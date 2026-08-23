@@ -238,6 +238,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Smooth light/dark theme transitions across the whole page */
+  *,
+  ::before,
+  ::after {
+    transition-property: background-color, border-color, color, fill, stroke,
+      text-decoration-color;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
   html {
     @apply font-sans;
     scroll-behavior: smooth;
@@ -371,13 +380,13 @@
     z-index: -1;
     pointer-events: none;
     background-color: var(--brass);
-    opacity: 0.06;
+    opacity: 0.13;
     -webkit-mask: url(/patterns/girih.svg) 0 0 / 52px 52px repeat;
     mask: url(/patterns/girih.svg) 0 0 / 52px 52px repeat;
   }
   .dark .pattern-islamic::before {
     background-color: var(--gold);
-    opacity: 0.05;
+    opacity: 0.1;
   }
 }
 

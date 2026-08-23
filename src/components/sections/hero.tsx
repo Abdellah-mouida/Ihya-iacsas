@@ -60,7 +60,7 @@ export function Hero() {
       <div aria-hidden className="absolute inset-0 -z-10 opacity-70">
         <HeroScene />
       </div>
-      <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
+      <div className="pattern-islamic absolute inset-0 -z-10" />
 
       {/* Content */}
       <motion.div
