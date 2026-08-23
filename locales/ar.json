@@ -86,10 +86,15 @@
     "title": "فروع إحياء في المغرب",
     "desc": "نمتدّ في عدّة مدن، ونواصل التوسّع لنكون قريبين منك.",
     "cardLabel": "فرع",
+    "mapHint": "مرّر فوق مدينة أو انقر عليها لعرض تفاصيل الفرع",
     "marrakech": "مراكش",
     "taroudant": "تارودانت",
     "famzguid": "فم زكيد (تاطا)",
-    "ouledteima": "أولاد تايمة"
+    "ouledteima": "أولاد تايمة",
+    "regionMarrakech": "جهة مراكش آسفي",
+    "regionTaroudant": "جهة سوس ماسة",
+    "regionFamzguid": "إقليم طاطا · سوس ماسة",
+    "regionOuledteima": "جهة سوس ماسة"
   },
   "gallery": {
     "kicker": "لحظات",

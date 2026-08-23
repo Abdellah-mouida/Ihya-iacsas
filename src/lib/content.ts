@@ -83,12 +83,28 @@ export const ACTIVITIES: Activity[] = [
   },
 ];
 
-export type Branch = { id: string; nameKey: string };
+export type Branch = { id: string; nameKey: string; regionKey: string };
 export const BRANCHES: Branch[] = [
-  { id: "marrakech", nameKey: "branches.marrakech" },
-  { id: "taroudant", nameKey: "branches.taroudant" },
-  { id: "famzguid", nameKey: "branches.famzguid" },
-  { id: "ouledteima", nameKey: "branches.ouledteima" },
+  {
+    id: "marrakech",
+    nameKey: "branches.marrakech",
+    regionKey: "branches.regionMarrakech",
+  },
+  {
+    id: "taroudant",
+    nameKey: "branches.taroudant",
+    regionKey: "branches.regionTaroudant",
+  },
+  {
+    id: "famzguid",
+    nameKey: "branches.famzguid",
+    regionKey: "branches.regionFamzguid",
+  },
+  {
+    id: "ouledteima",
+    nameKey: "branches.ouledteima",
+    regionKey: "branches.regionOuledteima",
+  },
 ];
 
 export type GalleryItem = { src: string; altKey: string; w: number; h: number };
