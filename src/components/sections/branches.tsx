@@ -2,14 +2,26 @@
 
 import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 
-import { MoroccoMap } from "@/components/common/morocco-map";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
 import { BRANCHES } from "@/lib/content";
 import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+
+function MapSkeleton() {
+  return (
+    <div className="mx-auto aspect-[1000/1065] w-full max-w-[26rem] animate-pulse rounded-3xl bg-muted/50" />
+  );
+}
+
+// Map SVG + pins is decorative & interactive — split into its own chunk.
+const MoroccoMap = dynamic(
+  () => import("@/components/common/morocco-map").then((m) => m.MoroccoMap),
+  { ssr: false, loading: () => <MapSkeleton /> },
+);
 
 export function Branches() {
   const { t } = useLocale();

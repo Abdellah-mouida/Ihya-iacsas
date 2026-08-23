@@ -75,7 +75,7 @@ export function EventPoster({
             alt={alt}
             width={512}
             height={640}
-            priority
+            sizes="(max-width: 640px) 90vw, 384px"
             className="h-auto w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />
           {/* Warm overlay + gold inner frame */}

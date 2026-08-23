@@ -75,6 +75,7 @@ export function About() {
                 alt=""
                 width={526}
                 height={526}
+                sizes="(max-width: 1024px) 100vw, 45vw"
                 className="h-64 w-full object-cover sm:h-72"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-night/50 to-transparent" />
