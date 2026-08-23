@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Menu } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -9,22 +9,26 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT, IMAGES, NAV_LINKS } from "@/lib/content";
-import { EASE } from "@/lib/motion";
+import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+const hamburgerTop = {
+  closed: { rotate: 0, y: -6 },
+  open: { rotate: 45, y: 0 },
+};
+const hamburgerMid = { closed: { opacity: 1 }, open: { opacity: 0 } };
+const hamburgerBot = {
+  closed: { rotate: 0, y: 6 },
+  open: { rotate: -45, y: 0 },
+};
+
 export function GlassNavbar() {
-  const { t, dir } = useLocale();
+  const { t } = useLocale();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("home");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -33,7 +37,33 @@ export function GlassNavbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const side = dir === "rtl" ? "left" : "right";
+  // Scroll-spy: highlight the section currently crossing the viewport middle.
+  useEffect(() => {
+    const sections = NAV_LINKS.map((l) =>
+      document.getElementById(l.href.slice(1)),
+    ).filter((el): el is HTMLElement => Boolean(el));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setActive(e.target.id);
+        });
+      },
+      { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  // Lock scroll + Escape to close the mobile menu.
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
     <motion.header
@@ -44,35 +74,73 @@ export function GlassNavbar() {
     >
       <nav
         className={cn(
-          "mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-2xl px-3 py-2 transition-all duration-300 sm:px-4",
-          scrolled ? "glass-strong shadow-layered" : "bg-transparent",
+          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] px-3 transition-all duration-500 sm:px-4",
+          scrolled ? "glass-strong shadow-layered py-1.5" : "glass py-2.5",
         )}
       >
-        <Link href="#home" className="flex items-center gap-2" aria-label={t("nav.brand")}>
-          <Image
-            src={IMAGES.logoBanner}
-            alt={t("nav.brand")}
-            width={96}
-            height={40}
-            priority
-            className="h-9 w-auto object-contain"
-          />
+        {/* animated gradient sheen inside the glass */}
+        <span
+          aria-hidden
+          className="bg-brass-gradient animate-gradient pointer-events-none absolute inset-0 -z-10 rounded-[inherit] opacity-[0.07] [background-size:200%_200%]"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-6 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"
+        />
+
+        {/* Logo */}
+        <Link
+          href="#home"
+          className="group flex items-center gap-2.5"
+          aria-label={t("nav.brand")}
+        >
+          <span className="relative shrink-0">
+            <Image
+              src={IMAGES.logoSquare}
+              alt={t("nav.brand")}
+              width={40}
+              height={40}
+              priority
+              className="size-10 rounded-full object-cover ring-1 ring-brass/40 transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
+          </span>
+          <span className="text-gradient-brass font-heading text-xl font-bold">
+            {t("nav.brand")}
+          </span>
         </Link>
 
+        {/* Desktop links with moving scroll-spy pill */}
         <ul className="hidden items-center gap-0.5 lg:flex">
-          {NAV_LINKS.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                className="group relative rounded-lg px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
-              >
-                {t(link.key)}
-                <span className="bg-brass-gradient absolute inset-x-3 bottom-1 h-0.5 origin-center scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100" />
-              </a>
-            </li>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const id = link.href.slice(1);
+            const isActive = active === id;
+            return (
+              <li key={link.href} className="relative">
+                <a
+                  href={link.href}
+                  className={cn(
+                    "relative block rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
+                    isActive
+                      ? "text-brass"
+                      : "text-foreground/85 hover:text-foreground",
+                  )}
+                >
+                  {isActive ? (
+                    <motion.span
+                      layoutId="navActive"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                      className="absolute inset-0 -z-10 rounded-full bg-brass/12 ring-1 ring-brass/25"
+                    />
+                  ) : null}
+                  {t(link.key)}
+                </a>
+              </li>
+            );
+          })}
         </ul>
 
+        {/* Controls */}
         <div className="flex items-center gap-2">
           <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
@@ -83,50 +151,99 @@ export function GlassNavbar() {
             <Link href={EVENT.bookHref}>{t("nav.book")}</Link>
           </Button>
 
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="glass size-10 rounded-full lg:hidden"
-                aria-label={t("nav.menu")}
-              >
-                <Menu className="size-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side={side} className="glass-strong w-72 border-border/60">
-              <SheetTitle className="text-gradient-brass px-4 pt-4 font-heading text-2xl">
-                {t("nav.brand")}
-              </SheetTitle>
-              <ul className="mt-4 flex flex-col gap-1 px-3">
-                {NAV_LINKS.map((link) => (
-                  <li key={link.href}>
-                    <SheetClose asChild>
-                      <a
-                        href={link.href}
-                        className="block rounded-lg px-3 py-3 text-base font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        {t(link.key)}
-                      </a>
-                    </SheetClose>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-auto flex flex-col gap-3 p-4">
-                <LanguageSwitcher className="w-full justify-center" />
-                <SheetClose asChild>
-                  <Button
-                    asChild
-                    className="bg-brass-gradient h-11 w-full rounded-full font-semibold text-night"
-                  >
-                    <Link href={EVENT.bookHref}>{t("nav.book")}</Link>
-                  </Button>
-                </SheetClose>
-              </div>
-            </SheetContent>
-          </Sheet>
+          {/* Animated hamburger */}
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={t("nav.menu")}
+            aria-expanded={open}
+            className="glass grid size-10 place-items-center rounded-full text-foreground transition-transform hover:scale-105 lg:hidden"
+          >
+            <span className="relative block size-5 text-current">
+              <motion.span
+                variants={hamburgerTop}
+                animate={open ? "open" : "closed"}
+                className="absolute inset-x-0 top-1/2 -mt-px h-0.5 rounded-full bg-current"
+                style={{ originX: 0.5, originY: 0.5 }}
+              />
+              <motion.span
+                variants={hamburgerMid}
+                animate={open ? "open" : "closed"}
+                className="absolute inset-x-0 top-1/2 -mt-px h-0.5 rounded-full bg-current"
+              />
+              <motion.span
+                variants={hamburgerBot}
+                animate={open ? "open" : "closed"}
+                className="absolute inset-x-0 top-1/2 -mt-px h-0.5 rounded-full bg-current"
+                style={{ originX: 0.5, originY: 0.5 }}
+              />
+            </span>
+          </button>
         </div>
       </nav>
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {open ? (
+          <>
+            <motion.div
+              key="overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setOpen(false)}
+              className="fixed inset-0 z-0 bg-night/40 backdrop-blur-sm lg:hidden"
+            />
+            <motion.div
+              key="panel"
+              initial={{ opacity: 0, y: -16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: EASE }}
+              className="glass-strong absolute inset-x-3 top-[4.5rem] z-10 origin-top rounded-[1.75rem] p-4 shadow-layered sm:inset-x-4 lg:hidden"
+            >
+              <motion.ul
+                variants={staggerContainer(0.06)}
+                initial="hidden"
+                animate="show"
+                className="flex flex-col gap-1"
+              >
+                {NAV_LINKS.map((link) => {
+                  const isActive = active === link.href.slice(1);
+                  return (
+                    <motion.li key={link.href} variants={fadeUp}>
+                      <a
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className={cn(
+                          "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                          isActive
+                            ? "bg-brass/15 text-brass"
+                            : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                        )}
+                      >
+                        {t(link.key)}
+                        <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                      </a>
+                    </motion.li>
+                  );
+                })}
+              </motion.ul>
+              <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
+                <LanguageSwitcher className="flex-1 justify-center" />
+                <Button
+                  asChild
+                  className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
+                >
+                  <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
+                    {t("nav.book")}
+                  </Link>
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
     </motion.header>
   );
 }
