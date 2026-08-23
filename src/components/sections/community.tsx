@@ -1,16 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import dynamic from "next/dynamic";
 
+import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
-
-const CommunityOrbit = dynamic(
-  () => import("@/components/three/community-orbit"),
-  { ssr: false },
-);
+import { fadeUp, scaleIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
 export function Community() {
   const { t } = useLocale();
@@ -18,18 +13,18 @@ export function Community() {
   return (
     <section
       id="community"
-      className="relative isolate flex min-h-[85vh] items-center overflow-hidden bg-night py-28 text-white sm:py-36"
+      className="relative isolate flex min-h-[70vh] items-center overflow-hidden bg-night py-28 text-white sm:py-36"
     >
-      {/* 3D orbit graphic */}
-      <div className="absolute inset-0 -z-20">
-        <CommunityOrbit />
-      </div>
-      {/* readability scrims */}
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,transparent_0%,var(--night)_78%)]" />
-      <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
+      {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here) */}
+      <div className="pattern-islamic absolute inset-0 -z-10" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(233,196,106,0.16),transparent_60%)]" />
+      <div
+        aria-hidden
+        className="bg-brass-gradient animate-float-slow absolute left-1/2 top-1/2 -z-10 size-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.08] blur-3xl"
+      />
 
       <motion.div
-        variants={staggerContainer(0.14)}
+        variants={staggerContainer(0.16)}
         initial="hidden"
         whileInView="show"
         viewport={viewportOnce}
@@ -45,14 +40,18 @@ export function Community() {
 
         <motion.h2
           variants={fadeUp}
-          className="mt-6 font-heading text-4xl font-semibold text-balance drop-shadow-lg sm:text-5xl md:text-6xl"
+          className="mt-6 font-heading text-4xl font-semibold text-balance sm:text-5xl md:text-6xl"
         >
           {t("community.title")}
         </motion.h2>
 
+        <motion.div variants={fadeUp} className="mt-5">
+          <OrnamentDivider />
+        </motion.div>
+
         <motion.p
-          variants={fadeUp}
-          className="text-gradient-brass mt-5 font-heading text-2xl font-semibold sm:text-3xl"
+          variants={scaleIn}
+          className="text-gradient-brass mt-5 font-heading text-3xl font-semibold sm:text-4xl"
         >
           {t("community.quote")}
         </motion.p>
