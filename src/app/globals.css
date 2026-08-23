@@ -311,6 +311,22 @@
   .bg-spirit-gradient {
     background-image: var(--gradient-spirit);
   }
+  /* React Bits-style shiny text: moving sheen across a gold gradient */
+  .text-shine {
+    background: linear-gradient(
+      110deg,
+      var(--gold) 0%,
+      oklch(0.97 0.05 90) 18%,
+      var(--brass) 38%,
+      var(--gold-deep) 68%,
+      var(--gold) 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 6s linear infinite;
+  }
   .rule-gold {
     height: 1px;
     background: linear-gradient(

@@ -2,13 +2,19 @@
 
 import { motion } from "framer-motion";
 import { ArrowDown, CalendarDays, Info } from "lucide-react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 
+import { AuroraBackground } from "@/components/react-bits/aurora-background";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+
+const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
+  ssr: false,
+});
 
 export function Hero() {
   const { t } = useLocale();
@@ -22,10 +28,10 @@ export function Hero() {
   return (
     <section
       id="home"
-      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-16"
+      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-16 text-white"
     >
-      {/* Background image + scrims */}
-      <div className="absolute inset-0 -z-20">
+      {/* Photo layer */}
+      <div className="absolute inset-0 -z-30">
         <Image
           src={IMAGES.groupPortrait}
           alt=""
@@ -34,20 +40,34 @@ export function Hero() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-night/85 via-night/70 to-night/90" />
-        <div className="bg-spirit-gradient absolute inset-0 opacity-25 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-b from-night/85 via-night/72 to-night/92" />
       </div>
-      <div className="pattern-islamic absolute inset-0 -z-10 opacity-70" />
 
-      {/* Floating decorative orbs */}
-      <div className="bg-brass-gradient absolute -top-10 end-[8%] -z-10 size-40 rounded-full opacity-30 blur-3xl animate-float" />
-      <div className="bg-spirit-gradient absolute bottom-10 start-[6%] -z-10 size-52 rounded-full opacity-20 blur-3xl animate-float-slow" />
+      {/* React Bits aurora — warm animated light over the photo */}
+      <AuroraBackground className="-z-20 opacity-60 mix-blend-screen" />
 
+      {/* Inner vignette so the photo edges melt into the section */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_180px_70px_var(--night)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_42%,var(--night)_100%)] opacity-80"
+      />
+
+      {/* Ambient 3D motif */}
+      <div aria-hidden className="absolute inset-0 -z-10 opacity-70">
+        <HeroScene />
+      </div>
+      <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
+
+      {/* Content */}
       <motion.div
         variants={staggerContainer(0.14, 0.1)}
         initial="hidden"
         animate="show"
-        className="mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center text-white"
+        className="mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center"
       >
         <motion.span
           variants={fadeUp}
@@ -59,9 +79,9 @@ export function Hero() {
 
         <motion.h1
           variants={fadeUp}
-          className="mt-6 font-heading text-6xl font-bold leading-[0.95] sm:text-7xl md:text-8xl"
+          className="mt-6 font-heading text-7xl font-extrabold leading-[0.95] sm:text-8xl md:text-9xl"
         >
-          <span className="text-gradient-brass">{t("hero.title")}</span>
+          <span className="text-shine">{t("hero.title")}</span>
         </motion.h1>
 
         <motion.p
@@ -96,7 +116,6 @@ export function Hero() {
           </Button>
         </motion.div>
 
-        {/* Stats */}
         <motion.dl
           variants={fadeUp}
           className="mt-14 grid w-full max-w-2xl grid-cols-3 gap-4"
@@ -109,7 +128,7 @@ export function Hero() {
                 i !== 0 && "border-s border-white/15",
               )}
             >
-              <dt className="text-gradient-brass font-heading text-3xl font-bold sm:text-4xl">
+              <dt className="text-shine font-heading text-3xl font-bold sm:text-4xl">
                 {s.value}
               </dt>
               <dd className="text-xs text-white/70 sm:text-sm">{s.label}</dd>
