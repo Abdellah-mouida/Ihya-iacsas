@@ -47,7 +47,7 @@ export function GalleryLightbox() {
           <motion.div
             key={item.src}
             variants={fadeUp}
-            className="group relative break-inside-avoid overflow-hidden rounded-2xl border border-border/60 shadow-layered"
+            className="group relative break-inside-avoid overflow-hidden rounded-2xl border border-border/60 shadow-layered transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:ring-2 hover:ring-brass/30"
           >
             <button
               type="button"

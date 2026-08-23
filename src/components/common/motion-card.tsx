@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 /**
  * Mouse-tracking 3D tilt card. Wraps children in a perspective container and
  * rotates on hover, with an optional light glare that follows the pointer.
+ * `radiusClass` MUST match the inner card's radius so the glare and tilt stay
+ * contained within the rounded corners (no square/border artifacts on hover).
  */
 export function MotionCard({
   children,
@@ -21,12 +23,14 @@ export function MotionCard({
   wrapperClassName,
   intensity = 9,
   glare = true,
+  radiusClass = "rounded-3xl",
 }: {
   children: ReactNode;
   className?: string;
   wrapperClassName?: string;
   intensity?: number;
   glare?: boolean;
+  radiusClass?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const px = useMotionValue(0);
@@ -59,20 +63,23 @@ export function MotionCard({
   }
 
   return (
-    <div className={cn("perspective-1200", wrapperClassName)}>
+    <div className={cn("perspective-1200 h-full", wrapperClassName)}>
       <motion.div
         ref={ref}
         onPointerMove={handleMove}
         onPointerLeave={handleLeave}
         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        className={cn("relative", className)}
+        className={cn("relative h-full", radiusClass, className)}
       >
         {children}
         {glare ? (
           <motion.div
             aria-hidden
             style={{ background: glareBg }}
-            className="pointer-events-none absolute inset-0 z-20 rounded-[inherit] opacity-0 mix-blend-soft-light transition-opacity duration-300 group-hover:opacity-100"
+            className={cn(
+              "pointer-events-none absolute inset-0 z-20 opacity-0 mix-blend-soft-light transition-opacity duration-300 group-hover:opacity-100",
+              radiusClass,
+            )}
           />
         ) : null}
       </motion.div>

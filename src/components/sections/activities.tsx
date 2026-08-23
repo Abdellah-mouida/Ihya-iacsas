@@ -30,7 +30,7 @@ export function Activities() {
           {ACTIVITIES.map((item) => (
             <motion.div key={item.num} variants={fadeUp} className="group h-full">
               <MotionCard intensity={11} className="h-full">
-                <div className="preserve-3d relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl bg-night p-8 text-white shadow-layered ring-1 ring-white/10">
+                <div className="preserve-3d relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl bg-night p-8 text-white shadow-layered ring-1 ring-white/10 transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1 group-hover:ring-brass/40 group-hover:shadow-[0_28px_70px_rgba(0,0,0,0.45)]">
                   {/* number watermark */}
                   <span className="pointer-events-none absolute -top-4 end-3 font-heading text-8xl font-bold text-white/5">
                     {item.num}

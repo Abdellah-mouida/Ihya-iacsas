@@ -14,7 +14,7 @@ export function About() {
 
   return (
     <section id="about" className="relative overflow-hidden py-24 sm:py-32">
-      <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
+      <div className="pattern-islamic absolute inset-0 -z-10" />
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
         <motion.div
@@ -91,8 +91,13 @@ export function About() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             {ABOUT_CARDS.map((card) => (
-              <MotionCard key={card.titleKey} intensity={10} glare={false}>
-                <div className="glass flex h-full flex-col gap-3 rounded-2xl p-5">
+              <MotionCard
+                key={card.titleKey}
+                intensity={10}
+                glare={false}
+                radiusClass="rounded-2xl"
+              >
+                <div className="glass flex h-full flex-col gap-3 rounded-2xl p-5 transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:shadow-layered hover:ring-1 hover:ring-brass/30">
                   <span className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25">
                     <card.icon className="size-5" />
                   </span>
