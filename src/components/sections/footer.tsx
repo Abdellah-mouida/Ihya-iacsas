@@ -24,7 +24,7 @@ export function Footer() {
                 alt={t("nav.brand")}
                 width={44}
                 height={44}
-                className="rounded-xl ring-1 ring-brass/30"
+                className="size-11 rounded-full object-cover ring-1 ring-brass/30"
               />
               <span className="text-gradient-brass font-heading text-2xl font-bold">
                 {t("nav.brand")}
