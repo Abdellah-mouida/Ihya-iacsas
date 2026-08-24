@@ -14,7 +14,6 @@ export function About() {
 
   return (
     <section id="about" className="relative overflow-hidden py-24 sm:py-32">
-      <div className="pattern-islamic absolute inset-0 -z-10" />
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
         <motion.div

@@ -56,11 +56,10 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_42%,var(--night)_100%)] opacity-80"
       />
 
-      {/* Ambient 3D motif */}
-      <div aria-hidden className="absolute inset-0 -z-10 opacity-70">
+      {/* Ambient drifting particles */}
+      <div aria-hidden className="absolute inset-0 -z-10 opacity-80">
         <HeroScene />
       </div>
-      <div className="pattern-islamic absolute inset-0 -z-10" />
 
       {/* Content */}
       <motion.div

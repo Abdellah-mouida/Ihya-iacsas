@@ -74,8 +74,10 @@ export function GlassNavbar() {
     >
       <nav
         className={cn(
-          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] px-3 transition-all duration-500 sm:px-4",
-          scrolled ? "glass-strong shadow-layered py-1.5" : "glass py-2.5",
+          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] border border-border/60 px-3 backdrop-blur-xl backdrop-saturate-150 transition-all duration-500 sm:px-4",
+          scrolled
+            ? "bg-[color-mix(in_oklch,var(--background)_72%,transparent)] py-1.5 shadow-layered"
+            : "bg-[color-mix(in_oklch,var(--background)_50%,transparent)] py-2.5",
         )}
       >
         {/* animated gradient sheen inside the glass */}

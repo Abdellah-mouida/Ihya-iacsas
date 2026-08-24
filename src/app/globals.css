@@ -238,10 +238,12 @@
   * {
     @apply border-border outline-ring/50;
   }
-  /* Smooth light/dark theme transitions across the whole page */
-  *,
-  ::before,
-  ::after {
+  /* Smooth light/dark theme transitions across the whole page.
+     Gated on `.theme-ready` (added by Providers after first paint) so the
+     colors don't animate on initial load / hydration — only on real toggles. */
+  .theme-ready *,
+  .theme-ready ::before,
+  .theme-ready ::after {
     transition-property: background-color, border-color, color, fill, stroke,
       text-decoration-color;
     transition-duration: 300ms;
@@ -365,7 +367,10 @@
   }
   /* React Bits-style shiny text: moving sheen across a gold gradient */
   .text-shine {
-    background: linear-gradient(
+    /* Use background-image (not the `background` shorthand) so the optimizer
+       can't fold background-size in and reset background-clip back to
+       border-box — that bug made the gradient paint the whole box. */
+    background-image: linear-gradient(
       110deg,
       var(--gold) 0%,
       oklch(0.97 0.05 90) 18%,
@@ -376,6 +381,7 @@
     background-size: 220% 100%;
     -webkit-background-clip: text;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
     color: transparent;
     animation: shimmer 6s linear infinite;
   }
