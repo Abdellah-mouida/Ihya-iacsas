@@ -13,6 +13,7 @@ export function Footer() {
 
   return (
     <footer className="relative overflow-hidden border-t border-border/60 bg-card/50 pt-16 pb-8">
+      <div className="pattern-islamic absolute inset-0 -z-10" />
       <div className="mx-auto max-w-6xl px-5">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}

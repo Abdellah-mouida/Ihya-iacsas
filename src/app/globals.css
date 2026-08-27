@@ -238,16 +238,14 @@
   * {
     @apply border-border outline-ring/50;
   }
-  /* Smooth light/dark theme transitions across the whole page.
-     Gated on `.theme-ready` (added by Providers after first paint) so the
-     colors don't animate on initial load / hydration — only on real toggles. */
-  .theme-ready *,
-  .theme-ready ::before,
-  .theme-ready ::after {
-    transition-property: background-color, border-color, color, fill, stroke,
-      text-decoration-color;
-    transition-duration: 300ms;
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Theme switching uses the View Transitions API (see ThemeToggle) for a
+     single GPU-composited cross-fade. Transitioning every element janked
+     against the backdrop-filters + WebGL canvas, so we only keep a cheap
+     root-level fade as the fallback for browsers without View Transitions. */
+  .theme-ready body {
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
   html {
     @apply font-sans;
@@ -458,5 +456,18 @@
   }
   .cursor-none-fine {
     cursor: none;
+  }
+}
+
+/* View Transition cross-fade for theme switching (top-level, not layered) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }

@@ -15,7 +15,8 @@ export function Community() {
       id="community"
       className="relative isolate flex min-h-[70vh] items-center overflow-hidden bg-night py-28 text-white sm:py-36"
     >
-      {/* Calm, quiet backdrop — gentle gold glow (no texture, no 3D here) */}
+      {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here) */}
+      <div className="pattern-islamic absolute inset-0 -z-10" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(233,196,106,0.16),transparent_60%)]" />
       <div
         aria-hidden
