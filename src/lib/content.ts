@@ -94,15 +94,24 @@ export const PAST_EVENTS = EVENTS.filter((e) => e.status === "past");
 // Drives the navbar "new event" indicator — tied to the events data above.
 export const hasNewEvent = OPEN_EVENTS.some((e) => e.isNew);
 
-export type NavLink = { key: string; href: string };
+// Primary navigation — intentionally minimal (Home + Events) and easy to
+// extend later. `indicator: true` links surface the "new event" dot when
+// `hasNewEvent` is set from the events data above.
+export type NavLink = { key: string; href: string; indicator?: boolean };
 export const NAV_LINKS: NavLink[] = [
-  { key: "nav.home", href: "#home" },
-  { key: "nav.about", href: "#about" },
-  { key: "nav.activities", href: "#activities" },
-  { key: "nav.event", href: "#event" },
-  { key: "nav.branches", href: "#branches" },
-  { key: "nav.gallery", href: "#gallery" },
-  { key: "nav.contact", href: "#contact" },
+  { key: "nav.home", href: "/" },
+  { key: "nav.events", href: "/events", indicator: true },
+];
+
+// Footer keeps a richer set of jump links to the homepage sections; absolute
+// hrefs so they resolve from any route.
+export const FOOTER_LINKS: NavLink[] = [
+  { key: "nav.home", href: "/" },
+  { key: "nav.about", href: "/#about" },
+  { key: "nav.activities", href: "/#activities" },
+  { key: "nav.gallery", href: "/#gallery" },
+  { key: "nav.events", href: "/events" },
+  { key: "nav.contact", href: "/#contact" },
 ];
 
 export type IconItem = {
