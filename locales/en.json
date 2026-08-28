@@ -110,6 +110,17 @@
     "altQuote": "Quote card",
     "altNight": "Evening session"
   },
+  "cards": {
+    "kicker": "In focus",
+    "title": "Posters & reflections",
+    "desc": "A gentle, looping showcase of Ihyaa's posters, reflections, and journeys.",
+    "altNight": "Evening session poster",
+    "altJourney": "A journey",
+    "altQuote": "Quote card",
+    "prev": "Previous poster",
+    "next": "Next poster",
+    "goTo": "Go to poster {n}"
+  },
   "community": {
     "kicker": "Community spirit",
     "title": "Together we revive, together we grow",

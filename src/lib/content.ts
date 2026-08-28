@@ -9,9 +9,11 @@ import {
 
 export const IMAGES = {
   eventPoster: "/images/event-poster.jpg",
-  nightPoster: "/images/night-poster.jpg",
-  quoteCard: "/images/quote-card.jpg",
-  journeyCard: "/images/journey-card.jpg",
+  // Poster "cards" live under /images/cards/ and are surfaced in the card
+  // carousel (not the gallery masonry).
+  nightCard: "/images/cards/night-card.jpg",
+  quoteCard: "/images/cards/quote-card.jpg",
+  journeyCard: "/images/cards/journey-card.jpg",
   football: "/images/football.jpg",
   prayer: "/images/prayer.jpg",
   gathering: "/images/gathering.jpg",
@@ -108,12 +110,19 @@ export const BRANCHES: Branch[] = [
 ];
 
 export type GalleryItem = { src: string; altKey: string; w: number; h: number };
+// Gallery masonry — real "moments" only. Poster cards are intentionally
+// excluded here and shown in the CardCarousel section instead.
 export const GALLERY: GalleryItem[] = [
   { src: IMAGES.gathering, altKey: "gallery.altGathering", w: 590, h: 332 },
   { src: IMAGES.prayer, altKey: "gallery.altPrayer", w: 1280, h: 960 },
   { src: IMAGES.groupPortrait, altKey: "gallery.altGroup", w: 2048, h: 1516 },
   { src: IMAGES.football, altKey: "gallery.altFootball", w: 1280, h: 960 },
-  { src: IMAGES.nightPoster, altKey: "gallery.altNight", w: 512, h: 640 },
-  { src: IMAGES.journeyCard, altKey: "gallery.altJourney", w: 526, h: 526 },
-  { src: IMAGES.quoteCard, altKey: "gallery.altQuote", w: 526, h: 526 },
+];
+
+// Poster "cards" for the looping card carousel (all live in /images/cards/).
+export type CardPoster = { src: string; altKey: string; w: number; h: number };
+export const CARD_POSTERS: CardPoster[] = [
+  { src: IMAGES.nightCard, altKey: "cards.altNight", w: 512, h: 640 },
+  { src: IMAGES.journeyCard, altKey: "cards.altJourney", w: 526, h: 526 },
+  { src: IMAGES.quoteCard, altKey: "cards.altQuote", w: 526, h: 526 },
 ];

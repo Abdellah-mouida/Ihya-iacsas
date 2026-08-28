@@ -1,6 +1,7 @@
 import { About } from "@/components/sections/about";
 import { Activities } from "@/components/sections/activities";
 import { Branches } from "@/components/sections/branches";
+import { CardCarousel } from "@/components/sections/card-carousel";
 import { Community } from "@/components/sections/community";
 import { Contact } from "@/components/sections/contact";
 import { FeaturedEvent } from "@/components/sections/featured-event";
@@ -22,6 +23,7 @@ export default function Home() {
           <Activities />
           <FeaturedEvent />
           <Branches />
+          <CardCarousel />
           <Gallery />
           <Community />
           <Contact />
