@@ -45,7 +45,7 @@ export function Footer() {
                 <li key={link.href}>
                   <a
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-brass"
+                    className="text-sm text-muted-foreground transition-colors hover:text-green"
                   >
                     {t(link.key)}
                   </a>
@@ -79,7 +79,7 @@ export function Footer() {
             <a
               href={EVENT.phoneHref}
               dir="ltr"
-              className="w-max text-sm text-muted-foreground transition-colors hover:text-brass"
+              className="w-max text-sm text-muted-foreground transition-colors hover:text-green"
             >
               {t("contact.phone")}
             </a>

@@ -21,6 +21,8 @@
   --color-gold-deep: var(--gold-deep);
   --color-emerald: var(--emerald);
   --color-emerald-deep: var(--emerald-deep);
+  --color-green: var(--brand-green);
+  --color-green-strong: var(--brand-green-strong);
   --color-night: var(--night);
   --color-night-deep: var(--night-deep);
   --color-sand: var(--sand);
@@ -105,8 +107,13 @@
   --brass: oklch(0.7 0.11 77);
   --gold: oklch(0.8 0.13 84);
   --gold-deep: oklch(0.58 0.1 72);
-  --emerald: oklch(0.55 0.1 165);
-  --emerald-deep: oklch(0.42 0.08 168);
+  /* Green family tuned to the Ihyaa logo green (sampled ~#0a5417, oklch hue ~147).
+     `emerald` is nudged onto that hue so every existing green accent now reads
+     as the brand green; `brand-green` is the punchier, dedicated accent. */
+  --emerald: oklch(0.52 0.12 150);
+  --emerald-deep: oklch(0.4 0.11 148);
+  --brand-green: oklch(0.44 0.13 146);
+  --brand-green-strong: oklch(0.34 0.1 147);
   --night: oklch(0.2 0.03 265);
   --night-deep: oklch(0.15 0.025 265);
   --sand: oklch(0.95 0.02 85);
@@ -122,6 +129,12 @@
     var(--emerald) 0%,
     var(--brass) 55%,
     var(--gold) 100%
+  );
+  --gradient-green: linear-gradient(
+    135deg,
+    var(--brand-green) 0%,
+    var(--emerald) 55%,
+    var(--brand-green-strong) 100%
   );
 
   --sidebar: oklch(0.985 0.01 85);
@@ -163,8 +176,10 @@
   --brass: oklch(0.74 0.12 79);
   --gold: oklch(0.83 0.14 85);
   --gold-deep: oklch(0.64 0.11 74);
-  --emerald: oklch(0.66 0.11 165);
-  --emerald-deep: oklch(0.5 0.09 168);
+  --emerald: oklch(0.66 0.13 150);
+  --emerald-deep: oklch(0.52 0.11 148);
+  --brand-green: oklch(0.64 0.15 147);
+  --brand-green-strong: oklch(0.52 0.13 147);
   --night: oklch(0.2 0.03 265);
   --night-deep: oklch(0.13 0.02 265);
   --sand: oklch(0.3 0.03 265);
@@ -362,6 +377,15 @@
   }
   .bg-spirit-gradient {
     background-image: var(--gradient-spirit);
+  }
+  .bg-green-gradient {
+    background-image: var(--gradient-green);
+  }
+  .text-gradient-green {
+    background: var(--gradient-green);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   /* React Bits-style shiny text: moving sheen across a gold gradient */
   .text-shine {
