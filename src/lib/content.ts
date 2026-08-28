@@ -28,6 +28,72 @@ export const EVENT = {
   bookHref: "/events/majlis-ihyaa/book",
 } as const;
 
+export const EVENTS_HREF = "/events";
+
+// ---- Events model -------------------------------------------------------
+// A single source of truth for events. `status: "open"` events are open for
+// booking and shown at the top of /events; `status: "past"` events populate
+// the archive. `isNew` on an open event drives the navbar "new event"
+// indicator and can be toggled per event later.
+export type EventStatus = "open" | "past";
+export type IhyaaEvent = {
+  id: string;
+  poster: string;
+  titleKey: string;
+  dateKey: string;
+  timeKey?: string;
+  locationKey: string;
+  status: EventStatus;
+  badgeKey?: string;
+  bookHref?: string;
+  isNew?: boolean;
+};
+
+export const EVENTS: IhyaaEvent[] = [
+  {
+    id: "majlis-ihyaa",
+    poster: IMAGES.eventPoster,
+    titleKey: "event.name",
+    dateKey: "event.date",
+    timeKey: "event.time",
+    locationKey: "event.location",
+    status: "open",
+    badgeKey: "event.badge",
+    bookHref: EVENT.bookHref,
+    isNew: true,
+  },
+  // Placeholder archive so the page structure supports future content.
+  {
+    id: "past-winter-retreat",
+    poster: IMAGES.groupPortrait,
+    titleKey: "events.pastRetreatTitle",
+    dateKey: "events.pastRetreatDate",
+    locationKey: "events.pastRetreatLocation",
+    status: "past",
+  },
+  {
+    id: "past-football-cup",
+    poster: IMAGES.football,
+    titleKey: "events.pastCupTitle",
+    dateKey: "events.pastCupDate",
+    locationKey: "events.pastCupLocation",
+    status: "past",
+  },
+  {
+    id: "past-gathering",
+    poster: IMAGES.gathering,
+    titleKey: "events.pastGatheringTitle",
+    dateKey: "events.pastGatheringDate",
+    locationKey: "events.pastGatheringLocation",
+    status: "past",
+  },
+];
+
+export const OPEN_EVENTS = EVENTS.filter((e) => e.status === "open");
+export const PAST_EVENTS = EVENTS.filter((e) => e.status === "past");
+// Drives the navbar "new event" indicator — tied to the events data above.
+export const hasNewEvent = OPEN_EVENTS.some((e) => e.isNew);
+
 export type NavLink = { key: string; href: string };
 export const NAV_LINKS: NavLink[] = [
   { key: "nav.home", href: "#home" },

@@ -4,11 +4,12 @@ import { motion } from "framer-motion";
 import { ArrowDown, CalendarDays, Info } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import Link from "next/link";
 
 import { AuroraBackground } from "@/components/react-bits/aurora-background";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { IMAGES } from "@/lib/content";
+import { EVENTS_HREF, IMAGES } from "@/lib/content";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -98,10 +99,10 @@ export function Hero() {
             asChild
             className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
           >
-            <a href="#event">
+            <Link href={EVENTS_HREF}>
               <CalendarDays className="size-5" />
               {t("hero.ctaPrimary")}
-            </a>
+            </Link>
           </Button>
           <Button
             asChild

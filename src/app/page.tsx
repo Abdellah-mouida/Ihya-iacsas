@@ -4,7 +4,6 @@ import { Branches } from "@/components/sections/branches";
 import { CardCarousel } from "@/components/sections/card-carousel";
 import { Community } from "@/components/sections/community";
 import { Contact } from "@/components/sections/contact";
-import { FeaturedEvent } from "@/components/sections/featured-event";
 import { Footer } from "@/components/sections/footer";
 import { Gallery } from "@/components/sections/gallery";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
@@ -21,7 +20,6 @@ export default function Home() {
         <div className="relative bg-fixed bg-[radial-gradient(55%_45%_at_18%_12%,color-mix(in_oklch,var(--brass)_9%,transparent),transparent_60%),radial-gradient(50%_50%_at_85%_72%,color-mix(in_oklch,var(--emerald)_10%,transparent),transparent_65%)]">
           <About />
           <Activities />
-          <FeaturedEvent />
           <Branches />
           <CardCarousel />
           <Gallery />
