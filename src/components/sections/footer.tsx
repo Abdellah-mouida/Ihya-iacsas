@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { useLocale } from "@/i18n/locale-provider";
-import { BRANCHES, EVENT, IMAGES, NAV_LINKS } from "@/lib/content";
+import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
 
 export function Footer() {
   const { t } = useLocale();
@@ -41,11 +41,11 @@ export function Footer() {
               {t("footer.quickLinks")}
             </h3>
             <ul className="flex flex-col gap-2">
-              {NAV_LINKS.slice(0, 5).map((link) => (
+              {FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-brass"
+                    className="text-sm text-muted-foreground transition-colors hover:text-green"
                   >
                     {t(link.key)}
                   </a>
@@ -79,7 +79,7 @@ export function Footer() {
             <a
               href={EVENT.phoneHref}
               dir="ltr"
-              className="w-max text-sm text-muted-foreground transition-colors hover:text-brass"
+              className="w-max text-sm text-muted-foreground transition-colors hover:text-green"
             >
               {t("contact.phone")}
             </a>

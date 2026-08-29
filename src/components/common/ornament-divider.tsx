@@ -29,11 +29,12 @@ export function OrnamentDivider({
           fill="currentColor"
           opacity="0.9"
         />
-        {/* eight-point star */}
+        {/* eight-point star — brand green accent */}
         <g
+          className="text-green"
           stroke="currentColor"
           strokeWidth="1.2"
-          opacity="0.85"
+          opacity="0.9"
           transform="translate(2 2)"
         >
           <rect x="4.2" y="4.2" width="6" height="6" transform="rotate(45 7.2 7.2)" />

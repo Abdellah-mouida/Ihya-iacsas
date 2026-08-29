@@ -17,11 +17,28 @@ export function ThemeToggle({ className }: { className?: string }) {
 
   const isDark = resolvedTheme === "dark";
 
+  const toggleTheme = () => {
+    const next = isDark ? "light" : "dark";
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => void;
+    };
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Composited cross-fade via the View Transitions API — avoids the lag of
+    // transitioning every element (backdrop-filters + WebGL canvas) at once.
+    if (doc.startViewTransition && !reduce) {
+      doc.startViewTransition(() => setTheme(next));
+    } else {
+      setTheme(next);
+    }
+  };
+
   return (
     <button
       type="button"
       aria-label={t("theme.toggle")}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={toggleTheme}
       className={cn(
         "glass group relative inline-flex size-10 items-center justify-center rounded-full text-foreground/80 transition-all duration-300 hover:scale-110 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         className,

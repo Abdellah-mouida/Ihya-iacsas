@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { fadeUp, scaleIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
-export function Community() {
+export function Program() {
   const { t } = useLocale();
 
   return (
     <section
-      id="community"
+      id="program"
       className="relative isolate flex min-h-[70vh] items-center overflow-hidden bg-night py-28 text-white sm:py-36"
     >
       {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here) */}
@@ -34,15 +34,15 @@ export function Community() {
           variants={fadeUp}
           className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-md"
         >
-          <span className="size-1.5 rounded-full bg-gold" />
-          {t("community.kicker")}
+          <span className="size-1.5 rounded-full bg-green" />
+          {t("program.kicker")}
         </motion.span>
 
         <motion.h2
           variants={fadeUp}
           className="mt-6 font-heading text-4xl font-semibold text-balance sm:text-5xl md:text-6xl"
         >
-          {t("community.title")}
+          {t("program.title")}
         </motion.h2>
 
         <motion.div variants={fadeUp} className="mt-5">
@@ -53,22 +53,22 @@ export function Community() {
           variants={scaleIn}
           className="text-gradient-brass mt-5 font-heading text-3xl font-semibold sm:text-4xl"
         >
-          {t("community.quote")}
+          {t("program.quote")}
         </motion.p>
 
         <motion.p
           variants={fadeUp}
           className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-white/80"
         >
-          {t("community.desc")}
+          {t("program.desc")}
         </motion.p>
 
         <motion.div variants={fadeUp} className="mt-8">
           <Button
             asChild
-            className="bg-brass-gradient h-12 rounded-full px-8 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
+            className="bg-green-gradient h-12 rounded-full px-8 text-base font-semibold text-white shadow-layered ring-1 ring-gold/25 transition-all hover:-translate-y-0.5 hover:opacity-95"
           >
-            <a href="#contact">{t("community.cta")}</a>
+            <a href="#contact">{t("program.cta")}</a>
           </Button>
         </motion.div>
       </motion.div>

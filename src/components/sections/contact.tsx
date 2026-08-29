@@ -171,7 +171,7 @@ export function Contact() {
                       <a
                         href={row.href}
                         dir={row.ltr ? "ltr" : undefined}
-                        className="font-medium transition-colors hover:text-brass"
+                        className="font-medium transition-colors hover:text-green"
                       >
                         {row.value}
                       </a>

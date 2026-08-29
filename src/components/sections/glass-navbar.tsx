@@ -4,13 +4,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { EVENT, IMAGES, NAV_LINKS } from "@/lib/content";
+import { EVENT, IMAGES, NAV_LINKS, hasNewEvent } from "@/lib/content";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -24,34 +25,30 @@ const hamburgerBot = {
   open: { rotate: -45, y: 0 },
 };
 
+/** Pulsing green dot shown on the Events link when a new event is bookable. */
+function NewEventDot({ label }: { label: string }) {
+  return (
+    <span className="relative ms-1.5 inline-flex size-2.5" role="status" aria-label={label}>
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-70" />
+      <span className="relative inline-flex size-2.5 rounded-full bg-green ring-2 ring-green/30" />
+    </span>
+  );
+}
+
 export function GlassNavbar() {
   const { t } = useLocale();
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState("home");
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Scroll-spy: highlight the section currently crossing the viewport middle.
-  useEffect(() => {
-    const sections = NAV_LINKS.map((l) =>
-      document.getElementById(l.href.slice(1)),
-    ).filter((el): el is HTMLElement => Boolean(el));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) setActive(e.target.id);
-        });
-      },
-      { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
-    );
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
   }, []);
 
   // Lock scroll + Escape to close the mobile menu.
@@ -65,6 +62,9 @@ export function GlassNavbar() {
     };
   }, [open]);
 
+  // Close the mobile menu on route change.
+  useEffect(() => setOpen(false), [pathname]);
+
   return (
     <motion.header
       initial={{ y: -80, opacity: 0 }}
@@ -74,8 +74,10 @@ export function GlassNavbar() {
     >
       <nav
         className={cn(
-          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] px-3 transition-all duration-500 sm:px-4",
-          scrolled ? "glass-strong shadow-layered py-1.5" : "glass py-2.5",
+          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] border border-border/60 px-3 backdrop-blur-xl backdrop-saturate-150 transition-all duration-500 sm:px-4",
+          scrolled
+            ? "bg-[color-mix(in_oklch,var(--background)_72%,transparent)] py-1.5 shadow-layered"
+            : "bg-[color-mix(in_oklch,var(--background)_50%,transparent)] py-2.5",
         )}
       >
         {/* animated gradient sheen inside the glass */}
@@ -90,7 +92,7 @@ export function GlassNavbar() {
 
         {/* Logo */}
         <Link
-          href="#home"
+          href="/"
           className="group flex items-center gap-2.5"
           aria-label={t("nav.brand")}
         >
@@ -110,31 +112,33 @@ export function GlassNavbar() {
           </span>
         </Link>
 
-        {/* Desktop links with moving scroll-spy pill */}
+        {/* Desktop links with moving active pill (brand green) */}
         <ul className="hidden items-center gap-0.5 lg:flex">
           {NAV_LINKS.map((link) => {
-            const id = link.href.slice(1);
-            const isActive = active === id;
+            const active = isActive(link.href);
+            const showDot = Boolean(link.indicator) && hasNewEvent;
             return (
               <li key={link.href} className="relative">
-                <a
+                <Link
                   href={link.href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative block rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
-                    isActive
-                      ? "text-brass"
-                      : "text-foreground/85 hover:text-foreground",
+                    "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
+                    active
+                      ? "text-green"
+                      : "text-foreground/85 hover:text-green",
                   )}
                 >
-                  {isActive ? (
+                  {active ? (
                     <motion.span
                       layoutId="navActive"
                       transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                      className="absolute inset-0 -z-10 rounded-full bg-brass/12 ring-1 ring-brass/25"
+                      className="absolute inset-0 -z-10 rounded-full bg-green/12 ring-1 ring-green/25"
                     />
                   ) : null}
                   {t(link.key)}
-                </a>
+                  {showDot ? <NewEventDot label={t("nav.newEvent")} /> : null}
+                </Link>
               </li>
             );
           })}
@@ -209,22 +213,29 @@ export function GlassNavbar() {
                 className="flex flex-col gap-1"
               >
                 {NAV_LINKS.map((link) => {
-                  const isActive = active === link.href.slice(1);
+                  const active = isActive(link.href);
+                  const showDot = Boolean(link.indicator) && hasNewEvent;
                   return (
                     <motion.li key={link.href} variants={fadeUp}>
-                      <a
+                      <Link
                         href={link.href}
                         onClick={() => setOpen(false)}
+                        aria-current={active ? "page" : undefined}
                         className={cn(
                           "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
-                          isActive
-                            ? "bg-brass/15 text-brass"
-                            : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                          active
+                            ? "bg-green/15 text-green"
+                            : "text-foreground/85 hover:bg-muted hover:text-green",
                         )}
                       >
-                        {t(link.key)}
+                        <span className="flex items-center">
+                          {t(link.key)}
+                          {showDot ? (
+                            <NewEventDot label={t("nav.newEvent")} />
+                          ) : null}
+                        </span>
                         <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
-                      </a>
+                      </Link>
                     </motion.li>
                   );
                 })}

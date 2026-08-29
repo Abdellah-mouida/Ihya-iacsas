@@ -21,6 +21,8 @@
   --color-gold-deep: var(--gold-deep);
   --color-emerald: var(--emerald);
   --color-emerald-deep: var(--emerald-deep);
+  --color-green: var(--brand-green);
+  --color-green-strong: var(--brand-green-strong);
   --color-night: var(--night);
   --color-night-deep: var(--night-deep);
   --color-sand: var(--sand);
@@ -105,8 +107,13 @@
   --brass: oklch(0.7 0.11 77);
   --gold: oklch(0.8 0.13 84);
   --gold-deep: oklch(0.58 0.1 72);
-  --emerald: oklch(0.55 0.1 165);
-  --emerald-deep: oklch(0.42 0.08 168);
+  /* Green family tuned to the Ihyaa logo green (sampled ~#0a5417, oklch hue ~147).
+     `emerald` is nudged onto that hue so every existing green accent now reads
+     as the brand green; `brand-green` is the punchier, dedicated accent. */
+  --emerald: oklch(0.52 0.12 150);
+  --emerald-deep: oklch(0.4 0.11 148);
+  --brand-green: oklch(0.44 0.13 146);
+  --brand-green-strong: oklch(0.34 0.1 147);
   --night: oklch(0.2 0.03 265);
   --night-deep: oklch(0.15 0.025 265);
   --sand: oklch(0.95 0.02 85);
@@ -122,6 +129,12 @@
     var(--emerald) 0%,
     var(--brass) 55%,
     var(--gold) 100%
+  );
+  --gradient-green: linear-gradient(
+    135deg,
+    var(--brand-green) 0%,
+    var(--emerald) 55%,
+    var(--brand-green-strong) 100%
   );
 
   --sidebar: oklch(0.985 0.01 85);
@@ -163,8 +176,10 @@
   --brass: oklch(0.74 0.12 79);
   --gold: oklch(0.83 0.14 85);
   --gold-deep: oklch(0.64 0.11 74);
-  --emerald: oklch(0.66 0.11 165);
-  --emerald-deep: oklch(0.5 0.09 168);
+  --emerald: oklch(0.66 0.13 150);
+  --emerald-deep: oklch(0.52 0.11 148);
+  --brand-green: oklch(0.64 0.15 147);
+  --brand-green-strong: oklch(0.52 0.13 147);
   --night: oklch(0.2 0.03 265);
   --night-deep: oklch(0.13 0.02 265);
   --sand: oklch(0.3 0.03 265);
@@ -238,14 +253,14 @@
   * {
     @apply border-border outline-ring/50;
   }
-  /* Smooth light/dark theme transitions across the whole page */
-  *,
-  ::before,
-  ::after {
-    transition-property: background-color, border-color, color, fill, stroke,
-      text-decoration-color;
-    transition-duration: 300ms;
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Theme switching uses the View Transitions API (see ThemeToggle) for a
+     single GPU-composited cross-fade. Transitioning every element janked
+     against the backdrop-filters + WebGL canvas, so we only keep a cheap
+     root-level fade as the fallback for browsers without View Transitions. */
+  .theme-ready body {
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
   html {
     @apply font-sans;
@@ -363,9 +378,21 @@
   .bg-spirit-gradient {
     background-image: var(--gradient-spirit);
   }
+  .bg-green-gradient {
+    background-image: var(--gradient-green);
+  }
+  .text-gradient-green {
+    background: var(--gradient-green);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
   /* React Bits-style shiny text: moving sheen across a gold gradient */
   .text-shine {
-    background: linear-gradient(
+    /* Use background-image (not the `background` shorthand) so the optimizer
+       can't fold background-size in and reset background-clip back to
+       border-box — that bug made the gradient paint the whole box. */
+    background-image: linear-gradient(
       110deg,
       var(--gold) 0%,
       oklch(0.97 0.05 90) 18%,
@@ -376,6 +403,7 @@
     background-size: 220% 100%;
     -webkit-background-clip: text;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
     color: transparent;
     animation: shimmer 6s linear infinite;
   }
@@ -411,7 +439,12 @@
     border-radius: 46% 46% var(--radius-lg) var(--radius-lg) / 26% 26% 0 0;
   }
 
-  /* Subtle Islamic geometric field (masked, tinted, theme-aware) */
+  /* Subtle Islamic geometric field (masked, tinted, theme-aware).
+     The tint is painted as a vertical gradient that starts fully transparent
+     at the section's top edge, ramps to full by ~10% of the height, holds,
+     then mirrors the fade-out over the final ~10%. Because this lives in the
+     texture layer itself (not tied to scroll/time), every textured section
+     melts smoothly into the untextured ones above and below it. */
   .pattern-islamic {
     position: relative;
     isolation: isolate;
@@ -422,13 +455,25 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-color: var(--brass);
+    background-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      var(--brass) 10%,
+      var(--brass) 90%,
+      transparent 100%
+    );
     opacity: 0.13;
     -webkit-mask: url(/patterns/girih.svg) 0 0 / 52px 52px repeat;
     mask: url(/patterns/girih.svg) 0 0 / 52px 52px repeat;
   }
   .dark .pattern-islamic::before {
-    background-color: var(--gold);
+    background-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      var(--gold) 10%,
+      var(--gold) 90%,
+      transparent 100%
+    );
     opacity: 0.1;
   }
 }
@@ -452,5 +497,18 @@
   }
   .cursor-none-fine {
     cursor: none;
+  }
+}
+
+/* View Transition cross-fade for theme switching (top-level, not layered) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }

@@ -1,19 +1,21 @@
 {
   "meta": {
-    "title": "Ihyaa — A Youth Islamic Community",
-    "description": "The Ihyaa youth community: gatherings, activities, and meaningful content bringing young people together across Morocco."
+    "title": "Ihyaa — A Youth Islamic Program",
+    "description": "The Ihyaa youth program: gatherings, activities, and meaningful content bringing young people together across Morocco."
   },
   "nav": {
     "home": "Home",
     "about": "About",
     "activities": "Activities",
     "event": "Event",
+    "events": "Events",
+    "newEvent": "New event available",
     "branches": "Branches",
     "gallery": "Gallery",
     "contact": "Contact",
     "book": "Book now",
     "brand": "Ihyaa",
-    "tagline": "Youth community",
+    "tagline": "Youth program",
     "menu": "Menu"
   },
   "lang": {
@@ -28,7 +30,7 @@
     "dark": "Dark"
   },
   "hero": {
-    "kicker": "Youth community • Morocco",
+    "kicker": "Youth program • Morocco",
     "title": "Ihyaa",
     "subtitle": "Reviving values, uniting hearts, and building a conscious generation — gatherings, activities and meaningful content across Moroccan cities.",
     "ctaPrimary": "Explore events",
@@ -43,7 +45,7 @@
   },
   "about": {
     "kicker": "Who we are",
-    "title": "A community that revives meaning",
+    "title": "A program that revives meaning",
     "p1": "Ihyaa is a youth initiative that revives Islamic values in the hearts of young people through inspiring gatherings, diverse activities, and meaningful content.",
     "p2": "We believe the new generation can drive change when it finds a nurturing space that unites spirit, mind, and action.",
     "quote": "\u201cThe best of people are those most beneficial to others.\u201d",
@@ -81,6 +83,30 @@
     "phone": "0615789337",
     "posterAlt": "Ihyaa Majalis event poster"
   },
+  "events": {
+    "metaTitle": "Events — Ihyaa",
+    "metaDesc": "Upcoming and past gatherings of the Ihyaa youth program.",
+    "kicker": "Events",
+    "title": "Gatherings you can be part of",
+    "desc": "Our upcoming gatherings open for booking — and a look back at where we've been.",
+    "openKicker": "Open for booking",
+    "noneTitle": "No open events right now",
+    "noneDesc": "Check back soon — new gatherings are announced regularly.",
+    "pastKicker": "Archive",
+    "pastTitle": "Past events",
+    "pastDesc": "A glimpse of gatherings that have already taken place.",
+    "endedBadge": "Ended",
+    "newBadge": "New",
+    "pastRetreatTitle": "Winter spiritual retreat",
+    "pastRetreatDate": "December 2025",
+    "pastRetreatLocation": "Taroudant",
+    "pastCupTitle": "Ihyaa Football Cup",
+    "pastCupDate": "August 2025",
+    "pastCupLocation": "Ouled Teima",
+    "pastGatheringTitle": "Ramadan night gathering",
+    "pastGatheringDate": "March 2025",
+    "pastGatheringLocation": "Marrakech"
+  },
   "branches": {
     "kicker": "Where to find us",
     "title": "Ihyaa branches across Morocco",
@@ -102,7 +128,7 @@
     "desc": "Snapshots from our gatherings, activities, and spiritual life.",
     "view": "View image",
     "close": "Close",
-    "altGathering": "Community gathering",
+    "altGathering": "Group gathering",
     "altFootball": "Football activity",
     "altPrayer": "A moment of prayer",
     "altGroup": "Group portrait",
@@ -110,11 +136,22 @@
     "altQuote": "Quote card",
     "altNight": "Evening session"
   },
-  "community": {
-    "kicker": "Community spirit",
+  "cards": {
+    "kicker": "In focus",
+    "title": "Posters & reflections",
+    "desc": "A gentle, looping showcase of Ihyaa's posters, reflections, and journeys.",
+    "altNight": "Evening session poster",
+    "altJourney": "A journey",
+    "altQuote": "Quote card",
+    "prev": "Previous poster",
+    "next": "Next poster",
+    "goTo": "Go to poster {n}"
+  },
+  "program": {
+    "kicker": "Ihyaa Youth Program",
     "title": "Together we revive, together we grow",
     "quote": "\u201cThe believers are but brothers.\u201d",
-    "desc": "Ihyaa is more than activities; it is a bond that unites hearts around one purpose: to live with meaning and leave an impact.",
+    "desc": "The Ihyaa Youth Program is more than activities; it is a bond that unites hearts around one purpose: to live with meaning and leave an impact.",
     "cta": "Join us"
   },
   "contact": {
@@ -143,7 +180,7 @@
     "errMessage": "Please write a message"
   },
   "footer": {
-    "desc": "The Ihyaa youth community — reviving values and building a conscious generation across Morocco.",
+    "desc": "The Ihyaa youth program — reviving values and building a conscious generation across Morocco.",
     "quickLinks": "Quick links",
     "branchesTitle": "Our branches",
     "contactTitle": "Contact",
