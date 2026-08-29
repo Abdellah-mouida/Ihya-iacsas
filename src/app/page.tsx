@@ -2,12 +2,12 @@ import { About } from "@/components/sections/about";
 import { Activities } from "@/components/sections/activities";
 import { Branches } from "@/components/sections/branches";
 import { CardCarousel } from "@/components/sections/card-carousel";
-import { Community } from "@/components/sections/community";
 import { Contact } from "@/components/sections/contact";
 import { Footer } from "@/components/sections/footer";
 import { Gallery } from "@/components/sections/gallery";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { Hero } from "@/components/sections/hero";
+import { Program } from "@/components/sections/program";
 import { WavesBackground } from "@/components/react-bits/waves-background";
 
 export default function Home() {
@@ -27,7 +27,7 @@ export default function Home() {
           <Branches />
           <CardCarousel />
           <Gallery />
-          <Community />
+          <Program />
           <Contact />
         </div>
       </main>

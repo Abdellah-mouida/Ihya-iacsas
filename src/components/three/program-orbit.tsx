@@ -116,7 +116,7 @@ function Cluster() {
   );
 }
 
-export default function CommunityOrbit() {
+export default function ProgramOrbit() {
   return (
     <Canvas
       camera={{ position: [0, 0, 8], fov: 45 }}

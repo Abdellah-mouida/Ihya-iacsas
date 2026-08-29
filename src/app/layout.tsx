@@ -18,9 +18,9 @@ const notoKufi = Noto_Kufi_Arabic({
 });
 
 export const metadata: Metadata = {
-  title: "إحياء — Ihyaa Community",
+  title: "إحياء — Ihyaa Program",
   description:
-    "مجتمع إحياء الشبابي: لقاءات، أنشطة، ومحتوى هادف يجمع الشباب في مدن المغرب.",
+    "برنامج إحياء الشبابي: لقاءات، أنشطة، ومحتوى هادف يجمع الشباب في مدن المغرب.",
 };
 
 export const viewport: Viewport = {
