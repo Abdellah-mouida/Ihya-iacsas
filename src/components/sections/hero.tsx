@@ -29,7 +29,7 @@ export function Hero() {
   return (
     <section
       id="home"
-      className="relative isolate flex min-h-dvh items-center overflow-hidden pt-28 pb-16 text-white"
+      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-16 text-white"
     >
       {/* Photo layer */}
       <div className="absolute inset-0 -z-30">
