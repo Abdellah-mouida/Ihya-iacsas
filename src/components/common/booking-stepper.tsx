@@ -133,7 +133,7 @@ export function BookingStepper() {
     <div className="mx-auto w-full max-w-2xl">
       {/* Back link */}
       <Link
-        href="/#event"
+        href="/events"
         className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-brass"
       >
         <ArrowLeft className="size-4 rtl:rotate-180" />
