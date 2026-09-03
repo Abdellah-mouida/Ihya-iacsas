@@ -13,11 +13,13 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[70vh] items-center overflow-hidden bg-night py-28 text-white sm:py-36"
+      className="relative isolate flex min-h-[70vh] items-center overflow-hidden py-28 text-foreground dark:bg-night dark:text-white sm:py-36"
     >
-      {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here) */}
+      {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here).
+          Transparent in light mode so it blends with the page (texture fades
+          at its own edges); a dark band only in dark mode. */}
       <div className="pattern-islamic absolute inset-0 -z-10" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(233,196,106,0.16),transparent_60%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
       <div
         aria-hidden
         className="bg-brass-gradient animate-float-slow absolute left-1/2 top-1/2 -z-10 size-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.08] blur-3xl"
@@ -32,7 +34,7 @@ export function Program() {
       >
         <motion.span
           variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-md"
+          className="inline-flex items-center gap-2 rounded-full border border-brass/25 bg-card/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white"
         >
           <span className="size-1.5 rounded-full bg-green" />
           {t("program.kicker")}
@@ -58,7 +60,7 @@ export function Program() {
 
         <motion.p
           variants={fadeUp}
-          className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-white/80"
+          className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground dark:text-white/80"
         >
           {t("program.desc")}
         </motion.p>
