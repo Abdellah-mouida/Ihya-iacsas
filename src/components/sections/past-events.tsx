@@ -33,7 +33,7 @@ export function PastEvents() {
             <motion.article
               key={ev.id}
               variants={fadeUp}
-              className="group glass relative flex flex-col overflow-hidden rounded-3xl shadow-layered ring-1 ring-border/60 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-brass/30"
+              className="group glass relative flex flex-col overflow-hidden rounded-3xl shadow-layered ring-1 ring-border/60 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-brass/30"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <Image

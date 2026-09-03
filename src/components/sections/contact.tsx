@@ -147,7 +147,7 @@ export function Contact() {
             initial="hidden"
             whileInView="show"
             viewport={viewportOnce}
-            className="glass-strong relative flex flex-col gap-6 overflow-hidden rounded-3xl p-8 shadow-layered"
+            className="glass-strong group relative flex flex-col gap-6 overflow-hidden rounded-3xl p-8 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30"
           >
             <div className="bg-brass-gradient absolute -right-12 -top-12 size-40 rounded-full opacity-20 blur-3xl" />
             <div>

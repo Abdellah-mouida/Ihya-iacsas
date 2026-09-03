@@ -75,7 +75,7 @@ export function FeaturedEvent() {
 
           <motion.div
             variants={fadeUp}
-            className="glass-strong w-full rounded-3xl p-6 shadow-layered sm:p-8"
+            className="glass-strong w-full rounded-3xl p-6 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30 sm:p-8"
           >
             <h3 className="font-heading text-xl font-semibold text-balance sm:text-2xl">
               {t("event.name")}
