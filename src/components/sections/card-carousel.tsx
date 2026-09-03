@@ -37,24 +37,21 @@ const TRANSITION = { duration: 0.7, ease: EASE };
  * we snap (un-animated) back onto the matching real slide.
  */
 export function CardCarousel() {
-  const { t, dir } = useLocale();
+  const { t } = useLocale();
   const reduceMotion = useReducedMotion();
-  const isRtl = dir === "rtl";
 
   const items = CARD_POSTERS;
   const n = items.length;
 
-  // Clone-padded track: [last-1, last, ...reals, first, first+1]
-  const extended = useMemo(
-    () => [
-      items[n - 2],
-      items[n - 1],
-      ...items,
-      items[0],
-      items[1],
-    ],
-    [items, n],
-  );
+  // Clone-padded track: [last-1, last, ...reals, first, first+1]. Access via a
+  // modular helper so clone construction is safe for ANY list length (a short
+  // list no longer yields `undefined` src values, which previously corrupted
+  // the loop). Ordering is unchanged for the normal (>=2 item) case.
+  const extended = useMemo(() => {
+    if (n === 0) return [];
+    const at = (idx: number) => items[((idx % n) + n) % n];
+    return [at(n - 2), at(n - 1), ...items, at(0), at(1)];
+  }, [items, n]);
   const REAL_START = 2; // reals occupy indices 2 .. n+1
 
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -135,8 +132,8 @@ export function CardCarousel() {
   function endPointer(e: ReactPointerEvent) {
     if (start.current && didSwipe.current) {
       const dx = e.clientX - start.current.x;
-      const forward = isRtl ? dx > 0 : dx < 0;
-      go(forward ? 1 : -1);
+      // The track is laid out LTR (see below), so dragging left always advances.
+      go(dx < 0 ? 1 : -1);
     }
     start.current = null;
     setDragging(false);
@@ -165,9 +162,12 @@ export function CardCarousel() {
           onFocusCapture={() => setHovering(true)}
           onBlurCapture={() => setHovering(false)}
         >
-          {/* Stage */}
+          {/* Stage — forced LTR so the translate math is direction-agnostic
+              (the site is RTL by default; an RTL flex track would lay slides
+              out right-to-left and invert the loop direction + mis-center). */}
           <div
             ref={viewportRef}
+            dir="ltr"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={endPointer}
@@ -211,21 +211,13 @@ export function CardCarousel() {
                         alt={t(item.altKey)}
                         fill
                         draggable={false}
+                        loading="eager"
                         sizes="(max-width: 640px) 66vw, 360px"
                         className="object-cover"
                       />
                       {/* Warm overlay + gold inner frame (poster treatment) */}
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-night/45 via-transparent to-transparent" />
                       <div className="pointer-events-none absolute inset-2.5 rounded-[1.4rem] ring-1 ring-inset ring-gold/35" />
-                      {/* Caption on the active poster */}
-                      <figcaption
-                        className={cn(
-                          "absolute inset-x-0 bottom-0 p-4 text-start text-sm font-medium text-white transition-opacity duration-500",
-                          isCenter ? "opacity-100" : "opacity-0",
-                        )}
-                      >
-                        {t(item.altKey)}
-                      </figcaption>
                     </div>
                   </motion.figure>
                 );
