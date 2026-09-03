@@ -8,7 +8,13 @@ import { useEffect, useState } from "react";
 import { useLocale } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({
+  className,
+  onDark = false,
+}: {
+  className?: string;
+  onDark?: boolean;
+}) {
   const { resolvedTheme, setTheme } = useTheme();
   const { t } = useLocale();
   const [mounted, setMounted] = useState(false);
@@ -40,7 +46,10 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={t("theme.toggle")}
       onClick={toggleTheme}
       className={cn(
-        "glass group relative inline-flex size-10 items-center justify-center rounded-full text-foreground/80 transition-all duration-300 hover:scale-110 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "group relative inline-flex size-10 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        onDark
+          ? "text-white/90 hover:text-white"
+          : "glass text-foreground/80",
         className,
       )}
     >
