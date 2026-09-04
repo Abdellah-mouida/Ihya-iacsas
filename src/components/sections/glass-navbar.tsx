@@ -131,7 +131,7 @@ export function GlassNavbar() {
               "font-heading text-xl font-bold transition-colors duration-300",
               transparentTop
                 ? "text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.45)]"
-                : "text-gradient-brass",
+                : "text-black dark:text-gradient-brass",
             )}
           >
             {t("nav.brand")}
@@ -156,7 +156,7 @@ export function GlassNavbar() {
                         : "text-green"
                       : transparentTop
                         ? "text-white/90 hover:text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]"
-                        : "text-foreground/85 hover:text-green",
+                        : "text-black/85 dark:text-foreground/85 hover:text-green",
                   )}
                 >
                   {active ? (
@@ -194,16 +194,16 @@ export function GlassNavbar() {
           </Button>
 
           {/* Animated hamburger */}
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-label={t("nav.menu")}
-            aria-expanded={open}
-            className={cn(
-              "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
-              transparentTop ? "text-white" : "glass text-foreground",
-            )}
-          >
+<button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-label={t("nav.menu")}
+              aria-expanded={open}
+              className={cn(
+                "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
+                transparentTop ? "text-white" : "glass text-black dark:text-foreground",
+              )}
+            >
             <span className="relative block size-5 text-current">
               <motion.span
                 variants={hamburgerTop}
@@ -266,7 +266,7 @@ export function GlassNavbar() {
                           "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
                           active
                             ? "bg-green/15 text-green"
-                            : "text-foreground/85 hover:bg-muted hover:text-green",
+                            : "text-black/85 dark:text-foreground/85 hover:bg-muted hover:text-green",
                         )}
                       >
                         <span className="flex items-center">

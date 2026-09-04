@@ -48,14 +48,14 @@ export function Hero() {
       {/* React Bits aurora — warm animated light over the photo */}
       <AuroraBackground className="-z-20 opacity-50 mix-blend-screen dark:opacity-60" />
 
-      {/* Inner vignette so the photo edges melt into the section (theme-aware) */}
+      {/* Inner vignette: strong at corners/edges, transparent at center (theme-aware) */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_180px_70px_var(--background)]"
+        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_200px_80px_var(--background)] dark:[box-shadow:inset_0_0_200px_80px_var(--night)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_42%,var(--background)_100%)] opacity-80"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--background)_100%)] opacity-70 dark:bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--night)_100%)] dark:opacity-70"
       />
 
       {/* Ambient drifting particles */}

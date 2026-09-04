@@ -5,21 +5,10 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Points, ShaderMaterial } from "three";
 
-const COUNT = 130;
+const COUNT = 100;
 
-// Warm brand palettes. Dark mode uses bright motes with additive glow; light
-// mode uses deeper brass/gold/green with normal blending so they stay visible
-// on the light hero.
-const PALETTE_DARK = [
-  new THREE.Color("#f0d69a"),
-  new THREE.Color("#d9b25a"),
-  new THREE.Color("#fff4e0"),
-];
-const PALETTE_LIGHT = [
-  new THREE.Color("#9a6a1e"),
-  new THREE.Color("#b6832c"),
-  new THREE.Color("#2f7d54"),
-];
+// Yellow particle color for both themes (consistent across light/dark)
+const PARTICLE_COLOR = new THREE.Color("#f5d742");
 
 const vertexShader = /* glsl */ `
   attribute float aAlpha;
@@ -96,19 +85,15 @@ function createBuffers(count: number): Buffers {
     vy[i] = (Math.random() - 0.5) * 0.02 - 0.012; // gentle upward drift
     phase[i] = Math.random() * Math.PI * 2;
     base[i] = 0.4 + Math.random() * 0.55;
-    sizes[i] = 4 + Math.random() * 9;
+    sizes[i] = 3; // uniform smaller size
+  }
+  // Paint all particles yellow
+  for (let i = 0; i < count; i++) {
+    colors[i * 3] = PARTICLE_COLOR.r;
+    colors[i * 3 + 1] = PARTICLE_COLOR.g;
+    colors[i * 3 + 2] = PARTICLE_COLOR.b;
   }
   return { nx, ny, vx, vy, phase, base, positions, alphas, sizes, colors };
-}
-
-function paintColors(colors: Float32Array, count: number, dark: boolean) {
-  const palette = dark ? PALETTE_DARK : PALETTE_LIGHT;
-  for (let i = 0; i < count; i++) {
-    const c = palette[i % palette.length];
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
-  }
 }
 
 const isDark = () =>
@@ -124,21 +109,15 @@ function ParticleField() {
   const buffersRef = useRef<Buffers | null>(null);
   if (buffersRef.current === null) {
     buffersRef.current = createBuffers(COUNT);
-    paintColors(buffersRef.current.colors, COUNT, isDark());
   }
   const buffers = buffersRef.current;
 
   const uniforms = useMemo(() => ({ uPixelRatio: { value: 1 } }), []);
 
-  // Repaint mote colors + blend mode when the theme changes.
+  // Update blending mode when theme changes (additive for dark, normal for light)
   useEffect(() => {
     const apply = () => {
       const dark = isDark();
-      paintColors(buffers.colors, COUNT, dark);
-      const colorAttr = pointsRef.current?.geometry.getAttribute("aColor") as
-        | THREE.BufferAttribute
-        | undefined;
-      if (colorAttr) colorAttr.needsUpdate = true;
       if (matRef.current) {
         matRef.current.blending = dark
           ? THREE.AdditiveBlending
@@ -153,7 +132,7 @@ function ParticleField() {
       attributeFilter: ["class"],
     });
     return () => observer.disconnect();
-  }, [buffers]);
+  }, []);
 
   useFrame((state, delta) => {
     const pts = pointsRef.current;
