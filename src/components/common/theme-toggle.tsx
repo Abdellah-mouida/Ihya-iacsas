@@ -49,7 +49,7 @@ export function ThemeToggle({
         "group relative inline-flex size-10 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         onDark
           ? "text-white/90 hover:text-white"
-          : "glass text-foreground/80",
+          : "glass text-black dark:text-foreground/80",
         className,
       )}
     >

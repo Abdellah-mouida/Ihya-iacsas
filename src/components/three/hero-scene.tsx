@@ -85,7 +85,7 @@ function createBuffers(count: number): Buffers {
     vy[i] = (Math.random() - 0.5) * 0.02 - 0.012; // gentle upward drift
     phase[i] = Math.random() * Math.PI * 2;
     base[i] = 0.4 + Math.random() * 0.55;
-    sizes[i] = 3; // uniform smaller size
+    sizes[i] = 6; // uniform size (reduced from original 4-13 range, but clearly visible)
   }
   // Paint all particles yellow
   for (let i = 0; i < count; i++) {

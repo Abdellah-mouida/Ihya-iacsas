@@ -21,7 +21,7 @@ export function LanguageSwitcher({
       aria-label={t("lang.toggle")}
       className={cn(
         "inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        onDark ? "text-white/90 hover:text-white" : "glass text-foreground/80",
+        onDark ? "text-white/90 hover:text-white" : "glass text-black dark:text-foreground/80",
         className,
       )}
     >
