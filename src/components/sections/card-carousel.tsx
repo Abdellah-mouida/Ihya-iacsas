@@ -12,6 +12,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { getCarouselPosts } from "@/app/actions/carousel";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
 import { CARD_POSTERS } from "@/lib/content";
@@ -40,7 +41,24 @@ export function CardCarousel() {
   const { t } = useLocale();
   const reduceMotion = useReducedMotion();
 
-  const items = CARD_POSTERS;
+  const [dbItems, setDbItems] = useState<{ src: string; altKey: string; w: number; h: number }[]>([]);
+
+  useEffect(() => {
+    getCarouselPosts(true).then((res) => {
+      if (res.success && res.posts && res.posts.length > 0) {
+        setDbItems(
+          res.posts.map((p) => ({
+            src: p.imageUrl,
+            altKey: "cards.altNight",
+            w: 512,
+            h: 640,
+          })),
+        );
+      }
+    });
+  }, []);
+
+  const items = dbItems.length > 0 ? dbItems : CARD_POSTERS;
   const n = items.length;
 
   // Clone-padded track: [last-1, last, ...reals, first, first+1]. Access via a

@@ -234,5 +234,18 @@
     "errCard": "Invalid card number",
     "errExpiry": "Invalid date",
     "errCvc": "Invalid security code"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "portal": "Admin Portal",
+    "overview": "Overview",
+    "carousel": "Carousel",
+    "gallery": "Gallery",
+    "events": "Events",
+    "bookings": "Bookings",
+    "theme": "Theme & Language",
+    "backToSite": "Back to site",
+    "authNoticeTitle": "Security Warning:",
+    "authNoticeBody": "This admin route is currently unauthenticated for dev testing. Add NextAuth before production deployment."
   }
 }

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
+import { getGalleryPhotos } from "@/app/actions/gallery";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
@@ -19,11 +20,42 @@ const slideVariants = {
 };
 
 export function GalleryLightbox() {
-  const { t, dir } = useLocale();
+  const { t, locale, dir } = useLocale();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const count = GALLERY.length;
+
+  const [dbItems, setDbItems] = useState<{ src: string; caption: string; w: number; h: number }[]>([]);
+
+  useEffect(() => {
+    getGalleryPhotos().then((res) => {
+      if (res.success && res.photos && res.photos.length > 0) {
+        setDbItems(
+          res.photos.map((p) => ({
+            src: p.imageUrl,
+            caption:
+              locale === "ar"
+                ? p.captionAr || p.captionEn || "صورة من إحياء"
+                : p.captionEn || p.captionAr || "Ihyaa moment",
+            w: 1280,
+            h: 960,
+          })),
+        );
+      }
+    });
+  }, [locale]);
+
+  const items =
+    dbItems.length > 0
+      ? dbItems
+      : GALLERY.map((g) => ({
+          src: g.src,
+          caption: t(g.altKey),
+          w: g.w,
+          h: g.h,
+        }));
+
+  const count = items.length;
 
   const go = useCallback(
     (delta: number) => {
@@ -43,7 +75,7 @@ export function GalleryLightbox() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, go, dir]);
 
-  const current = GALLERY[index];
+  const current = items[index];
 
   return (
     <>
@@ -54,7 +86,7 @@ export function GalleryLightbox() {
         viewport={viewportOnce}
         className="columns-2 gap-4 md:columns-3 [&>*]:mb-4"
       >
-        {GALLERY.map((item, i) => (
+        {items.map((item, i) => (
           // Non-button wrapper; inner button is the lightbox trigger.
           <motion.div
             key={item.src}
@@ -73,7 +105,7 @@ export function GalleryLightbox() {
             >
               <Image
                 src={item.src}
-                alt={t(item.altKey)}
+                alt={item.caption}
                 width={item.w}
                 height={item.h}
                 sizes="(max-width: 768px) 50vw, 33vw"
@@ -83,7 +115,7 @@ export function GalleryLightbox() {
                 <ZoomIn className="size-7 text-white" />
               </span>
               <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-night/80 to-transparent p-3 text-start text-xs font-medium text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                {t(item.altKey)}
+                {item.caption}
               </span>
             </button>
           </motion.div>
@@ -93,7 +125,7 @@ export function GalleryLightbox() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl border-brass/30 bg-background/95 p-2 sm:max-w-3xl">
           <DialogTitle className="sr-only">
-            {current ? t(current.altKey) : ""}
+            {current ? current.caption : ""}
           </DialogTitle>
 
           <div className="relative h-[60vh] w-full overflow-hidden rounded-xl sm:h-[72vh]">
@@ -112,7 +144,7 @@ export function GalleryLightbox() {
                 >
                   <Image
                     src={current.src}
-                    alt={t(current.altKey)}
+                    alt={current.caption}
                     fill
                     priority
                     sizes={LIGHTBOX_SIZES}
@@ -122,11 +154,10 @@ export function GalleryLightbox() {
               ) : null}
             </AnimatePresence>
 
-            {/* Preload every gallery image at the lightbox size (same box → same
-                variant) so navigation is always instant, never a slow load. */}
+            {/* Preload every gallery image at the lightbox size */}
             {open ? (
               <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-0">
-                {GALLERY.map((item, i) =>
+                {items.map((item, i) =>
                   i === index ? null : (
                     <Image
                       key={item.src}
@@ -162,7 +193,7 @@ export function GalleryLightbox() {
             </button>
           </div>
           <p className="pt-1 pb-2 text-center text-sm text-muted-foreground">
-            {current ? t(current.altKey) : ""}
+            {current ? current.caption : ""}
           </p>
         </DialogContent>
       </Dialog>

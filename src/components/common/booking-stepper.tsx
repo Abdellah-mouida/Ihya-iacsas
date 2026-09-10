@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
+import { createBooking } from "@/app/actions/bookings";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,11 +98,24 @@ export function BookingStepper() {
     }
   }
 
-  function submitPayment(ev: FormEvent) {
+  async function submitPayment(ev: FormEvent) {
     ev.preventDefault();
     if (validatePayment()) {
       setErrors({});
-      setConfirmationRef(makeRef());
+      // Create real database booking
+      const res = await createBooking({
+        eventId: "majlis-ihyaa-2026",
+        fullName: details.name,
+        email: details.email,
+        phone: details.phone,
+        quantity: details.quantity,
+      });
+
+      if (res.success && res.confirmationNumber) {
+        setConfirmationRef(res.confirmationNumber);
+      } else {
+        setConfirmationRef(makeRef());
+      }
       setStep(3);
     }
   }

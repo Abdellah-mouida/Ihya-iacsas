@@ -11,7 +11,8 @@ import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { EVENT, IMAGES, NAV_LINKS, hasNewEvent } from "@/lib/content";
+import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/lib/content";
+import { getPublicEvents } from "@/app/actions/events";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,15 @@ export function GlassNavbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
+
+  useEffect(() => {
+    getPublicEvents().then((res) => {
+      if (res.success) {
+        setHasNewEvent(res.hasNew);
+      }
+    });
+  }, []);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
