@@ -131,21 +131,18 @@ async function main() {
           fullName: "حمزة بناني",
           email: "hamza.bennani@example.com",
           phone: "0661234567",
-          quantity: 2,
         },
         {
           eventId: upcomingEvent.id,
           fullName: "عمر السملالي",
           email: "omar.semlali@example.com",
           phone: "0669876543",
-          quantity: 1,
         },
         {
           eventId: upcomingEvent.id,
           fullName: "ياسين التازي",
           email: "yassine.tazi@example.com",
           phone: "0664567890",
-          quantity: 3,
         },
       ],
     });

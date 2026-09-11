@@ -18,7 +18,11 @@ export async function getEvents() {
     return { success: true, events };
   } catch (error) {
     console.error("Error fetching events:", error);
-    return { success: false, error: "Failed to fetch events", events: [] };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch events",
+      events: [],
+    };
   }
 }
 
@@ -37,7 +41,7 @@ export async function getPublicEvents() {
     console.error("Error fetching public events:", error);
     return {
       success: false,
-      error: "Failed to fetch events",
+      error: error instanceof Error ? error.message : "Failed to fetch events",
       events: [],
       openEvents: [],
       pastEvents: [],
@@ -48,41 +52,51 @@ export async function getPublicEvents() {
 
 export async function createEvent(formData: FormData) {
   try {
-    const titleAr = formData.get("titleAr") as string;
-    const titleEn = formData.get("titleEn") as string;
-    const descriptionAr = formData.get("descriptionAr") as string;
-    const descriptionEn = formData.get("descriptionEn") as string;
-    const dateStr = formData.get("date") as string;
-    const time = formData.get("time") as string;
-    const location = formData.get("location") as string;
+    const titleAr = (formData.get("titleAr") as string)?.trim();
+    const titleEn = (formData.get("titleEn") as string)?.trim();
+    const descriptionAr = (formData.get("descriptionAr") as string)?.trim() || "";
+    const descriptionEn = (formData.get("descriptionEn") as string)?.trim() || "";
+    const dateStr = (formData.get("date") as string)?.trim();
+    const time = (formData.get("time") as string)?.trim() || "18:00";
+    const location = (formData.get("location") as string)?.trim();
     const isNew = formData.get("isNew") === "true" || formData.get("isNew") === "on";
     const bookingOpen = formData.get("bookingOpen") === "true" || formData.get("bookingOpen") === "on";
 
     const file = formData.get("image") as File | null;
-    let posterUrl = formData.get("posterUrl") as string | null;
+    let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
 
     if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
+      } catch (uploadErr) {
+        if (!posterUrl) {
+          const errMsg =
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : "Event poster upload failed";
+          return { success: false, error: errMsg };
+        }
+      }
     }
 
     if (!titleAr || !titleEn || !dateStr || !location) {
-      return { success: false, error: "Title, Date, and Location are required" };
+      return { success: false, error: "Event Title (Ar & En), Date, and Location are required." };
     }
 
     if (!posterUrl) {
-      posterUrl = "/images/event-poster.jpg"; // Default fallback
+      posterUrl = "/images/event-poster.jpg"; // Default fallback poster
     }
 
     const event = await prisma.event.create({
       data: {
         titleAr,
         titleEn,
-        descriptionAr: descriptionAr || "",
-        descriptionEn: descriptionEn || "",
+        descriptionAr,
+        descriptionEn,
         date: new Date(dateStr),
-        time: time || "18:00",
+        time,
         location,
         posterUrl,
         isNew,
@@ -98,23 +112,27 @@ export async function createEvent(formData: FormData) {
     return { success: true, event };
   } catch (error) {
     console.error("Error creating event:", error);
-    return { success: false, error: "Failed to create event" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save event to database",
+    };
   }
 }
 
 export async function updateEvent(id: string, formData: FormData) {
   try {
-    const titleAr = formData.get("titleAr") as string;
-    const titleEn = formData.get("titleEn") as string;
-    const descriptionAr = formData.get("descriptionAr") as string;
-    const descriptionEn = formData.get("descriptionEn") as string;
-    const dateStr = formData.get("date") as string;
-    const time = formData.get("time") as string;
-    const location = formData.get("location") as string;
+    const titleAr = (formData.get("titleAr") as string)?.trim();
+    const titleEn = (formData.get("titleEn") as string)?.trim();
+    const descriptionAr = (formData.get("descriptionAr") as string)?.trim() || "";
+    const descriptionEn = (formData.get("descriptionEn") as string)?.trim() || "";
+    const dateStr = (formData.get("date") as string)?.trim();
+    const time = (formData.get("time") as string)?.trim();
+    const location = (formData.get("location") as string)?.trim();
     const isNew = formData.get("isNew") === "true" || formData.get("isNew") === "on";
     const bookingOpen = formData.get("bookingOpen") === "true" || formData.get("bookingOpen") === "on";
 
     const file = formData.get("image") as File | null;
+    let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
 
     const dataToUpdate: Record<string, unknown> = {
       titleAr,
@@ -129,9 +147,22 @@ export async function updateEvent(id: string, formData: FormData) {
     };
 
     if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      dataToUpdate.posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        dataToUpdate.posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
+      } catch (uploadErr) {
+        if (posterUrl) {
+          dataToUpdate.posterUrl = posterUrl;
+        } else {
+          return {
+            success: false,
+            error: uploadErr instanceof Error ? uploadErr.message : "Upload failed",
+          };
+        }
+      }
+    } else if (posterUrl) {
+      dataToUpdate.posterUrl = posterUrl;
     }
 
     const event = await prisma.event.update({
@@ -147,7 +178,10 @@ export async function updateEvent(id: string, formData: FormData) {
     return { success: true, event };
   } catch (error) {
     console.error("Error updating event:", error);
-    return { success: false, error: "Failed to update event" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update event",
+    };
   }
 }
 
@@ -166,7 +200,10 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
     return { success: true, event };
   } catch (error) {
     console.error("Error toggling event status:", error);
-    return { success: false, error: "Failed to toggle event status" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to toggle event status",
+    };
   }
 }
 
@@ -184,6 +221,9 @@ export async function deleteEvent(id: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting event:", error);
-    return { success: false, error: "Failed to delete event" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete event",
+    };
   }
 }

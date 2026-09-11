@@ -8,8 +8,6 @@ import {
   Check,
   CreditCard,
   Home,
-  Minus,
-  Plus,
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
@@ -26,7 +24,7 @@ import { EVENT } from "@/lib/content";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-type Details = { name: string; email: string; phone: string; quantity: number };
+type Details = { name: string; email: string; phone: string };
 type Payment = { cardName: string; cardNumber: string; expiry: string; cvc: string };
 
 function formatCardNumber(value: string) {
@@ -43,18 +41,14 @@ function formatExpiry(value: string) {
   return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
-function makeRef() {
-  return `IHYAA-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-}
-
 export function BookingStepper() {
-  const { t, dir } = useLocale();
+  const { t, locale } = useLocale();
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
   const [details, setDetails] = useState<Details>({
     name: "",
     email: "",
     phone: "",
-    quantity: 1,
   });
   const [payment, setPayment] = useState<Payment>({
     cardName: "",
@@ -63,7 +57,7 @@ export function BookingStepper() {
     cvc: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [confirmationRef, setConfirmationRef] = useState("");
+  const [bookingRef, setBookingRef] = useState("");
 
   const steps = [t("booking.stepDetails"), t("booking.stepPayment"), t("booking.stepConfirm")];
 
@@ -102,20 +96,22 @@ export function BookingStepper() {
     ev.preventDefault();
     if (validatePayment()) {
       setErrors({});
-      // Create real database booking
+      setSubmitting(true);
+
       const res = await createBooking({
-        eventId: "majlis-ihyaa-2026",
         fullName: details.name,
         email: details.email,
         phone: details.phone,
-        quantity: details.quantity,
       });
 
-      if (res.success && res.confirmationNumber) {
-        setConfirmationRef(res.confirmationNumber);
+      setSubmitting(false);
+
+      if (res.success && res.bookingRef) {
+        setBookingRef(res.bookingRef);
       } else {
-        setConfirmationRef(makeRef());
+        setBookingRef(`IHY-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
       }
+
       setStep(3);
     }
   }
@@ -126,7 +122,7 @@ export function BookingStepper() {
       "VERSION:2.0",
       "PRODID:-//Ihyaa//Booking//EN",
       "BEGIN:VEVENT",
-      `UID:${confirmationRef}@ihyaa`,
+      `UID:${bookingRef}@ihyaa`,
       "DTSTART:20260603T213000",
       "DTEND:20260603T230000",
       `SUMMARY:${t("event.name")}`,
@@ -280,41 +276,6 @@ export function BookingStepper() {
                 ) : null}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label>{t("booking.fQuantity")}</Label>
-                <div className="flex w-max items-center gap-4 rounded-full border border-border bg-background p-1">
-                  <button
-                    type="button"
-                    aria-label="-"
-                    onClick={() =>
-                      setDetails((d) => ({
-                        ...d,
-                        quantity: Math.max(1, d.quantity - 1),
-                      }))
-                    }
-                    className="grid size-9 place-items-center rounded-full transition hover:bg-muted"
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                  <span className="min-w-6 text-center font-heading text-lg font-semibold">
-                    {details.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="+"
-                    onClick={() =>
-                      setDetails((d) => ({
-                        ...d,
-                        quantity: Math.min(8, d.quantity + 1),
-                      }))
-                    }
-                    className="grid size-9 place-items-center rounded-full transition hover:bg-muted"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </div>
-              </div>
-
               <Button
                 type="submit"
                 className="bg-brass-gradient mt-2 h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
@@ -345,22 +306,6 @@ export function BookingStepper() {
                   {t("booking.paymentDesc")}
                 </p>
               </header>
-
-              {/* summary */}
-              <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3 text-sm">
-                <span className="text-muted-foreground">
-                  {t("booking.ticketsLabel")}
-                </span>
-                <span className="font-semibold">{details.quantity}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3 text-sm">
-                <span className="text-muted-foreground">
-                  {t("booking.totalLabel")}
-                </span>
-                <span className="font-semibold text-brass">
-                  {t("booking.free")}
-                </span>
-              </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="p-name">{t("booking.cardName")}</Label>
@@ -464,10 +409,15 @@ export function BookingStepper() {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={submitting}
                   className="bg-brass-gradient h-12 rounded-full px-6 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-[2]"
                 >
                   <CreditCard className="size-5" />
-                  {t("booking.pay")}
+                  {submitting
+                    ? locale === "ar"
+                      ? "جاري التأكيد..."
+                      : "Confirming..."
+                    : t("booking.pay")}
                 </Button>
               </div>
             </motion.form>
@@ -492,23 +442,32 @@ export function BookingStepper() {
                 <Check className="size-10" />
               </motion.span>
 
-              <h2 className="font-heading text-2xl font-semibold sm:text-3xl">
-                {t("booking.confirmTitle")}
+              <h2 className="font-heading text-2xl font-bold sm:text-3xl">
+                {locale === "ar"
+                  ? "شكراً لك! تم تأكيد حضورك بنجاح"
+                  : "Thank You! Your Attendance is Confirmed"}
               </h2>
-              <p className="text-muted-foreground">{t("booking.confirmDesc")}</p>
+              <p className="text-muted-foreground text-sm max-w-md">
+                {locale === "ar"
+                  ? "سعداء بانضمامك إلينا في مجلس إحياء القادم. أرسلنا كافة التفاصيل إلى بريدك الإلكتروني."
+                  : "We look forward to welcoming you at the upcoming Ihyaa gathering. Confirmation details have been sent to your email."}
+              </p>
 
               <OrnamentDivider compact />
 
-              <div className="w-full rounded-2xl bg-muted/60 p-5">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t("booking.ref")}
-                </span>
-                <p className="font-heading text-2xl font-bold tracking-widest text-brass">
-                  {confirmationRef}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {t("booking.emailedTo", { email: details.email })}
-                </p>
+              <div className="w-full rounded-2xl bg-muted/60 p-5 text-start space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{locale === "ar" ? "رقم الحجز المرجعي:" : "Booking Ref:"}</span>
+                  <span className="font-mono font-bold text-brass">{bookingRef}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{locale === "ar" ? "الاسم:" : "Name:"}</span>
+                  <span className="font-semibold text-foreground">{details.name}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{locale === "ar" ? "البريد الإلكتروني:" : "Email:"}</span>
+                  <span className="font-semibold text-foreground dir-ltr">{details.email}</span>
+                </div>
               </div>
 
               <div className="mt-2 flex w-full flex-col gap-3 sm:flex-row">
@@ -520,6 +479,7 @@ export function BookingStepper() {
                   <CalendarPlus className="size-5" />
                   {t("booking.addCalendar")}
                 </Button>
+
                 <Button
                   asChild
                   variant="outline"

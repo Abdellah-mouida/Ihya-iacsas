@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import {
   createCarouselPost,
@@ -48,6 +49,8 @@ export default function AdminCarouselPage() {
     const res = await getCarouselPosts();
     if (res.success && res.posts) {
       setPosts(res.posts as unknown as CarouselItem[]);
+    } else if (res.error) {
+      toast.error(res.error);
     }
     setLoading(false);
   };
@@ -57,11 +60,18 @@ export default function AdminCarouselPage() {
   }, []);
 
   const handleToggleActive = async (id: string, currentActive: boolean) => {
-    // Optimistic UI update
     setPosts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, active: !currentActive } : p)),
     );
-    await toggleCarouselActive(id, !currentActive);
+    const res = await toggleCarouselActive(id, !currentActive);
+    if (res.success) {
+      toast.success(
+        locale === "ar" ? "تم تحديث حالة الملصق" : "Poster status updated",
+      );
+    } else {
+      toast.error(res.error || "Failed to toggle poster status");
+      fetchPosts();
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -76,7 +86,13 @@ export default function AdminCarouselPage() {
     }
 
     setPosts((prev) => prev.filter((p) => p.id !== id));
-    await deleteCarouselPost(id);
+    const res = await deleteCarouselPost(id);
+    if (res.success) {
+      toast.success(locale === "ar" ? "تم حذف الملصق بنجاح" : "Poster deleted successfully");
+    } else {
+      toast.error(res.error || "Failed to delete poster");
+      fetchPosts();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -85,17 +101,32 @@ export default function AdminCarouselPage() {
 
     const formData = new FormData(e.currentTarget);
 
+    let res;
     if (editingPost) {
-      await updateCarouselPost(editingPost.id, formData);
+      res = await updateCarouselPost(editingPost.id, formData);
     } else {
-      await createCarouselPost(formData);
+      res = await createCarouselPost(formData);
     }
 
     setSubmitting(false);
-    setModalOpen(false);
-    setEditingPost(null);
-    setPreviewUrl(null);
-    fetchPosts();
+
+    if (res.success) {
+      toast.success(
+        editingPost
+          ? locale === "ar"
+            ? "تم تحديث الملصق بنجاح"
+            : "Poster updated successfully"
+          : locale === "ar"
+          ? "تم إضافة الملصق الجديد بنجاح"
+          : "Poster created successfully",
+      );
+      setModalOpen(false);
+      setEditingPost(null);
+      setPreviewUrl(null);
+      fetchPosts();
+    } else {
+      toast.error(res.error || "Failed to save carousel poster");
+    }
   };
 
   const openAddModal = () => {
@@ -111,15 +142,17 @@ export default function AdminCarouselPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-w-0">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-brass font-semibold text-xs uppercase tracking-wider mb-1">
-            <Sparkles className="size-4" />
-            <span>{locale === "ar" ? "إدارة الواجهة" : "Homepage Showcase"}</span>
+          <div className="flex items-center gap-2 text-brass font-semibold text-xs uppercase tracking-wider mb-1 shrink-0">
+            <Sparkles className="size-4 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "إدارة الواجهة" : "Homepage Showcase"}
+            </span>
           </div>
-          <h1 className="font-heading text-3xl font-extrabold text-foreground">
+          <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight whitespace-nowrap">
             {locale === "ar" ? "شريط الملصقات (Card Carousel)" : "Carousel Posters"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -129,22 +162,24 @@ export default function AdminCarouselPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             onClick={fetchPosts}
             variant="outline"
-            className="rounded-xl glass gap-2"
+            className="rounded-xl glass gap-2 h-10 px-4 text-sm font-semibold"
           >
-            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            <span>{locale === "ar" ? "تحديث" : "Refresh"}</span>
+            <RefreshCw className={`size-4 shrink-0 ${loading ? "animate-spin" : ""}`} />
+            <span className="whitespace-nowrap">{locale === "ar" ? "تحديث" : "Refresh"}</span>
           </Button>
 
           <Button
             onClick={openAddModal}
-            className="bg-brass-gradient text-night rounded-xl px-5 font-semibold shadow-layered hover:opacity-95"
+            className="bg-brass-gradient text-night rounded-xl px-5 h-10 font-semibold shadow-layered hover:opacity-95 text-sm"
           >
-            <Plus className="size-4 me-1.5" />
-            <span>{locale === "ar" ? "إضافة ملصق" : "Add Poster"}</span>
+            <Plus className="size-4 me-1.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "إضافة ملصق" : "Add Poster"}
+            </span>
           </Button>
         </div>
       </div>
@@ -156,7 +191,7 @@ export default function AdminCarouselPage() {
         </div>
       ) : posts.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center space-y-4">
-          <ImageIcon className="size-12 text-brass/50 mx-auto" />
+          <ImageIcon className="size-12 text-brass/50 mx-auto shrink-0" />
           <h3 className="font-heading text-lg font-bold text-foreground">
             {locale === "ar" ? "لا توجد ملصقات حالياً" : "No Posters Found"}
           </h3>
@@ -165,9 +200,11 @@ export default function AdminCarouselPage() {
               ? "قم بإضافة ملصق جديد لبيانه في شريط الصفحة الرئيسية."
               : "Add a new poster to display in the main homepage carousel."}
           </p>
-          <Button onClick={openAddModal} className="bg-brass-gradient text-night rounded-full px-6">
-            <Plus className="size-4 me-1.5" />
-            {locale === "ar" ? "إضافة أول ملصق" : "Add First Poster"}
+          <Button onClick={openAddModal} className="bg-brass-gradient text-night rounded-full px-6 text-sm h-10 font-semibold">
+            <Plus className="size-4 me-1.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "إضافة أول ملصق" : "Add First Poster"}
+            </span>
           </Button>
         </div>
       ) : (
@@ -178,7 +215,7 @@ export default function AdminCarouselPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="glass rounded-2xl overflow-hidden border border-border/60 shadow-layered group flex flex-col justify-between"
+              className="glass rounded-2xl overflow-hidden border border-border/60 shadow-layered group flex flex-col justify-between min-w-0"
             >
               <div className="relative aspect-[4/5] bg-muted/40 overflow-hidden">
                 <Image
@@ -192,7 +229,7 @@ export default function AdminCarouselPage() {
                 {/* Status Badges */}
                 <div className="absolute top-3 start-3 flex items-center gap-1.5">
                   <span
-                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-bold shadow-md backdrop-blur-md ${
+                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-bold shadow-md backdrop-blur-md whitespace-nowrap ${
                       post.active
                         ? "bg-emerald-500/80 text-white"
                         : "bg-amber-500/80 text-white"
@@ -200,13 +237,13 @@ export default function AdminCarouselPage() {
                   >
                     {post.active ? (
                       <>
-                        <CheckCircle2 className="size-3" />
-                        {locale === "ar" ? "مفعّل" : "Active"}
+                        <CheckCircle2 className="size-3 shrink-0" />
+                        <span>{locale === "ar" ? "مفعّل" : "Active"}</span>
                       </>
                     ) : (
                       <>
-                        <EyeOff className="size-3" />
-                        {locale === "ar" ? "مخفي" : "Disabled"}
+                        <EyeOff className="size-3 shrink-0" />
+                        <span>{locale === "ar" ? "مخفي" : "Disabled"}</span>
                       </>
                     )}
                   </span>
@@ -219,22 +256,22 @@ export default function AdminCarouselPage() {
 
               {/* Action Toolbar */}
               <div className="p-4 bg-card/60 border-t border-border/50 flex items-center justify-between gap-2">
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                   {locale === "ar" ? "الترتيب:" : "Order:"} <strong>{post.order}</strong>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => handleToggleActive(post.id, post.active)}
-                    className="h-8 rounded-lg text-xs"
+                    className="h-8 rounded-lg text-xs font-semibold px-2.5"
                     title={post.active ? "Hide" : "Show"}
                   >
                     {post.active ? (
-                      <EyeOff className="size-3.5 text-amber-500" />
+                      <EyeOff className="size-3.5 text-amber-500 shrink-0" />
                     ) : (
-                      <Eye className="size-3.5 text-emerald-500" />
+                      <Eye className="size-3.5 text-emerald-500 shrink-0" />
                     )}
                   </Button>
 
@@ -242,18 +279,20 @@ export default function AdminCarouselPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => openEditModal(post)}
-                    className="h-8 rounded-lg text-xs glass"
+                    className="h-8 rounded-lg text-xs glass px-3 font-semibold"
                   >
-                    {locale === "ar" ? "تعديل" : "Edit"}
+                    <span className="whitespace-nowrap">
+                      {locale === "ar" ? "تعديل" : "Edit"}
+                    </span>
                   </Button>
 
                   <Button
                     size="sm"
                     variant="destructive"
                     onClick={() => handleDelete(post.id)}
-                    className="h-8 rounded-lg text-xs"
+                    className="h-8 rounded-lg text-xs px-2.5"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5 shrink-0" />
                   </Button>
                 </div>
               </div>
@@ -271,7 +310,7 @@ export default function AdminCarouselPage() {
             className="glass-strong border border-brass/30 rounded-2xl w-full max-w-lg p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
-              <h2 className="font-heading text-xl font-bold text-foreground">
+              <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">
                 {editingPost
                   ? locale === "ar"
                     ? "تعديل ملصق الواجهة"
@@ -284,9 +323,9 @@ export default function AdminCarouselPage() {
                 size="icon"
                 variant="ghost"
                 onClick={() => setModalOpen(false)}
-                className="rounded-full"
+                className="rounded-full shrink-0"
               >
-                <X className="size-5" />
+                <X className="size-5 shrink-0" />
               </Button>
             </div>
 
@@ -374,26 +413,28 @@ export default function AdminCarouselPage() {
                   type="button"
                   variant="outline"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl glass"
+                  className="rounded-xl glass text-sm h-10 font-semibold"
                 >
-                  {locale === "ar" ? "إلغاء" : "Cancel"}
+                  <span className="whitespace-nowrap">{locale === "ar" ? "إلغاء" : "Cancel"}</span>
                 </Button>
 
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-brass-gradient text-night font-semibold rounded-xl px-6"
+                  className="bg-brass-gradient text-night font-semibold rounded-xl px-6 text-sm h-10 shrink-0"
                 >
                   {submitting ? (
-                    <Upload className="size-4 animate-spin me-2" />
+                    <Upload className="size-4 animate-spin me-2 shrink-0" />
                   ) : null}
-                  {editingPost
-                    ? locale === "ar"
-                      ? "حفظ التغييرات"
-                      : "Save Changes"
-                    : locale === "ar"
-                    ? "إضافة الملصق"
-                    : "Add Poster"}
+                  <span className="whitespace-nowrap">
+                    {editingPost
+                      ? locale === "ar"
+                        ? "حفظ التغييرات"
+                        : "Save Changes"
+                      : locale === "ar"
+                      ? "إضافة الملصق"
+                      : "Add Poster"}
+                  </span>
                 </Button>
               </div>
             </form>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import {
   createEvent,
@@ -59,6 +60,8 @@ export default function AdminEventsPage() {
     const res = await getEvents();
     if (res.success && res.events) {
       setEvents(res.events as unknown as EventItem[]);
+    } else if (res.error) {
+      toast.error(res.error);
     }
     setLoading(false);
   };
@@ -75,7 +78,15 @@ export default function AdminEventsPage() {
     setEvents((prev) =>
       prev.map((e) => (e.id === id ? { ...e, [field]: !currentValue } : e)),
     );
-    await toggleEventStatus(id, field, !currentValue);
+    const res = await toggleEventStatus(id, field, !currentValue);
+    if (res.success) {
+      toast.success(
+        locale === "ar" ? "تم تحديث حالة الفعالية" : "Event status updated",
+      );
+    } else {
+      toast.error(res.error || "Failed to toggle event status");
+      fetchEvents();
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -90,7 +101,13 @@ export default function AdminEventsPage() {
     }
 
     setEvents((prev) => prev.filter((e) => e.id !== id));
-    await deleteEvent(id);
+    const res = await deleteEvent(id);
+    if (res.success) {
+      toast.success(locale === "ar" ? "تم حذف الفعالية بنجاح" : "Event deleted successfully");
+    } else {
+      toast.error(res.error || "Failed to delete event");
+      fetchEvents();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -99,17 +116,32 @@ export default function AdminEventsPage() {
 
     const formData = new FormData(e.currentTarget);
 
+    let res;
     if (editingEvent) {
-      await updateEvent(editingEvent.id, formData);
+      res = await updateEvent(editingEvent.id, formData);
     } else {
-      await createEvent(formData);
+      res = await createEvent(formData);
     }
 
     setSubmitting(false);
-    setModalOpen(false);
-    setEditingEvent(null);
-    setPosterPreview(null);
-    fetchEvents();
+
+    if (res.success) {
+      toast.success(
+        editingEvent
+          ? locale === "ar"
+            ? "تم تحديث الفعالية بنجاح"
+            : "Event updated successfully"
+          : locale === "ar"
+          ? "تم إضافة الفعالية الجديدة بنجاح"
+          : "Event created successfully",
+      );
+      setModalOpen(false);
+      setEditingEvent(null);
+      setPosterPreview(null);
+      fetchEvents();
+    } else {
+      toast.error(res.error || "Failed to save event");
+    }
   };
 
   const openAddModal = () => {
@@ -125,15 +157,17 @@ export default function AdminEventsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-w-0">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-blue-500 font-semibold text-xs uppercase tracking-wider mb-1">
-            <CalendarIcon className="size-4" />
-            <span>{locale === "ar" ? "برامج إحياء" : "Events Management"}</span>
+          <div className="flex items-center gap-2 text-blue-500 font-semibold text-xs uppercase tracking-wider mb-1 shrink-0">
+            <CalendarIcon className="size-4 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "برامج إحياء" : "Events Management"}
+            </span>
           </div>
-          <h1 className="font-heading text-3xl font-extrabold text-foreground">
+          <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight whitespace-nowrap">
             {locale === "ar" ? "إدارة الفعاليات واللقاءات" : "Manage Events"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -143,22 +177,24 @@ export default function AdminEventsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             onClick={fetchEvents}
             variant="outline"
-            className="rounded-xl glass gap-2"
+            className="rounded-xl glass gap-2 h-10 px-4 text-sm font-semibold"
           >
-            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            <span>{locale === "ar" ? "تحديث" : "Refresh"}</span>
+            <RefreshCw className={`size-4 shrink-0 ${loading ? "animate-spin" : ""}`} />
+            <span className="whitespace-nowrap">{locale === "ar" ? "تحديث" : "Refresh"}</span>
           </Button>
 
           <Button
             onClick={openAddModal}
-            className="bg-brass-gradient text-night rounded-xl px-5 font-semibold shadow-layered hover:opacity-95"
+            className="bg-brass-gradient text-night rounded-xl px-5 h-10 font-semibold shadow-layered hover:opacity-95 text-sm"
           >
-            <Plus className="size-4 me-1.5" />
-            <span>{locale === "ar" ? "فعالية جديدة" : "New Event"}</span>
+            <Plus className="size-4 me-1.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "فعالية جديدة" : "New Event"}
+            </span>
           </Button>
         </div>
       </div>
@@ -170,7 +206,7 @@ export default function AdminEventsPage() {
         </div>
       ) : events.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center space-y-4">
-          <CalendarIcon className="size-12 text-brass/50 mx-auto" />
+          <CalendarIcon className="size-12 text-brass/50 mx-auto shrink-0" />
           <h3 className="font-heading text-lg font-bold text-foreground">
             {locale === "ar" ? "لا توجد فعاليات مسجلة" : "No Events Found"}
           </h3>
@@ -179,23 +215,25 @@ export default function AdminEventsPage() {
               ? "أنشئ أول فعالية لبرنامج إحياء لتفعيل الحجز والمؤشر العلوي."
               : "Create your first event to enable bookings and navbar indicators."}
           </p>
-          <Button onClick={openAddModal} className="bg-brass-gradient text-night rounded-full px-6">
-            <Plus className="size-4 me-1.5" />
-            {locale === "ar" ? "إنشاء أول فعالية" : "Create First Event"}
+          <Button onClick={openAddModal} className="bg-brass-gradient text-night rounded-full px-6 text-sm h-10 font-semibold">
+            <Plus className="size-4 me-1.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "إنشاء أول فعالية" : "Create First Event"}
+            </span>
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           {events.map((evt, index) => (
             <motion.div
               key={evt.id}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="glass rounded-2xl p-5 border border-border/60 shadow-layered flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+              className="glass rounded-2xl p-5 border border-border/60 shadow-layered flex flex-col md:flex-row items-start md:items-center justify-between gap-6 min-w-0"
             >
               {/* Event Poster Thumbnail & Info */}
-              <div className="flex items-start md:items-center gap-4">
+              <div className="flex items-start md:items-center gap-4 min-w-0">
                 <div className="relative size-20 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
                   <Image
                     src={evt.posterUrl || "/images/event-poster.jpg"}
@@ -205,28 +243,28 @@ export default function AdminEventsPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-heading text-lg font-bold text-foreground">
+                    <h3 className="font-heading text-lg font-bold text-foreground truncate">
                       {locale === "ar" ? evt.titleAr : evt.titleEn}
                     </h3>
 
                     {/* Badges */}
                     {evt.bookingOpen ? (
-                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="size-3" />
-                        {locale === "ar" ? "مفتوحة للحجز" : "Booking Open"}
+                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                        <CheckCircle2 className="size-3 shrink-0" />
+                        <span>{locale === "ar" ? "مفتوحة للحجز" : "Booking Open"}</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border">
-                        {locale === "ar" ? "أرشيف / انتهت" : "Past Event"}
+                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border whitespace-nowrap">
+                        <span>{locale === "ar" ? "أرشيف / انتهت" : "Past Event"}</span>
                       </span>
                     )}
 
                     {evt.isNew && (
-                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/20">
-                        <Sparkles className="size-3" />
-                        {locale === "ar" ? "مؤشر جديد" : "Navbar Dot Active"}
+                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
+                        <Sparkles className="size-3 shrink-0" />
+                        <span>{locale === "ar" ? "مؤشر جديد" : "Navbar Dot Active"}</span>
                       </span>
                     )}
                   </div>
@@ -236,82 +274,93 @@ export default function AdminEventsPage() {
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
-                    <span className="flex items-center gap-1">
-                      <CalendarIcon className="size-3.5 text-brass" />
-                      {new Date(evt.date).toLocaleDateString(
-                        locale === "ar" ? "ar-MA" : "en-US",
-                        { year: "numeric", month: "long", day: "numeric" },
-                      )}
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      <CalendarIcon className="size-3.5 text-brass shrink-0" />
+                      <span>
+                        {new Date(evt.date).toLocaleDateString(
+                          locale === "ar" ? "ar-MA" : "en-US",
+                          { year: "numeric", month: "long", day: "numeric" },
+                        )}
+                      </span>
                     </span>
 
-                    <span className="flex items-center gap-1">
-                      <Clock className="size-3.5 text-brass" />
-                      {evt.time}
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      <Clock className="size-3.5 text-brass shrink-0" />
+                      <span>{evt.time}</span>
                     </span>
 
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3.5 text-brass" />
-                      {evt.location}
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      <MapPin className="size-3.5 text-brass shrink-0" />
+                      <span>{evt.location}</span>
                     </span>
 
-                    <span className="flex items-center gap-1 font-semibold text-brass">
-                      <Ticket className="size-3.5" />
-                      {evt._count?.bookings || 0} {locale === "ar" ? "حجز" : "bookings"}
+                    <span className="flex items-center gap-1 font-semibold text-brass whitespace-nowrap">
+                      <Ticket className="size-3.5 shrink-0" />
+                      <span>
+                        {evt._count?.bookings || 0}{" "}
+                        {locale === "ar" ? "مسجلين" : "attendees"}
+                      </span>
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Status Toggles & Actions */}
-              <div className="flex flex-wrap items-center gap-2 self-end md:self-auto w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-border/40">
+              <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-auto w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-border/40">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() =>
                     handleToggleStatus(evt.id, "bookingOpen", evt.bookingOpen)
                   }
-                  className="rounded-xl text-xs glass"
+                  className="rounded-xl text-xs glass h-8 px-3 font-semibold"
                 >
-                  {evt.bookingOpen
-                    ? locale === "ar"
-                      ? "إغلاق الحجز"
-                      : "Close Booking"
-                    : locale === "ar"
-                    ? "فتح الحجز"
-                    : "Open Booking"}
+                  <span className="whitespace-nowrap">
+                    {evt.bookingOpen
+                      ? locale === "ar"
+                        ? "إغلاق الحجز"
+                        : "Close Booking"
+                      : locale === "ar"
+                      ? "فتح الحجز"
+                      : "Open Booking"}
+                  </span>
                 </Button>
 
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleToggleStatus(evt.id, "isNew", evt.isNew)}
-                  className="rounded-xl text-xs glass"
+                  className="rounded-xl text-xs glass h-8 px-3 font-semibold"
                 >
-                  {evt.isNew
-                    ? locale === "ar"
-                      ? "إلغاء الشارة"
-                      : "Disable Dot"
-                    : locale === "ar"
-                    ? "تفعيل الشارة"
-                    : "Set 'New' Dot"}
+                  <span className="whitespace-nowrap">
+                    {evt.isNew
+                      ? locale === "ar"
+                        ? "إلغاء الشارة"
+                        : "Disable Dot"
+                      : locale === "ar"
+                      ? "تفعيل الشارة"
+                      : "Set 'New' Dot"}
+                  </span>
                 </Button>
 
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => openEditModal(evt)}
-                  className="rounded-xl text-xs glass"
+                  className="rounded-xl text-xs glass h-8 px-3 font-semibold"
                 >
-                  {locale === "ar" ? "تعديل" : "Edit"}
+                  <span className="whitespace-nowrap">
+                    {locale === "ar" ? "تعديل" : "Edit"}
+                  </span>
                 </Button>
 
                 <Button
                   size="sm"
                   variant="destructive"
                   onClick={() => handleDelete(evt.id)}
-                  className="rounded-xl text-xs"
+                  className="rounded-xl text-xs h-8 px-2.5"
                 >
-                  <Trash2 className="size-3.5" />
+                  <Trash2 className="size-3.5 shrink-0" />
                 </Button>
               </div>
             </motion.div>
@@ -328,7 +377,7 @@ export default function AdminEventsPage() {
             className="glass-strong border border-brass/30 rounded-2xl w-full max-w-2xl p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
-              <h2 className="font-heading text-xl font-bold text-foreground">
+              <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">
                 {editingEvent
                   ? locale === "ar"
                     ? "تعديل الفعالية"
@@ -341,9 +390,9 @@ export default function AdminEventsPage() {
                 size="icon"
                 variant="ghost"
                 onClick={() => setModalOpen(false)}
-                className="rounded-full"
+                className="rounded-full shrink-0"
               >
-                <X className="size-5" />
+                <X className="size-5 shrink-0" />
               </Button>
             </div>
 
@@ -503,7 +552,7 @@ export default function AdminEventsPage() {
                   />
                   <label
                     htmlFor="bookingOpenCheck"
-                    className="text-sm font-semibold text-foreground cursor-pointer"
+                    className="text-sm font-semibold text-foreground cursor-pointer whitespace-nowrap"
                   >
                     {locale === "ar"
                       ? "مفتوحة للحجز (فعالية قادمة)"
@@ -521,7 +570,7 @@ export default function AdminEventsPage() {
                   />
                   <label
                     htmlFor="isNewCheck"
-                    className="text-sm font-semibold text-foreground cursor-pointer"
+                    className="text-sm font-semibold text-foreground cursor-pointer whitespace-nowrap"
                   >
                     {locale === "ar"
                       ? "تفعيل الشارة النباضة في القائمة"
@@ -536,26 +585,28 @@ export default function AdminEventsPage() {
                   type="button"
                   variant="outline"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl glass"
+                  className="rounded-xl glass text-sm h-10 font-semibold"
                 >
-                  {locale === "ar" ? "إلغاء" : "Cancel"}
+                  <span className="whitespace-nowrap">{locale === "ar" ? "إلغاء" : "Cancel"}</span>
                 </Button>
 
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-brass-gradient text-night font-semibold rounded-xl px-6"
+                  className="bg-brass-gradient text-night font-semibold rounded-xl px-6 text-sm h-10 shrink-0"
                 >
                   {submitting ? (
-                    <Upload className="size-4 animate-spin me-2" />
+                    <Upload className="size-4 animate-spin me-2 shrink-0" />
                   ) : null}
-                  {editingEvent
-                    ? locale === "ar"
-                      ? "حفظ التغييرات"
-                      : "Save Changes"
-                    : locale === "ar"
-                    ? "إضافة الفعالية"
-                    : "Add Event"}
+                  <span className="whitespace-nowrap">
+                    {editingEvent
+                      ? locale === "ar"
+                        ? "حفظ التغييرات"
+                        : "Save Changes"
+                      : locale === "ar"
+                      ? "إضافة الفعالية"
+                      : "Add Event"}
+                  </span>
                 </Button>
               </div>
             </form>

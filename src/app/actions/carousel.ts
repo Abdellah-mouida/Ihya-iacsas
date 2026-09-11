@@ -14,7 +14,11 @@ export async function getCarouselPosts(onlyActive = false) {
     return { success: true, posts };
   } catch (error) {
     console.error("Error fetching carousel posts:", error);
-    return { success: false, error: "Failed to fetch carousel posts", posts: [] };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch carousel posts",
+      posts: [],
+    };
   }
 }
 
@@ -24,16 +28,26 @@ export async function createCarouselPost(formData: FormData) {
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
 
-    let imageUrl = formData.get("imageUrl") as string | null;
+    let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
 
     if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
+      } catch (uploadErr) {
+        if (!imageUrl) {
+          const errMsg =
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : "Image upload failed";
+          return { success: false, error: errMsg };
+        }
+      }
     }
 
     if (!imageUrl) {
-      return { success: false, error: "Image file or URL is required" };
+      return { success: false, error: "Please select an image file to upload or enter an Image URL." };
     }
 
     const order = orderStr ? parseInt(orderStr, 10) : 0;
@@ -54,7 +68,10 @@ export async function createCarouselPost(formData: FormData) {
     return { success: true, post };
   } catch (error) {
     console.error("Error creating carousel post:", error);
-    return { success: false, error: "Failed to create carousel post" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save carousel post to database",
+    };
   }
 }
 
@@ -63,6 +80,7 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     const file = formData.get("image") as File | null;
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
+    let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
 
     const dataToUpdate: {
       order?: number;
@@ -70,7 +88,7 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       imageUrl?: string;
     } = {};
 
-    if (orderStr !== null && orderStr !== undefined) {
+    if (orderStr !== null && orderStr !== undefined && orderStr !== "") {
       dataToUpdate.order = parseInt(orderStr, 10);
     }
 
@@ -79,9 +97,22 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     }
 
     if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      dataToUpdate.imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        dataToUpdate.imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
+      } catch (uploadErr) {
+        if (imageUrl) {
+          dataToUpdate.imageUrl = imageUrl;
+        } else {
+          return {
+            success: false,
+            error: uploadErr instanceof Error ? uploadErr.message : "Upload failed",
+          };
+        }
+      }
+    } else if (imageUrl) {
+      dataToUpdate.imageUrl = imageUrl;
     }
 
     const post = await prisma.carouselPost.update({
@@ -96,7 +127,10 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     return { success: true, post };
   } catch (error) {
     console.error("Error updating carousel post:", error);
-    return { success: false, error: "Failed to update carousel post" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update carousel post",
+    };
   }
 }
 
@@ -114,7 +148,10 @@ export async function toggleCarouselActive(id: string, active: boolean) {
     return { success: true, post };
   } catch (error) {
     console.error("Error toggling carousel post:", error);
-    return { success: false, error: "Failed to toggle carousel post active status" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to toggle carousel post active status",
+    };
   }
 }
 
@@ -131,6 +168,9 @@ export async function deleteCarouselPost(id: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting carousel post:", error);
-    return { success: false, error: "Failed to delete carousel post" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete carousel post",
+    };
   }
 }

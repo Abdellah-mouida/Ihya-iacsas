@@ -24,34 +24,35 @@ export async function getBookings(eventId?: string) {
     return { success: true, bookings };
   } catch (error) {
     console.error("Error fetching bookings:", error);
-    return { success: false, error: "Failed to fetch bookings", bookings: [] };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch bookings",
+      bookings: [],
+    };
   }
 }
 
 export async function createBooking(data: {
-  eventId: string;
+  eventId?: string;
   fullName: string;
   email: string;
   phone: string;
-  quantity?: number;
 }) {
   try {
-    const { eventId, fullName, email, phone, quantity = 1 } = data;
+    const { eventId, fullName, email, phone } = data;
 
     if (!fullName || !email || !phone) {
-      return { success: false, error: "Please fill in all required fields" };
+      return { success: false, error: "Please fill in all required fields (Name, Email, Phone)" };
     }
 
-    // Find the event
+    // Find target event (either specified ID or the latest open event)
     const event = await prisma.event.findFirst({
-      where: {
-        OR: [{ id: eventId }, { bookingOpen: true }],
-      },
+      where: eventId ? { id: eventId } : { bookingOpen: true },
       orderBy: { date: "asc" },
     });
 
     if (!event) {
-      return { success: false, error: "No open event found for booking" };
+      return { success: false, error: "No active event found for booking" };
     }
 
     if (!event.bookingOpen) {
@@ -61,10 +62,9 @@ export async function createBooking(data: {
     const booking = await prisma.booking.create({
       data: {
         eventId: event.id,
-        fullName,
-        email,
-        phone,
-        quantity,
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
       },
       include: {
         event: true,
@@ -77,11 +77,14 @@ export async function createBooking(data: {
     return {
       success: true,
       booking,
-      confirmationNumber: `IHY-${booking.id.slice(-6).toUpperCase()}`,
+      bookingRef: `IHY-${booking.id.slice(-6).toUpperCase()}`,
     };
   } catch (error) {
     console.error("Error creating booking:", error);
-    return { success: false, error: "Failed to process booking submission" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to process booking submission",
+    };
   }
 }
 
@@ -97,6 +100,9 @@ export async function deleteBooking(id: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting booking:", error);
-    return { success: false, error: "Failed to delete booking" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete booking record",
+    };
   }
 }

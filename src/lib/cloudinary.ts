@@ -1,46 +1,68 @@
 import { v2 as cloudinary } from "cloudinary";
 
-// Cloudinary auto-configures from process.env.CLOUDINARY_URL
-if (process.env.CLOUDINARY_URL) {
-  cloudinary.config({
-    secure: true,
-  });
+function configureCloudinary() {
+  const url = process.env.CLOUDINARY_URL;
+  if (!url) {
+    console.warn("CLOUDINARY_URL environment variable is missing.");
+    return;
+  }
+
+  // Parse cloudinary://<api_key>:<api_secret>@<cloud_name>
+  const match = url.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/);
+  if (match) {
+    const [, apiKey, apiSecret, cloudName] = match;
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+      secure: true,
+    });
+  } else {
+    cloudinary.config(true);
+  }
 }
 
+configureCloudinary();
+
 /**
- * Uploads a base64 or Buffer image to Cloudinary in the 'ihyaa-uploads' folder
- * and returns the secure HTTPS URL.
+ * Uploads a base64 string, Buffer, or File data URI to Cloudinary.
+ * Returns the secure HTTPS URL.
  */
 export async function uploadImageToCloudinary(
   fileData: string | Buffer,
   folder = "ihyaa-uploads",
 ): Promise<string> {
+  configureCloudinary();
+
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
+    // Convert Buffer to data URI for direct upload API
+    let uploadPayload: string;
+
+    if (Buffer.isBuffer(fileData)) {
+      uploadPayload = `data:image/jpeg;base64,${fileData.toString("base64")}`;
+    } else if (typeof fileData === "string") {
+      uploadPayload = fileData;
+    } else {
+      return reject(new Error("Invalid file format provided for image upload"));
+    }
+
+    cloudinary.uploader.upload(
+      uploadPayload,
       {
         folder,
         resource_type: "image",
       },
       (error, result) => {
         if (error || !result) {
-          reject(error || new Error("Failed to upload image to Cloudinary"));
+          const msg =
+            error?.message ||
+            "Cloudinary upload failed. Check API credentials or enter an Image URL directly.";
+          reject(new Error(`Cloudinary Error: ${msg}`));
         } else {
           resolve(result.secure_url);
         }
       },
     );
-
-    if (Buffer.isBuffer(fileData)) {
-      uploadStream.end(fileData);
-    } else if (typeof fileData === "string") {
-      // If it's a base64 data URI or string
-      cloudinary.uploader
-        .upload(fileData, { folder, resource_type: "image" })
-        .then((res) => resolve(res.secure_url))
-        .catch(reject);
-    } else {
-      reject(new Error("Invalid file data passed to upload"));
-    }
   });
 }
 

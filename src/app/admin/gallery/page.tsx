@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import {
   createGalleryPhoto,
@@ -43,6 +44,8 @@ export default function AdminGalleryPage() {
     const res = await getGalleryPhotos();
     if (res.success && res.photos) {
       setPhotos(res.photos as unknown as GalleryPhoto[]);
+    } else if (res.error) {
+      toast.error(res.error);
     }
     setLoading(false);
   };
@@ -63,7 +66,13 @@ export default function AdminGalleryPage() {
     }
 
     setPhotos((prev) => prev.filter((p) => p.id !== id));
-    await deleteGalleryPhoto(id);
+    const res = await deleteGalleryPhoto(id);
+    if (res.success) {
+      toast.success(locale === "ar" ? "تم حذف الصورة بنجاح" : "Photo deleted successfully");
+    } else {
+      toast.error(res.error || "Failed to delete photo");
+      fetchPhotos();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -72,17 +81,32 @@ export default function AdminGalleryPage() {
 
     const formData = new FormData(e.currentTarget);
 
+    let res;
     if (editingPhoto) {
-      await updateGalleryPhoto(editingPhoto.id, formData);
+      res = await updateGalleryPhoto(editingPhoto.id, formData);
     } else {
-      await createGalleryPhoto(formData);
+      res = await createGalleryPhoto(formData);
     }
 
     setSubmitting(false);
-    setModalOpen(false);
-    setEditingPhoto(null);
-    setPreviewUrl(null);
-    fetchPhotos();
+
+    if (res.success) {
+      toast.success(
+        editingPhoto
+          ? locale === "ar"
+            ? "تم تحديث الصورة بنجاح"
+            : "Photo updated successfully"
+          : locale === "ar"
+          ? "تم إضافة الصورة بنجاح"
+          : "Photo created successfully",
+      );
+      setModalOpen(false);
+      setEditingPhoto(null);
+      setPreviewUrl(null);
+      fetchPhotos();
+    } else {
+      toast.error(res.error || "Failed to save photo");
+    }
   };
 
   const openAddModal = () => {
@@ -98,15 +122,17 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-w-0">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-emerald-500 font-semibold text-xs uppercase tracking-wider mb-1">
-            <ImageIcon className="size-4" />
-            <span>{locale === "ar" ? "ألبوم الصور" : "Moments Gallery"}</span>
+          <div className="flex items-center gap-2 text-emerald-500 font-semibold text-xs uppercase tracking-wider mb-1 shrink-0">
+            <ImageIcon className="size-4 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "ألبوم الصور" : "Moments Gallery"}
+            </span>
           </div>
-          <h1 className="font-heading text-3xl font-extrabold text-foreground">
+          <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight whitespace-nowrap">
             {locale === "ar" ? "معرض الصور (لحظات)" : "Gallery Management"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -116,22 +142,24 @@ export default function AdminGalleryPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             onClick={fetchPhotos}
             variant="outline"
-            className="rounded-xl glass gap-2"
+            className="rounded-xl glass gap-2 h-10 px-4 text-sm font-semibold"
           >
-            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            <span>{locale === "ar" ? "تحديث" : "Refresh"}</span>
+            <RefreshCw className={`size-4 shrink-0 ${loading ? "animate-spin" : ""}`} />
+            <span className="whitespace-nowrap">{locale === "ar" ? "تحديث" : "Refresh"}</span>
           </Button>
 
           <Button
             onClick={openAddModal}
-            className="bg-brass-gradient text-night rounded-xl px-5 font-semibold shadow-layered hover:opacity-95"
+            className="bg-brass-gradient text-night rounded-xl px-5 h-10 font-semibold shadow-layered hover:opacity-95 text-sm"
           >
-            <Plus className="size-4 me-1.5" />
-            <span>{locale === "ar" ? "إضافة صورة" : "Add Photo"}</span>
+            <Plus className="size-4 me-1.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "إضافة صورة" : "Add Photo"}
+            </span>
           </Button>
         </div>
       </div>
@@ -143,7 +171,7 @@ export default function AdminGalleryPage() {
         </div>
       ) : photos.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center space-y-4">
-          <ImageIcon className="size-12 text-brass/50 mx-auto" />
+          <ImageIcon className="size-12 text-brass/50 mx-auto shrink-0" />
           <h3 className="font-heading text-lg font-bold text-foreground">
             {locale === "ar" ? "لا توجد صور في المعرض" : "No Photos Found"}
           </h3>
@@ -152,9 +180,11 @@ export default function AdminGalleryPage() {
               ? "قم بإضافة صور جديدة لتظهر في معرض اللحظات بالموقع."
               : "Add new photos to showcase in the website moments gallery."}
           </p>
-          <Button onClick={openAddModal} className="bg-brass-gradient text-night rounded-full px-6">
-            <Plus className="size-4 me-1.5" />
-            {locale === "ar" ? "إضافة أول صورة" : "Add First Photo"}
+          <Button onClick={openAddModal} className="bg-brass-gradient text-night rounded-full px-6 text-sm h-10 font-semibold">
+            <Plus className="size-4 me-1.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              {locale === "ar" ? "إضافة أول صورة" : "Add First Photo"}
+            </span>
           </Button>
         </div>
       ) : (
@@ -165,7 +195,7 @@ export default function AdminGalleryPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="glass rounded-2xl overflow-hidden border border-border/60 shadow-layered group flex flex-col justify-between"
+              className="glass rounded-2xl overflow-hidden border border-border/60 shadow-layered group flex flex-col justify-between min-w-0"
             >
               <div className="relative aspect-[4/3] bg-muted/40 overflow-hidden">
                 <Image
@@ -193,27 +223,29 @@ export default function AdminGalleryPage() {
 
               {/* Actions toolbar */}
               <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-border/40">
-                <span className="text-[0.65rem] text-muted-foreground">
+                <span className="text-[0.65rem] text-muted-foreground whitespace-nowrap">
                   {new Date(photo.createdAt).toLocaleDateString()}
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => openEditModal(photo)}
-                    className="h-8 rounded-lg text-xs glass"
+                    className="h-8 rounded-lg text-xs glass px-3 font-semibold"
                   >
-                    {locale === "ar" ? "تعديل" : "Edit"}
+                    <span className="whitespace-nowrap">
+                      {locale === "ar" ? "تعديل" : "Edit"}
+                    </span>
                   </Button>
 
                   <Button
                     size="sm"
                     variant="destructive"
                     onClick={() => handleDelete(photo.id)}
-                    className="h-8 rounded-lg text-xs"
+                    className="h-8 rounded-lg text-xs px-2.5"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5 shrink-0" />
                   </Button>
                 </div>
               </div>
@@ -231,7 +263,7 @@ export default function AdminGalleryPage() {
             className="glass-strong border border-brass/30 rounded-2xl w-full max-w-lg p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
-              <h2 className="font-heading text-xl font-bold text-foreground">
+              <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">
                 {editingPhoto
                   ? locale === "ar"
                     ? "تعديل صورة المعرض"
@@ -244,9 +276,9 @@ export default function AdminGalleryPage() {
                 size="icon"
                 variant="ghost"
                 onClick={() => setModalOpen(false)}
-                className="rounded-full"
+                className="rounded-full shrink-0"
               >
-                <X className="size-5" />
+                <X className="size-5 shrink-0" />
               </Button>
             </div>
 
@@ -325,26 +357,28 @@ export default function AdminGalleryPage() {
                   type="button"
                   variant="outline"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl glass"
+                  className="rounded-xl glass text-sm h-10 font-semibold"
                 >
-                  {locale === "ar" ? "إلغاء" : "Cancel"}
+                  <span className="whitespace-nowrap">{locale === "ar" ? "إلغاء" : "Cancel"}</span>
                 </Button>
 
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-brass-gradient text-night font-semibold rounded-xl px-6"
+                  className="bg-brass-gradient text-night font-semibold rounded-xl px-6 text-sm h-10 shrink-0"
                 >
                   {submitting ? (
-                    <Upload className="size-4 animate-spin me-2" />
+                    <Upload className="size-4 animate-spin me-2 shrink-0" />
                   ) : null}
-                  {editingPhoto
-                    ? locale === "ar"
-                      ? "حفظ التغييرات"
-                      : "Save Changes"
-                    : locale === "ar"
-                    ? "إضافة الصورة"
-                    : "Add Photo"}
+                  <span className="whitespace-nowrap">
+                    {editingPhoto
+                      ? locale === "ar"
+                        ? "حفظ التغييرات"
+                        : "Save Changes"
+                      : locale === "ar"
+                      ? "إضافة الصورة"
+                      : "Add Photo"}
+                  </span>
                 </Button>
               </div>
             </form>

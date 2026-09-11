@@ -56,7 +56,6 @@ model Booking {
   fullName  String
   email     String
   phone     String
-  quantity  Int      @default(1)
   createdAt DateTime @default(now())
 
   @@index([eventId])
