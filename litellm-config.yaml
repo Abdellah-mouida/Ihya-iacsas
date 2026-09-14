@@ -1,0 +1,55 @@
+model_list:
+  - model_name: gemini
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GOOGLE_KEY_1
+
+  - model_name: gemini
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GOOGLE_KEY_2
+
+  - model_name: gemini
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GOOGLE_KEY_3
+
+  - model_name: gemini
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GOOGLE_KEY_4
+  - model_name: gemini
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GOOGLE_KEY_5
+  - model_name: gemini
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GOOGLE_KEY_6
+
+  # ---- Fallback 1: Mistral Codestral (coding-specific, 1B tokens/month free) ----
+  - model_name: codestral
+    litellm_params:
+      model: mistral/codestral-latest
+      api_key: os.environ/MISTRAL_API_KEY
+
+  # ---- Fallback 2: Groq gpt-oss-120b (fast, strong reasoning, good backend logic) ----
+  - model_name: groq-oss
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+
+
+
+router_settings:
+  routing_strategy: usage-based-routing-v2   # picks the key/model with most headroom within a group
+  num_retries: 3
+  retry_after: 5                              # seconds to back off before retrying the same key
+  fallbacks:
+    - gemini:
+        - codestral
+        - groq-oss
+
+litellm_settings:
+  drop_params: true                           # silently drop provider-incompatible params instead of erroring
+  set_verbose: false
