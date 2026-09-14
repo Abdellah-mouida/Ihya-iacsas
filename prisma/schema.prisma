@@ -1,66 +1,10 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
-model CarouselPost {
+model ContactMessage {
   id        String   @id @default(cuid())
-  imageUrl  String
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([order])
-}
-
-model GalleryPhoto {
-  id        String   @id @default(cuid())
-  imageUrl  String
-  captionAr String?
-  captionEn String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([createdAt])
-}
-
-model Event {
-  id            String    @id @default(cuid())
-  titleAr       String
-  titleEn       String
-  descriptionAr String
-  descriptionEn String
-  date          DateTime
-  time          String
-  location      String
-  posterUrl     String
-  isNew         Boolean   @default(false)
-  bookingOpen   Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  bookings      Booking[]
-
-  @@index([date])
-  @@index([bookingOpen])
-}
-
-model Booking {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  fullName  String
+  name      String
   email     String
-  city      String
-  age       Int
-  motive    String?
+  message   String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([eventId])
   @@index([createdAt])
 }
