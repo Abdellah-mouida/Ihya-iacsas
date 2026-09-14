@@ -36,13 +36,27 @@ export async function createBooking(data: {
   eventId?: string;
   fullName: string;
   email: string;
-  phone: string;
+  city: string;
+  age: number;
+  motive?: string;
 }) {
   try {
-    const { eventId, fullName, email, phone } = data;
+    const { eventId, fullName, email, city, age, motive } = data;
 
-    if (!fullName || !email || !phone) {
-      return { success: false, error: "Please fill in all required fields (Name, Email, Phone)" };
+    if (!fullName || !email || !city || !age) {
+      return { success: false, error: "Please fill in all required fields (Name, Email, City, Age)" };
+    }
+
+    // Validate email domain
+    const allowedDomains = [
+      "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com",
+      "protonmail.com", "aol.com", "live.com", "msn.com", "yandex.com",
+      "mail.com", "gmx.com", "zoho.com", "outlook.fr", "orange.fr",
+      "laposte.net", "menara.ma", "gmail.co", "yahoo.fr", "yahoo.co.uk"
+    ];
+    const emailDomain = email.split('@')[1];
+    if (!allowedDomains.includes(emailDomain)) {
+      return { success: false, error: "Please use an email from a well-known provider" };
     }
 
     // Find target event (either specified ID or the latest open event)
@@ -64,7 +78,9 @@ export async function createBooking(data: {
         eventId: event.id,
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        city: city.trim(),
+        age,
+        motive: motive?.trim() || null,
       },
       include: {
         event: true,

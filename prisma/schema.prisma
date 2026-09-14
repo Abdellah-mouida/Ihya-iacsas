@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model CarouselPost {
@@ -55,7 +56,9 @@ model Booking {
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   fullName  String
   email     String
-  phone     String
+  city      String
+  age       Int
+  motive    String?
   createdAt DateTime @default(now())
 
   @@index([eventId])
