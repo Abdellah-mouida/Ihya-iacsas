@@ -87,6 +87,23 @@ export async function createBooking(data: {
       },
     });
 
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Store OTP in database
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        otp: otp,
+        otpExpiry: otpExpiry,
+      },
+    });
+
+    // Send OTP via email
+    // TODO: Implement email sending logic here
+    // This would typically use a transactional email service like Resend, SendGrid, etc.
+
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
 
