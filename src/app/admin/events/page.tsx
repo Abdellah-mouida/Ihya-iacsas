@@ -115,6 +115,14 @@ export default function AdminEventsPage() {
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    const file = formData.get("image") as File | null;
+    const posterUrl = formData.get("posterUrl") as string | null;
+
+    if (!file && !posterUrl) {
+      toast.error(locale === "ar" ? "الرجاء اختيار صورة أو إدخال رابط صورة" : "Please select an image file or enter an image URL");
+      setSubmitting(false);
+      return;
+    }
 
     let res;
     if (editingEvent) {

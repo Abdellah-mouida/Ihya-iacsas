@@ -75,11 +75,19 @@ export default function AdminGalleryPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    const file = formData.get("image") as File | null;
+    const imageUrl = formData.get("imageUrl") as string | null;
+
+    if (!file && !imageUrl) {
+      toast.error(locale === "ar" ? "الرجاء اختيار صورة أو إدخال رابط صورة" : "Please select an image file or enter an image URL");
+      setSubmitting(false);
+      return;
+    }
 
     let res;
     if (editingPhoto) {
@@ -97,8 +105,8 @@ export default function AdminGalleryPage() {
             ? "تم تحديث الصورة بنجاح"
             : "Photo updated successfully"
           : locale === "ar"
-          ? "تم إضافة الصورة بنجاح"
-          : "Photo created successfully",
+          ? "تم إضافة الصورة الجديدة بنجاح"
+          : "Photo added successfully",
       );
       setModalOpen(false);
       setEditingPhoto(null);
