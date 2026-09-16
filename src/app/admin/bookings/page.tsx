@@ -4,7 +4,9 @@ import { motion } from "framer-motion";
 import {
   Calendar,
   Clock,
+  Eye,
   Filter,
+  MapPin,
   RefreshCw,
   Search,
   Ticket,
@@ -17,13 +19,22 @@ import { toast } from "sonner";
 import { deleteBooking, getBookings } from "@/app/actions/bookings";
 import { getEvents } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 
 type BookingRecord = {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
+  city: string;
+  age: number;
+  motive?: string | null;
   createdAt: Date;
   event: {
     id: string;
@@ -47,6 +58,7 @@ export default function AdminBookingsPage() {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [activeModalBooking, setActiveModalBooking] = useState<BookingRecord | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -83,7 +95,7 @@ export default function AdminBookingsPage() {
     if (
       !confirm(
         locale === "ar"
-          ? "هل أنت تأكد من رغبتك في حذف هذا الحجز؟"
+          ? "هل أنت متأكد من رغبتك في حذف هذا الحجز؟"
           : "Are you sure you want to delete this booking record?",
       )
     ) {
@@ -107,7 +119,7 @@ export default function AdminBookingsPage() {
     return (
       b.fullName.toLowerCase().includes(q) ||
       b.email.toLowerCase().includes(q) ||
-      b.phone.toLowerCase().includes(q) ||
+      b.city.toLowerCase().includes(q) ||
       b.event.titleAr.toLowerCase().includes(q) ||
       b.event.titleEn.toLowerCase().includes(q)
     );
@@ -125,12 +137,12 @@ export default function AdminBookingsPage() {
             </span>
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight whitespace-nowrap">
-            {locale === "ar" ? "حجوزات الفعاليات المسجلة" : "Manage Bookings"}
+            {locale === "ar" ? "حجوزات الفعاليات المؤكدة" : "Confirmed Bookings"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {locale === "ar"
-              ? "استعراض وتصفية طلبات الحجز الحقيقية القادمة من صفحة الفعاليات بالموقع."
-              : "Review, filter, and manage real booking submissions from the website."}
+              ? "استعراض وتصفية الحجوزات المؤكدة عبر رمز التحقق (OTP)."
+              : "Review, filter, and manage attendee bookings verified via OTP."}
           </p>
         </div>
 
@@ -157,8 +169,8 @@ export default function AdminBookingsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
               locale === "ar"
-                ? "بحث بالاسم، البريد، أو الهاتف..."
-                : "Search by name, email, or phone..."
+                ? "بحث بالاسم، البريد، أو المدينة..."
+                : "Search by name, email, or city..."
             }
             className="w-full rounded-xl border border-border bg-background/50 ps-10 pe-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
           />
@@ -194,7 +206,7 @@ export default function AdminBookingsPage() {
           <Users className="size-4 text-brass shrink-0" />
           <span>
             {locale === "ar"
-              ? `إجمالي الحاضرين المسجلين: ${filteredBookings.length}`
+              ? `إجمالي الحاضرين المؤكدين: ${filteredBookings.length}`
               : `Total Confirmed Attendees: ${filteredBookings.length}`}
           </span>
         </span>
@@ -217,8 +229,8 @@ export default function AdminBookingsPage() {
                 ? "لا توجد نتائج تطابق معايير البحث والتصفية المحددة."
                 : "No booking records match your current filter."
               : locale === "ar"
-              ? "سيظهر هنا كل حجز جديد يتم إرصاده عبر صفحة الفعالية بالموقع."
-              : "New bookings submitted on the public events page will appear here."}
+              ? "سيظهر هنا كل حجز مؤكد تم التحقق منه بالبريد الإلكتروني."
+              : "New verified bookings will appear here once OTP is confirmed."}
           </p>
         </div>
       ) : (
@@ -230,19 +242,19 @@ export default function AdminBookingsPage() {
                   <th className="py-4 px-6 text-start whitespace-nowrap min-w-[180px]">
                     {locale === "ar" ? "الرقم والاسم الكامل" : "Ref & Full Name"}
                   </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[200px]">
+                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[180px]">
                     {locale === "ar" ? "الفعالية الحاضر لها" : "Target Event"}
                   </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[220px]">
+                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[200px]">
                     {locale === "ar" ? "البريد الإلكتروني" : "Email Address"}
                   </th>
                   <th className="py-4 px-6 text-start whitespace-nowrap min-w-[140px]">
-                    {locale === "ar" ? "رقم الهاتف" : "Phone Number"}
+                    {locale === "ar" ? "المدينة / السن" : "City / Age"}
                   </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[160px]">
-                    {locale === "ar" ? "تاريخ الحجز" : "Submitted At"}
+                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[150px]">
+                    {locale === "ar" ? "تاريخ التأكيد" : "Confirmed At"}
                   </th>
-                  <th className="py-4 px-6 text-end whitespace-nowrap min-w-[90px]">
+                  <th className="py-4 px-6 text-end whitespace-nowrap min-w-[110px]">
                     {locale === "ar" ? "إجراءات" : "Actions"}
                   </th>
                 </tr>
@@ -276,8 +288,6 @@ export default function AdminBookingsPage() {
                             locale === "ar" ? "ar-MA" : "en-US",
                             { month: "short", day: "numeric" },
                           )}
-                          {" — "}
-                          {b.event.location}
                         </span>
                       </div>
                     </td>
@@ -286,8 +296,9 @@ export default function AdminBookingsPage() {
                       {b.email}
                     </td>
 
-                    <td className="py-4 px-6 whitespace-nowrap dir-ltr text-start font-medium text-muted-foreground">
-                      {b.phone}
+                    <td className="py-4 px-6 whitespace-nowrap font-medium text-muted-foreground">
+                      <span>{b.city}</span>
+                      <span className="text-xs opacity-75"> ({b.age} {locale === "ar" ? "سنة" : "yo"})</span>
                     </td>
 
                     <td className="py-4 px-6 whitespace-nowrap text-xs text-muted-foreground">
@@ -309,14 +320,25 @@ export default function AdminBookingsPage() {
                     </td>
 
                     <td className="py-4 px-6 text-end whitespace-nowrap">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(b.id)}
-                        className="rounded-xl h-8 px-3 text-xs"
-                      >
-                        <Trash2 className="size-3.5 shrink-0" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setActiveModalBooking(b)}
+                          className="rounded-xl h-8 px-2.5 text-xs gap-1"
+                        >
+                          <Eye className="size-3.5 shrink-0 text-brass" />
+                          <span>{locale === "ar" ? "تفاصيل" : "Details"}</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(b.id)}
+                          className="rounded-xl h-8 px-2.5 text-xs"
+                        >
+                          <Trash2 className="size-3.5 shrink-0" />
+                        </Button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}
@@ -325,6 +347,77 @@ export default function AdminBookingsPage() {
           </div>
         </div>
       )}
+
+      {/* Booking Detail Modal */}
+      <Dialog
+        open={!!activeModalBooking}
+        onOpenChange={(open) => {
+          if (!open) setActiveModalBooking(null);
+        }}
+      >
+        {activeModalBooking ? (
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Ticket className="size-5 text-brass" />
+                <span>
+                  {locale === "ar" ? "تفاصيل الحجز" : "Booking Details"}
+                </span>
+                <span className="font-mono text-xs text-brass font-bold ms-auto">
+                  IHY-{activeModalBooking.id.slice(-6).toUpperCase()}
+                </span>
+              </DialogTitle>
+              <DialogDescription>
+                {locale === "ar"
+                  ? "معلومات المشارك المسجلة لحضور الفعالية."
+                  : "Attendee information registered for this event."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2 text-sm">
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">{locale === "ar" ? "الاسم الكامل:" : "Full Name:"}</span>
+                <span className="font-semibold text-foreground">{activeModalBooking.fullName}</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">{locale === "ar" ? "البريد الإلكتروني:" : "Email:"}</span>
+                <span className="font-semibold text-foreground dir-ltr">{activeModalBooking.email}</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">{locale === "ar" ? "المدينة:" : "City:"}</span>
+                <span className="font-semibold text-foreground">{activeModalBooking.city}</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">{locale === "ar" ? "العمر:" : "Age:"}</span>
+                <span className="font-semibold text-foreground">{activeModalBooking.age} {locale === "ar" ? "سنة" : "years"}</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">{locale === "ar" ? "الفعالية:" : "Event:"}</span>
+                <span className="font-semibold text-foreground">
+                  {locale === "ar" ? activeModalBooking.event.titleAr : activeModalBooking.event.titleEn}
+                </span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">{locale === "ar" ? "الموقع:" : "Location:"}</span>
+                <span className="font-semibold text-foreground flex items-center gap-1">
+                  <MapPin className="size-3.5 text-brass" />
+                  {activeModalBooking.event.location}
+                </span>
+              </div>
+              {activeModalBooking.motive ? (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-muted-foreground text-xs font-semibold uppercase">
+                    {locale === "ar" ? "دافع الحضور:" : "Reason for Attending:"}
+                  </span>
+                  <p className="bg-muted/40 p-3 rounded-xl text-xs whitespace-pre-wrap leading-relaxed">
+                    {activeModalBooking.motive}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

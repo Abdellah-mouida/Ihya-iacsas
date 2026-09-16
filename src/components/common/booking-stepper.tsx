@@ -4,139 +4,220 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
-  CalendarPlus,
   Check,
-  CreditCard,
+  CheckCircle2,
   Home,
-  ShieldAlert,
+  KeyRound,
+  RefreshCw,
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 
-import { createBooking } from "@/app/actions/bookings";
+import {
+  requestBookingOtp,
+  resendBookingOtp,
+  verifyBookingOtp,
+} from "@/app/actions/bookings";
+import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT } from "@/lib/content";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-type Details = { name: string; email: string; phone: string };
-type Payment = { cardName: string; cardNumber: string; expiry: string; cvc: string };
-
-function formatCardNumber(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 16)
-    .replace(/(.{4})/g, "$1 ")
-    .trim();
-}
-
-function formatExpiry(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
+type Details = {
+  fullName: string;
+  email: string;
+  city: string;
+  age: string;
+  motive: string;
+};
 
 export function BookingStepper() {
   const { t, locale } = useLocale();
-  const [step, setStep] = useState(1);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const eventIdParam = searchParams.get("eventId") || undefined;
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
   const [details, setDetails] = useState<Details>({
-    name: "",
+    fullName: "",
     email: "",
-    phone: "",
+    city: "",
+    age: "",
+    motive: "",
   });
-  const [payment, setPayment] = useState<Payment>({
-    cardName: "",
-    cardNumber: "",
-    expiry: "",
-    cvc: "",
-  });
+
+  const [bookingId, setBookingId] = useState<string>("");
+  const [otp, setOtp] = useState<string>("");
+  const [bookingRef, setBookingRef] = useState<string>("");
+  const [targetEventId, setTargetEventId] = useState<string>(eventIdParam || "majlis-ihyaa");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [bookingRef, setBookingRef] = useState("");
+  const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
 
-  const steps = [t("booking.stepDetails"), t("booking.stepPayment"), t("booking.stepConfirm")];
+  const steps = [
+    t("booking.stepDetails"),
+    t("booking.stepVerify"),
+    t("booking.stepConfirm"),
+  ];
 
-  function validateDetails() {
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setResendTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  // Auto-redirect timer on Step 3
+  useEffect(() => {
+    if (step !== 3) return;
+
+    const interval = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          router.push("/events");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [step, router]);
+
+  function validateDetails(): boolean {
     const e: Record<string, string> = {};
-    if (!details.name.trim()) e.name = t("booking.errRequired");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email))
+
+    if (!details.fullName.trim()) {
+      e.fullName = t("booking.errRequired");
+    }
+
+    const email = details.email.trim().toLowerCase();
+    if (!email) {
+      e.email = t("booking.errRequired");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       e.email = t("booking.errEmail");
-    if (details.phone.replace(/\D/g, "").length < 6)
-      e.phone = t("booking.errRequired");
+    } else {
+      const parts = email.split("@");
+      const domain = parts[1];
+      if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+        e.email = t("booking.errDomain");
+      }
+    }
+
+    if (!details.city.trim()) {
+      e.city = t("booking.errRequired");
+    }
+
+    const ageNum = parseInt(details.age, 10);
+    if (!details.age || isNaN(ageNum) || ageNum < 5 || ageNum > 120) {
+      e.age = t("booking.errAge");
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function validatePayment() {
-    const e: Record<string, string> = {};
-    if (!payment.cardName.trim()) e.cardName = t("booking.errRequired");
-    if (payment.cardNumber.replace(/\s/g, "").length !== 16)
-      e.cardNumber = t("booking.errCard");
-    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(payment.expiry))
-      e.expiry = t("booking.errExpiry");
-    if (!/^\d{3,4}$/.test(payment.cvc)) e.cvc = t("booking.errCvc");
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  function submitDetails(ev: FormEvent) {
+  async function submitDetails(ev: FormEvent) {
     ev.preventDefault();
-    if (validateDetails()) {
-      setErrors({});
+    if (!validateDetails()) return;
+
+    setErrors({});
+    setSubmitting(true);
+
+    const res = await requestBookingOtp({
+      eventId: eventIdParam,
+      fullName: details.fullName,
+      email: details.email,
+      city: details.city,
+      age: parseInt(details.age, 10),
+      motive: details.motive,
+      locale,
+    });
+
+    setSubmitting(false);
+
+    if (res.success && res.bookingId) {
+      setBookingId(res.bookingId);
+      if (res.eventId) setTargetEventId(res.eventId);
+      setResendTimer(60);
       setStep(2);
+    } else {
+      setErrors({ form: res.error || "Failed to process registration" });
     }
   }
 
-  async function submitPayment(ev: FormEvent) {
+  async function submitOtp(ev: FormEvent) {
     ev.preventDefault();
-    if (validatePayment()) {
-      setErrors({});
-      setSubmitting(true);
+    const cleanOtp = otp.trim();
 
-      const res = await createBooking({
-        fullName: details.name,
-        email: details.email,
-        phone: details.phone,
-      });
+    if (!cleanOtp) {
+      setErrors({ otp: t("booking.errOtpRequired") });
+      return;
+    }
 
-      setSubmitting(false);
+    setErrors({});
+    setSubmitting(true);
 
-      if (res.success && res.bookingRef) {
-        setBookingRef(res.bookingRef);
-      } else {
-        setBookingRef(`IHY-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
+    const res = await verifyBookingOtp({
+      bookingId,
+      otp: cleanOtp,
+      locale,
+    });
+
+    setSubmitting(false);
+
+    if (res.success && res.bookingRef) {
+      setBookingRef(res.bookingRef);
+      if (res.eventId) setTargetEventId(res.eventId);
+
+      // Store in localStorage for client recognition
+      try {
+        localStorage.setItem(`ihyaa_booked_${res.eventId || targetEventId}`, "true");
+        localStorage.setItem("ihyaa_booked_latest", "true");
+        localStorage.setItem("ihyaa_booked_ref", res.bookingRef);
+      } catch (e) {
+        console.warn("Storage error", e);
       }
 
       setStep(3);
+    } else {
+      setErrors({ otp: res.error || "Invalid verification code" });
     }
   }
 
-  function downloadIcs() {
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Ihyaa//Booking//EN",
-      "BEGIN:VEVENT",
-      `UID:${bookingRef}@ihyaa`,
-      "DTSTART:20260603T213000",
-      "DTEND:20260603T230000",
-      `SUMMARY:${t("event.name")}`,
-      `LOCATION:${t("event.location")}`,
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
-    const blob = new Blob([ics], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "ihyaa-majlis.ics";
-    a.click();
-    URL.revokeObjectURL(url);
+  async function handleResend() {
+    if (resendTimer > 0 || resending) return;
+
+    setResending(true);
+    setErrors({});
+
+    const res = await resendBookingOtp({
+      bookingId,
+      locale,
+    });
+
+    setResending(false);
+
+    if (res.success) {
+      setResendTimer(60);
+      setOtp("");
+    } else {
+      setErrors({ otp: res.error || "Failed to resend verification code" });
+    }
   }
 
   return (
@@ -150,16 +231,10 @@ export function BookingStepper() {
         {t("booking.back")}
       </Link>
 
-      {/* Demo banner */}
-      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-brass/30 bg-brass/10 px-4 py-3 text-sm font-medium text-brass">
-        <ShieldAlert className="size-5 shrink-0" />
-        {t("booking.demoBanner")}
-      </div>
-
       {/* Stepper indicator */}
       <div className="mt-8 flex items-center">
         {steps.map((label, i) => {
-          const n = i + 1;
+          const n = (i + 1) as 1 | 2 | 3;
           const active = step === n;
           const done = step > n;
           return (
@@ -179,7 +254,7 @@ export function BookingStepper() {
                 <span
                   className={cn(
                     "text-xs font-medium",
-                    active ? "text-foreground" : "text-muted-foreground",
+                    active ? "text-foreground font-semibold" : "text-muted-foreground",
                   )}
                 >
                   {label}
@@ -221,25 +296,34 @@ export function BookingStepper() {
                 </p>
               </header>
 
+              {errors.form ? (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                  {errors.form}
+                </div>
+              ) : null}
+
+              {/* Full Name */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="b-name">{t("booking.fName")}</Label>
+                <Label htmlFor="b-name">{t("booking.fName")} *</Label>
                 <Input
                   id="b-name"
-                  value={details.name}
-                  aria-invalid={!!errors.name}
+                  value={details.fullName}
+                  aria-invalid={!!errors.fullName}
                   placeholder={t("booking.namePh")}
                   onChange={(e) =>
-                    setDetails((d) => ({ ...d, name: e.target.value }))
+                    setDetails((d) => ({ ...d, fullName: e.target.value }))
                   }
                   className="h-11"
+                  required
                 />
-                {errors.name ? (
-                  <span className="text-xs text-destructive">{errors.name}</span>
+                {errors.fullName ? (
+                  <span className="text-xs text-destructive">{errors.fullName}</span>
                 ) : null}
               </div>
 
+              {/* Email */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="b-email">{t("booking.fEmail")}</Label>
+                <Label htmlFor="b-email">{t("booking.fEmail")} *</Label>
                 <Input
                   id="b-email"
                   type="email"
@@ -251,46 +335,100 @@ export function BookingStepper() {
                     setDetails((d) => ({ ...d, email: e.target.value }))
                   }
                   className="h-11"
+                  required
                 />
                 {errors.email ? (
-                  <span className="text-xs text-destructive">{errors.email}</span>
-                ) : null}
+                  <span
+                    data-testid="email-error"
+                    className="text-xs text-destructive font-medium"
+                  >
+                    {errors.email}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground">
+                    {locale === "ar"
+                      ? "المزودات المقبولة: Gmail, Yahoo, Outlook, Hotmail, iCloud, ProtonMail..."
+                      : "Accepted: Gmail, Yahoo, Outlook, Hotmail, iCloud, ProtonMail..."}
+                  </span>
+                )}
               </div>
 
+              {/* City and Age */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="b-city">{t("booking.fCity")} *</Label>
+                  <Input
+                    id="b-city"
+                    value={details.city}
+                    aria-invalid={!!errors.city}
+                    placeholder={t("booking.cityPh")}
+                    onChange={(e) =>
+                      setDetails((d) => ({ ...d, city: e.target.value }))
+                    }
+                    className="h-11"
+                    required
+                  />
+                  {errors.city ? (
+                    <span className="text-xs text-destructive">{errors.city}</span>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="b-age">{t("booking.fAge")} *</Label>
+                  <Input
+                    id="b-age"
+                    type="number"
+                    min="5"
+                    max="120"
+                    value={details.age}
+                    aria-invalid={!!errors.age}
+                    placeholder={t("booking.agePh")}
+                    onChange={(e) =>
+                      setDetails((d) => ({ ...d, age: e.target.value }))
+                    }
+                    className="h-11"
+                    required
+                  />
+                  {errors.age ? (
+                    <span className="text-xs text-destructive">{errors.age}</span>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Motive */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="b-phone">{t("booking.fPhone")}</Label>
-                <Input
-                  id="b-phone"
-                  type="tel"
-                  dir="ltr"
-                  value={details.phone}
-                  aria-invalid={!!errors.phone}
-                  placeholder={t("booking.phonePh")}
+                <Label htmlFor="b-motive">{t("booking.fMotive")}</Label>
+                <Textarea
+                  id="b-motive"
+                  value={details.motive}
+                  placeholder={t("booking.motivePh")}
                   onChange={(e) =>
-                    setDetails((d) => ({ ...d, phone: e.target.value }))
+                    setDetails((d) => ({ ...d, motive: e.target.value }))
                   }
-                  className="h-11"
+                  className="min-h-24 resize-none"
                 />
-                {errors.phone ? (
-                  <span className="text-xs text-destructive">{errors.phone}</span>
-                ) : null}
               </div>
 
               <Button
                 type="submit"
+                disabled={submitting}
                 className="bg-brass-gradient mt-2 h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
               >
-                {t("booking.continue")}
+                {submitting
+                  ? locale === "ar"
+                    ? "جاري إرسال الرمز..."
+                    : "Sending code..."
+                  : t("booking.continue")}
                 <ArrowRight className="size-5 rtl:rotate-180" />
               </Button>
             </motion.form>
           ) : null}
 
-          {/* STEP 2 — PAYMENT */}
+          {/* STEP 2 — OTP VERIFICATION */}
           {step === 2 ? (
             <motion.form
-              key="payment"
-              onSubmit={submitPayment}
+              key="otp-step"
+              onSubmit={submitOtp}
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
@@ -299,131 +437,100 @@ export function BookingStepper() {
               noValidate
             >
               <header className="flex flex-col gap-1">
+                <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-brass/10 text-brass ring-1 ring-brass/25 mb-1">
+                  <KeyRound className="size-6" />
+                </div>
                 <h2 className="font-heading text-2xl font-semibold">
-                  {t("booking.paymentTitle")}
+                  {t("booking.verifyTitle")}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {t("booking.paymentDesc")}
+                  {t("booking.verifyDesc", { email: details.email })}
                 </p>
               </header>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="p-name">{t("booking.cardName")}</Label>
+                <Label htmlFor="b-otp">{t("booking.otpLabel")}</Label>
                 <Input
-                  id="p-name"
-                  value={payment.cardName}
-                  aria-invalid={!!errors.cardName}
-                  placeholder={t("booking.cardNamePh")}
-                  onChange={(e) =>
-                    setPayment((p) => ({ ...p, cardName: e.target.value }))
-                  }
-                  className="h-11"
-                />
-                {errors.cardName ? (
-                  <span className="text-xs text-destructive">
-                    {errors.cardName}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="p-number">{t("booking.cardNumber")}</Label>
-                <Input
-                  id="p-number"
+                  id="b-otp"
+                  type="text"
                   inputMode="numeric"
+                  maxLength={6}
                   dir="ltr"
-                  value={payment.cardNumber}
-                  aria-invalid={!!errors.cardNumber}
-                  placeholder={t("booking.cardNumberPh")}
+                  value={otp}
+                  aria-invalid={!!errors.otp}
+                  placeholder={t("booking.otpPh")}
                   onChange={(e) =>
-                    setPayment((p) => ({
-                      ...p,
-                      cardNumber: formatCardNumber(e.target.value),
-                    }))
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
-                  className="h-11"
+                  className="h-14 text-center font-mono text-2xl tracking-[0.4em] font-bold"
+                  autoFocus
                 />
-                {errors.cardNumber ? (
-                  <span className="text-xs text-destructive">
-                    {errors.cardNumber}
+                {errors.otp ? (
+                  <span
+                    data-testid="otp-error"
+                    className="text-xs text-destructive font-medium"
+                  >
+                    {errors.otp}
                   </span>
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="p-exp">{t("booking.expiry")}</Label>
-                  <Input
-                    id="p-exp"
-                    inputMode="numeric"
-                    dir="ltr"
-                    value={payment.expiry}
-                    aria-invalid={!!errors.expiry}
-                    placeholder={t("booking.expiryPh")}
-                    onChange={(e) =>
-                      setPayment((p) => ({
-                        ...p,
-                        expiry: formatExpiry(e.target.value),
-                      }))
-                    }
-                    className="h-11"
-                  />
-                  {errors.expiry ? (
-                    <span className="text-xs text-destructive">
-                      {errors.expiry}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="p-cvc">{t("booking.cvc")}</Label>
-                  <Input
-                    id="p-cvc"
-                    inputMode="numeric"
-                    dir="ltr"
-                    value={payment.cvc}
-                    aria-invalid={!!errors.cvc}
-                    placeholder={t("booking.cvcPh")}
-                    onChange={(e) =>
-                      setPayment((p) => ({
-                        ...p,
-                        cvc: e.target.value.replace(/\D/g, "").slice(0, 4),
-                      }))
-                    }
-                    className="h-11"
-                  />
-                  {errors.cvc ? (
-                    <span className="text-xs text-destructive">{errors.cvc}</span>
-                  ) : null}
-                </div>
+              {/* Resend button */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {locale === "ar"
+                    ? "لم يصلك الرمز؟"
+                    : "Didn't receive the code?"}
+                </span>
+                {resendTimer > 0 ? (
+                  <span className="font-mono text-brass font-medium">
+                    {t("booking.resendWait", { seconds: resendTimer })}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="inline-flex items-center gap-1 font-semibold text-brass hover:underline disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={cn("size-3.5", resending && "animate-spin")}
+                    />
+                    {t("booking.resendCode")}
+                  </button>
+                )}
               </div>
 
               <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStep(1)}
+                  onClick={() => {
+                    setStep(1);
+                    setErrors({});
+                  }}
                   className="glass h-12 rounded-full px-6 text-base font-semibold sm:flex-1"
                 >
                   <ArrowLeft className="size-5 rtl:rotate-180" />
-                  {t("booking.payBack")}
+                  {t("booking.verifyBack")}
                 </Button>
                 <Button
                   type="submit"
                   disabled={submitting}
                   className="bg-brass-gradient h-12 rounded-full px-6 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-[2]"
                 >
-                  <CreditCard className="size-5" />
+                  <CheckCircle2 className="size-5" />
                   {submitting
                     ? locale === "ar"
-                      ? "جاري التأكيد..."
-                      : "Confirming..."
-                    : t("booking.pay")}
+                      ? "جاري التحقق..."
+                      : "Verifying..."
+                    : t("booking.verifyButton")}
                 </Button>
               </div>
             </motion.form>
           ) : null}
 
-          {/* STEP 3 — CONFIRMATION */}
+          {/* STEP 3 — SUCCESS CONFIRMATION */}
           {step === 3 ? (
             <motion.div
               key="confirm"
@@ -436,48 +543,78 @@ export function BookingStepper() {
               <motion.span
                 initial={{ scale: 0, rotate: -30 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 12 }}
+                transition={{
+                  delay: 0.1,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 12,
+                }}
                 className="bg-brass-gradient grid size-20 place-items-center rounded-full text-night shadow-layered"
               >
                 <Check className="size-10" />
               </motion.span>
 
               <h2 className="font-heading text-2xl font-bold sm:text-3xl">
-                {locale === "ar"
-                  ? "شكراً لك! تم تأكيد حضورك بنجاح"
-                  : "Thank You! Your Attendance is Confirmed"}
+                {t("booking.confirmTitle")}
               </h2>
               <p className="text-muted-foreground text-sm max-w-md">
-                {locale === "ar"
-                  ? "سعداء بانضمامك إلينا في مجلس إحياء القادم. أرسلنا كافة التفاصيل إلى بريدك الإلكتروني."
-                  : "We look forward to welcoming you at the upcoming Ihyaa gathering. Confirmation details have been sent to your email."}
+                {t("booking.confirmDesc")}
               </p>
 
               <OrnamentDivider compact />
 
-              <div className="w-full rounded-2xl bg-muted/60 p-5 text-start space-y-2">
+              <div className="w-full rounded-2xl bg-muted/60 p-5 text-start space-y-2.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{locale === "ar" ? "رقم الحجز المرجعي:" : "Booking Ref:"}</span>
-                  <span className="font-mono font-bold text-brass">{bookingRef}</span>
+                  <span>{t("booking.ref")}:</span>
+                  <span
+                    data-testid="booking-ref-display"
+                    className="font-mono font-bold text-brass text-sm"
+                  >
+                    {bookingRef}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{locale === "ar" ? "الاسم:" : "Name:"}</span>
-                  <span className="font-semibold text-foreground">{details.name}</span>
+                  <span>{t("booking.fName")}:</span>
+                  <span className="font-semibold text-foreground">
+                    {details.fullName}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{locale === "ar" ? "البريد الإلكتروني:" : "Email:"}</span>
-                  <span className="font-semibold text-foreground dir-ltr">{details.email}</span>
+                  <span>{t("booking.fEmail")}:</span>
+                  <span className="font-semibold text-foreground dir-ltr">
+                    {details.email}
+                  </span>
                 </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t("booking.fCity")}:</span>
+                  <span className="font-semibold text-foreground">
+                    {details.city}
+                  </span>
+                </div>
+              </div>
+
+              {/* Redirect notice banner */}
+              <div
+                data-testid="redirect-notice"
+                className="w-full rounded-xl border border-brass/30 bg-brass/10 py-3 px-4 text-xs font-medium text-brass flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="size-3.5 animate-spin" />
+                <span>
+                  {t("booking.redirectNotice", { seconds: redirectCountdown })}
+                </span>
               </div>
 
               <div className="mt-2 flex w-full flex-col gap-3 sm:flex-row">
                 <Button
-                  type="button"
-                  onClick={downloadIcs}
+                  asChild
                   className="bg-brass-gradient h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-1"
                 >
-                  <CalendarPlus className="size-5" />
-                  {t("booking.addCalendar")}
+                  <Link href="/events">
+                    <ArrowLeft className="size-5 rtl:rotate-180" />
+                    {locale === "ar"
+                      ? "الذهاب لصفحة الفعالية الآن"
+                      : "Go to Event Page Now"}
+                  </Link>
                 </Button>
 
                 <Button

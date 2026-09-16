@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarDays, Clock, MapPin, Phone } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { EventPoster } from "@/components/common/event-poster";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
@@ -27,6 +28,21 @@ type FeaturedEventProps = {
 
 export function FeaturedEvent({ event }: FeaturedEventProps) {
   const { t, locale, dir } = useLocale();
+  const [isBooked, setIsBooked] = useState(false);
+
+  const eventId = event?.id || "majlis-ihyaa";
+
+  useEffect(() => {
+    // Check cookie and localStorage for booking recognition
+    const hasLocal = localStorage.getItem(`ihyaa_booked_${eventId}`) === "true" ||
+      localStorage.getItem("ihyaa_booked_latest") === "true";
+    const hasCookie = document.cookie.includes(`ihyaa_booked_${eventId}=true`) ||
+      document.cookie.includes("ihyaa_booked_events");
+
+    if (hasLocal || hasCookie) {
+      setIsBooked(true);
+    }
+  }, [eventId]);
 
   const title = event
     ? locale === "ar"
@@ -44,7 +60,7 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
   const timeStr = event ? event.time : t("event.time");
   const locationStr = event ? event.location : t("event.location");
   const poster = event ? event.posterUrl : IMAGES.eventPoster;
-  const bookHref = event ? `/events/${event.id}/book` : EVENT.bookHref;
+  const bookHref = event ? `/events/majlis-ihyaa/book?eventId=${event.id}` : EVENT.bookHref;
 
   const details = [
     { icon: CalendarDays, label: t("event.dateLabel"), value: dateStr },
@@ -127,12 +143,26 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
             </ul>
 
             <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Button
-                asChild
-                className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
-              >
-                <Link href={bookHref}>{t("event.cta")}</Link>
-              </Button>
+              {isBooked ? (
+                <div
+                  data-testid="booked-state-badge"
+                  className="flex items-center gap-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-6 py-3 text-emerald-700 dark:text-emerald-300 font-semibold shadow-sm"
+                >
+                  <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    {locale === "ar"
+                      ? "أنت مسجل — تم تأكيد حجزك بنجاح!"
+                      : "You're booked — your booking was successful!"}
+                  </span>
+                </div>
+              ) : (
+                <Button
+                  asChild
+                  className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
+                >
+                  <Link href={bookHref}>{t("event.cta")}</Link>
+                </Button>
+              )}
               <a
                 href={EVENT.phoneHref}
                 className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-brass"
