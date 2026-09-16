@@ -1,20 +1,42 @@
 "use client";
 
 import { CalendarClock } from "lucide-react";
+import { useEffect, useState } from "react";
 
+import { getPublicEvents } from "@/app/actions/events";
 import { useLocale } from "@/i18n/locale-provider";
 import { OPEN_EVENTS } from "@/lib/content";
 import { FeaturedEvent } from "./featured-event";
 
-/**
- * The "open for booking" region of /events. Reuses the FeaturedEvent block
- * (EventPoster + booking flow) for the live event, and degrades gracefully
- * to an empty state so the page structure supports future content.
- */
+type DbEvent = {
+  id: string;
+  titleAr: string;
+  titleEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
+  date: Date;
+  time: string;
+  location: string;
+  posterUrl: string;
+};
+
 export function OpenEvents() {
   const { t } = useLocale();
+  const [openEvents, setOpenEvents] = useState<DbEvent[] | null>(null);
 
-  if (OPEN_EVENTS.length === 0) {
+  useEffect(() => {
+    getPublicEvents().then((res) => {
+      if (res.success && res.openEvents && res.openEvents.length > 0) {
+        setOpenEvents(res.openEvents as unknown as DbEvent[]);
+      } else if (res.success) {
+        setOpenEvents([]);
+      }
+    });
+  }, []);
+
+  const activeEvents = openEvents !== null ? openEvents : OPEN_EVENTS;
+
+  if (activeEvents.length === 0) {
     return (
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-2xl px-5">
@@ -34,5 +56,7 @@ export function OpenEvents() {
     );
   }
 
-  return <FeaturedEvent />;
+  const primaryEvent = openEvents && openEvents.length > 0 ? openEvents[0] : undefined;
+
+  return <FeaturedEvent event={primaryEvent} />;
 }

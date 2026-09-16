@@ -27,9 +27,9 @@ export function Hero() {
   ];
 
   return (
-    <section
+<section
       id="home"
-      className="relative isolate flex min-h-dvh items-center overflow-hidden pt-28 pb-16 text-white"
+      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-white"
     >
       {/* Photo layer */}
       <div className="absolute inset-0 -z-30">
@@ -41,20 +41,21 @@ export function Hero() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-night/85 via-night/72 to-night/92" />
+        {/* Scrim: a light warm wash in light mode, deep night in dark mode. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background/94 dark:from-night/85 dark:via-night/72 dark:to-night/92" />
       </div>
 
       {/* React Bits aurora — warm animated light over the photo */}
-      <AuroraBackground className="-z-20 opacity-60 mix-blend-screen" />
+      <AuroraBackground className="-z-20 opacity-50 mix-blend-screen dark:opacity-60" />
 
-      {/* Inner vignette so the photo edges melt into the section */}
+      {/* Inner vignette: strong at corners/edges, transparent at center (theme-aware) */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_180px_70px_var(--night)]"
+        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_200px_80px_var(--background)] dark:[box-shadow:inset_0_0_200px_80px_var(--night)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_42%,var(--night)_100%)] opacity-80"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--background)_100%)] opacity-70 dark:bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--night)_100%)] dark:opacity-70"
       />
 
       {/* Ambient drifting particles */}
@@ -71,7 +72,7 @@ export function Hero() {
       >
         <motion.span
           variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-md"
+          className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-md dark:border-white/20 dark:bg-white/10"
         >
           <span className="size-1.5 animate-pulse rounded-full bg-gold" />
           {t("hero.kicker")}
@@ -86,7 +87,7 @@ export function Hero() {
 
         <motion.p
           variants={fadeUp}
-          className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-white/85 sm:text-xl"
+          className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80 dark:text-white/85 sm:text-xl"
         >
           {t("hero.subtitle")}
         </motion.p>
@@ -107,7 +108,7 @@ export function Hero() {
           <Button
             asChild
             variant="outline"
-            className="glass h-12 rounded-full border-white/25 px-7 text-base font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/15 hover:text-white"
+            className="glass h-12 rounded-full border-foreground/20 px-7 text-base font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:bg-foreground/5 dark:border-white/25 dark:text-white dark:hover:bg-white/15 dark:hover:text-white"
           >
             <a href="#about">
               <Info className="size-5" />
@@ -125,13 +126,15 @@ export function Hero() {
               key={i}
               className={cn(
                 "flex flex-col items-center gap-1 px-2",
-                i !== 0 && "border-s border-white/15",
+                i !== 0 && "border-s border-foreground/15 dark:border-white/15",
               )}
             >
               <dt className="text-shine font-heading text-3xl font-bold sm:text-4xl">
                 {s.value}
               </dt>
-              <dd className="text-xs text-white/70 sm:text-sm">{s.label}</dd>
+              <dd className="text-xs text-muted-foreground dark:text-white/70 sm:text-sm">
+                {s.label}
+              </dd>
             </div>
           ))}
         </motion.dl>
@@ -144,12 +147,12 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1, duration: 0.8 }}
-        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-white/70"
+        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-muted-foreground dark:text-white/70"
       >
         <span className="text-[0.7rem] uppercase tracking-[0.2em]">
           {t("hero.scroll")}
         </span>
-        <span className="grid size-9 place-items-center rounded-full border border-white/25">
+        <span className="grid size-9 place-items-center rounded-full border border-foreground/25 dark:border-white/25">
           <ArrowDown className="size-4 animate-bounce" />
         </span>
       </motion.a>

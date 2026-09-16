@@ -11,7 +11,8 @@ import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { EVENT, IMAGES, NAV_LINKS, hasNewEvent } from "@/lib/content";
+import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/lib/content";
+import { getPublicEvents } from "@/app/actions/events";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +41,33 @@ export function GlassNavbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
+
+  useEffect(() => {
+    getPublicEvents().then((res) => {
+      if (res.success) {
+        setHasNewEvent(res.hasNew);
+      }
+    });
+  }, []);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  // The navbar only goes fully transparent while floating over the dark hero
+  // (home page, at the very top). Elsewhere (or once scrolled) it stays glass
+  // so text/icons remain legible on light backgrounds.
+  const transparentTop = pathname === "/" && !scrolled;
+
+  // Close the mobile menu on route change WITHOUT a dedicated effect: compare
+  // the current pathname against the last one seen during render. Setting
+  // state of the current component during render is the supported pattern and
+  // avoids the extra commit + effect pass a `useEffect([pathname])` would add.
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    if (open) setOpen(false);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -62,9 +87,6 @@ export function GlassNavbar() {
     };
   }, [open]);
 
-  // Close the mobile menu on route change.
-  useEffect(() => setOpen(false), [pathname]);
-
   return (
     <motion.header
       initial={{ y: -80, opacity: 0 }}
@@ -74,20 +96,27 @@ export function GlassNavbar() {
     >
       <nav
         className={cn(
-          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] border border-border/60 px-3 backdrop-blur-xl backdrop-saturate-150 transition-all duration-500 sm:px-4",
-          scrolled
-            ? "bg-[color-mix(in_oklch,var(--background)_72%,transparent)] py-1.5 shadow-layered"
-            : "bg-[color-mix(in_oklch,var(--background)_50%,transparent)] py-2.5",
+          "relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-hidden rounded-[1.9rem] border px-3 transition-all duration-500 sm:px-4",
+          scrolled ? "py-1.5" : "py-2.5",
+          transparentTop
+            ? "border-transparent bg-transparent shadow-none backdrop-blur-0"
+            : "border-border/60 bg-[color-mix(in_oklch,var(--background)_80%,transparent)] shadow-layered backdrop-blur-xl backdrop-saturate-150",
         )}
       >
-        {/* animated gradient sheen inside the glass */}
+        {/* animated gradient sheen inside the glass — only once it's glass */}
         <span
           aria-hidden
-          className="bg-brass-gradient animate-gradient pointer-events-none absolute inset-0 -z-10 rounded-[inherit] opacity-[0.07] [background-size:200%_200%]"
+          className={cn(
+            "bg-brass-gradient animate-gradient pointer-events-none absolute inset-0 -z-10 rounded-[inherit] [background-size:200%_200%] transition-opacity duration-500",
+            transparentTop ? "opacity-0" : "opacity-[0.07]",
+          )}
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-6 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"
+          className={cn(
+            "pointer-events-none absolute inset-x-6 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent transition-opacity duration-500",
+            transparentTop ? "opacity-0" : "opacity-100",
+          )}
         />
 
         {/* Logo */}
@@ -107,7 +136,14 @@ export function GlassNavbar() {
             />
             <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
           </span>
-          <span className="text-gradient-brass font-heading text-xl font-bold">
+          <span
+            className={cn(
+              "font-heading text-xl font-bold transition-colors duration-300",
+              transparentTop
+                ? "text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.45)]"
+                : "text-black dark:text-gradient-brass",
+            )}
+          >
             {t("nav.brand")}
           </span>
         </Link>
@@ -125,15 +161,24 @@ export function GlassNavbar() {
                   className={cn(
                     "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
                     active
-                      ? "text-green"
-                      : "text-foreground/85 hover:text-green",
+                      ? transparentTop
+                        ? "text-white"
+                        : "text-green"
+                      : transparentTop
+                        ? "text-white/90 hover:text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]"
+                        : "text-black/85 dark:text-foreground/85 hover:text-green",
                   )}
                 >
                   {active ? (
                     <motion.span
                       layoutId="navActive"
                       transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                      className="absolute inset-0 -z-10 rounded-full bg-green/12 ring-1 ring-green/25"
+                      className={cn(
+                        "absolute inset-0 -z-10 rounded-full ring-1",
+                        transparentTop
+                          ? "bg-white/15 ring-white/35"
+                          : "bg-green/12 ring-green/25",
+                      )}
                     />
                   ) : null}
                   {t(link.key)}
@@ -146,8 +191,11 @@ export function GlassNavbar() {
 
         {/* Controls */}
         <div className="flex items-center gap-2">
-          <LanguageSwitcher className="hidden sm:inline-flex" />
-          <ThemeToggle />
+          <LanguageSwitcher
+            className="hidden sm:inline-flex"
+            onDark={transparentTop}
+          />
+          <ThemeToggle onDark={transparentTop} />
           <Button
             asChild
             className="bg-brass-gradient hidden h-10 rounded-full px-5 text-sm font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:inline-flex"
@@ -156,13 +204,16 @@ export function GlassNavbar() {
           </Button>
 
           {/* Animated hamburger */}
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-label={t("nav.menu")}
-            aria-expanded={open}
-            className="glass grid size-10 place-items-center rounded-full text-foreground transition-transform hover:scale-105 lg:hidden"
-          >
+<button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-label={t("nav.menu")}
+              aria-expanded={open}
+              className={cn(
+                "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
+                transparentTop ? "text-white" : "glass text-black dark:text-foreground",
+              )}
+            >
             <span className="relative block size-5 text-current">
               <motion.span
                 variants={hamburgerTop}
@@ -225,7 +276,7 @@ export function GlassNavbar() {
                           "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
                           active
                             ? "bg-green/15 text-green"
-                            : "text-foreground/85 hover:bg-muted hover:text-green",
+                            : "text-black/85 dark:text-foreground/85 hover:bg-muted hover:text-green",
                         )}
                       >
                         <span className="flex items-center">

@@ -345,7 +345,10 @@
 }
 
 @layer components {
-  /* Glassmorphism */
+  /* Glassmorphism — the baseline surface language for every card/panel on the
+     site. Any new card or panel-style component MUST use `.glass` (or
+     `.glass-strong`) so translucency, blur, and a soft border stay consistent.
+     Pair with `shadow-layered` for depth and a `hover:` lift/ring for motion. */
   .glass {
     background: color-mix(in oklch, var(--card) 65%, transparent);
     backdrop-filter: blur(14px) saturate(1.4);

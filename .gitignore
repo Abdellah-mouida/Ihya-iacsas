@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # next.js
 /.next/
@@ -32,6 +33,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -43,4 +45,10 @@ next-env.d.ts
 # local agent/session artifacts
 /.playwright-mcp/
 session-*.md
-
+# Zenrows CLI (do not commit secrets or run artifacts)
+.zenrows/secrets.json
+.zenrows/config.json
+.zenrows/account.json
+.zenrows/runs/
+.zenrows/traces/
+.zenrows/logs/

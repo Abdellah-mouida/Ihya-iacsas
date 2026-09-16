@@ -18,6 +18,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Environment variables
+
+Copy `.env.example` to `.env.local` and adjust as needed. All variables are optional.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ALLOWED_DEV_ORIGINS` | `localhost,127.0.0.1` | Comma-separated list of extra origins allowed to reach the Next.js dev server. Add your machine's LAN IP (e.g. `192.168.1.50`) to open the site from a phone on the same network. Only affects `next dev`. |
+
+```bash
+# example: allow a phone on the LAN to reach the dev server
+ALLOWED_DEV_ORIGINS=192.168.1.50 npm run dev
+```
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

@@ -19,15 +19,21 @@ export default function BookPage() {
       <div className="bg-brass-gradient absolute -top-24 start-1/2 -z-10 size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl" />
 
       <header className="mx-auto flex max-w-2xl items-center justify-between px-5 pt-6">
-        <Link href="/" className="flex items-center gap-2" aria-label="Ihyaa">
-          <Image
-            src={IMAGES.logoBanner}
-            alt="Ihyaa"
-            width={96}
-            height={40}
-            priority
-            className="h-8 w-auto object-contain"
-          />
+        <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
+          <span className="relative shrink-0">
+            <Image
+              src={IMAGES.logoSquare}
+              alt="Ihyaa"
+              width={40}
+              height={40}
+              priority
+              className="size-10 rounded-full object-cover ring-1 ring-brass/40 transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
+          </span>
+          <span className="font-heading text-xl font-bold text-foreground">
+            إحياء
+          </span>
         </Link>
         <div className="flex items-center gap-2">
           <LanguageSwitcher />

@@ -95,10 +95,10 @@ export function About() {
               <MotionCard
                 key={card.titleKey}
                 intensity={10}
-                glare={false}
                 radiusClass="rounded-2xl"
+                wrapperClassName="group"
               >
-                <div className="glass flex h-full flex-col gap-3 rounded-2xl p-5 transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:shadow-layered hover:ring-1 hover:ring-brass/30">
+                <div className="glass flex h-full flex-col gap-3 rounded-2xl p-5 transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-1 hover:ring-brass/30">
                   <span className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25">
                     <card.icon className="size-5" />
                   </span>

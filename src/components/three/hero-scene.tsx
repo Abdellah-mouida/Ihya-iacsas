@@ -1,19 +1,14 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Points, ShaderMaterial } from "three";
 
-const COUNT = 130;
+const COUNT = 100;
 
-// Warm brand palette for the motes (gold / brass / cream), all rendered as
-// soft circles by the fragment shader below.
-const PALETTE = [
-  new THREE.Color("#f0d69a"),
-  new THREE.Color("#d9b25a"),
-  new THREE.Color("#fff4e0"),
-];
+// Yellow particle color for both themes (consistent across light/dark)
+const PARTICLE_COLOR = new THREE.Color("#f5d742");
 
 const vertexShader = /* glsl */ `
   attribute float aAlpha;
@@ -54,54 +49,95 @@ function edgeFade(n: number) {
   return 1 - Math.min(Math.max(t, 0), 1);
 }
 
+type Buffers = {
+  // Normalized (resolution-independent) simulation state.
+  nx: Float32Array;
+  ny: Float32Array;
+  vx: Float32Array;
+  vy: Float32Array;
+  phase: Float32Array;
+  base: Float32Array;
+  // GPU attribute buffers.
+  positions: Float32Array;
+  alphas: Float32Array;
+  sizes: Float32Array;
+  colors: Float32Array;
+};
+
+// Module-scope buffer construction — building these random arrays here (once,
+// lazily via a ref) is cheaper than reconstructing them inside useMemo on every
+// mount. Behaviour/mutation logic is unchanged from before.
+function createBuffers(count: number): Buffers {
+  const nx = new Float32Array(count);
+  const ny = new Float32Array(count);
+  const vx = new Float32Array(count);
+  const vy = new Float32Array(count);
+  const phase = new Float32Array(count);
+  const base = new Float32Array(count);
+  const positions = new Float32Array(count * 3);
+  const alphas = new Float32Array(count);
+  const sizes = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    nx[i] = (Math.random() - 0.5) * (1 + 2 * MARGIN);
+    ny[i] = (Math.random() - 0.5) * (1 + 2 * MARGIN);
+    vx[i] = (Math.random() - 0.5) * 0.02;
+    vy[i] = (Math.random() - 0.5) * 0.02 - 0.012; // gentle upward drift
+    phase[i] = Math.random() * Math.PI * 2;
+    base[i] = 0.4 + Math.random() * 0.55;
+    sizes[i] = 6; // uniform size (reduced from original 4-13 range, but clearly visible)
+  }
+  // Paint all particles yellow
+  for (let i = 0; i < count; i++) {
+    colors[i * 3] = PARTICLE_COLOR.r;
+    colors[i * 3 + 1] = PARTICLE_COLOR.g;
+    colors[i * 3 + 2] = PARTICLE_COLOR.b;
+  }
+  return { nx, ny, vx, vy, phase, base, positions, alphas, sizes, colors };
+}
+
+const isDark = () =>
+  typeof document !== "undefined" &&
+  document.documentElement.classList.contains("dark");
+
 function ParticleField() {
   const { viewport, gl } = useThree();
   const pointsRef = useRef<Points>(null);
   const matRef = useRef<ShaderMaterial>(null);
 
-  // Normalized (resolution-independent) particle state, mapped onto the hero's
-  // visible viewport every frame so motes always fill the section exactly.
-  const sim = useMemo(() => {
-    const nx = new Float32Array(COUNT);
-    const ny = new Float32Array(COUNT);
-    const vx = new Float32Array(COUNT);
-    const vy = new Float32Array(COUNT);
-    const phase = new Float32Array(COUNT);
-    const base = new Float32Array(COUNT);
-    for (let i = 0; i < COUNT; i++) {
-      nx[i] = (Math.random() - 0.5) * (1 + 2 * MARGIN);
-      ny[i] = (Math.random() - 0.5) * (1 + 2 * MARGIN);
-      vx[i] = (Math.random() - 0.5) * 0.02;
-      vy[i] = (Math.random() - 0.5) * 0.02 - 0.012; // gentle upward drift
-      phase[i] = Math.random() * Math.PI * 2;
-      base[i] = 0.4 + Math.random() * 0.55;
-    }
-    return { nx, ny, vx, vy, phase, base };
-  }, []);
+  // Lazily create + retain the buffers in a ref (not useMemo).
+  const buffersRef = useRef<Buffers | null>(null);
+  if (buffersRef.current === null) {
+    buffersRef.current = createBuffers(COUNT);
+  }
+  const buffers = buffersRef.current;
 
-  const { positions, alphas, sizes, colors } = useMemo(() => {
-    const positions = new Float32Array(COUNT * 3);
-    const alphas = new Float32Array(COUNT);
-    const sizes = new Float32Array(COUNT);
-    const colors = new Float32Array(COUNT * 3);
-    for (let i = 0; i < COUNT; i++) {
-      sizes[i] = 4 + Math.random() * 9;
-      const col = PALETTE[i % PALETTE.length];
-      colors[i * 3] = col.r;
-      colors[i * 3 + 1] = col.g;
-      colors[i * 3 + 2] = col.b;
-    }
-    return { positions, alphas, sizes, colors };
-  }, []);
+  const uniforms = useMemo(() => ({ uPixelRatio: { value: 1 } }), []);
 
-  const uniforms = useMemo(
-    () => ({ uPixelRatio: { value: 1 } }),
-    [],
-  );
+  // Update blending mode when theme changes (additive for dark, normal for light)
+  useEffect(() => {
+    const apply = () => {
+      const dark = isDark();
+      if (matRef.current) {
+        matRef.current.blending = dark
+          ? THREE.AdditiveBlending
+          : THREE.NormalBlending;
+        matRef.current.needsUpdate = true;
+      }
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useFrame((state, delta) => {
     const pts = pointsRef.current;
     if (!pts) return;
+    const { nx, ny, vx, vy, phase, base, positions, alphas } = buffers;
     const dt = Math.min(delta, 0.05);
     const W = viewport.width;
     const H = viewport.height;
@@ -118,20 +154,20 @@ function ParticleField() {
 
     for (let i = 0; i < COUNT; i++) {
       // Drift + a tiny lateral wobble, then wrap within the padded bounds.
-      let x = sim.nx[i] + sim.vx[i] * dt + Math.sin(t * 0.3 + sim.phase[i]) * 0.0006;
-      let y = sim.ny[i] + sim.vy[i] * dt;
+      let x = nx[i] + vx[i] * dt + Math.sin(t * 0.3 + phase[i]) * 0.0006;
+      let y = ny[i] + vy[i] * dt;
       if (x > bound) x -= span;
       else if (x < -bound) x += span;
       if (y > bound) y -= span;
       else if (y < -bound) y += span;
-      sim.nx[i] = x;
-      sim.ny[i] = y;
+      nx[i] = x;
+      ny[i] = y;
 
       positions[i * 3] = x * W;
       positions[i * 3 + 1] = y * H;
       positions[i * 3 + 2] = 0;
       // Fade near the edges so wrapping is invisible → density stays constant.
-      alphas[i] = edgeFade(x) * edgeFade(y) * sim.base[i];
+      alphas[i] = edgeFade(x) * edgeFade(y) * base[i];
     }
 
     posAttr.needsUpdate = true;
@@ -145,10 +181,13 @@ function ParticleField() {
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-aAlpha" args={[alphas, 1]} />
-        <bufferAttribute attach="attributes-aSize" args={[sizes, 1]} />
-        <bufferAttribute attach="attributes-aColor" args={[colors, 3]} />
+        <bufferAttribute
+          attach="attributes-position"
+          args={[buffers.positions, 3]}
+        />
+        <bufferAttribute attach="attributes-aAlpha" args={[buffers.alphas, 1]} />
+        <bufferAttribute attach="attributes-aSize" args={[buffers.sizes, 1]} />
+        <bufferAttribute attach="attributes-aColor" args={[buffers.colors, 3]} />
       </bufferGeometry>
       <shaderMaterial
         ref={matRef}

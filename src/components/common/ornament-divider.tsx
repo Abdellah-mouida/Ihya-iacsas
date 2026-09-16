@@ -23,13 +23,13 @@ export function OrnamentDivider({
         fill="none"
         className="animate-float-slow shrink-0"
       >
-        {/* crescent */}
+        {/* Islamic geometric motif */}
         <path
-          d="M16.2 3.4a9 9 0 1 0 4.4 12.3 7 7 0 1 1-4.4-12.3Z"
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
           fill="currentColor"
           opacity="0.9"
         />
-        {/* eight-point star — brand green accent */}
+        {/* Star */}
         <g
           className="text-green"
           stroke="currentColor"
