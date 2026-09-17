@@ -3,14 +3,16 @@
 import { motion } from "framer-motion";
 import {
   Calendar,
+  CheckCircle2,
   Clock,
-  Eye,
   Filter,
+  Mail,
   MapPin,
   RefreshCw,
   Search,
   Ticket,
   Trash2,
+  User,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -19,6 +21,7 @@ import { toast } from "sonner";
 import { deleteBooking, getBookings } from "@/app/actions/bookings";
 import { getEvents } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
+import { IslamicLoader } from "@/components/common/islamic-loader";
 import {
   Dialog,
   DialogContent,
@@ -58,7 +61,8 @@ export default function AdminBookingsPage() {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [activeModalBooking, setActiveModalBooking] = useState<BookingRecord | null>(null);
+  const [activeModalBooking, setActiveModalBooking] =
+    useState<BookingRecord | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -91,7 +95,8 @@ export default function AdminBookingsPage() {
     fetchData();
   }, [selectedEventId]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     if (
       !confirm(
         locale === "ar"
@@ -105,7 +110,9 @@ export default function AdminBookingsPage() {
     setBookings((prev) => prev.filter((b) => b.id !== id));
     const res = await deleteBooking(id);
     if (res.success) {
-      toast.success(locale === "ar" ? "تم حذف الحجز بنجاح" : "Booking record deleted");
+      toast.success(
+        locale === "ar" ? "تم حذف الحجز بنجاح" : "Booking record deleted",
+      );
     } else {
       toast.error(res.error || "Failed to delete booking");
       fetchData();
@@ -141,8 +148,8 @@ export default function AdminBookingsPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {locale === "ar"
-              ? "استعراض وتصفية الحجوزات المؤكدة عبر رمز التحقق (OTP)."
-              : "Review, filter, and manage attendee bookings verified via OTP."}
+              ? "اضغط على أي صف لعرض كامل التفاصيل والمعلومات المسجلة."
+              : "Click any row to open full booking details and registration data."}
           </p>
         </div>
 
@@ -151,7 +158,9 @@ export default function AdminBookingsPage() {
           variant="outline"
           className="rounded-xl glass gap-2 shrink-0 self-start sm:self-auto h-10 px-4 text-sm font-semibold"
         >
-          <RefreshCw className={`size-4 shrink-0 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`size-4 shrink-0 ${loading ? "animate-spin" : ""}`}
+          />
           <span className="whitespace-nowrap">
             {locale === "ar" ? "تحديث السجل" : "Refresh"}
           </span>
@@ -180,7 +189,9 @@ export default function AdminBookingsPage() {
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0 font-semibold whitespace-nowrap">
             <Filter className="size-4 text-brass shrink-0" />
-            <span>{locale === "ar" ? "تصفية حسب الفعالية:" : "Filter Event:"}</span>
+            <span>
+              {locale === "ar" ? "تصفية حسب الفعالية:" : "Filter Event:"}
+            </span>
           </div>
 
           <select
@@ -214,8 +225,14 @@ export default function AdminBookingsPage() {
 
       {/* Bookings Table View */}
       {loading ? (
-        <div className="py-20 text-center text-muted-foreground text-sm animate-pulse">
-          {locale === "ar" ? "جاري تحميل سجل الحجوزات..." : "Loading bookings..."}
+        <div className="py-20 flex justify-center items-center">
+          <IslamicLoader
+            message={
+              locale === "ar"
+                ? "جاري تحميل سجل الحجوزات..."
+                : "Loading bookings..."
+            }
+          />
         </div>
       ) : filteredBookings.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center space-y-4">
@@ -235,27 +252,21 @@ export default function AdminBookingsPage() {
         </div>
       ) : (
         <div className="glass rounded-2xl border border-border/60 shadow-layered overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm border-collapse min-w-[720px]">
+          <div className="w-full">
+            <table className="w-full text-start text-sm border-collapse table-auto">
               <thead>
                 <tr className="border-b border-border/60 bg-card/50 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[180px]">
-                    {locale === "ar" ? "الرقم والاسم الكامل" : "Ref & Full Name"}
+                  <th className="py-3.5 px-4 sm:px-6 text-start">
+                    {locale === "ar" ? "الاسم والرقم" : "Attendee / Ref"}
                   </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[180px]">
-                    {locale === "ar" ? "الفعالية الحاضر لها" : "Target Event"}
+                  <th className="py-3.5 px-4 sm:px-6 text-start">
+                    {locale === "ar" ? "الفعالية" : "Event"}
                   </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[200px]">
-                    {locale === "ar" ? "البريد الإلكتروني" : "Email Address"}
+                  <th className="py-3.5 px-4 sm:px-6 text-start hidden sm:table-cell">
+                    {locale === "ar" ? "تاريخ التأكيد" : "Date"}
                   </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[140px]">
-                    {locale === "ar" ? "المدينة / السن" : "City / Age"}
-                  </th>
-                  <th className="py-4 px-6 text-start whitespace-nowrap min-w-[150px]">
-                    {locale === "ar" ? "تاريخ التأكيد" : "Confirmed At"}
-                  </th>
-                  <th className="py-4 px-6 text-end whitespace-nowrap min-w-[110px]">
-                    {locale === "ar" ? "إجراءات" : "Actions"}
+                  <th className="py-3.5 px-4 sm:px-6 text-end">
+                    {locale === "ar" ? "الحالة" : "Status"}
                   </th>
                 </tr>
               </thead>
@@ -263,78 +274,57 @@ export default function AdminBookingsPage() {
                 {filteredBookings.map((b, index) => (
                   <motion.tr
                     key={b.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.02 }}
-                    className="hover:bg-muted/30 transition-colors"
+                    onClick={() => setActiveModalBooking(b)}
+                    data-testid={`booking-row-${b.id}`}
+                    className="cursor-pointer hover:bg-brass/10 transition-colors group"
                   >
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-xs font-mono font-bold text-brass mb-0.5 dir-ltr text-start">
-                        IHY-{b.id.slice(-6).toUpperCase()}
-                      </div>
-                      <div className="text-base font-bold text-foreground">
+                    {/* Attendee Name & Ref */}
+                    <td className="py-3.5 px-4 sm:px-6">
+                      <div className="font-bold text-foreground group-hover:text-brass transition-colors">
                         {b.fullName}
                       </div>
+                      <div className="text-[11px] font-mono text-brass/80">
+                        IHY-{b.id.slice(-6).toUpperCase()}
+                      </div>
                     </td>
 
-                    <td className="py-4 px-6">
-                      <div className="font-semibold text-foreground whitespace-nowrap">
+                    {/* Target Event */}
+                    <td className="py-3.5 px-4 sm:px-6">
+                      <div className="font-medium text-foreground truncate max-w-[200px] sm:max-w-xs">
                         {locale === "ar" ? b.event.titleAr : b.event.titleEn}
                       </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
-                        <Calendar className="size-3 text-brass shrink-0" />
-                        <span>
-                          {new Date(b.event.date).toLocaleDateString(
-                            locale === "ar" ? "ar-MA" : "en-US",
-                            { month: "short", day: "numeric" },
-                          )}
-                        </span>
+                      <div className="text-xs text-muted-foreground">
+                        {b.city}
                       </div>
                     </td>
 
-                    <td className="py-4 px-6 whitespace-nowrap dir-ltr text-start font-medium text-foreground">
-                      {b.email}
+                    {/* Submission Date */}
+                    <td className="py-3.5 px-4 sm:px-6 text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                      {new Date(b.createdAt).toLocaleDateString(
+                        locale === "ar" ? "ar-MA" : "en-US",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        },
+                      )}
                     </td>
 
-                    <td className="py-4 px-6 whitespace-nowrap font-medium text-muted-foreground">
-                      <span>{b.city}</span>
-                      <span className="text-xs opacity-75"> ({b.age} {locale === "ar" ? "سنة" : "yo"})</span>
-                    </td>
-
-                    <td className="py-4 px-6 whitespace-nowrap text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="size-3.5 text-brass shrink-0" />
-                        <span>
-                          {new Date(b.createdAt).toLocaleDateString(
-                            locale === "ar" ? "ar-MA" : "en-US",
-                            {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-6 text-end whitespace-nowrap">
+                    {/* Status & Delete */}
+                    <td className="py-3.5 px-4 sm:px-6 text-end whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 className="size-3.5 shrink-0" />
+                          <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
+                        </span>
                         <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setActiveModalBooking(b)}
-                          className="rounded-xl h-8 px-2.5 text-xs gap-1"
-                        >
-                          <Eye className="size-3.5 shrink-0 text-brass" />
-                          <span>{locale === "ar" ? "تفاصيل" : "Details"}</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDelete(b.id)}
-                          className="rounded-xl h-8 px-2.5 text-xs"
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => handleDelete(e, b.id)}
+                          className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="size-3.5 shrink-0" />
                         </Button>
@@ -356,60 +346,116 @@ export default function AdminBookingsPage() {
         }}
       >
         {activeModalBooking ? (
-          <DialogContent className="sm:max-w-md">
+          <DialogContent
+            data-testid="booking-detail-modal"
+            className="sm:max-w-lg glass-strong border-brass/30"
+          >
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Ticket className="size-5 text-brass" />
-                <span>
-                  {locale === "ar" ? "تفاصيل الحجز" : "Booking Details"}
-                </span>
-                <span className="font-mono text-xs text-brass font-bold ms-auto">
+              <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-3">
+                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                  <User className="size-5 text-brass" />
+                  <span>
+                    {locale === "ar" ? "تفاصيل الحجز" : "Booking Details"}
+                  </span>
+                </DialogTitle>
+                <span className="font-mono text-xs font-bold text-brass bg-brass/10 px-2.5 py-1 rounded-full border border-brass/30">
                   IHY-{activeModalBooking.id.slice(-6).toUpperCase()}
                 </span>
-              </DialogTitle>
-              <DialogDescription>
+              </div>
+              <DialogDescription className="text-xs text-muted-foreground pt-1">
                 {locale === "ar"
-                  ? "معلومات المشارك المسجلة لحضور الفعالية."
-                  : "Attendee information registered for this event."}
+                  ? "جميع البيانات والمعلومات المسجلة للمشارك لحضور الفعالية."
+                  : "Complete attendee registration information for this event."}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-sm">
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">{locale === "ar" ? "الاسم الكامل:" : "Full Name:"}</span>
-                <span className="font-semibold text-foreground">{activeModalBooking.fullName}</span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">{locale === "ar" ? "البريد الإلكتروني:" : "Email:"}</span>
-                <span className="font-semibold text-foreground dir-ltr">{activeModalBooking.email}</span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">{locale === "ar" ? "المدينة:" : "City:"}</span>
-                <span className="font-semibold text-foreground">{activeModalBooking.city}</span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">{locale === "ar" ? "العمر:" : "Age:"}</span>
-                <span className="font-semibold text-foreground">{activeModalBooking.age} {locale === "ar" ? "سنة" : "years"}</span>
-              </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">{locale === "ar" ? "الفعالية:" : "Event:"}</span>
-                <span className="font-semibold text-foreground">
-                  {locale === "ar" ? activeModalBooking.event.titleAr : activeModalBooking.event.titleEn}
+              <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                <span className="text-muted-foreground text-xs font-semibold uppercase">
+                  {locale === "ar" ? "الاسم الكامل" : "Full Name"}
+                </span>
+                <span className="font-bold text-foreground text-base">
+                  {activeModalBooking.fullName}
                 </span>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">{locale === "ar" ? "الموقع:" : "Location:"}</span>
-                <span className="font-semibold text-foreground flex items-center gap-1">
-                  <MapPin className="size-3.5 text-brass" />
+
+              <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                <span className="text-muted-foreground text-xs font-semibold uppercase">
+                  {locale === "ar" ? "البريد الإلكتروني" : "Email Address"}
+                </span>
+                <span className="font-medium text-foreground dir-ltr flex items-center gap-1.5">
+                  <Mail className="size-3.5 text-brass" />
+                  {activeModalBooking.email}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-b border-border/40 pb-2.5">
+                <div>
+                  <span className="text-muted-foreground text-xs font-semibold uppercase block">
+                    {locale === "ar" ? "المدينة" : "City"}
+                  </span>
+                  <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
+                    <MapPin className="size-3.5 text-brass" />
+                    {activeModalBooking.city}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs font-semibold uppercase block">
+                    {locale === "ar" ? "العمر" : "Age"}
+                  </span>
+                  <span className="font-semibold text-foreground mt-0.5 block">
+                    {activeModalBooking.age}{" "}
+                    {locale === "ar" ? "سنة" : "years old"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                <span className="text-muted-foreground text-xs font-semibold uppercase">
+                  {locale === "ar" ? "الفعالية المستهدفة" : "Target Event"}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {locale === "ar"
+                    ? activeModalBooking.event.titleAr
+                    : activeModalBooking.event.titleEn}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                <span className="text-muted-foreground text-xs font-semibold uppercase">
+                  {locale === "ar" ? "تاريخ الفعالية ومقرها" : "Event Details"}
+                </span>
+                <span className="font-medium text-muted-foreground text-xs flex items-center gap-1.5">
+                  <Calendar className="size-3.5 text-brass" />
+                  {new Date(activeModalBooking.event.date).toLocaleDateString(
+                    locale === "ar" ? "ar-MA" : "en-US",
+                    { month: "long", day: "numeric", year: "numeric" },
+                  )}
+                  {" — "}
                   {activeModalBooking.event.location}
                 </span>
               </div>
+
+              <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                <span className="text-muted-foreground text-xs font-semibold uppercase">
+                  {locale === "ar" ? "تاريخ التسجيل" : "Registered At"}
+                </span>
+                <span className="font-medium text-muted-foreground text-xs flex items-center gap-1.5">
+                  <Clock className="size-3.5 text-brass" />
+                  {new Date(activeModalBooking.createdAt).toLocaleString(
+                    locale === "ar" ? "ar-MA" : "en-US",
+                  )}
+                </span>
+              </div>
+
               {activeModalBooking.motive ? (
                 <div className="space-y-1.5 pt-1">
                   <span className="text-muted-foreground text-xs font-semibold uppercase">
-                    {locale === "ar" ? "دافع الحضور:" : "Reason for Attending:"}
+                    {locale === "ar"
+                      ? "دافع الحضور"
+                      : "Reason for Attending"}
                   </span>
-                  <p className="bg-muted/40 p-3 rounded-xl text-xs whitespace-pre-wrap leading-relaxed">
+                  <p className="bg-muted/50 border border-border/50 p-3.5 rounded-2xl text-xs whitespace-pre-wrap leading-relaxed">
                     {activeModalBooking.motive}
                   </p>
                 </div>
