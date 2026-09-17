@@ -1,14 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { AlertCircle, Home, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { useEffect } from "react";
 
-const GlassmorphismCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl pointer-events-none" />
-    {children}
-  </div>
-);
+import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { Button } from "@/components/ui/button";
 
 export default function ErrorPage({
   error,
@@ -17,77 +15,66 @@ export default function ErrorPage({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("App error boundary caught:", error);
+  }, [error]);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+    <div className="relative min-h-dvh flex flex-col items-center justify-center p-6 text-foreground overflow-hidden">
+      {/* Background ambient lighting and pattern */}
+      <div className="pattern-islamic absolute inset-0 -z-10 opacity-60" />
+      <div className="bg-destructive absolute top-1/3 start-1/2 -z-10 size-96 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-10 blur-3xl" />
+
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-8"
+        initial={{ opacity: 0, scale: 0.92, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="glass-strong relative z-10 mx-auto max-w-lg w-full rounded-[2rem] border border-destructive/30 p-8 sm:p-10 text-center shadow-layered backdrop-blur-xl"
       >
-        <h1 className="text-6xl font-bold text-red-500 mb-4">خطأ</h1>
-        <h2 className="text-2xl font-semibold mb-6">حدث خطأ غير متوقع</h2>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          نعتذر، حدثت مشكلة أثناء تحميل هذه الصفحة. يمكنك محاولة إعادة التحميل.
-        </p>
-      </motion.div>
-
-      <OrnamentDivider className="my-8" />
-
-      <GlassmorphismCard>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="text-center"
-        >
-          <svg
-            width="120"
-            height="120"
-            viewBox="0 0 24 24"
-            fill="none"
-            className="mx-auto mb-6 text-brass"
-          >
-            {/* Islamic geometric motif */}
-            <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-              fill="currentColor"
-              opacity="0.9"
-            />
-            {/* Star */}
-            <g
-              className="text-green"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              opacity="0.9"
-              transform="translate(2 2)"
-            >
-              <rect x="4.2" y="4.2" width="6" height="6" transform="rotate(45 7.2 7.2)" />
-            </g>
-          </svg>
-          <p className="text-muted-foreground mb-6">
-            إذا استمرت المشكلة، يمكنك العودة إلى الصفحة الرئيسية أو التواصل معنا.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <motion.button
-              onClick={reset}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-brass text-white rounded-full font-medium hover:bg-brass/90 transition-colors"
-            >
-              إعادة المحاولة
-            </motion.button>
-            <motion.a
-              href="/"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-secondary text-secondary-foreground rounded-full font-medium hover:bg-secondary/80 transition-colors"
-            >
-              العودة إلى الصفحة الرئيسية
-            </motion.a>
+        {/* Animated Islamic ornament with error badge */}
+        <div className="relative mx-auto mb-6 flex size-20 items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-destructive/15 blur-lg" />
+          <div className="grid size-16 place-items-center rounded-2xl border border-destructive/40 bg-destructive/10 text-destructive shadow-sm">
+            <AlertCircle className="size-8" />
           </div>
-        </motion.div>
-      </GlassmorphismCard>
+        </div>
+
+        <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
+          حدث خطأ غير متوقع
+        </h1>
+        <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-destructive">
+          Something went wrong
+        </p>
+
+        <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
+          نعتذر عن هذا الخطأ المؤقت. يمكنك محاولة إعادة تحميل الصفحة أو العودة للصفحة الرئيسية.
+        </p>
+
+        <div className="my-6">
+          <OrnamentDivider compact />
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button
+            onClick={() => reset()}
+            className="bg-brass-gradient h-11 w-full sm:w-auto rounded-full px-6 font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
+          >
+            <RotateCcw className="size-4 me-2 shrink-0" />
+            إعادة المحاولة
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
+            className="glass h-11 w-full sm:w-auto rounded-full px-6 font-semibold"
+          >
+            <Link href="/">
+              <Home className="size-4 me-2 shrink-0 text-brass" />
+              الصفحة الرئيسية
+            </Link>
+          </Button>
+        </div>
+      </motion.div>
     </div>
   );
 }
