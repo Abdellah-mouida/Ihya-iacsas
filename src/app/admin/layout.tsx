@@ -5,6 +5,7 @@ import {
   Calendar,
   Image as ImageIcon,
   LayoutDashboard,
+  Mail,
   Menu,
   ShieldAlert,
   Sparkles,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: "/admin/gallery", labelKey: "dashboard.gallery", icon: ImageIcon },
   { href: "/admin/events", labelKey: "dashboard.events", icon: Calendar },
   { href: "/admin/bookings", labelKey: "dashboard.bookings", icon: Ticket },
+  { href: "/admin/contacts", labelKey: "dashboard.contacts", icon: Mail },
 ];
 
 export default function AdminLayout({

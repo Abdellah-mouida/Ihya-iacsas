@@ -5,6 +5,7 @@ import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { submitContactMessage } from "@/app/actions/contacts";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,16 +33,19 @@ export function Contact() {
     return Object.keys(next).length === 0;
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
     setStatus("sending");
-    // Frontend-only: simulate a request.
-    window.setTimeout(() => {
+    const res = await submitContactMessage(values);
+    if (res.success) {
       setStatus("success");
       toast.success(t("contact.success"), { description: t("contact.successDesc") });
       setValues({ name: "", email: "", message: "" });
-    }, 1100);
+    } else {
+      setStatus("idle");
+      toast.error(res.error || "Failed to submit message");
+    }
   }
 
   const info = [
