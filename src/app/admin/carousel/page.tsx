@@ -25,6 +25,7 @@ import {
   updateCarouselPost,
 } from "@/app/actions/carousel";
 import { Button } from "@/components/ui/button";
+import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useLocale } from "@/i18n/locale-provider";
 
 type CarouselItem = {
@@ -35,6 +36,19 @@ type CarouselItem = {
   createdAt: Date;
 };
 
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function AdminCarouselPage() {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
@@ -43,6 +57,24 @@ export default function AdminCarouselPage() {
   const [editingPost, setEditingPost] = useState<CarouselItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Clean up blob object URL on unmount or when preview changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const setSafePreviewUrl = (newUrl: string | null) => {
+    setPreviewUrl((prev) => {
+      if (prev && prev.startsWith("blob:") && prev !== newUrl) {
+        URL.revokeObjectURL(prev);
+      }
+      return newUrl;
+    });
+  };
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -130,7 +162,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       );
       setModalOpen(false);
       setEditingPost(null);
-      setPreviewUrl(null);
+      setSafePreviewUrl(null);
       fetchPosts();
     } else {
       toast.error(res.error || "Failed to save poster");
@@ -139,13 +171,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
   const openAddModal = () => {
     setEditingPost(null);
-    setPreviewUrl(null);
+    setSafePreviewUrl(null);
     setModalOpen(true);
   };
 
   const openEditModal = (post: CarouselItem) => {
     setEditingPost(post);
-    setPreviewUrl(post.imageUrl);
+    setSafePreviewUrl(post.imageUrl);
     setModalOpen(true);
   };
 
@@ -194,8 +226,14 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
       {/* Grid of Posters */}
       {loading ? (
-        <div className="py-20 text-center text-muted-foreground text-sm animate-pulse">
-          {locale === "ar" ? "جاري تحميل الملصقات..." : "Loading posters..."}
+        <div className="py-20 flex items-center justify-center">
+          <IslamicLoader
+            message={
+              locale === "ar"
+                ? "جاري تحميل الملصقات..."
+                : "Loading posters..."
+            }
+          />
         </div>
       ) : posts.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center space-y-4">
@@ -344,12 +382,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   {locale === "ar" ? "الصورة (تحميل أو رابط)" : "Image (Upload or URL)"}
                 </label>
 
-                {previewUrl && (
+                {isValidImageUrl(previewUrl) && (
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">
                     <Image
-                      src={previewUrl}
+                      src={previewUrl!}
                       alt="Preview"
                       fill
+                      unoptimized={previewUrl!.startsWith("blob:")}
                       className="object-contain"
                     />
                   </div>
@@ -362,7 +401,10 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) setPreviewUrl(URL.createObjectURL(file));
+                      if (file) {
+                        const blobUrl = URL.createObjectURL(file);
+                        setSafePreviewUrl(blobUrl);
+                      }
                     }}
                     className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brass/20 file:text-brass hover:file:bg-brass/30 cursor-pointer"
                   />
@@ -377,7 +419,10 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     defaultValue={editingPost?.imageUrl || ""}
                     placeholder="https://images.unsplash.com/..."
                     onChange={(e) => {
-                      if (e.target.value) setPreviewUrl(e.target.value);
+                      const val = e.target.value.trim();
+                      if (isValidImageUrl(val)) {
+                        setSafePreviewUrl(val);
+                      }
                     }}
                     className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
                   />

@@ -30,6 +30,19 @@ type GalleryPhoto = {
   createdAt: Date;
 };
 
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function AdminGalleryPage() {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
@@ -38,6 +51,23 @@ export default function AdminGalleryPage() {
   const [editingPhoto, setEditingPhoto] = useState<GalleryPhoto | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const setSafePreviewUrl = (newUrl: string | null) => {
+    setPreviewUrl((prev) => {
+      if (prev && prev.startsWith("blob:") && prev !== newUrl) {
+        URL.revokeObjectURL(prev);
+      }
+      return newUrl;
+    });
+  };
 
   const fetchPhotos = async () => {
     setLoading(true);
@@ -110,7 +140,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       );
       setModalOpen(false);
       setEditingPhoto(null);
-      setPreviewUrl(null);
+      setSafePreviewUrl(null);
       fetchPhotos();
     } else {
       toast.error(res.error || "Failed to save photo");
@@ -119,13 +149,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
   const openAddModal = () => {
     setEditingPhoto(null);
-    setPreviewUrl(null);
+    setSafePreviewUrl(null);
     setModalOpen(true);
   };
 
   const openEditModal = (photo: GalleryPhoto) => {
     setEditingPhoto(photo);
-    setPreviewUrl(photo.imageUrl);
+    setSafePreviewUrl(photo.imageUrl);
     setModalOpen(true);
   };
 
@@ -297,12 +327,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   {locale === "ar" ? "الصورة" : "Image File or URL"}
                 </label>
 
-                {previewUrl && (
+                {isValidImageUrl(previewUrl) && (
                   <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">
                     <Image
-                      src={previewUrl}
+                      src={previewUrl!}
                       alt="Preview"
                       fill
+                      unoptimized={previewUrl!.startsWith("blob:")}
                       className="object-contain"
                     />
                   </div>
@@ -314,7 +345,10 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) setPreviewUrl(URL.createObjectURL(file));
+                    if (file) {
+                      const blobUrl = URL.createObjectURL(file);
+                      setSafePreviewUrl(blobUrl);
+                    }
                   }}
                   className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brass/20 file:text-brass hover:file:bg-brass/30 cursor-pointer"
                 />
@@ -325,7 +359,10 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   defaultValue={editingPhoto?.imageUrl || ""}
                   placeholder="https://..."
                   onChange={(e) => {
-                    if (e.target.value) setPreviewUrl(e.target.value);
+                    const val = e.target.value.trim();
+                    if (isValidImageUrl(val)) {
+                      setSafePreviewUrl(val);
+                    }
                   }}
                   className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
                 />
