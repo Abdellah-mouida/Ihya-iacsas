@@ -31,8 +31,7 @@ export function ThemeToggle({
     const reduce =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // Composited cross-fade via the View Transitions API — avoids the lag of
-    // transitioning every element (backdrop-filters + WebGL canvas) at once.
+
     if (doc.startViewTransition && !reduce) {
       doc.startViewTransition(() => setTheme(next));
     } else {
@@ -48,8 +47,8 @@ export function ThemeToggle({
       className={cn(
         "group relative inline-flex size-10 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         onDark
-          ? "text-white/90 hover:text-white"
-          : "glass text-black dark:text-foreground/80",
+          ? "text-foreground dark:text-white/90 hover:text-brass dark:hover:text-white"
+          : "glass text-foreground/85 hover:text-foreground",
         className,
       )}
     >

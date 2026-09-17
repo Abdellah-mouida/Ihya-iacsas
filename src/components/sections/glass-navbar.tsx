@@ -140,8 +140,8 @@ export function GlassNavbar() {
             className={cn(
               "font-heading text-xl font-bold transition-colors duration-300",
               transparentTop
-                ? "text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.45)]"
-                : "text-black dark:text-gradient-brass",
+                ? "text-foreground dark:text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.25)]"
+                : "text-foreground dark:text-gradient-brass",
             )}
           >
             {t("nav.brand")}
@@ -162,11 +162,11 @@ export function GlassNavbar() {
                     "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
                     active
                       ? transparentTop
-                        ? "text-white"
+                        ? "text-green dark:text-white"
                         : "text-green"
                       : transparentTop
-                        ? "text-white/90 hover:text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]"
-                        : "text-black/85 dark:text-foreground/85 hover:text-green",
+                        ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
+                        : "text-foreground/85 hover:text-green",
                   )}
                 >
                   {active ? (
@@ -176,7 +176,7 @@ export function GlassNavbar() {
                       className={cn(
                         "absolute inset-0 -z-10 rounded-full ring-1",
                         transparentTop
-                          ? "bg-white/15 ring-white/35"
+                          ? "bg-foreground/10 ring-foreground/20 dark:bg-white/15 dark:ring-white/35"
                           : "bg-green/12 ring-green/25",
                       )}
                     />
@@ -204,16 +204,18 @@ export function GlassNavbar() {
           </Button>
 
           {/* Animated hamburger */}
-<button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-label={t("nav.menu")}
-              aria-expanded={open}
-              className={cn(
-                "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
-                transparentTop ? "text-white" : "glass text-black dark:text-foreground",
-              )}
-            >
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={t("nav.menu")}
+            aria-expanded={open}
+            className={cn(
+              "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
+              transparentTop
+                ? "text-foreground dark:text-white"
+                : "glass text-foreground",
+            )}
+          >
             <span className="relative block size-5 text-current">
               <motion.span
                 variants={hamburgerTop}
@@ -276,7 +278,7 @@ export function GlassNavbar() {
                           "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
                           active
                             ? "bg-green/15 text-green"
-                            : "text-black/85 dark:text-foreground/85 hover:bg-muted hover:text-green",
+                            : "text-foreground/85 hover:bg-muted hover:text-green",
                         )}
                       >
                         <span className="flex items-center">
