@@ -353,7 +353,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-lg p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
+            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-lg p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">

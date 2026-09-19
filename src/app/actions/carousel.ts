@@ -80,7 +80,7 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     const file = formData.get("image") as File | null;
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
-    let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
+    const imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
 
     const dataToUpdate: {
       order?: number;
