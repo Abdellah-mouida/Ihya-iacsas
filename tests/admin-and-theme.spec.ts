@@ -118,4 +118,44 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await page.goto("/page-that-does-not-exist-404");
     await expect(page.locator("h1")).toContainText("الصفحة غير موجودة");
   });
+
+  test("6. Bilingual fields render with required validation and translate suggestion chips", async ({ page }) => {
+    await page.goto("/admin/events");
+
+    // Open create event modal
+    const addBtn = page.locator("button", { hasText: /فعالية جديدة|New Event/i }).first();
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+    await addBtn.click();
+
+    // Verify both titleAr and titleEn inputs exist and are required
+    const titleArInput = page.locator('input[name="titleAr"]');
+    const titleEnInput = page.locator('input[name="titleEn"]');
+    await expect(titleArInput).toBeVisible();
+    await expect(titleEnInput).toBeVisible();
+    await expect(titleArInput).toHaveAttribute("required", "");
+    await expect(titleEnInput).toHaveAttribute("required", "");
+
+    // Type Arabic text and test translation suggestion chip
+    await titleArInput.fill("أمسية قرآنية شبابية");
+    // Wait for translation debouncing & chip appearance
+    const suggestionChip = page.locator("button[title='Accept'], button[title='قبول']").first();
+    await expect(suggestionChip).toBeVisible({ timeout: 10000 });
+
+    // Accept suggestion
+    await suggestionChip.click();
+    await expect(titleEnInput).not.toHaveValue("");
+
+    // Also verify Gallery modal has required bilingual captions
+    await page.goto("/admin/gallery");
+    const addPhotoBtn = page.locator("button", { hasText: /إضافة صورة|إضافة أول صورة|Add Photo|Add First Photo/i }).first();
+    await expect(addPhotoBtn).toBeVisible({ timeout: 10000 });
+    await addPhotoBtn.click();
+
+    const captionArInput = page.locator('input[name="captionAr"]');
+    const captionEnInput = page.locator('input[name="captionEn"]');
+    await expect(captionArInput).toBeVisible();
+    await expect(captionEnInput).toBeVisible();
+    await expect(captionArInput).toHaveAttribute("required", "");
+    await expect(captionEnInput).toHaveAttribute("required", "");
+  });
 });

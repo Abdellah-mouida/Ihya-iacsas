@@ -19,6 +19,7 @@ import {
   getGalleryPhotos,
   updateGalleryPhoto,
 } from "@/app/actions/gallery";
+import { BilingualFields } from "@/components/common/bilingual-fields";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -298,7 +299,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-lg p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
+            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-lg p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">
@@ -368,33 +369,19 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 />
               </div>
 
-              {/* Caption Arabic */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                  {locale === "ar" ? "الوصف (بالعربية)" : "Caption (Arabic)"}
-                </label>
-                <input
-                  type="text"
-                  name="captionAr"
-                  defaultValue={editingPhoto?.captionAr || ""}
-                  placeholder="لحظات إيمانية في لقاء شبابي..."
-                  className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
-                />
-              </div>
-
-              {/* Caption English */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                  {locale === "ar" ? "الوصف (بالإنجليزية)" : "Caption (English)"}
-                </label>
-                <input
-                  type="text"
-                  name="captionEn"
-                  defaultValue={editingPhoto?.captionEn || ""}
-                  placeholder="Spiritual moments in a youth gathering..."
-                  className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass dir-ltr"
-                />
-              </div>
+              {/* Bilingual Captions AR & EN with Translation Suggestions */}
+              <BilingualFields
+                arabicLabel={locale === "ar" ? "الوصف (بالعربية)" : "Caption (Arabic)"}
+                englishLabel={locale === "ar" ? "الوصف (بالإنجليزية)" : "Caption (English)"}
+                arabicName="captionAr"
+                englishName="captionEn"
+                defaultArabic={editingPhoto?.captionAr || ""}
+                defaultEnglish={editingPhoto?.captionEn || ""}
+                arabicPlaceholder="لحظات إيمانية في لقاء شبابي..."
+                englishPlaceholder="Spiritual moments in a youth gathering..."
+                required={true}
+                locale={locale}
+              />
 
               {/* Submit Buttons */}
               <div className="pt-4 border-t border-border/60 flex items-center justify-end gap-3">

@@ -25,8 +25,15 @@ export async function createGalleryPhoto(formData: FormData) {
   try {
     const file = formData.get("image") as File | null;
     let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
-    const captionAr = (formData.get("captionAr") as string) || null;
-    const captionEn = (formData.get("captionEn") as string) || null;
+    const captionAr = (formData.get("captionAr") as string)?.trim() || null;
+    const captionEn = (formData.get("captionEn") as string)?.trim() || null;
+
+    if (!captionAr || !captionEn) {
+      return {
+        success: false,
+        error: "Both Arabic and English captions are required.",
+      };
+    }
 
     if (file && file.size > 0) {
       try {
@@ -72,10 +79,18 @@ export async function createGalleryPhoto(formData: FormData) {
 
 export async function updateGalleryPhoto(id: string, formData: FormData) {
   try {
-    const captionAr = (formData.get("captionAr") as string) || null;
-    const captionEn = (formData.get("captionEn") as string) || null;
+    const captionAr = (formData.get("captionAr") as string)?.trim() || null;
+    const captionEn = (formData.get("captionEn") as string)?.trim() || null;
+
+    if (!captionAr || !captionEn) {
+      return {
+        success: false,
+        error: "Both Arabic and English captions are required.",
+      };
+    }
+
     const file = formData.get("image") as File | null;
-    let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
+    const imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
 
     const dataToUpdate: {
       captionAr?: string | null;

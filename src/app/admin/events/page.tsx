@@ -25,6 +25,7 @@ import {
   toggleEventStatus,
   updateEvent,
 } from "@/app/actions/events";
+import { BilingualFields } from "@/components/common/bilingual-fields";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -299,10 +300,10 @@ export default function AdminEventsPage() {
                       </span>
                     )}
 
-                    {evt.isNew && (
+                    {new Date(evt.date) >= new Date() && evt.bookingOpen && (
                       <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
                         <Sparkles className="size-3 shrink-0" />
-                        <span>{locale === "ar" ? "مؤشر جديد" : "Navbar Dot Active"}</span>
+                        <span>{locale === "ar" ? "مؤشر نشط تلقائياً" : "Auto Dot Active"}</span>
                       </span>
                     )}
                   </div>
@@ -367,23 +368,6 @@ export default function AdminEventsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleToggleStatus(evt.id, "isNew", evt.isNew)}
-                  className="rounded-xl text-xs glass h-8 px-3 font-semibold"
-                >
-                  <span className="whitespace-nowrap">
-                    {evt.isNew
-                      ? locale === "ar"
-                        ? "إلغاء الشارة"
-                        : "Disable Dot"
-                      : locale === "ar"
-                      ? "تفعيل الشارة"
-                      : "Set 'New' Dot"}
-                  </span>
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
                   onClick={() => openEditModal(evt)}
                   className="rounded-xl text-xs glass h-8 px-3 font-semibold"
                 >
@@ -412,7 +396,7 @@ export default function AdminEventsPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-2xl p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
+            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-2xl p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">
@@ -435,36 +419,19 @@ export default function AdminEventsPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Titles AR & EN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                    {locale === "ar" ? "عنوان الفعالية (بالعربية)" : "Title (Arabic)"}
-                  </label>
-                  <input
-                    type="text"
-                    name="titleAr"
-                    required
-                    defaultValue={editingEvent?.titleAr || ""}
-                    placeholder="مجالس إحياء الشبابي..."
-                    className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                    {locale === "ar" ? "العنوان (بالإنجليزية)" : "Title (English)"}
-                  </label>
-                  <input
-                    type="text"
-                    name="titleEn"
-                    required
-                    defaultValue={editingEvent?.titleEn || ""}
-                    placeholder="Ihyaa Youth Gathering..."
-                    className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass dir-ltr"
-                  />
-                </div>
-              </div>
+              {/* Titles AR & EN with Translation Suggestions */}
+              <BilingualFields
+                arabicLabel={locale === "ar" ? "عنوان الفعالية (بالعربية)" : "Title (Arabic)"}
+                englishLabel={locale === "ar" ? "العنوان (بالإنجليزية)" : "Title (English)"}
+                arabicName="titleAr"
+                englishName="titleEn"
+                defaultArabic={editingEvent?.titleAr || ""}
+                defaultEnglish={editingEvent?.titleEn || ""}
+                arabicPlaceholder="مجالس إحياء الشبابي..."
+                englishPlaceholder="Ihyaa Youth Gathering..."
+                required={true}
+                locale={locale}
+              />
 
               {/* Descriptions AR & EN */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -607,24 +574,6 @@ export default function AdminEventsPage() {
                     {locale === "ar"
                       ? "مفتوحة للحجز (فعالية قادمة)"
                       : "Booking Open (Upcoming Event)"}
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isNewCheck"
-                    name="isNew"
-                    defaultChecked={editingEvent ? editingEvent.isNew : false}
-                    className="size-4 rounded border-border text-brass focus:ring-brass"
-                  />
-                  <label
-                    htmlFor="isNewCheck"
-                    className="text-sm font-semibold text-foreground cursor-pointer whitespace-nowrap"
-                  >
-                    {locale === "ar"
-                      ? "تفعيل الشارة النباضة في القائمة"
-                      : "Enable Pulsing Dot in Navbar"}
                   </label>
                 </div>
               </div>
