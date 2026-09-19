@@ -38,6 +38,7 @@ type BookingRecord = {
   city: string;
   age: number;
   motive?: string | null;
+  confirmed: boolean;
   createdAt: Date;
   event: {
     id: string;
@@ -316,10 +317,17 @@ export default function AdminBookingsPage() {
                     {/* Status & Delete */}
                     <td className="py-3.5 px-4 sm:px-6 text-end whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                          <CheckCircle2 className="size-3.5 shrink-0" />
-                          <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
-                        </span>
+                        {b.confirmed ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            <CheckCircle2 className="size-3.5 shrink-0" />
+                            <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            <Clock className="size-3.5 shrink-0" />
+                            <span>{locale === "ar" ? "قيد التأكيد" : "Pending"}</span>
+                          </span>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -348,7 +356,7 @@ export default function AdminBookingsPage() {
         {activeModalBooking ? (
           <DialogContent
             data-testid="booking-detail-modal"
-            className="sm:max-w-lg glass-strong border-brass/30"
+            className="sm:max-w-lg glass-strong border-brass/30 no-scrollbar max-h-[90vh] overflow-y-auto"
           >
             <DialogHeader>
               <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-3">
@@ -370,6 +378,23 @@ export default function AdminBookingsPage() {
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-sm">
+              <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
+                <span className="text-muted-foreground text-xs font-semibold uppercase">
+                  {locale === "ar" ? "حالة الحجز" : "Booking Status"}
+                </span>
+                {activeModalBooking.confirmed ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    <CheckCircle2 className="size-3.5 shrink-0" />
+                    <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <Clock className="size-3.5 shrink-0" />
+                    <span>{locale === "ar" ? "قيد التأكيد (في انتظار التحقق)" : "Pending (Awaiting Verification)"}</span>
+                  </span>
+                )}
+              </div>
+
               <div className="flex justify-between items-center border-b border-border/40 pb-2.5">
                 <span className="text-muted-foreground text-xs font-semibold uppercase">
                   {locale === "ar" ? "الاسم الكامل" : "Full Name"}

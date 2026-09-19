@@ -606,7 +606,6 @@ export async function getBookings(eventId?: string) {
   try {
     const bookings = await prisma.booking.findMany({
       where: {
-        confirmed: true,
         ...(eventId && eventId !== "all" ? { eventId } : {}),
       },
       orderBy: { createdAt: "desc" },
