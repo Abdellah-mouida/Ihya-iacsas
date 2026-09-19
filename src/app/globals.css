@@ -501,6 +501,35 @@
   .cursor-none-fine {
     cursor: none;
   }
+
+  /* Hide visible scrollbars in dialogs and textareas while maintaining full scrollability */
+  .no-scrollbar {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+/* Global scrollbar hiding for dialogs and textareas */
+[role="dialog"],
+dialog,
+[data-slot="dialog-content"],
+textarea {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+[role="dialog"]::-webkit-scrollbar,
+dialog::-webkit-scrollbar,
+[data-slot="dialog-content"]::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* View Transition cross-fade for theme switching (top-level, not layered) */
