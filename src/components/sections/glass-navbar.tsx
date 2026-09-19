@@ -45,11 +45,26 @@ export function GlassNavbar() {
 
   useEffect(() => {
     getPublicEvents().then((res) => {
-      if (res.success) {
+      if (res.success && res.openEvents) {
+        // Check if visitor has booked the active event
+        const isBooked = (id: string) => {
+          if (typeof window === "undefined") return false;
+          const localBooked =
+            localStorage.getItem(`ihyaa_booked_${id}`) === "true" ||
+            localStorage.getItem("ihyaa_booked_latest") === "true";
+          const cookieBooked =
+            document.cookie.includes(`ihyaa_booked_${id}=true`) ||
+            document.cookie.includes("ihyaa_booked_events");
+          return localBooked || cookieBooked;
+        };
+
+        const unbookedEvents = res.openEvents.filter((e) => !isBooked(e.id));
+        setHasNewEvent(unbookedEvents.length > 0);
+      } else if (res.success) {
         setHasNewEvent(res.hasNew);
       }
     });
-  }, []);
+  }, [pathname]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
