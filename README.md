@@ -1,144 +1,224 @@
-# إحياء | Ihyaa Community Website
+<p align="center">
+  <img src="public/images/logo-square.jpg" alt="Ihyaa Logo" width="100" height="100" style="border-radius: 50%; object-fit: cover;" />
+</p>
 
-A modern, animated, Arabic-first (RTL by default) website for **Ihyaa**
-(إحياء), a youth-focused Islamic community program in Morocco with
-branches in Marrakech, Taroudant, Fam Zguid (Tata), and Ouled Teima.
+<h1 align="center">Ihyaa Community Platform</h1>
 
-The site presents the program's activities, showcases its events with a
-full booking flow (including email verification), and includes an admin
-dashboard for managing content — all wrapped in a premium glassmorphism
-design with restrained Islamic visual motifs.
+<p align="center">
+  Official web platform for <strong>Ihyaa</strong> — a Moroccan non-profit youth community association dedicated to personal development, education, spiritual growth, and community service.
+</p>
 
 ---
 
-## ✨ Features
+## Overview
 
-- **Bilingual, RTL-first** — Arabic (RTL) by default with an English (LTR)
-  toggle; all UI copy is pulled from locale files, never hardcoded.
-- **Modern, animated design** — glassmorphism navigation and cards, 3D
-  hover/tilt effects, scroll-triggered animations, and an ambient
-  React Three Fiber particle scene in the hero section.
-- **Light / dark mode** — full theme support with smooth transitions,
-  consistent across every section and the admin dashboard.
-- **Branches map** — an interactive map of Morocco pinning each of the
-  program's four branch locations.
-- **Events & booking flow** — a dedicated events page listing upcoming
-  and past events, with a booking flow that collects attendee details
-  (name, email, city, age, optional motive) and verifies the attendee's
-  email via a one-time password (OTP) before confirming the booking.
-- **Gallery** — a curated set of photos on the home page with a
-  dedicated, full gallery page grouping every photo by upload date.
-- **Card carousel** — a looping poster carousel for featured visual content.
-- **Admin dashboard** — manage carousel posts, gallery photos, events,
-  view booking submissions and contact form messages, all backed by a
-  real database.
+**Ihyaa** is a non-profit youth community initiative based in Morocco, operating active branches and gatherings across **Marrakech**, **Taroudant**, **Fam Zguid (Tata)**, and **Ouled Teima**.
 
-## 🛠️ Tech Stack
+This web platform serves as the central digital hub for the organization, providing:
+- A public-facing web portal for event discovery, community news, activity photo galleries, and youth program registration.
+- A secure, rate-limited attendance booking flow with one-time passcode (OTP) email verification.
+- An internal administration portal for event scheduling, booking management, gallery curation, carousel controls, and contact inquiries.
 
-| Layer | Technology |
-|---|---|
-| Framework | [Next.js](https://nextjs.org/) (App Router), TypeScript |
-| Styling | [Tailwind CSS](https://tailwindcss.com/) |
-| Animation | [Framer Motion](https://www.framer.com/motion/) |
-| 3D | [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) + drei |
-| UI Components | [shadcn/ui](https://ui.shadcn.com/) + Base UI primitives |
-| Theming | [next-themes](https://github.com/pacocoursey/next-themes) |
-| Database | [Neon](https://neon.tech/) (serverless PostgreSQL) |
-| ORM | [Prisma](https://www.prisma.io/) |
-| Image storage | [Cloudinary](https://cloudinary.com/) |
-| Transactional email | [MailerSend](https://www.mailersend.com/) (OTP delivery) |
-| Icons | [lucide-react](https://lucide.dev/) |
-| Testing | [Playwright](https://playwright.dev/) |
+---
 
-## 📁 Project Structure
+## Features
+
+### Public Portal
+- **Full Bilingual Support (Arabic & English)**: Complete RTL (Right-to-Left) and LTR (Left-to-Right) layout adaptation with persistent language preference via `LocaleProvider`.
+- **Interactive 3D Hero Scene**: Custom Three.js and React Three Fiber shader canvas featuring dynamic floating particles and responsive camera interaction.
+- **Dynamic Events & Gatherings**:
+  - Event catalog with status indicators (Open / Closed / Upcoming).
+  - Automated "New" indicators and client-side recognition of booked events.
+- **Secure Multi-Step Booking Flow**:
+  - Step 1: Attendee details input with an interactive, searchable Moroccan city combobox and allowed email domain validation.
+  - Step 2: Rate-limited verification via 6-digit one-time passcodes (OTP), secured by HMAC-SHA256 hashing with salt and 10-minute expirations.
+  - Step 3: Registration confirmation displaying a unique booking reference, automatic localStorage persistence, and countdown redirect.
+  - Transactional email dispatch powered by MailerSend with branded Arabic and English templates.
+- **Activity Gallery**: Responsive media showcase with category filtering, bilingual descriptions, and modal zoom preview.
+- **Interactive Morocco Chapter Map**: Visual map component highlighting Ihyaa regional hubs across Morocco.
+- **Contact & Inquiries**: Direct messaging form with database logging for administrative review.
+- **Dark & Light Mode**: Theme switching with system preference detection powered by `next-themes`.
+
+### Administration Dashboard (`/admin`)
+- **Dashboard Overview**: Key metrics covering total bookings, active events, gallery photos, and pending inquiries.
+- **Bookings Management**: Filter attendees by event, monitor attendance status, inspect registration motives, and remove invalid entries.
+- **Events Management**: Create and edit gatherings, manage event dates, locations, and Cloudinary poster uploads, and toggle booking availability.
+- **Gallery Manager**: Upload high-resolution event photography directly to Cloudinary with bilingual captions and automated translation helper chips.
+- **Carousel Manager**: Reorder and toggle homepage banner slides with live previews.
+- **Inquiry Inbox**: Review messages submitted through the public contact form.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Version | Purpose |
+| --- | --- | --- | --- |
+| **Framework** | Next.js (App Router, Turbopack) | `16.3.2` | Full-stack React framework with server actions and static prerendering |
+| **Runtime / Library** | React & React DOM | `19.2.8` | UI component rendering |
+| **Language** | TypeScript | `^5` | Strict type safety across client and server |
+| **Styling** | Tailwind CSS | `^4` | Utility-first styling with `@tailwindcss/postcss` |
+| **Animation** | Framer Motion | `^13.1.1` | Page transitions, step animations, and interactive UI micro-interactions |
+| **3D Graphics** | Three.js / React Three Fiber / Drei | `^0.185.1` / `^9.7.0` / `^10.7.8` | Interactive 3D particle canvas on homepage |
+| **Database & ORM** | PostgreSQL (Neon) & Prisma ORM | `^6.4.1` | Relational database schema, connection pooling, and typed queries |
+| **Media Hosting** | Cloudinary SDK | `^2.11.0` | Cloud media storage and image optimization for posters and gallery |
+| **Transactional Email** | MailerSend REST API | — | Secure delivery of branded OTP verification emails |
+| **UI Components** | Radix UI Primitives & Lucide Icons | `^1.6.7` / `^1.33.0` | Accessible dialogs, dropdowns, and SVG iconography |
+| **Notifications** | Sonner | `^2.0.8` | Toast feedback for administrative actions |
+| **End-to-End Testing** | Playwright | `^1.63.0` | Automated testing for booking flow, rate limiting, and OTP logic |
+
+---
+
+## Project Structure
 
 ```
-src/
-├── app/
-│   ├── (site)/              # Public-facing pages (home, events, gallery, contact)
-│   ├── events/[event]/book/ # Booking flow (details → OTP → confirmation)
-│   ├── admin/                # Admin dashboard (carousel, gallery, events, bookings, contact)
-│   └── actions/              # Server Actions (bookings, uploads, OTP)
-├── components/
-│   ├── sections/              # Home page sections (hero, about, activities, branches, gallery, etc.)
-│   ├── common/                 # Shared components (navbar, footer, cards, stepper)
-│   ├── three/                   # React Three Fiber scenes
-│   └── react-bits/              # React Bits-based background/animation components
-├── locales/
-│   ├── ar.json                  # Arabic strings
-│   └── en.json                  # English strings
-prisma/
-├── schema.prisma                 # Database schema
-└── migrations/                    # Migration history
-public/
-└── images/
-    ├── cards/                      # Carousel poster images
-    └── ...                          # Gallery and site images
+.
+├── prisma/
+│   ├── migrations/              # Prisma SQL migration history (baselined)
+│   │   └── 0_init/
+│   │       └── migration.sql
+│   ├── schema.prisma            # Database schema (Events, Bookings, OTP, RateLimit, etc.)
+│   └── seed.ts                  # Optional database seeder
+├── public/
+│   └── images/                  # Static logos, posters, and placeholder assets
+├── src/
+│   ├── app/
+│   │   ├── actions/             # Next.js Server Actions (bookings, events, gallery, carousel)
+│   │   ├── admin/               # Internal Admin Portal routes
+│   │   │   ├── bookings/        # Attendee registration management
+│   │   │   ├── carousel/        # Homepage banner carousel management
+│   │   │   ├── contacts/        # Contact form inquiry inbox
+│   │   │   ├── events/          # Event management and scheduling
+│   │   │   └── gallery/         # Activity gallery photo uploads
+│   │   ├── events/              # Public events listing & booking wizard
+│   │   │   └── majlis-ihyaa/
+│   │   │       └── book/        # Multi-step booking stepper route
+│   │   ├── gallery/             # Public activity photo gallery
+│   │   ├── globals.css          # Tailwind CSS v4 design tokens and theme variables
+│   │   ├── layout.tsx           # Root layout with Theme and Locale providers
+│   │   └── page.tsx             # Homepage landing page
+│   ├── components/
+│   │   ├── common/              # Shared UI (BookingStepper, CityCombobox, MoroccoMap, ThemeToggle)
+│   │   ├── react-bits/          # Custom animated UI components (DecryptedText, ShinyText, etc.)
+│   │   ├── sections/            # Page sections (GlassNavbar, Hero, FeaturedEvent, Gallery, Footer)
+│   │   ├── three/               # React Three Fiber shader canvas components
+│   │   └── ui/                  # Base component primitives (button, input, dialog, card, etc.)
+│   ├── i18n/                    # Bilingual translations dictionary and LocaleProvider context
+│   └── lib/
+│       ├── cloudinary.ts        # Cloudinary uploader utility
+│       ├── constants.ts         # Moroccan cities list and allowed email domains
+│       ├── email.ts             # MailerSend transactional email templates & client
+│       ├── motion.ts            # Framer Motion animation curves and presets
+│       ├── prisma.ts            # PrismaClient singleton with connection pooling
+│       └── utils.ts             # Tailwind class merging utility
+├── tests/                       # Playwright end-to-end test suites
+├── next.config.ts               # Next.js configuration and image remote patterns
+├── package.json                 # Scripts and package dependencies
+└── tsconfig.json                # TypeScript compiler configuration
 ```
 
-## 🚀 Getting Started
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and configure the following variables:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Required | Description |
+| --- | :---: | --- |
+| `DATABASE_URL` | **Yes** | PostgreSQL connection URL (Neon pooled connection string with `?sslmode=require`). |
+| `DIRECT_URL` | **Yes** | Direct, unpooled PostgreSQL connection URL used by Prisma for schema migrations. |
+| `CLOUDINARY_URL` | Optional | Combined Cloudinary connection string (`cloudinary://API_KEY:API_SECRET@CLOUD_NAME`). |
+| `CLOUDINARY_CLOUD_NAME` | **Yes** | Cloudinary account cloud name (used if `CLOUDINARY_URL` is omitted). |
+| `CLOUDINARY_API_KEY` | **Yes** | Cloudinary API access key. |
+| `CLOUDINARY_API_SECRET` | **Yes** | Cloudinary API secret key. |
+| `MAILERSEND_API_TOKEN` | **Yes** | API authentication token for sending emails via MailerSend. |
+| `MAILERSEND_SENDER_EMAIL` | Optional | Verified sender email address configured in MailerSend. |
+| `MAILERSEND_SENDER_NAME` | Optional | Sender display name for outgoing emails (e.g. `Ihyaa Association`). |
+| `OTP_SECRET` | Optional | Secret salt string used for HMAC-SHA256 OTP hashing (falls back to a default salt in development). |
+| `NEXT_PUBLIC_APP_URL` | Optional | Base URL of the deployment (e.g. `https://ihyaa.org`) used for absolute email asset URLs. |
+| `ALLOWED_DEV_ORIGINS` | Optional | Comma-separated LAN IP addresses or hostnames allowed to access the Next.js dev server. |
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- A [Neon](https://neon.tech/) PostgreSQL database
-- A [Cloudinary](https://cloudinary.com/) account
-- A [MailerSend](https://www.mailersend.com/) account (for OTP emails)
+- **Node.js**: Version 20.x or later (Node 22+ recommended).
+- **Package Manager**: `npm` (v10+) or `pnpm`.
+- **Database**: An active PostgreSQL instance (e.g. Neon Serverless Postgres).
 
-### Setup
+### 1. Installation
+Clone the repository and install dependencies:
 
-1. Clone the repository and install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/Abdellah-mouida/Ihya-iacsas.git
+cd Ihya-iacsas
+npm install
+```
 
-2. Copy the example environment file and fill in your credentials:
-   ```bash
-   cp .env.example .env.local
-   ```
-   Required variables:
-   ```
-   DATABASE_URL=              # Neon pooled connection string
-   DIRECT_URL=                # Neon direct connection string (for migrations)
-   CLOUDINARY_CLOUD_NAME=
-   CLOUDINARY_API_KEY=
-   CLOUDINARY_API_SECRET=
-   MAILERSEND_API_TOKEN=
-   ```
+> Note: The `postinstall` script will automatically run `prisma generate` to build the local Prisma Client.
 
-3. Run the initial database migration:
-   ```bash
-   npx prisma migrate deploy
-   npx prisma generate
-   ```
+### 2. Configure Environment
+Set up your local environment file:
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000).
+```bash
+cp .env.example .env.local
+```
+Fill in your database credentials and API keys in `.env.local`.
 
-### Build
+### 3. Apply Database Migrations
+Deploy the database schema to your connected database:
+
+```bash
+npx prisma migrate deploy
+```
+
+If you prefer to inspect the database schema visually:
+```bash
+npx prisma studio
+```
+
+### 4. Run the Development Server
+Start the Next.js development server:
+
+```bash
+npm run dev
+```
+
+The application will be accessible at [http://localhost:3000](http://localhost:3000).
+
+### 5. Running Tests
+To run the automated end-to-end Playwright test suite:
+
+```bash
+npx playwright test
+```
+
+### 6. Production Build
+To create an optimized production build:
 
 ```bash
 npm run build
-npm start
 ```
 
-## 🌍 Internationalization
+To start the production server locally:
+```bash
+npm run start
+```
 
-All UI text lives in `src/locales/ar.json` and `src/locales/en.json`.
-Arabic is the default language and direction (RTL); switching to English
-flips the document direction to LTR. When adding new UI text, always add
-a key to **both** locale files — never hardcode strings in components.
+---
 
-## 🔐 Admin Dashboard
+## Security Notice: Admin Dashboard
 
-The admin dashboard is available at `/admin` and currently has **no
-authentication** — it is not linked from public navigation, but the route
-itself is reachable directly. Do not deploy this publicly without adding
-proper access control (e.g. a login gate) first.
+The administrative dashboard located at `/admin` is designed for internal operations (event creation, attendee management, and media uploads).
 
-## 📄 License
+> **Important**: The `/admin` routes currently operate without an authentication gate. **Do not deploy this application to a public production domain without adding access control** (such as NextAuth/Auth.js, Clerk, Supabase Auth, or reverse-proxy basic authentication) to restrict `/admin` and related server actions.
 
-Internal project for the Ihyaa (إحياء) youth program. Not licensed for
-external reuse.
+---
+
+## License & Internal Use
+
+This repository is proprietary software maintained for the internal operations and community activities of the **Ihyaa Cultural and Development Association** (Morocco). All rights reserved.
