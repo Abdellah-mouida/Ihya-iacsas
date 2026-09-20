@@ -13,8 +13,18 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[70vh] items-center overflow-hidden py-28 text-foreground dark:bg-night dark:text-white sm:py-36"
+      className="relative isolate flex min-h-[70vh] items-center overflow-x-clip py-28 text-foreground dark:bg-night dark:text-white sm:py-36"
     >
+      {/* Smooth top and bottom transitions */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-36 bg-gradient-to-b from-background via-background/40 to-transparent dark:from-background dark:via-night/60 dark:to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-36 bg-gradient-to-t from-background via-background/40 to-transparent dark:from-background dark:via-night/60 dark:to-transparent"
+      />
+
       {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here).
           Transparent in light mode so it blends with the page (texture fades
           at its own edges); a dark band only in dark mode. */}

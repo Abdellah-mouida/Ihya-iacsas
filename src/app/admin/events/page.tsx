@@ -510,9 +510,14 @@ export default function AdminEventsPage() {
 
               {/* Poster Upload/URL */}
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                  {locale === "ar" ? "ملصق الفعالية (Poster Image)" : "Event Poster Image"}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                    {locale === "ar" ? "ملصق الفعالية (Poster Image)" : "Event Poster Image"}
+                  </label>
+                  <span className="text-[11px] font-medium text-brass/90 bg-brass/10 px-2 py-0.5 rounded-md border border-brass/20">
+                    {locale === "ar" ? "المقاس المقترح: 4:5 عمودي (1024×1280px)" : "Recommended: 4:5 portrait (1024×1280px)"}
+                  </span>
+                </div>
 
                 {isValidImageUrl(posterPreview) && (
                   <div className="relative aspect-[16/9] max-h-40 rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">

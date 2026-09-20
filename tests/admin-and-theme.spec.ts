@@ -158,4 +158,63 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await expect(captionArInput).toHaveAttribute("required", "");
     await expect(captionEnInput).toHaveAttribute("required", "");
   });
+
+  test("7. Dedicated /gallery page loads photos grouped by date with interactive lightbox", async ({ page }) => {
+    await page.goto("/gallery");
+    await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 10000 });
+
+    // Verify at least one photo card is present
+    const photoButtons = page.locator("section button");
+    await expect(photoButtons.first()).toBeVisible();
+
+    // Click photo to open lightbox
+    await photoButtons.first().click();
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Close lightbox via Escape
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test("8. Homepage gallery CTA navigates to /gallery and contact section has social links", async ({ page }) => {
+    await page.goto("/");
+
+    // Gallery CTA button
+    const galleryCta = page.locator('a[href="/gallery"]');
+    await expect(galleryCta.first()).toBeVisible();
+
+    // Contact section social links
+    const fbLink = page.locator('a[href*="facebook.com"]');
+    const igLink = page.locator('a[href*="instagram.com"]');
+    await expect(fbLink).toBeVisible();
+    await expect(igLink).toBeVisible();
+
+    // Verify demo site disclaimer is completely gone
+    await expect(page.locator("body")).not.toContainText("موقع تجريبي");
+    await expect(page.locator("body")).not.toContainText("Demo site");
+  });
+
+  test("9. Admin upload modals show recommended image resolution and aspect ratio hints", async ({ page }) => {
+    // Check Carousel hints
+    await page.goto("/admin/carousel");
+    const addCarouselBtn = page.locator("button", { hasText: /إضافة ملصق|إضافة أول ملصق|Add Poster/i }).first();
+    await expect(addCarouselBtn).toBeVisible({ timeout: 10000 });
+    await addCarouselBtn.click();
+    await expect(page.locator("body")).toContainText("4:5");
+
+    // Check Events hints
+    await page.goto("/admin/events");
+    const addEventBtn = page.locator("button", { hasText: /فعالية جديدة/i }).first();
+    await expect(addEventBtn).toBeVisible({ timeout: 10000 });
+    await addEventBtn.click();
+    await expect(page.locator("body")).toContainText("1024");
+
+    // Check Gallery hints
+    await page.goto("/admin/gallery");
+    const addGalleryBtn = page.locator("button", { hasText: /إضافة صورة|إضافة أول صورة/i }).first();
+    await expect(addGalleryBtn).toBeVisible({ timeout: 10000 });
+    await addGalleryBtn.click();
+    await expect(page.locator("body")).toContainText("4:3");
+  });
 });
