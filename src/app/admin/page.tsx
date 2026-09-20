@@ -6,6 +6,7 @@ import {
   Calendar,
   Clock,
   Image as ImageIcon,
+  Mail,
   Plus,
   RefreshCw,
   Sparkles,
@@ -27,13 +28,15 @@ type StatsData = {
   totalEventsCount: number;
   upcomingEventsCount: number;
   totalBookingsCount: number;
+  contactMessagesCount?: number;
 };
 
 type RecentBooking = {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
+  city: string;
+  confirmed?: boolean;
   createdAt: Date;
   event: {
     titleAr: string;
@@ -49,7 +52,7 @@ export default function AdminOverviewPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const res = await getDashboardStats();
+    const res = await getDashboardStats(locale);
     if (res.success && res.stats) {
       setStats(res.stats);
       setRecentBookings((res.recentBookings as unknown as RecentBooking[]) || []);
@@ -61,7 +64,7 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [locale]);
 
   const statCards = [
     {
@@ -92,12 +95,20 @@ export default function AdminOverviewPage() {
       href: "/admin/events",
     },
     {
-      title: locale === "ar" ? "إجمالي الحضور" : "Confirmed Attendees",
+      title: locale === "ar" ? "إجمالي الحضور" : "Total Bookings",
       value: stats ? stats.totalBookingsCount : "-",
-      subtext: locale === "ar" ? "حضور مسجل بالكامل" : "Registered attendees",
+      subtext: locale === "ar" ? "تسجيلات الحضور المسجلة" : "Submitted bookings",
       icon: Ticket,
       color: "text-purple-500 bg-purple-500/10 border-purple-500/20",
       href: "/admin/bookings",
+    },
+    {
+      title: locale === "ar" ? "رسائل التواصل" : "Contact Inquiries",
+      value: stats ? (stats.contactMessagesCount ?? 0) : "-",
+      subtext: locale === "ar" ? "رسائل الزوار الواردة" : "Visitor messages",
+      icon: Mail,
+      color: "text-teal-500 bg-teal-500/10 border-teal-500/20",
+      href: "/admin/contacts",
     },
   ];
 
@@ -130,7 +141,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
@@ -261,7 +272,7 @@ export default function AdminOverviewPage() {
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground dir-ltr text-start whitespace-nowrap">
                       <div className="font-medium text-foreground">{b.email}</div>
-                      <div className="text-xs text-muted-foreground">{b.phone}</div>
+                      <div className="text-xs text-muted-foreground">{b.city}</div>
                     </td>
                     <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">

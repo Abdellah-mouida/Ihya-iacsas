@@ -9,7 +9,7 @@ import { IMAGES } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "حجز — مجالس إحياء | Ihyaa Booking",
-  description: "Demo booking flow for the Ihyaa Majalis event (frontend only).",
+  description: "Booking flow for the Ihyaa Majalis event.",
 };
 
 export default function BookPage() {

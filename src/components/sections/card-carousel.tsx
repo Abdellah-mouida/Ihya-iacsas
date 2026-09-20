@@ -160,7 +160,7 @@ export function CardCarousel() {
   const realIndex = ((pos - REAL_START) % n + n) % n;
 
   return (
-    <section id="cards" className="relative overflow-hidden py-24 sm:py-32">
+    <section id="cards" className="relative overflow-x-clip py-24 sm:py-32">
       {/* Soft brand glow behind the stage */}
       <div
         aria-hidden
@@ -191,8 +191,8 @@ export function CardCarousel() {
             onPointerUp={endPointer}
             onPointerCancel={endPointer}
             onPointerLeave={(e) => start.current && endPointer(e)}
-            className="relative mx-auto w-full max-w-3xl touch-pan-y select-none overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] [perspective:1400px]"
-            style={{ height: dims.slideH }}
+            className="relative mx-auto w-full max-w-3xl touch-pan-y select-none overflow-hidden py-6 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] [perspective:1400px]"
+            style={{ height: dims.slideH + 48 }}
           >
             <motion.div
               className="absolute inset-y-0 left-0 flex items-center"
@@ -289,6 +289,11 @@ export function CardCarousel() {
           </div>
         </div>
       </div>
+      {/* Bottom fade into gallery */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-b from-transparent to-background/50 dark:to-background/40"
+      />
     </section>
   );
 }

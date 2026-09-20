@@ -40,7 +40,10 @@ export function Activities() {
                   <span className="pointer-events-none absolute -top-4 end-3 font-heading text-8xl font-bold text-foreground/[0.05] dark:text-white/5">
                     {item.num}
                   </span>
-                  <div className="bg-brass-gradient absolute -right-10 -top-10 size-32 rounded-full opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-40" />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_25%,transparent),transparent_70%)] opacity-20 blur-xl transition-opacity duration-500 group-hover:opacity-50"
+                  />
 
                   <span
                     style={{ transform: "translateZ(40px)" }}

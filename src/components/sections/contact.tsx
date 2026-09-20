@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
+import { Phone, Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { submitContactMessage } from "@/app/actions/contacts";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,26 +33,72 @@ export function Contact() {
     return Object.keys(next).length === 0;
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
     setStatus("sending");
-    // Frontend-only: simulate a request.
-    window.setTimeout(() => {
+    const res = await submitContactMessage(values);
+    if (res.success) {
       setStatus("success");
       toast.success(t("contact.success"), { description: t("contact.successDesc") });
       setValues({ name: "", email: "", message: "" });
-    }, 1100);
+    } else {
+      setStatus("idle");
+      toast.error(res.error || "Failed to submit message");
+    }
   }
 
   const info = [
     { icon: Phone, label: t("contact.phoneLabel"), value: t("contact.phone"), href: EVENT.phoneHref, ltr: true },
-    { icon: Clock, label: t("contact.hoursLabel"), value: t("contact.hours") },
-    { icon: MapPin, label: t("contact.locationLabel"), value: t("contact.location") },
+  ];
+
+  const socialLinks = [
+    {
+      name: t("contact.facebook"),
+      icon: function FacebookIcon({ className }: { className?: string }) {
+        return (
+          <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+          </svg>
+        );
+      },
+      href: "https://www.facebook.com/profile.php?id=61580907187601",
+      hoverClass: "hover:text-blue-500 hover:border-blue-500/40 hover:bg-blue-500/10",
+    },
+    {
+      name: t("contact.instagram"),
+      icon: function InstagramIcon({ className }: { className?: string }) {
+        return (
+          <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+          </svg>
+        );
+      },
+      href: "https://www.instagram.com/i7yae_shabab/",
+      hoverClass: "hover:text-pink-500 hover:border-pink-500/40 hover:bg-pink-500/10",
+    },
   ];
 
   return (
-    <section id="contact" className="relative overflow-hidden py-24 sm:py-32">
+    <section id="contact" className="relative overflow-x-clip py-24 sm:py-32">
       <div className="bg-spirit-gradient absolute inset-x-0 bottom-0 -z-10 h-72 opacity-[0.06] blur-3xl" />
       <div className="mx-auto max-w-6xl px-5">
         <div className="grid gap-12 lg:grid-cols-2">
@@ -149,7 +196,10 @@ export function Contact() {
             viewport={viewportOnce}
             className="glass-strong group relative flex flex-col gap-6 overflow-hidden rounded-3xl p-8 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30"
           >
-            <div className="bg-brass-gradient absolute -right-12 -top-12 size-40 rounded-full opacity-20 blur-3xl" />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_22%,transparent),transparent_70%)] opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-40"
+            />
             <div>
               <h3 className="font-heading text-2xl font-semibold">
                 {t("contact.infoTitle")}
@@ -183,13 +233,38 @@ export function Contact() {
               ))}
             </ul>
 
-            <div className="mt-auto flex items-center gap-3 rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
-              <Mail className="size-5 shrink-0 text-brass" />
-              {t("footer.demo")}
+            {/* Social media links */}
+            <div className="flex flex-col gap-3 pt-2 border-t border-border/40">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
+                {t("contact.socialTitle")}
+              </span>
+              <div className="flex items-center gap-3">
+                {socialLinks.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <a
+                      key={s.name}
+                      href={s.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={s.name}
+                      className={`group/btn inline-flex items-center gap-2.5 rounded-2xl px-4 py-2.5 glass text-sm font-semibold text-foreground transition-all duration-300 ${s.hoverClass}`}
+                    >
+                      <Icon className="size-5 shrink-0 transition-transform duration-300 group-hover/btn:scale-110" />
+                      <span>{s.name}</span>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
           </motion.div>
         </div>
       </div>
+      {/* Bottom fade into footer */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-b from-transparent to-card/40 dark:to-card/20"
+      />
     </section>
   );
 }

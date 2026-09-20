@@ -1,27 +1,54 @@
+import https from "https";
 import { v2 as cloudinary } from "cloudinary";
 
-function configureCloudinary() {
-  const url = process.env.CLOUDINARY_URL;
-  if (!url) {
-    console.warn("CLOUDINARY_URL environment variable is missing.");
+// IPv4 agent with keepAlive ensures fast, reliable connection in serverless & local dev
+const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
+
+let isConfigured = false;
+
+export function configureCloudinary() {
+  if (isConfigured) return;
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (cloudName && apiKey && apiSecret) {
+    cloudinary.config({
+      cloud_name: cloudName.trim(),
+      api_key: apiKey.trim(),
+      api_secret: apiSecret.trim(),
+      secure: true,
+    });
+    isConfigured = true;
     return;
   }
 
-  // Parse cloudinary://<api_key>:<api_secret>@<cloud_name>
-  const match = url.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/);
-  if (match) {
-    const [, apiKey, apiSecret, cloudName] = match;
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-      secure: true,
-    });
-  } else {
+  const url = process.env.CLOUDINARY_URL;
+  if (url) {
+    const match = url.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/);
+    if (match) {
+      const [, k, s, c] = match;
+      cloudinary.config({
+        cloud_name: c.trim(),
+        api_key: k.trim(),
+        api_secret: s.trim(),
+        secure: true,
+      });
+      isConfigured = true;
+      return;
+    }
     cloudinary.config(true);
+    isConfigured = true;
+    return;
   }
+
+  console.warn(
+    "[Cloudinary] Configuration missing: Ensure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set.",
+  );
 }
 
+// Initial configuration attempt
 configureCloudinary();
 
 /**
@@ -35,7 +62,6 @@ export async function uploadImageToCloudinary(
   configureCloudinary();
 
   return new Promise((resolve, reject) => {
-    // Convert Buffer to data URI for direct upload API
     let uploadPayload: string;
 
     if (Buffer.isBuffer(fileData)) {
@@ -51,9 +77,13 @@ export async function uploadImageToCloudinary(
       {
         folder,
         resource_type: "image",
+        agent: httpsAgent,
       },
       (error, result) => {
         if (error || !result) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Cloudinary Server Error]", error);
+          }
           const msg =
             error?.message ||
             "Cloudinary upload failed. Check API credentials or enter an Image URL directly.";

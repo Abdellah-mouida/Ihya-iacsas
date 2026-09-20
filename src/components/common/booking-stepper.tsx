@@ -20,14 +20,16 @@ import {
   resendBookingOtp,
   verifyBookingOtp,
 } from "@/app/actions/bookings";
-import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
+import { CityCombobox } from "@/components/common/city-combobox";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { SegmentedOtpInput } from "@/components/common/segmented-otp-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT } from "@/lib/content";
+import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +63,9 @@ export function BookingStepper() {
   const [bookingId, setBookingId] = useState<string>("");
   const [otp, setOtp] = useState<string>("");
   const [bookingRef, setBookingRef] = useState<string>("");
-  const [targetEventId, setTargetEventId] = useState<string>(eventIdParam || "majlis-ihyaa");
+  const [targetEventId, setTargetEventId] = useState<string>(
+    eventIdParam || "majlis-ihyaa",
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
 
@@ -71,7 +75,7 @@ export function BookingStepper() {
     t("booking.stepConfirm"),
   ];
 
-  // Resend cooldown timer
+  // 30-second resend cooldown timer
   useEffect(() => {
     if (resendTimer <= 0) return;
     const interval = setInterval(() => {
@@ -153,18 +157,17 @@ export function BookingStepper() {
     if (res.success && res.bookingId) {
       setBookingId(res.bookingId);
       if (res.eventId) setTargetEventId(res.eventId);
-      setResendTimer(60);
+      setResendTimer(30); // 30-second cooldown
       setStep(2);
     } else {
       setErrors({ form: res.error || "Failed to process registration" });
     }
   }
 
-  async function submitOtp(ev: FormEvent) {
-    ev.preventDefault();
-    const cleanOtp = otp.trim();
+  async function executeOtpVerification(codeToVerify: string) {
+    const cleanOtp = codeToVerify.trim();
 
-    if (!cleanOtp) {
+    if (!cleanOtp || cleanOtp.length < 6) {
       setErrors({ otp: t("booking.errOtpRequired") });
       return;
     }
@@ -174,6 +177,7 @@ export function BookingStepper() {
 
     const res = await verifyBookingOtp({
       bookingId,
+      email: details.email,
       otp: cleanOtp,
       locale,
     });
@@ -184,9 +188,12 @@ export function BookingStepper() {
       setBookingRef(res.bookingRef);
       if (res.eventId) setTargetEventId(res.eventId);
 
-      // Store in localStorage for client recognition
+      // Store in localStorage for client-side recognition
       try {
-        localStorage.setItem(`ihyaa_booked_${res.eventId || targetEventId}`, "true");
+        localStorage.setItem(
+          `ihyaa_booked_${res.eventId || targetEventId}`,
+          "true",
+        );
         localStorage.setItem("ihyaa_booked_latest", "true");
         localStorage.setItem("ihyaa_booked_ref", res.bookingRef);
       } catch (e) {
@@ -199,6 +206,11 @@ export function BookingStepper() {
     }
   }
 
+  async function submitOtp(ev: FormEvent) {
+    ev.preventDefault();
+    await executeOtpVerification(otp);
+  }
+
   async function handleResend() {
     if (resendTimer > 0 || resending) return;
 
@@ -206,14 +218,14 @@ export function BookingStepper() {
     setErrors({});
 
     const res = await resendBookingOtp({
-      bookingId,
+      email: details.email,
       locale,
     });
 
     setResending(false);
 
     if (res.success) {
-      setResendTimer(60);
+      setResendTimer(30);
       setOtp("");
     } else {
       setErrors({ otp: res.error || "Failed to resend verification code" });
@@ -238,7 +250,10 @@ export function BookingStepper() {
           const active = step === n;
           const done = step > n;
           return (
-            <div key={label} className="flex flex-1 items-center last:flex-none">
+            <div
+              key={label}
+              className="flex flex-1 items-center last:flex-none"
+            >
               <div className="flex flex-col items-center gap-2">
                 <div
                   className={cn(
@@ -246,7 +261,9 @@ export function BookingStepper() {
                     done && "bg-brass-gradient text-night ring-transparent",
                     active &&
                       "bg-brass-gradient text-night shadow-layered ring-transparent",
-                    !active && !done && "bg-muted text-muted-foreground ring-border",
+                    !active &&
+                      !done &&
+                      "bg-muted text-muted-foreground ring-border",
                   )}
                 >
                   {done ? <Check className="size-5" /> : n}
@@ -254,7 +271,9 @@ export function BookingStepper() {
                 <span
                   className={cn(
                     "text-xs font-medium",
-                    active ? "text-foreground font-semibold" : "text-muted-foreground",
+                    active
+                      ? "text-foreground font-semibold"
+                      : "text-muted-foreground",
                   )}
                 >
                   {label}
@@ -317,7 +336,9 @@ export function BookingStepper() {
                   required
                 />
                 {errors.fullName ? (
-                  <span className="text-xs text-destructive">{errors.fullName}</span>
+                  <span className="text-xs text-destructive">
+                    {errors.fullName}
+                  </span>
                 ) : null}
               </div>
 
@@ -353,23 +374,22 @@ export function BookingStepper() {
                 )}
               </div>
 
-              {/* City and Age */}
+              {/* City (Searchable Select of Moroccan Cities) and Age */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="b-city">{t("booking.fCity")} *</Label>
-                  <Input
-                    id="b-city"
+                  <CityCombobox
                     value={details.city}
-                    aria-invalid={!!errors.city}
-                    placeholder={t("booking.cityPh")}
-                    onChange={(e) =>
-                      setDetails((d) => ({ ...d, city: e.target.value }))
+                    onChange={(city) =>
+                      setDetails((d) => ({ ...d, city }))
                     }
-                    className="h-11"
-                    required
+                    locale={locale}
+                    hasError={!!errors.city}
                   />
                   {errors.city ? (
-                    <span className="text-xs text-destructive">{errors.city}</span>
+                    <span className="text-xs text-destructive">
+                      {errors.city}
+                    </span>
                   ) : null}
                 </div>
 
@@ -390,7 +410,9 @@ export function BookingStepper() {
                     required
                   />
                   {errors.age ? (
-                    <span className="text-xs text-destructive">{errors.age}</span>
+                    <span className="text-xs text-destructive">
+                      {errors.age}
+                    </span>
                   ) : null}
                 </div>
               </div>
@@ -436,8 +458,8 @@ export function BookingStepper() {
               className="flex flex-col gap-5"
               noValidate
             >
-              <header className="flex flex-col gap-1">
-                <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-brass/10 text-brass ring-1 ring-brass/25 mb-1">
+              <header className="flex flex-col gap-1 text-center">
+                <div className="mx-auto inline-flex size-12 items-center justify-center rounded-2xl bg-brass/10 text-brass ring-1 ring-brass/25 mb-1">
                   <KeyRound className="size-6" />
                 </div>
                 <h2 className="font-heading text-2xl font-semibold">
@@ -448,55 +470,60 @@ export function BookingStepper() {
                 </p>
               </header>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="b-otp">{t("booking.otpLabel")}</Label>
-                <Input
-                  id="b-otp"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  dir="ltr"
+              <div className="flex flex-col items-center gap-3 py-2">
+                <Label htmlFor="b-otp" className="text-sm font-semibold">
+                  {t("booking.otpLabel")}
+                </Label>
+
+                {/* 6-box Segmented OTP Input */}
+                <SegmentedOtpInput
                   value={otp}
-                  aria-invalid={!!errors.otp}
-                  placeholder={t("booking.otpPh")}
-                  onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  className="h-14 text-center font-mono text-2xl tracking-[0.4em] font-bold"
-                  autoFocus
+                  onChange={(val) => {
+                    setOtp(val);
+                    if (errors.otp) setErrors((e) => ({ ...e, otp: "" }));
+                  }}
+                  onComplete={(code) => executeOtpVerification(code)}
+                  hasError={!!errors.otp}
+                  disabled={submitting}
                 />
+
                 {errors.otp ? (
                   <span
                     data-testid="otp-error"
-                    className="text-xs text-destructive font-medium"
+                    className="text-xs text-destructive font-medium text-center mt-1"
                   >
                     {errors.otp}
                   </span>
                 ) : null}
               </div>
 
-              {/* Resend button */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              {/* 30-Second Resend Action */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                 <span>
                   {locale === "ar"
                     ? "لم يصلك الرمز؟"
                     : "Didn't receive the code?"}
                 </span>
+
                 {resendTimer > 0 ? (
-                  <span className="font-mono text-brass font-medium">
+                  <span
+                    data-testid="resend-timer-countdown"
+                    className="font-semibold text-brass"
+                  >
                     {t("booking.resendWait", { seconds: resendTimer })}
                   </span>
                 ) : (
                   <button
                     type="button"
+                    data-testid="resend-otp-btn"
                     onClick={handleResend}
                     disabled={resending}
-                    className="inline-flex items-center gap-1 font-semibold text-brass hover:underline disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 font-semibold text-brass hover:underline disabled:opacity-50"
                   >
                     <RefreshCw
                       className={cn("size-3.5", resending && "animate-spin")}
                     />
-                    {t("booking.resendCode")}
+                    <span>{t("booking.resendCode")}</span>
                   </button>
                 )}
               </div>
@@ -516,7 +543,7 @@ export function BookingStepper() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || otp.length < 6}
                   className="bg-brass-gradient h-12 rounded-full px-6 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-[2]"
                 >
                   <CheckCircle2 className="size-5" />

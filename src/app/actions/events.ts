@@ -32,9 +32,15 @@ export async function getPublicEvents() {
       orderBy: { date: "desc" },
     });
 
-    const openEvents = events.filter((e) => e.bookingOpen);
-    const pastEvents = events.filter((e) => !e.bookingOpen);
-    const hasNew = openEvents.some((e) => e.isNew);
+    const now = new Date();
+    // An event is open/active if its date has not passed and booking is open
+    const openEvents = events.filter(
+      (e) => new Date(e.date) >= now && e.bookingOpen,
+    );
+    const pastEvents = events.filter(
+      (e) => new Date(e.date) < now || !e.bookingOpen,
+    );
+    const hasNew = openEvents.length > 0;
 
     return { success: true, events, openEvents, pastEvents, hasNew };
   } catch (error) {
@@ -132,7 +138,7 @@ export async function updateEvent(id: string, formData: FormData) {
     const bookingOpen = formData.get("bookingOpen") === "true" || formData.get("bookingOpen") === "on";
 
     const file = formData.get("image") as File | null;
-    let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
+    const posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
 
     const dataToUpdate: Record<string, unknown> = {
       titleAr,
