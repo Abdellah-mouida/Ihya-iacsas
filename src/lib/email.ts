@@ -3,6 +3,28 @@
  * Compatible with Vercel serverless / Edge functions
  */
 
+import fs from "fs";
+import path from "path";
+
+function getLogoBase64(): string | null {
+  try {
+    const logoPath = path.join(
+      process.cwd(),
+      "public",
+      "images",
+      "logo-square.jpg",
+    );
+    if (fs.existsSync(logoPath)) {
+      return fs.readFileSync(logoPath).toString("base64");
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[Email] Could not load logo file for attachment:", err);
+    }
+  }
+  return null;
+}
+
 export async function sendOTPEmail(
   to: string,
   otp: string,
@@ -25,7 +47,8 @@ export async function sendOTPEmail(
   const senderEmail =
     process.env.MAILERSEND_SENDER_EMAIL ||
     "ihyaa@test-q3enl6k119r42vwr.mlsender.net";
-  const senderName = process.env.MAILERSEND_SENDER_NAME || "جمعية إحياء | Ihyaa";
+  const senderName =
+    process.env.MAILERSEND_SENDER_NAME || "جمعية إحياء | Ihyaa";
 
   const isArabic = locale === "ar";
   const subject = isArabic
@@ -36,6 +59,17 @@ export async function sendOTPEmail(
     ? `السلام عليكم ورحمة الله وبركاته،\n\nرمز التحقق الخاص بك لحجز حضور فعالية جمعية إحياء هو:\n\n${otp}\n\nهذا الرمز صالح لمدة 10 دقائق ولا تشاركه مع أي شخص.\n\nجمعية إحياء للثقافة والتنمية`
     : `Hello,\n\nYour verification code to complete your booking with Ihyaa is:\n\n${otp}\n\nThis code will expire in 10 minutes. Do not share this code with anyone.\n\nIhyaa Cultural and Development Association`;
 
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  const logoBase64 = getLogoBase64();
+  const logoSrc = appUrl
+    ? `${appUrl}/images/logo-square.jpg`
+    : logoBase64
+      ? "cid:ihyaa-logo"
+      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+
   const html = isArabic
     ? `
 <!DOCTYPE html>
@@ -45,42 +79,58 @@ export async function sendOTPEmail(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
-<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1217; color: #f1f5f9;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #131b23; border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+<body style="margin: 0; padding: 28px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', Helvetica, Arial, sans-serif; background-color: #0b1016; color: #f1f5f9;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #111822; border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+    <!-- Header with Brand Green Gradient -->
     <tr>
-      <td style="padding: 32px 28px 20px; text-align: center; background: linear-gradient(180deg, rgba(212, 175, 55, 0.1) 0%, transparent 100%);">
-        <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #0b1016; font-size: 22px; font-weight: bold; margin-bottom: 12px;">
-          إ
-        </div>
-        <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #d4af37; letter-spacing: -0.5px;">
+      <td style="padding: 36px 28px 24px; text-align: center; background: linear-gradient(180deg, rgba(16, 117, 39, 0.22) 0%, rgba(10, 84, 23, 0.05) 75%, transparent 100%);">
+        <!-- Circular Logo -->
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
+          <tr>
+            <td style="width: 70px; height: 70px; border-radius: 50%; padding: 3px; background: linear-gradient(135deg, #107527 0%, #d4af37 100%); text-align: center; vertical-align: middle;">
+              <img src="${logoSrc}" alt="شعار جمعية إحياء" width="64" height="64" style="display: block; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background-color: #0a5417;" />
+            </td>
+          </tr>
+        </table>
+        
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
           جمعية إحياء
         </h1>
-        <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">
-          تأكيد تسجيل الحضور في الفعالية
-        </p>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(16, 117, 39, 0.25); border: 1px solid rgba(16, 117, 39, 0.45); color: #34d399; font-size: 12px; font-weight: 600;">
+            تأكيد حجز الفعالية
+          </span>
+        </div>
       </td>
     </tr>
+
+    <!-- Body Content -->
     <tr>
-      <td style="padding: 10px 28px 24px; text-align: right; line-height: 1.7; color: #e2e8f0; font-size: 14px;">
-        <p style="margin: 0 0 12px;">السلام عليكم ورحمة الله وبركاته،</p>
-        <p style="margin: 0 0 20px; color: #cbd5e1;">
-          شكراً لاهتمامك بحضور فعالياتنا. لإتمام وتأكيد حجزك، يرجى استخدام رمز التحقق التالي:
+      <td style="padding: 8px 32px 28px; text-align: right; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
+        <p style="margin: 0 0 12px; font-weight: 600; color: #f1f5f9;">السلام عليكم ورحمة الله وبركاته،</p>
+        <p style="margin: 0 0 22px; color: #cbd5e1;">
+          شكراً لاهتمامك بحضور فعاليات جمعية إحياء. لإتمام وتأكيد حجز مقعدك، يُرجى إدخال رمز التحقق التالي في صفحة التسجيل:
         </p>
         
-        <div style="background: rgba(212, 175, 55, 0.08); border: 1px dashed #d4af37; border-radius: 12px; padding: 18px; text-align: center; margin: 24px 0;">
-          <span style="font-family: monospace, Courier; font-size: 32px; font-weight: 800; letter-spacing: 10px; color: #f59e0b; display: inline-block;">
+        <!-- OTP Box with Brand Green Style -->
+        <div style="background: linear-gradient(135deg, rgba(16, 117, 39, 0.14) 0%, rgba(10, 84, 23, 0.08) 100%); border: 1.5px dashed #107527; border-radius: 16px; padding: 22px 16px; text-align: center; margin: 26px 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);">
+          <span style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 34px; font-weight: 800; letter-spacing: 12px; color: #10b981; display: inline-block; text-indent: 12px;">
             ${otp}
           </span>
         </div>
 
-        <p style="margin: 0; font-size: 12px; color: #94a3b8; text-align: center;">
-          ⏳ تنتهي صلاحية هذا الرمز بعد 10 دقائق. يُرجى عدم مشاركته مع أي طرف.
-        </p>
+        <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 14px; text-align: center; margin: 0 0 10px;">
+          <p style="margin: 0; font-size: 12.5px; color: #94a3b8;">
+            ⏳ هذا الرمز صالح لمدة <strong style="color: #fbbf24;">10 دقائق</strong> فقط. يُرجى عدم مشاركته مع أي طرف آخر.
+          </p>
+        </div>
       </td>
     </tr>
+
+    <!-- Footer -->
     <tr>
-      <td style="padding: 16px 28px; background: rgba(0,0,0,0.25); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11px; color: #64748b;">
-        إذا لم تطلب هذا الرمز، يمكنك تجاهل هذا البريد الإلكتروني بأمان.<br>
+      <td style="padding: 18px 28px; background: rgba(0,0,0,0.35); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.6;">
+        إذا لم تطلب هذا الرمز، يمكنك تجاهل هذه الرسالة بأمان.<br>
         &copy; ${new Date().getFullYear()} جمعية إحياء للثقافة والتنمية. جميع الحقوق محفوظة.
       </td>
     </tr>
@@ -96,41 +146,57 @@ export async function sendOTPEmail(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
-<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1217; color: #f1f5f9;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #131b23; border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+<body style="margin: 0; padding: 28px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1016; color: #f1f5f9;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #111822; border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+    <!-- Header with Brand Green Gradient -->
     <tr>
-      <td style="padding: 32px 28px 20px; text-align: center; background: linear-gradient(180deg, rgba(212, 175, 55, 0.1) 0%, transparent 100%);">
-        <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #0b1016; font-size: 22px; font-weight: bold; margin-bottom: 12px;">
-          I
-        </div>
-        <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #d4af37; letter-spacing: -0.5px;">
+      <td style="padding: 36px 28px 24px; text-align: center; background: linear-gradient(180deg, rgba(16, 117, 39, 0.22) 0%, rgba(10, 84, 23, 0.05) 75%, transparent 100%);">
+        <!-- Circular Logo -->
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
+          <tr>
+            <td style="width: 70px; height: 70px; border-radius: 50%; padding: 3px; background: linear-gradient(135deg, #107527 0%, #d4af37 100%); text-align: center; vertical-align: middle;">
+              <img src="${logoSrc}" alt="Ihyaa Logo" width="64" height="64" style="display: block; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background-color: #0a5417;" />
+            </td>
+          </tr>
+        </table>
+        
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
           Ihyaa Association
         </h1>
-        <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">
-          Event Attendance Verification
-        </p>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(16, 117, 39, 0.25); border: 1px solid rgba(16, 117, 39, 0.45); color: #34d399; font-size: 12px; font-weight: 600;">
+            Event Booking Confirmation
+          </span>
+        </div>
       </td>
     </tr>
+
+    <!-- Body Content -->
     <tr>
-      <td style="padding: 10px 28px 24px; text-align: left; line-height: 1.7; color: #e2e8f0; font-size: 14px;">
-        <p style="margin: 0 0 12px;">Hello,</p>
-        <p style="margin: 0 0 20px; color: #cbd5e1;">
-          Thank you for your interest in attending our event. To confirm your registration, please enter the following verification code:
+      <td style="padding: 8px 32px 28px; text-align: left; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
+        <p style="margin: 0 0 12px; font-weight: 600; color: #f1f5f9;">Hello,</p>
+        <p style="margin: 0 0 22px; color: #cbd5e1;">
+          Thank you for registering for our event. To complete and confirm your booking, please enter the following verification code:
         </p>
         
-        <div style="background: rgba(212, 175, 55, 0.08); border: 1px dashed #d4af37; border-radius: 12px; padding: 18px; text-align: center; margin: 24px 0;">
-          <span style="font-family: monospace, Courier; font-size: 32px; font-weight: 800; letter-spacing: 10px; color: #f59e0b; display: inline-block;">
+        <!-- OTP Box with Brand Green Style -->
+        <div style="background: linear-gradient(135deg, rgba(16, 117, 39, 0.14) 0%, rgba(10, 84, 23, 0.08) 100%); border: 1.5px dashed #107527; border-radius: 16px; padding: 22px 16px; text-align: center; margin: 26px 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);">
+          <span style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 34px; font-weight: 800; letter-spacing: 12px; color: #10b981; display: inline-block; text-indent: 12px;">
             ${otp}
           </span>
         </div>
 
-        <p style="margin: 0; font-size: 12px; color: #94a3b8; text-align: center;">
-          ⏳ This code will expire in 10 minutes. Please do not share it with anyone.
-        </p>
+        <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 14px; text-align: center; margin: 0 0 10px;">
+          <p style="margin: 0; font-size: 12.5px; color: #94a3b8;">
+            ⏳ This code expires in <strong style="color: #fbbf24;">10 minutes</strong>. Please do not share it with anyone.
+          </p>
+        </div>
       </td>
     </tr>
+
+    <!-- Footer -->
     <tr>
-      <td style="padding: 16px 28px; background: rgba(0,0,0,0.25); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11px; color: #64748b;">
+      <td style="padding: 18px 28px; background: rgba(0,0,0,0.35); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.6;">
         If you did not request this verification code, you can safely ignore this email.<br>
         &copy; ${new Date().getFullYear()} Ihyaa Cultural and Development Association. All rights reserved.
       </td>
@@ -141,6 +207,22 @@ export async function sendOTPEmail(
 `;
 
   try {
+    const attachments: Array<{
+      content: string;
+      filename: string;
+      id: string;
+      disposition?: string;
+    }> = [];
+
+    if (logoBase64 && !appUrl) {
+      attachments.push({
+        content: logoBase64,
+        filename: "logo-square.jpg",
+        id: "ihyaa-logo",
+        disposition: "inline",
+      });
+    }
+
     const res = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
       headers: {
@@ -161,6 +243,7 @@ export async function sendOTPEmail(
         subject,
         text: plainText,
         html,
+        ...(attachments.length > 0 ? { attachments } : {}),
       }),
     });
 

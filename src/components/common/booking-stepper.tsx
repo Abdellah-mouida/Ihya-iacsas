@@ -84,23 +84,23 @@ export function BookingStepper() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  // Auto-redirect timer on Step 3
+  // Auto-redirect countdown timer on Step 3
   useEffect(() => {
     if (step !== 3) return;
 
     const interval = setInterval(() => {
-      setRedirectCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          router.push("/events");
-          return 0;
-        }
-        return prev - 1;
-      });
+      setRedirectCountdown((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [step, router]);
+  }, [step]);
+
+  // Navigate when countdown reaches 0
+  useEffect(() => {
+    if (step === 3 && redirectCountdown === 0) {
+      router.push("/events");
+    }
+  }, [step, redirectCountdown, router]);
 
   function validateDetails(): boolean {
     const e: Record<string, string> = {};
