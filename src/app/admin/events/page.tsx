@@ -25,6 +25,7 @@ import {
   toggleEventStatus,
   updateEvent,
 } from "@/app/actions/events";
+import { BilingualFields } from "@/components/common/bilingual-fields";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -46,6 +47,19 @@ type EventItem = {
   };
 };
 
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function AdminEventsPage() {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
@@ -54,6 +68,23 @@ export default function AdminEventsPage() {
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (posterPreview && posterPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(posterPreview);
+      }
+    };
+  }, [posterPreview]);
+
+  const setSafePosterPreview = (newUrl: string | null) => {
+    setPosterPreview((prev) => {
+      if (prev && prev.startsWith("blob:") && prev !== newUrl) {
+        URL.revokeObjectURL(prev);
+      }
+      return newUrl;
+    });
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -145,7 +176,7 @@ export default function AdminEventsPage() {
       );
       setModalOpen(false);
       setEditingEvent(null);
-      setPosterPreview(null);
+      setSafePosterPreview(null);
       fetchEvents();
     } else {
       toast.error(res.error || "Failed to save event");
@@ -154,13 +185,13 @@ export default function AdminEventsPage() {
 
   const openAddModal = () => {
     setEditingEvent(null);
-    setPosterPreview(null);
+    setSafePosterPreview(null);
     setModalOpen(true);
   };
 
   const openEditModal = (evt: EventItem) => {
     setEditingEvent(evt);
-    setPosterPreview(evt.posterUrl);
+    setSafePosterPreview(evt.posterUrl);
     setModalOpen(true);
   };
 
@@ -269,10 +300,10 @@ export default function AdminEventsPage() {
                       </span>
                     )}
 
-                    {evt.isNew && (
+                    {new Date(evt.date) >= new Date() && evt.bookingOpen && (
                       <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
                         <Sparkles className="size-3 shrink-0" />
-                        <span>{locale === "ar" ? "مؤشر جديد" : "Navbar Dot Active"}</span>
+                        <span>{locale === "ar" ? "مؤشر نشط تلقائياً" : "Auto Dot Active"}</span>
                       </span>
                     )}
                   </div>
@@ -337,23 +368,6 @@ export default function AdminEventsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleToggleStatus(evt.id, "isNew", evt.isNew)}
-                  className="rounded-xl text-xs glass h-8 px-3 font-semibold"
-                >
-                  <span className="whitespace-nowrap">
-                    {evt.isNew
-                      ? locale === "ar"
-                        ? "إلغاء الشارة"
-                        : "Disable Dot"
-                      : locale === "ar"
-                      ? "تفعيل الشارة"
-                      : "Set 'New' Dot"}
-                  </span>
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
                   onClick={() => openEditModal(evt)}
                   className="rounded-xl text-xs glass h-8 px-3 font-semibold"
                 >
@@ -382,7 +396,7 @@ export default function AdminEventsPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-2xl p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto"
+            className="glass-strong border border-brass/30 rounded-2xl w-full max-w-2xl p-6 shadow-layered space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
           >
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <h2 className="font-heading text-xl font-bold text-foreground whitespace-nowrap">
@@ -405,36 +419,19 @@ export default function AdminEventsPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Titles AR & EN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                    {locale === "ar" ? "عنوان الفعالية (بالعربية)" : "Title (Arabic)"}
-                  </label>
-                  <input
-                    type="text"
-                    name="titleAr"
-                    required
-                    defaultValue={editingEvent?.titleAr || ""}
-                    placeholder="مجالس إحياء الشبابي..."
-                    className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                    {locale === "ar" ? "العنوان (بالإنجليزية)" : "Title (English)"}
-                  </label>
-                  <input
-                    type="text"
-                    name="titleEn"
-                    required
-                    defaultValue={editingEvent?.titleEn || ""}
-                    placeholder="Ihyaa Youth Gathering..."
-                    className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass dir-ltr"
-                  />
-                </div>
-              </div>
+              {/* Titles AR & EN with Translation Suggestions */}
+              <BilingualFields
+                arabicLabel={locale === "ar" ? "عنوان الفعالية (بالعربية)" : "Title (Arabic)"}
+                englishLabel={locale === "ar" ? "العنوان (بالإنجليزية)" : "Title (English)"}
+                arabicName="titleAr"
+                englishName="titleEn"
+                defaultArabic={editingEvent?.titleAr || ""}
+                defaultEnglish={editingEvent?.titleEn || ""}
+                arabicPlaceholder="مجالس إحياء الشبابي..."
+                englishPlaceholder="Ihyaa Youth Gathering..."
+                required={true}
+                locale={locale}
+              />
 
               {/* Descriptions AR & EN */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -513,13 +510,24 @@ export default function AdminEventsPage() {
 
               {/* Poster Upload/URL */}
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                  {locale === "ar" ? "ملصق الفعالية (Poster Image)" : "Event Poster Image"}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                    {locale === "ar" ? "ملصق الفعالية (Poster Image)" : "Event Poster Image"}
+                  </label>
+                  <span className="text-[11px] font-medium text-brass/90 bg-brass/10 px-2 py-0.5 rounded-md border border-brass/20">
+                    {locale === "ar" ? "المقاس المقترح: 4:5 عمودي (1024×1280px)" : "Recommended: 4:5 portrait (1024×1280px)"}
+                  </span>
+                </div>
 
-                {posterPreview && (
+                {isValidImageUrl(posterPreview) && (
                   <div className="relative aspect-[16/9] max-h-40 rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">
-                    <Image src={posterPreview} alt="Preview" fill className="object-contain" />
+                    <Image
+                      src={posterPreview!}
+                      alt="Preview"
+                      fill
+                      unoptimized={posterPreview!.startsWith("blob:")}
+                      className="object-contain"
+                    />
                   </div>
                 )}
 
@@ -529,7 +537,10 @@ export default function AdminEventsPage() {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) setPosterPreview(URL.createObjectURL(file));
+                    if (file) {
+                      const blobUrl = URL.createObjectURL(file);
+                      setSafePosterPreview(blobUrl);
+                    }
                   }}
                   className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brass/20 file:text-brass cursor-pointer"
                 />
@@ -540,7 +551,10 @@ export default function AdminEventsPage() {
                   defaultValue={editingEvent?.posterUrl || ""}
                   placeholder="https://..."
                   onChange={(e) => {
-                    if (e.target.value) setPosterPreview(e.target.value);
+                    const val = e.target.value.trim();
+                    if (isValidImageUrl(val)) {
+                      setSafePosterPreview(val);
+                    }
                   }}
                   className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
                 />
@@ -565,24 +579,6 @@ export default function AdminEventsPage() {
                     {locale === "ar"
                       ? "مفتوحة للحجز (فعالية قادمة)"
                       : "Booking Open (Upcoming Event)"}
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isNewCheck"
-                    name="isNew"
-                    defaultChecked={editingEvent ? editingEvent.isNew : false}
-                    className="size-4 rounded border-border text-brass focus:ring-brass"
-                  />
-                  <label
-                    htmlFor="isNewCheck"
-                    className="text-sm font-semibold text-foreground cursor-pointer whitespace-nowrap"
-                  >
-                    {locale === "ar"
-                      ? "تفعيل الشارة النباضة في القائمة"
-                      : "Enable Pulsing Dot in Navbar"}
                   </label>
                 </div>
               </div>

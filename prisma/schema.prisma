@@ -51,23 +51,46 @@ model Event {
 }
 
 model Booking {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   eventId   String
-  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   fullName  String
   email     String
   city      String
   age       Int
   motive    String?
-  otpHash   String?
-  otpExpiry DateTime?
-  confirmed Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  confirmed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([eventId])
   @@index([email])
   @@index([createdAt])
+}
+
+model OtpVerification {
+  id        String    @id @default(cuid())
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([expiresAt])
 }
 
 model ContactMessage {

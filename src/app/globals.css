@@ -9,10 +9,9 @@
   --color-foreground: var(--foreground);
 
   /* Typography: Montserrat (Latin) + Noto Kufi Arabic (Arabic), switched by locale */
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, "Segoe UI",
-    sans-serif;
-  --font-heading: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
-  --font-arabic: var(--font-noto-kufi), "Segoe UI", Tahoma, sans-serif;
+  --font-sans: var(--font-montserrat), sans-serif;
+  --font-heading: var(--font-montserrat), sans-serif;
+  --font-arabic: var(--font-noto-kufi), sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Brand palette */
@@ -321,15 +320,25 @@
   }
   /* Locale-driven typography: Arabic copy uses the Arabic font, Latin uses Montserrat */
   html[lang="ar"] {
-    font-family: var(--font-arabic);
+    font-family: var(--font-arabic) !important;
   }
   html[lang="ar"] .font-heading,
   html[lang="ar"] h1,
   html[lang="ar"] h2,
   html[lang="ar"] h3,
   html[lang="ar"] h4 {
-    font-family: var(--font-arabic);
+    font-family: var(--font-arabic) !important;
     letter-spacing: 0;
+  }
+  html[lang="en"] {
+    font-family: var(--font-sans) !important;
+  }
+  html[lang="en"] .font-heading,
+  html[lang="en"] h1,
+  html[lang="en"] h2,
+  html[lang="en"] h3,
+  html[lang="en"] h4 {
+    font-family: var(--font-heading) !important;
   }
 }
 
@@ -501,6 +510,35 @@
   .cursor-none-fine {
     cursor: none;
   }
+
+  /* Hide visible scrollbars in dialogs and textareas while maintaining full scrollability */
+  .no-scrollbar {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+/* Global scrollbar hiding for dialogs and textareas */
+[role="dialog"],
+dialog,
+[data-slot="dialog-content"],
+textarea {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+[role="dialog"]::-webkit-scrollbar,
+dialog::-webkit-scrollbar,
+[data-slot="dialog-content"]::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* View Transition cross-fade for theme switching (top-level, not layered) */

@@ -1,29 +1,56 @@
 import { test, expect } from "@playwright/test";
+import crypto from "crypto";
 import { prisma } from "../src/lib/prisma";
 
-test.describe("Booking Flow Overhaul & OTP Verification", () => {
+const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
+
+function computeHash(otp: string, email: string): string {
+  return crypto
+    .createHmac("sha256", OTP_SECRET)
+    .update(`${email.trim().toLowerCase()}:${otp.trim()}`)
+    .digest("hex");
+}
+
+test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
   const testEmail = "playwright.test@gmail.com";
 
   test.beforeEach(async () => {
-    // Clean up test bookings before each test
+    // Clean up test bookings, OTPs and rate limits
     await prisma.booking.deleteMany({
       where: { email: { in: [testEmail, "unapproved@bad-domain.xyz"] } },
     });
+    await prisma.otpVerification.deleteMany({
+      where: { email: { in: [testEmail, "unapproved@bad-domain.xyz"] } },
+    });
+    await prisma.rateLimit.deleteMany({
+      where: {
+        key: {
+          in: [
+            `otp_gen_cooldown:${testEmail}`,
+            `otp_gen_window:${testEmail}`,
+            `otp_ver_rate:${testEmail}`,
+          ],
+        },
+      },
+    });
   });
 
-  test("1. Reject email domain outside allow-list with inline error message", async ({ page }) => {
+  test("1. Reject email domain outside allow-list with inline error message", async ({
+    page,
+  }) => {
     await page.goto("/events/majlis-ihyaa/book");
 
-    // Fill form with disallowed email domain
     await page.fill("#b-name", "Test Attendee");
     await page.fill("#b-email", "unapproved@bad-domain.xyz");
-    await page.fill("#b-city", "Rabat");
+
+    // Select Moroccan city via Combobox
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-rabat"]');
+
     await page.fill("#b-age", "25");
 
-    // Click continue
     await page.click('button[type="submit"]');
 
-    // Verify inline domain error is visible
     const emailError = page.getByTestId("email-error");
     await expect(emailError).toBeVisible();
     await expect(emailError).toContainText(/Gmail|Yahoo|Outlook/i);
@@ -32,60 +59,124 @@ test.describe("Booking Flow Overhaul & OTP Verification", () => {
     await expect(page.locator("#b-otp")).not.toBeVisible();
   });
 
-  test("2. Wrong OTP attempt displays error", async ({ page }) => {
+  test("2. City Combobox searchable filtering and selection", async ({
+    page,
+  }) => {
+    await page.goto("/events/majlis-ihyaa/book");
+
+    const trigger = page.locator('[data-testid="city-combobox-trigger"]');
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+
+    // Verify dropdown is open
+    const dropdown = page.locator('[data-testid="city-dropdown"]');
+    await expect(dropdown).toBeVisible();
+
+    // Filter by typing in search box
+    const searchInput = page.locator('[data-testid="city-search-input"]');
+    await searchInput.fill("طنجة");
+
+    // Click filtered option
+    const option = page.locator('[data-testid="city-option-tangier"]');
+    await expect(option).toBeVisible();
+    await option.click();
+
+    // Dropdown closes and trigger shows selected city
+    await expect(dropdown).not.toBeVisible();
+    await expect(trigger).toContainText("طنجة");
+  });
+
+  test("3. Wrong OTP attempt displays remaining attempts error", async ({
+    page,
+  }) => {
     await page.goto("/events/majlis-ihyaa/book");
 
     await page.fill("#b-name", "Test Attendee");
     await page.fill("#b-email", testEmail);
-    await page.fill("#b-city", "Tetouan");
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-tetouan"]');
+
     await page.fill("#b-age", "23");
-    await page.fill("#b-motive", "Interest in personal development and spiritual growth");
+    await page.fill(
+      "#b-motive",
+      "Interest in personal development and spiritual growth",
+    );
 
     await page.click('button[type="submit"]');
 
-    // Wait for step 2 OTP input
-    const otpInput = page.locator("#b-otp");
-    await expect(otpInput).toBeVisible({ timeout: 10000 });
+    // Wait for step 2 segmented OTP input
+    const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpFirstBox).toBeVisible({ timeout: 10000 });
 
-    // Enter wrong 6-digit OTP
-    await otpInput.fill("000000");
+    // Enter wrong 6-digit OTP into boxes
+    for (let i = 0; i < 6; i++) {
+      await page.fill(`[data-testid="otp-box-${i}"]`, "0");
+    }
+
     await page.click('button[type="submit"]');
 
-    // Verify wrong OTP error
     const otpError = page.getByTestId("otp-error");
     await expect(otpError).toBeVisible();
     await expect(otpError).toContainText(/غير صحيح|invalid/i);
   });
 
-  test("3. Expired OTP attempt displays expiry error message", async ({ page }) => {
+  test("4. Expired OTP attempt displays expiry error message", async ({
+    page,
+  }) => {
     await page.goto("/events/majlis-ihyaa/book");
 
     await page.fill("#b-name", "Expired Tester");
     await page.fill("#b-email", testEmail);
-    await page.fill("#b-city", "Casablanca");
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-casablanca"]');
+
     await page.fill("#b-age", "28");
 
     await page.click('button[type="submit"]');
 
-    const otpInput = page.locator("#b-otp");
-    await expect(otpInput).toBeVisible({ timeout: 10000 });
+    const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpFirstBox).toBeVisible({ timeout: 10000 });
 
-    // Manually set otpExpiry in DB to past date to simulate expiration
-    await prisma.booking.updateMany({
-      where: { email: testEmail, confirmed: false },
-      data: { otpExpiry: new Date(Date.now() - 60 * 1000) }, // 1 min ago
+    // Manually set expiresAt in DB to past date to simulate expiration
+    await prisma.otpVerification.updateMany({
+      where: { email: testEmail, usedAt: null },
+      data: { expiresAt: new Date(Date.now() - 60 * 1000) }, // 1 min ago
     });
 
-    // Attempt to verify with any code
-    await otpInput.fill("123456");
+    for (let i = 0; i < 6; i++) {
+      await page.fill(`[data-testid="otp-box-${i}"]`, "1");
+    }
+
     await page.click('button[type="submit"]');
 
     const otpError = page.getByTestId("otp-error");
     await expect(otpError).toBeVisible();
-    await expect(otpError).toContainText(/صلاحية|expired/i);
+    await expect(otpError).toContainText(/صلاحيت|انتهت|expired/i);
   });
 
-  test("4. Full successful booking run: OTP verification, confirmation, redirect, and event page booked state", async ({ page }) => {
+  test("5. 30-Second Resend Countdown display", async ({ page }) => {
+    await page.goto("/events/majlis-ihyaa/book");
+
+    await page.fill("#b-name", "Resend Tester");
+    await page.fill("#b-email", testEmail);
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-fes"]');
+
+    await page.fill("#b-age", "22");
+
+    await page.click('button[type="submit"]');
+
+    const countdown = page.getByTestId("resend-timer-countdown");
+    await expect(countdown).toBeVisible({ timeout: 10000 });
+    await expect(countdown).toContainText(/ثانية|s/i);
+  });
+
+  test("6. Full successful booking run: OTP verification, confirmation, redirect, and event page booked state", async ({
+    page,
+  }) => {
     await page.goto("/events/majlis-ihyaa/book");
 
     // Check logo circular crop
@@ -93,46 +184,48 @@ test.describe("Booking Flow Overhaul & OTP Verification", () => {
     await expect(logo).toBeVisible();
     await expect(logo).toHaveClass(/rounded-full/);
 
-    // Step 1: Fill details
+    // Step 1: Fill details with Moroccan city
     await page.fill("#b-name", "زكرياء المنصوري");
     await page.fill("#b-email", testEmail);
-    await page.fill("#b-city", "طنجة");
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-tangier"]');
+
     await page.fill("#b-age", "24");
     await page.fill("#b-motive", "المشاركة في أنشطة جمعية إحياء الهادفة");
 
     await page.click('button[type="submit"]');
 
     // Wait for step 2
-    const otpInput = page.locator("#b-otp");
-    await expect(otpInput).toBeVisible({ timeout: 10000 });
+    const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpFirstBox).toBeVisible({ timeout: 10000 });
 
-    // Retrieve active booking to get its DB record and set known OTP hash for deterministic test
-    const booking = await prisma.booking.findFirst({
-      where: { email: testEmail, confirmed: false },
+    // Retrieve active OTP record and set known OTP hash for deterministic testing
+    const activeOtp = await prisma.otpVerification.findFirst({
+      where: { email: testEmail, usedAt: null },
       orderBy: { createdAt: "desc" },
     });
-    expect(booking).toBeTruthy();
+    expect(activeOtp).toBeTruthy();
 
-    // Set known OTP "987654" in DB
-    const crypto = await import("crypto");
     const testOtp = "987654";
-    const testHash = crypto.createHash("sha256").update(testOtp).digest("hex");
+    const testHash = computeHash(testOtp, testEmail);
 
-    await prisma.booking.update({
-      where: { id: booking!.id },
+    await prisma.otpVerification.update({
+      where: { id: activeOtp!.id },
       data: {
         otpHash: testHash,
-        otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
 
-    // Enter correct OTP
-    await otpInput.fill(testOtp);
-    await page.click('button[type="submit"]');
+    // Enter correct OTP across segmented boxes
+    for (let i = 0; i < testOtp.length; i++) {
+      await page.fill(`[data-testid="otp-box-${i}"]`, testOtp[i]);
+    }
 
-    // Step 3: Confirmation step
+    // Since onComplete auto-submits on the 6th digit, wait for step 3 confirmation directly
     const bookingRef = page.getByTestId("booking-ref-display");
-    await expect(bookingRef).toBeVisible({ timeout: 5000 });
+    await expect(bookingRef).toBeVisible({ timeout: 10000 });
     await expect(bookingRef).toContainText(/IHY-/);
 
     // Verify redirect notice is visible with countdown
@@ -148,7 +241,7 @@ test.describe("Booking Flow Overhaul & OTP Verification", () => {
     await expect(bookedBadge).toContainText(/أنت مسجل|You're booked/i);
   });
 
-  test("5. Light mode & Dark mode verification", async ({ page }) => {
+  test("7. Light mode & Dark mode verification", async ({ page }) => {
     // Light mode test
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/events/majlis-ihyaa/book");

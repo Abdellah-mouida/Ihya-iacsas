@@ -28,7 +28,7 @@ export function Branches() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   return (
-    <section id="branches" className="relative overflow-hidden py-24 sm:py-32">
+    <section id="branches" className="relative overflow-x-clip py-24 sm:py-32">
       <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
@@ -123,6 +123,11 @@ export function Branches() {
           </div>
         </div>
       </div>
+      {/* Bottom fade into card carousel */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-b from-transparent to-background/50 dark:to-background/40"
+      />
     </section>
   );
 }

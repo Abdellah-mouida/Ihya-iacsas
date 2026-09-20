@@ -5,6 +5,7 @@ import {
   Calendar,
   Image as ImageIcon,
   LayoutDashboard,
+  Mail,
   Menu,
   ShieldAlert,
   Sparkles,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: "/admin/gallery", labelKey: "dashboard.gallery", icon: ImageIcon },
   { href: "/admin/events", labelKey: "dashboard.events", icon: Calendar },
   { href: "/admin/bookings", labelKey: "dashboard.bookings", icon: Ticket },
+  { href: "/admin/contacts", labelKey: "dashboard.contacts", icon: Mail },
 ];
 
 export default function AdminLayout({
@@ -61,9 +63,9 @@ export default function AdminLayout({
         </span>
       </div>
 
-      <div className="mx-auto flex max-w-7xl flex-col lg:flex-row min-h-[calc(100vh-37px)]">
+      <div className="flex w-full flex-col lg:flex-row min-h-[calc(100vh-37px)]">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-64 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 shrink-0 justify-between">
+        <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 xl:p-6 shrink-0 justify-between sticky top-[37px] h-[calc(100vh-37px)]">
           <div>
             {/* Header Brand */}
             <Link href="/" className="flex items-center gap-3 px-2 py-3 mb-6">
@@ -202,7 +204,7 @@ export default function AdminLayout({
         )}
 
         {/* Main Workspace Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 overflow-y-auto">
           {children}
         </main>
       </div>

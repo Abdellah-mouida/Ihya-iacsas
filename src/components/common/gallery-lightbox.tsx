@@ -19,7 +19,20 @@ const slideVariants = {
   exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? "-8%" : "8%", scale: 0.98 }),
 };
 
-export function GalleryLightbox() {
+export type LightboxItem = {
+  src: string;
+  caption: string;
+  w?: number;
+  h?: number;
+};
+
+export function GalleryLightbox({
+  limit,
+  initialItems,
+}: {
+  limit?: number;
+  initialItems?: LightboxItem[];
+} = {}) {
   const { t, locale, dir } = useLocale();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
@@ -28,6 +41,7 @@ export function GalleryLightbox() {
   const [dbItems, setDbItems] = useState<{ src: string; caption: string; w: number; h: number }[]>([]);
 
   useEffect(() => {
+    if (initialItems && initialItems.length > 0) return;
     getGalleryPhotos().then((res) => {
       if (res.success && res.photos && res.photos.length > 0) {
         setDbItems(
@@ -43,17 +57,26 @@ export function GalleryLightbox() {
         );
       }
     });
-  }, [locale]);
+  }, [locale, initialItems]);
 
-  const items =
-    dbItems.length > 0
-      ? dbItems
-      : GALLERY.map((g) => ({
-          src: g.src,
-          caption: t(g.altKey),
-          w: g.w,
-          h: g.h,
-        }));
+  const rawItems =
+    initialItems && initialItems.length > 0
+      ? initialItems.map((i) => ({
+          src: i.src,
+          caption: i.caption,
+          w: i.w || 1280,
+          h: i.h || 960,
+        }))
+      : dbItems.length > 0
+        ? dbItems
+        : GALLERY.map((g) => ({
+            src: g.src,
+            caption: t(g.altKey),
+            w: g.w,
+            h: g.h,
+          }));
+
+  const items = limit ? rawItems.slice(0, limit) : rawItems;
 
   const count = items.length;
 
