@@ -101,6 +101,7 @@ export type NavLink = { key: string; href: string; indicator?: boolean };
 export const NAV_LINKS: NavLink[] = [
   { key: "nav.home", href: "/" },
   { key: "nav.events", href: "/events", indicator: true },
+  { key: "nav.gallery", href: "/gallery" },
 ];
 
 // Footer keeps a richer set of jump links to the homepage sections; absolute
@@ -109,7 +110,7 @@ export const FOOTER_LINKS: NavLink[] = [
   { key: "nav.home", href: "/" },
   { key: "nav.about", href: "/#about" },
   { key: "nav.activities", href: "/#activities" },
-  { key: "nav.gallery", href: "/#gallery" },
+  { key: "nav.gallery", href: "/gallery" },
   { key: "nav.events", href: "/events" },
   { key: "nav.contact", href: "/#contact" },
 ];

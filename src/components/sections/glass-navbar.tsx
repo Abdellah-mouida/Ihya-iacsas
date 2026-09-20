@@ -213,7 +213,10 @@ export function GlassNavbar() {
           <ThemeToggle onDark={transparentTop} />
           <Button
             asChild
-            className="bg-brass-gradient hidden h-10 rounded-full px-5 text-sm font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:inline-flex"
+            className={cn(
+              "bg-brass-gradient hidden h-10 rounded-full px-5 text-sm font-semibold text-night transition-all hover:-translate-y-0.5 hover:opacity-95 sm:inline-flex",
+              transparentTop ? "shadow-none" : "shadow-layered",
+            )}
           >
             <Link href={EVENT.bookHref}>{t("nav.book")}</Link>
           </Button>

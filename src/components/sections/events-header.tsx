@@ -7,7 +7,7 @@ export function EventsHeader() {
   const { t } = useLocale();
 
   return (
-    <section className="relative overflow-hidden pt-36 pb-4 sm:pt-40">
+    <section className="relative overflow-x-clip pt-36 pb-4 sm:pt-40">
       {/* Ambient brass glow to anchor the page header */}
       <div
         aria-hidden

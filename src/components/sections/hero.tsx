@@ -140,6 +140,12 @@ export function Hero() {
         </motion.dl>
       </motion.div>
 
+      {/* Bottom fade into the subsequent section */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-36 bg-gradient-to-b from-transparent via-background/60 to-background dark:via-background/80 dark:to-background"
+      />
+
       {/* Scroll cue */}
       <motion.a
         href="#about"

@@ -45,6 +45,9 @@ next-env.d.ts
 # local agent/session artifacts
 /.playwright-mcp/
 session-*.md
+session*.md
+session.md
+litellm-config.yaml
 # Zenrows CLI (do not commit secrets or run artifacts)
 .zenrows/secrets.json
 .zenrows/config.json

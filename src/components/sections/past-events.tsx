@@ -56,7 +56,12 @@ export function PastEvents() {
   if (displayList.length === 0) return null;
 
   return (
-    <section id="past-events" className="relative overflow-hidden py-24 sm:py-32">
+    <section id="past-events" className="relative overflow-x-clip py-24 sm:py-32">
+      {/* Top transition from open events */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-28 bg-gradient-to-b from-background to-transparent"
+      />
       <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
@@ -112,6 +117,11 @@ export function PastEvents() {
           ))}
         </motion.div>
       </div>
+      {/* Bottom transition into footer */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-t from-card/50 to-transparent"
+      />
     </section>
   );
 }
