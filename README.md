@@ -128,6 +128,7 @@ cp .env.example .env.local
 
 | Variable | Required | Description |
 | --- | :---: | --- |
+| `ADMIN_PASSWORD` | **Yes** | Password for the temporary access gate protecting `/admin` routes. |
 | `DATABASE_URL` | **Yes** | PostgreSQL connection URL (Neon pooled connection string with `?sslmode=require`). |
 | `DIRECT_URL` | **Yes** | Direct, unpooled PostgreSQL connection URL used by Prisma for schema migrations. |
 | `CLOUDINARY_URL` | Optional | Combined Cloudinary connection string (`cloudinary://API_KEY:API_SECRET@CLOUD_NAME`). |
@@ -215,7 +216,7 @@ npm run start
 
 The administrative dashboard located at `/admin` is designed for internal operations (event creation, attendee management, and media uploads).
 
-> **Important**: The `/admin` routes currently operate without an authentication gate. **Do not deploy this application to a public production domain without adding access control** (such as NextAuth/Auth.js, Clerk, Supabase Auth, or reverse-proxy basic authentication) to restrict `/admin` and related server actions.
+> **Important**: The `/admin` routes are protected by a temporary password gate (`ADMIN_PASSWORD`) with rate-limiting, timing-safe validation, and session auto-clearing. This is a **stopgap measure** to prevent casual public access and should be replaced with a full authentication solution (such as NextAuth/Auth.js or Clerk) before open public deployment.
 
 ---
 

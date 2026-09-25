@@ -246,7 +246,8 @@
     "contacts": "Contact Messages",
     "theme": "Theme & Language",
     "backToSite": "Back to site",
-    "authNoticeTitle": "Security Warning:",
-    "authNoticeBody": "This admin route is currently unauthenticated for dev testing. Add NextAuth before production deployment."
+    "logout": "Log out",
+    "authNoticeTitle": "Access Gate Active:",
+    "authNoticeBody": "Protected by temporary password gate. Session terminates upon browser exit or site navigation."
   }
 }

@@ -1,5 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026";
+
+async function loginAdmin(page: Page) {
+  await page.goto("/admin/login");
+  await page.fill('input[type="password"]', ADMIN_PASSWORD);
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.locator("aside")).toBeVisible();
+}
 
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   const testContactEmail = "contact.tester@example.com";
@@ -40,6 +50,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       },
     });
 
+    await loginAdmin(page);
     await page.goto("/admin/contacts");
     await expect(page.locator("body")).toContainText("زائر للتجربة", { timeout: 10000 });
     await expect(page.locator("body")).toContainText(testContactEmail);
@@ -62,6 +73,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       });
     }
 
+    await loginAdmin(page);
     await page.goto("/admin/bookings");
 
     // Click on row
@@ -120,6 +132,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   });
 
   test("6. Bilingual fields render with required validation and translate suggestion chips", async ({ page }) => {
+    await loginAdmin(page);
     await page.goto("/admin/events");
 
     // Open create event modal
@@ -196,6 +209,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   });
 
   test("9. Admin upload modals show recommended image resolution and aspect ratio hints", async ({ page }) => {
+    await loginAdmin(page);
     // Check Carousel hints
     await page.goto("/admin/carousel");
     const addCarouselBtn = page.locator("button", { hasText: /إضافة ملصق|إضافة أول ملصق|Add Poster/i }).first();

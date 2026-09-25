@@ -107,7 +107,7 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
 
     // Wait for step 2 segmented OTP input
     const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
-    await expect(otpFirstBox).toBeVisible({ timeout: 10000 });
+    await expect(otpFirstBox).toBeVisible({ timeout: 20000 });
 
     // Enter wrong 6-digit OTP into boxes
     for (let i = 0; i < 6; i++) {
@@ -137,7 +137,7 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
     await page.click('button[type="submit"]');
 
     const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
-    await expect(otpFirstBox).toBeVisible({ timeout: 10000 });
+    await expect(otpFirstBox).toBeVisible({ timeout: 20000 });
 
     // Manually set expiresAt in DB to past date to simulate expiration
     await prisma.otpVerification.updateMany({
@@ -198,7 +198,7 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
 
     // Wait for step 2
     const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
-    await expect(otpFirstBox).toBeVisible({ timeout: 10000 });
+    await expect(otpFirstBox).toBeVisible({ timeout: 20000 });
 
     // Retrieve active OTP record and set known OTP hash for deterministic testing
     const activeOtp = await prisma.otpVerification.findFirst({

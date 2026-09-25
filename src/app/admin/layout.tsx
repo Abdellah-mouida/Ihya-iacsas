@@ -5,6 +5,7 @@ import {
   Calendar,
   Image as ImageIcon,
   LayoutDashboard,
+  LogOut,
   Mail,
   Menu,
   ShieldAlert,
@@ -16,6 +17,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+
+import { adminLogout } from "@/app/actions/admin-auth";
 
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
@@ -41,6 +44,15 @@ export default function AdminLayout({
   const { t } = useLocale();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // If viewing the admin login screen, render standalone without dashboard chrome
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
+  const handleLogout = async () => {
+    await adminLogout();
+  };
 
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -68,7 +80,7 @@ export default function AdminLayout({
         <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 xl:p-6 shrink-0 justify-between sticky top-[37px] h-[calc(100vh-37px)]">
           <div>
             {/* Header Brand */}
-            <Link href="/" className="flex items-center gap-3 px-2 py-3 mb-6">
+            <Link href="/" prefetch={false} className="flex items-center gap-3 px-2 py-3 mb-6">
               <Image
                 src={IMAGES.logoSquare}
                 alt="Ihyaa"
@@ -129,14 +141,24 @@ export default function AdminLayout({
               variant="outline"
               className="w-full rounded-xl text-xs font-semibold justify-center"
             >
-              <Link href="/">{t("dashboard.backToSite") || "← Back to Site"}</Link>
+              <Link href="/" prefetch={false}>{t("dashboard.backToSite") || "← Back to Site"}</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleLogout}
+              data-testid="admin-logout-btn"
+              className="w-full rounded-xl text-xs font-semibold justify-center text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-700"
+            >
+              <LogOut className="size-3.5 me-2" />
+              {t("dashboard.logout") || "Log out"}
             </Button>
           </div>
         </aside>
 
         {/* Mobile Header Bar */}
         <div className="lg:hidden flex items-center justify-between border-b border-border/60 bg-card/40 backdrop-blur-xl px-4 py-3">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" prefetch={false} className="flex items-center gap-2.5">
             <Image
               src={IMAGES.logoSquare}
               alt="Ihyaa"
@@ -194,12 +216,23 @@ export default function AdminLayout({
                 </Link>
               );
             })}
-            <div className="pt-3 mt-2 border-t border-border flex items-center justify-between">
+            <div className="pt-3 mt-2 border-t border-border flex items-center justify-between gap-2">
               <LanguageSwitcher />
               <Button asChild size="sm" variant="outline" className="rounded-xl">
-                <Link href="/">{t("dashboard.backToSite") || "Back to Site"}</Link>
+                <Link href="/" prefetch={false}>{t("dashboard.backToSite") || "Back to Site"}</Link>
               </Button>
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              data-testid="admin-logout-mobile-btn"
+              className="w-full rounded-xl text-xs font-semibold justify-center text-red-600 dark:text-red-400 hover:bg-red-500/10"
+            >
+              <LogOut className="size-3.5 me-2" />
+              {t("dashboard.logout") || "Log out"}
+            </Button>
           </motion.div>
         )}
 
