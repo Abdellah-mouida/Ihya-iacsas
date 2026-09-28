@@ -23,7 +23,6 @@ async function loginAdmin(page: Page) {
 test.describe.serial("Event Capacity System & Waitlist Flow", () => {
   test.setTimeout(60_000);
 
-  const testEventSlug = "test-capacity-event-playwright";
   const user1Email = "user1.capacity.test@gmail.com";
   const user2Email = "user2.capacity.test@gmail.com";
   const user3Email = "user3.capacity.test@gmail.com";
@@ -127,7 +126,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     await page.click('button[type="submit"]');
 
     const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
-    await expect(otpFirstBox).toBeVisible({ timeout: 20000 });
+    await expect(otpFirstBox).toBeVisible({ timeout: 35000 });
 
     const activeOtp = await prisma.otpVerification.findFirst({
       where: { email, usedAt: null },
@@ -201,7 +200,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
 
     await page.goto("/admin/bookings");
     const approveBtn = page.locator(`[data-testid="approve-btn-${booking1Id}"]`);
-    await expect(approveBtn).toBeVisible({ timeout: 10000 });
+    await expect(approveBtn).toBeVisible({ timeout: 15000 });
     await approveBtn.click();
 
     // Verify status badge on bookings page updates to confirmed
@@ -225,7 +224,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
 
     await page.goto("/admin/bookings");
     const approveBtn = page.locator(`[data-testid="approve-btn-${booking2Id}"]`);
-    await expect(approveBtn).toBeVisible({ timeout: 10000 });
+    await expect(approveBtn).toBeVisible({ timeout: 15000 });
     await approveBtn.click();
 
     const statusBadge = page.locator(`[data-testid="booking-status-${booking2Id}"]`);

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/images/logo-square.jpg" alt="Ihyaa Logo" width="100" height="100" style="border-radius: 50%; object-fit: cover;" />
+  <img src="public/images/logo-circle.png" alt="Ihyaa Logo" width="100" height="100" />
 </p>
 
 <h1 align="center">Ihyaa Community Platform</h1>

@@ -91,12 +91,12 @@ export default function AdminLoginPage() {
           aria-label="Ihyaa Home"
         >
           <Image
-            src={IMAGES.logoSquare}
+            src={IMAGES.logoCircle}
             alt="Ihyaa"
             width={38}
             height={38}
             priority
-            className="size-9 rounded-full object-cover ring-1 ring-brass/40"
+            className="size-9 object-contain"
           />
           <span className="font-heading text-xl font-bold text-gradient-brass">
             {t("nav.brand") || "إحياء"}
@@ -240,7 +240,7 @@ export default function AdminLoginPage() {
         <span>
           {isRtl
             ? "نظام حماية مخصص لبرنامج إحياء • للوصول الإداري المصرح به فقط"
-            : "Temporary access gate for Ihyaa Platform • Authorized personnel only"}
+            : "Admin access gate for Ihyaa Program • Authorized personnel only"}
         </span>
       </footer>
     </div>

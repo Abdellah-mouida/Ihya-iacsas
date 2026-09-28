@@ -8,7 +8,6 @@ import {
   LogOut,
   Mail,
   Menu,
-  ShieldAlert,
   Sparkles,
   Ticket,
   X,
@@ -65,28 +64,18 @@ export default function AdminLayout({
         className="pointer-events-none fixed inset-0 -z-10 bg-girih opacity-[0.03] dark:opacity-[0.05]"
       />
 
-      {/* Access Control Notice Banner */}
-      <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-300 flex items-center justify-center gap-2">
-        <ShieldAlert className="size-4 shrink-0 text-amber-500" />
-        <span>
-          <strong>{t("dashboard.authNoticeTitle") || "Security Warning:"}</strong>{" "}
-          {t("dashboard.authNoticeBody") ||
-            "This admin route is currently unauthenticated for dev testing. Add NextAuth before production deployment."}
-        </span>
-      </div>
-
-      <div className="flex w-full flex-col lg:flex-row min-h-[calc(100vh-37px)]">
+      <div className="flex w-full flex-col lg:flex-row min-h-screen">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 xl:p-6 shrink-0 justify-between sticky top-[37px] h-[calc(100vh-37px)]">
+        <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 xl:p-6 shrink-0 justify-between sticky top-0 h-screen">
           <div>
             {/* Header Brand */}
             <Link href="/" prefetch={false} className="flex items-center gap-3 px-2 py-3 mb-6">
               <Image
-                src={IMAGES.logoSquare}
+                src={IMAGES.logoCircle}
                 alt="Ihyaa"
                 width={36}
                 height={36}
-                className="size-9 rounded-full object-cover ring-1 ring-brass/40"
+                className="size-9 object-contain"
               />
               <div>
                 <span className="font-heading text-lg font-bold text-gradient-brass block leading-none">
@@ -160,11 +149,11 @@ export default function AdminLayout({
         <div className="lg:hidden flex items-center justify-between border-b border-border/60 bg-card/40 backdrop-blur-xl px-4 py-3">
           <Link href="/" prefetch={false} className="flex items-center gap-2.5">
             <Image
-              src={IMAGES.logoSquare}
+              src={IMAGES.logoCircle}
               alt="Ihyaa"
               width={32}
               height={32}
-              className="size-8 rounded-full ring-1 ring-brass/40"
+              className="size-8 object-contain"
             />
             <span className="font-heading text-base font-bold text-gradient-brass">
               {t("nav.brand")} {t("dashboard.portal") || "Admin"}

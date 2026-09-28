@@ -22,14 +22,13 @@ export default function BookPage() {
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
           <span className="relative shrink-0">
             <Image
-              src={IMAGES.logoSquare}
+              src={IMAGES.logoCircle}
               alt="Ihyaa"
               width={40}
               height={40}
               priority
-              className="size-10 rounded-full object-cover ring-1 ring-brass/40 transition-transform duration-300 group-hover:scale-105"
+              className="size-10 object-contain transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
           </span>
           <span className="font-heading text-xl font-bold text-foreground">
             إحياء

@@ -20,6 +20,7 @@ export const IMAGES = {
   groupPortrait: "/images/group-portrait.jpg",
   logoBanner: "/images/logo-banner.jpg",
   logoSquare: "/images/logo-square.jpg",
+  logoCircle: "/images/logo-circle.png",
 } as const;
 
 export const EVENT = {

@@ -184,10 +184,10 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   }) => {
     await page.goto("/events/majlis-ihyaa/book");
 
-    // Check logo circular crop
+    // Check logo circular asset
     const logo = page.locator('header a[aria-label="Ihyaa"] img');
     await expect(logo).toBeVisible();
-    await expect(logo).toHaveClass(/rounded-full/);
+    await expect(logo).toHaveAttribute("src", /logo-circle/);
 
     // Step 1: Fill details with Moroccan city
     await page.fill("#b-name", "زكرياء المنصوري");

@@ -20,11 +20,11 @@ export function Footer() {
           <div className="flex flex-col gap-4 lg:col-span-1">
             <div className="flex items-center gap-3">
               <Image
-                src={IMAGES.logoSquare}
+                src={IMAGES.logoCircle}
                 alt={t("nav.brand")}
                 width={44}
                 height={44}
-                className="size-11 rounded-full object-cover ring-1 ring-brass/30"
+                className="size-11 object-contain"
               />
               <span className="text-gradient-brass font-heading text-2xl font-bold">
                 {t("nav.brand")}
