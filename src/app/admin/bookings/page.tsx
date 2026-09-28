@@ -2,10 +2,13 @@
 
 import { motion } from "framer-motion";
 import {
+  AlertCircle,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
   Filter,
+  ListOrdered,
   Mail,
   MapPin,
   RefreshCw,
@@ -14,11 +17,21 @@ import {
   Trash2,
   User,
   Users,
+  UserCheck,
+  UserX,
+  X,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { deleteBooking, getBookings } from "@/app/actions/bookings";
+import {
+  approveBooking,
+  deleteBooking,
+  getBookings,
+  promoteWaitlistBooking,
+  rejectBooking,
+} from "@/app/actions/bookings";
 import { getEvents } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
 import { IslamicLoader } from "@/components/common/islamic-loader";
@@ -39,6 +52,8 @@ type BookingRecord = {
   age: number;
   motive?: string | null;
   confirmed: boolean;
+  status: "CONFIRMED" | "PENDING" | "WAITLISTED" | "REJECTED" | string;
+  waitlistOrder?: number | null;
   createdAt: Date;
   event: {
     id: string;
@@ -46,6 +61,8 @@ type BookingRecord = {
     titleEn: string;
     date: Date;
     location: string;
+    capacityType?: string;
+    capacity?: number | null;
   };
 };
 
@@ -61,6 +78,7 @@ export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [events, setEvents] = useState<EventOption[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeModalBooking, setActiveModalBooking] =
     useState<BookingRecord | null>(null);
@@ -96,6 +114,57 @@ export default function AdminBookingsPage() {
     fetchData();
   }, [selectedEventId]);
 
+  const handleApprove = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const res = await approveBooking(id);
+    if (res.success) {
+      toast.success(
+        locale === "ar"
+          ? "تمت الموافقة على الحجز بنجاح"
+          : "Booking approved successfully",
+      );
+      fetchData();
+    } else {
+      toast.error(res.error || "Failed to approve booking");
+    }
+  };
+
+  const handleReject = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (
+      !confirm(
+        locale === "ar"
+          ? "هل أنت متأكد من رفض هذا الحجز؟ في حال توفر مقعد سيتم ترقية الحجز التالي في قائمة الانتظار تلقائياً."
+          : "Are you sure you want to reject this booking? If a spot opens, the next waitlisted attendee will be auto-promoted.",
+      )
+    ) {
+      return;
+    }
+
+    const res = await rejectBooking(id);
+    if (res.success) {
+      toast.success(locale === "ar" ? "تم رفض الحجز" : "Booking rejected");
+      fetchData();
+    } else {
+      toast.error(res.error || "Failed to reject booking");
+    }
+  };
+
+  const handlePromote = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const res = await promoteWaitlistBooking(id);
+    if (res.success) {
+      toast.success(
+        locale === "ar"
+          ? "تمت ترقية الحجز بنجاح وإرسال بريد التأكيد"
+          : "Booking promoted to confirmed and email sent",
+      );
+      fetchData();
+    } else {
+      toast.error(res.error || "Failed to promote booking");
+    }
+  };
+
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (
@@ -120,8 +189,11 @@ export default function AdminBookingsPage() {
     }
   };
 
-  // Filter bookings based on search query
+  // Filter bookings based on search query and status
   const filteredBookings = bookings.filter((b) => {
+    if (selectedStatus !== "all" && b.status !== selectedStatus) {
+      return false;
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -132,6 +204,70 @@ export default function AdminBookingsPage() {
       b.event.titleEn.toLowerCase().includes(q)
     );
   });
+
+  const renderStatusBadge = (
+    status: string,
+    waitlistOrder?: number | null,
+    bookingId?: string,
+  ) => {
+    const testAttr = bookingId ? { "data-testid": `booking-status-${bookingId}` } : {};
+    switch (status) {
+      case "CONFIRMED":
+        return (
+          <span
+            {...testAttr}
+            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+          >
+            <CheckCircle2 className="size-3.5 shrink-0" />
+            <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
+          </span>
+        );
+      case "PENDING":
+        return (
+          <span
+            {...testAttr}
+            className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/30"
+          >
+            <Clock className="size-3.5 shrink-0" />
+            <span>
+              {locale === "ar" ? "قيد الموافقة" : "Pending Approval"}
+            </span>
+          </span>
+        );
+      case "WAITLISTED":
+        return (
+          <span
+            {...testAttr}
+            className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/15 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 border border-purple-500/30"
+          >
+            <ListOrdered className="size-3.5 shrink-0" />
+            <span>
+              {locale === "ar"
+                ? `قائمة الانتظار (#${waitlistOrder || 1})`
+                : `Waitlisted (#${waitlistOrder || 1})`}
+            </span>
+          </span>
+        );
+      case "REJECTED":
+        return (
+          <span
+            {...testAttr}
+            className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/30"
+          >
+            <XCircle className="size-3.5 shrink-0" />
+            <span>{locale === "ar" ? "مرفوض" : "Rejected"}</span>
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const confirmedCount = bookings.filter((b) => b.status === "CONFIRMED").length;
+  const pendingCount = bookings.filter((b) => b.status === "PENDING").length;
+  const waitlistedCount = bookings.filter(
+    (b) => b.status === "WAITLISTED",
+  ).length;
 
   return (
     <div className="space-y-8 min-w-0">
@@ -186,40 +322,86 @@ export default function AdminBookingsPage() {
           />
         </div>
 
-        {/* Filter Event Dropdown */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0 font-semibold whitespace-nowrap">
-            <Filter className="size-4 text-brass shrink-0" />
-            <span>
-              {locale === "ar" ? "تصفية حسب الفعالية:" : "Filter Event:"}
-            </span>
+        {/* Filter Controls */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {/* Filter Status */}
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="rounded-xl border border-border bg-background/50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brass shrink-0 font-medium"
+            >
+              <option value="all">
+                {locale === "ar" ? "جميع الحالات" : "All Statuses"}
+              </option>
+              <option value="CONFIRMED">
+                {locale === "ar" ? "مؤكد" : "Confirmed"}
+              </option>
+              <option value="PENDING">
+                {locale === "ar" ? "قيد الموافقة" : "Pending Approval"}
+              </option>
+              <option value="WAITLISTED">
+                {locale === "ar" ? "قائمة الانتظار" : "Waitlisted"}
+              </option>
+              <option value="REJECTED">
+                {locale === "ar" ? "مرفوض" : "Rejected"}
+              </option>
+            </select>
           </div>
 
-          <select
-            value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
-            className="rounded-xl border border-border bg-background/50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brass shrink-0 font-medium"
-          >
-            <option value="all">
-              {locale === "ar" ? "جميع الفعاليات" : "All Events"}
-            </option>
-            {events.map((e) => (
-              <option key={e.id} value={e.id}>
-                {locale === "ar" ? e.titleAr : e.titleEn}
+          {/* Filter Event Dropdown */}
+          <div className="flex items-center gap-2">
+            <Filter className="size-4 text-brass shrink-0" />
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="rounded-xl border border-border bg-background/50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brass shrink-0 font-medium"
+            >
+              <option value="all">
+                {locale === "ar" ? "جميع الفعاليات" : "All Events"}
               </option>
-            ))}
-          </select>
+              {events.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {locale === "ar" ? e.titleAr : e.titleEn}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Summary Chip */}
-      <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-muted-foreground">
-        <span className="glass px-3.5 py-2 rounded-full border border-border/60 flex items-center gap-2 whitespace-nowrap text-sm">
-          <Users className="size-4 text-brass shrink-0" />
+      {/* Summary Chips */}
+      <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+        <span className="glass px-3.5 py-1.5 rounded-full border border-border/60 flex items-center gap-2 whitespace-nowrap">
+          <Users className="size-3.5 text-brass shrink-0" />
           <span>
             {locale === "ar"
-              ? `إجمالي الحاضرين المؤكدين: ${filteredBookings.length}`
-              : `Total Confirmed Attendees: ${filteredBookings.length}`}
+              ? `إجمالي المسجلين: ${bookings.length}`
+              : `Total Registrations: ${bookings.length}`}
+          </span>
+        </span>
+        <span className="glass px-3.5 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 whitespace-nowrap">
+          <CheckCircle2 className="size-3.5 shrink-0" />
+          <span>
+            {locale === "ar"
+              ? `مؤكد: ${confirmedCount}`
+              : `Confirmed: ${confirmedCount}`}
+          </span>
+        </span>
+        <span className="glass px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center gap-1.5 whitespace-nowrap">
+          <Clock className="size-3.5 shrink-0" />
+          <span>
+            {locale === "ar"
+              ? `قيد الموافقة: ${pendingCount}`
+              : `Pending Approval: ${pendingCount}`}
+          </span>
+        </span>
+        <span className="glass px-3.5 py-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center gap-1.5 whitespace-nowrap">
+          <ListOrdered className="size-3.5 shrink-0" />
+          <span>
+            {locale === "ar"
+              ? `قائمة الانتظار: ${waitlistedCount}`
+              : `Waitlisted: ${waitlistedCount}`}
           </span>
         </span>
       </div>
@@ -314,25 +496,60 @@ export default function AdminBookingsPage() {
                       )}
                     </td>
 
-                    {/* Status & Delete */}
+                    {/* Status & Actions */}
                     <td className="py-3.5 px-4 sm:px-6 text-end whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        {b.confirmed ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                            <CheckCircle2 className="size-3.5 shrink-0" />
-                            <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                            <Clock className="size-3.5 shrink-0" />
-                            <span>{locale === "ar" ? "قيد التأكيد" : "Pending"}</span>
-                          </span>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {renderStatusBadge(
+                          b.status || (b.confirmed ? "CONFIRMED" : "PENDING"),
+                          b.waitlistOrder,
+                          b.id,
                         )}
+
+                        {b.status === "PENDING" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            data-testid={`approve-btn-${b.id}`}
+                            onClick={(e) => handleApprove(e, b.id)}
+                            className="size-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 rounded-lg"
+                            title={locale === "ar" ? "الموافقة على الحجز" : "Approve booking"}
+                          >
+                            <UserCheck className="size-4" />
+                          </Button>
+                        )}
+
+                        {b.status === "WAITLISTED" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            data-testid={`promote-btn-${b.id}`}
+                            onClick={(e) => handlePromote(e, b.id)}
+                            className="size-8 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-500/10 rounded-lg"
+                            title={locale === "ar" ? "ترقية إلى مؤكد" : "Promote to confirmed"}
+                          >
+                            <UserCheck className="size-4" />
+                          </Button>
+                        )}
+
+                        {(b.status === "CONFIRMED" || b.status === "PENDING") && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            data-testid={`reject-btn-${b.id}`}
+                            onClick={(e) => handleReject(e, b.id)}
+                            className="size-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 rounded-lg"
+                            title={locale === "ar" ? "رفض الحجز" : "Reject booking"}
+                          >
+                            <UserX className="size-4" />
+                          </Button>
+                        )}
+
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={(e) => handleDelete(e, b.id)}
                           className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title={locale === "ar" ? "حذف الحجز" : "Delete record"}
                         >
                           <Trash2 className="size-3.5 shrink-0" />
                         </Button>
@@ -382,16 +599,11 @@ export default function AdminBookingsPage() {
                 <span className="text-muted-foreground text-xs font-semibold uppercase">
                   {locale === "ar" ? "حالة الحجز" : "Booking Status"}
                 </span>
-                {activeModalBooking.confirmed ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                    <CheckCircle2 className="size-3.5 shrink-0" />
-                    <span>{locale === "ar" ? "مؤكد" : "Confirmed"}</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                    <Clock className="size-3.5 shrink-0" />
-                    <span>{locale === "ar" ? "قيد التأكيد (في انتظار التحقق)" : "Pending (Awaiting Verification)"}</span>
-                  </span>
+                {renderStatusBadge(
+                  activeModalBooking.status ||
+                    (activeModalBooking.confirmed ? "CONFIRMED" : "PENDING"),
+                  activeModalBooking.waitlistOrder,
+                  `modal-${activeModalBooking.id}`,
                 )}
               </div>
 
@@ -485,6 +697,65 @@ export default function AdminBookingsPage() {
                   </p>
                 </div>
               ) : null}
+
+              {/* Action Buttons in Modal */}
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-border/50">
+                {activeModalBooking.status === "PENDING" && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={async (e) => {
+                        await handleApprove(e, activeModalBooking.id);
+                        setActiveModalBooking(null);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 rounded-xl text-xs h-9 px-3 font-semibold"
+                    >
+                      <UserCheck className="size-3.5" />
+                      {locale === "ar" ? "قبول وتأكيد الحجز" : "Approve Booking"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async (e) => {
+                        await handleReject(e, activeModalBooking.id);
+                        setActiveModalBooking(null);
+                      }}
+                      className="text-destructive hover:bg-destructive/10 border-destructive/30 gap-1.5 rounded-xl text-xs h-9 px-3 font-semibold"
+                    >
+                      <UserX className="size-3.5" />
+                      {locale === "ar" ? "رفض الحجز" : "Reject"}
+                    </Button>
+                  </>
+                )}
+                {activeModalBooking.status === "WAITLISTED" && (
+                  <Button
+                    size="sm"
+                    onClick={async (e) => {
+                      await handlePromote(e, activeModalBooking.id);
+                      setActiveModalBooking(null);
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 rounded-xl text-xs h-9 px-3 font-semibold"
+                  >
+                    <UserCheck className="size-3.5" />
+                    {locale === "ar" ? "ترقية إلى مؤكد" : "Promote to Confirmed"}
+                  </Button>
+                )}
+                {(activeModalBooking.status === "CONFIRMED" ||
+                  (!activeModalBooking.status && activeModalBooking.confirmed)) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async (e) => {
+                      await handleReject(e, activeModalBooking.id);
+                      setActiveModalBooking(null);
+                    }}
+                    className="text-destructive hover:bg-destructive/10 border-destructive/30 gap-1.5 rounded-xl text-xs h-9 px-3 font-semibold"
+                  >
+                    <UserX className="size-3.5" />
+                    {locale === "ar" ? "إلغاء / رفض الحجز" : "Cancel / Reject"}
+                  </Button>
+                )}
+              </div>
             </div>
           </DialogContent>
         ) : null}

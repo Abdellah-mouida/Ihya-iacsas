@@ -41,9 +41,18 @@ type EventItem = {
   posterUrl: string;
   isNew: boolean;
   bookingOpen: boolean;
+  capacityType?: string;
+  capacity?: number | null;
   createdAt: Date;
   _count?: {
     bookings: number;
+  };
+  counts?: {
+    total: number;
+    confirmed: number;
+    pending: number;
+    waitlisted: number;
+    rejected: number;
   };
 };
 
@@ -68,6 +77,7 @@ export default function AdminEventsPage() {
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [formCapacityType, setFormCapacityType] = useState<string>("OPEN");
 
   useEffect(() => {
     return () => {
@@ -186,12 +196,14 @@ export default function AdminEventsPage() {
   const openAddModal = () => {
     setEditingEvent(null);
     setSafePosterPreview(null);
+    setFormCapacityType("OPEN");
     setModalOpen(true);
   };
 
   const openEditModal = (evt: EventItem) => {
     setEditingEvent(evt);
     setSafePosterPreview(evt.posterUrl);
+    setFormCapacityType(evt.capacityType || "OPEN");
     setModalOpen(true);
   };
 
@@ -333,11 +345,33 @@ export default function AdminEventsPage() {
                       <span>{evt.location}</span>
                     </span>
 
-                    <span className="flex items-center gap-1 font-semibold text-brass whitespace-nowrap">
+                    <span
+                      data-testid={`event-capacity-${evt.id}`}
+                      className="flex items-center gap-1 font-semibold text-brass whitespace-nowrap"
+                    >
                       <Ticket className="size-3.5 shrink-0" />
                       <span>
-                        {evt._count?.bookings || 0}{" "}
-                        {locale === "ar" ? "مسجلين" : "attendees"}
+                        {evt.capacityType === "LIMITED" ? (
+                          <>
+                            {locale === "ar" ? "مقاعد محدودة: " : "Capacity: "}
+                            {evt.counts?.confirmed || 0}/{evt.capacity || "∞"}
+                            {(evt.counts?.pending || 0) > 0 && (
+                              <span className="text-amber-500 ms-1 font-normal">
+                                ({evt.counts?.pending} {locale === "ar" ? "قيد المراجعة" : "pending"})
+                              </span>
+                            )}
+                            {(evt.counts?.waitlisted || 0) > 0 && (
+                              <span className="text-purple-400 ms-1 font-normal">
+                                ({evt.counts?.waitlisted} {locale === "ar" ? "انتظار" : "waitlist"})
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {evt.counts?.confirmed || evt._count?.bookings || 0}{" "}
+                            {locale === "ar" ? "مؤكد (مفتوحة)" : "confirmed (Open)"}
+                          </>
+                        )}
                       </span>
                     </span>
                   </div>
@@ -558,6 +592,81 @@ export default function AdminEventsPage() {
                   }}
                   className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
                 />
+              </div>
+
+              {/* Capacity System Settings */}
+              <div className="p-4 rounded-xl border border-brass/20 bg-background/40 space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-brass block">
+                  {locale === "ar" ? "نظام المقاعد والطاقة الاستيعابية" : "Capacity & Attendance Model"}
+                </label>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    formCapacityType === "OPEN"
+                      ? "border-brass bg-brass/10"
+                      : "border-border/60 hover:bg-muted/40"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="capacityType"
+                      value="OPEN"
+                      checked={formCapacityType === "OPEN"}
+                      onChange={() => setFormCapacityType("OPEN")}
+                      className="mt-0.5 text-brass focus:ring-brass"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-foreground">
+                        {locale === "ar" ? "مفتوحة (تأكيد فوري)" : "Open (Instant Confirmation)"}
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        {locale === "ar"
+                          ? "مقاعد غير محدودة، تأكيد تلقائي بعد التحقق من الرمز"
+                          : "Unlimited places, auto-confirmed on OTP verification"}
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    formCapacityType === "LIMITED"
+                      ? "border-brass bg-brass/10"
+                      : "border-border/60 hover:bg-muted/40"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="capacityType"
+                      value="LIMITED"
+                      checked={formCapacityType === "LIMITED"}
+                      onChange={() => setFormCapacityType("LIMITED")}
+                      className="mt-0.5 text-brass focus:ring-brass"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold text-foreground">
+                        {locale === "ar" ? "مقاعد محدودة (موافقة وقائمة انتظار)" : "Limited (Approval & Waitlist)"}
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        {locale === "ar"
+                          ? "عدد محدد يتطلب موافقة، وما زاد ينتقل لقائمة الانتظار"
+                          : "Fixed capacity with admin approval & automatic waitlist"}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {formCapacityType === "LIMITED" && (
+                  <div className="pt-2">
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      {locale === "ar" ? "العدد الأقصى للمقاعد المتاحة (Capacity):" : "Maximum Available Seats (Capacity):"}
+                    </label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      min={1}
+                      required={formCapacityType === "LIMITED"}
+                      defaultValue={editingEvent?.capacity || 30}
+                      className="w-full sm:w-48 rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Toggles */}

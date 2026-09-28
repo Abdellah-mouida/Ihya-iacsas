@@ -6,10 +6,12 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  Clock,
   Home,
   KeyRound,
   RefreshCw,
   Sparkles,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,6 +22,7 @@ import {
   resendBookingOtp,
   verifyBookingOtp,
 } from "@/app/actions/bookings";
+import { getEventById } from "@/app/actions/events";
 import { CityCombobox } from "@/components/common/city-combobox";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { SegmentedOtpInput } from "@/components/common/segmented-otp-input";
@@ -66,8 +69,29 @@ export function BookingStepper() {
   const [targetEventId, setTargetEventId] = useState<string>(
     eventIdParam || "majlis-ihyaa",
   );
+  const [eventInfo, setEventInfo] = useState<{
+    id?: string;
+    titleAr?: string;
+    titleEn?: string;
+    capacityType?: string;
+    capacity?: number | null;
+    confirmedCount?: number;
+    isFull?: boolean;
+  } | null>(null);
+  const [bookingStatus, setBookingStatus] = useState<string>("CONFIRMED");
+  const [waitlistOrder, setWaitlistOrder] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
+
+  useEffect(() => {
+    if (targetEventId && targetEventId !== "majlis-ihyaa") {
+      getEventById(targetEventId).then((res) => {
+        if (res.success && res.event) {
+          setEventInfo(res.event);
+        }
+      });
+    }
+  }, [targetEventId]);
 
   const steps = [
     t("booking.stepDetails"),
@@ -187,6 +211,10 @@ export function BookingStepper() {
     if (res.success && res.bookingRef) {
       setBookingRef(res.bookingRef);
       if (res.eventId) setTargetEventId(res.eventId);
+      if (res.status) setBookingStatus(res.status);
+      if (res.waitlistOrder !== undefined) {
+        setWaitlistOrder(res.waitlistOrder ?? null);
+      }
 
       // Store in localStorage for client-side recognition
       try {
@@ -431,17 +459,48 @@ export function BookingStepper() {
                 />
               </div>
 
+              {eventInfo?.capacityType === "LIMITED" && (
+                <div
+                  className={cn(
+                    "rounded-xl p-3.5 text-xs font-medium border flex items-start gap-2.5",
+                    eventInfo.isFull
+                      ? "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                      : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                  )}
+                >
+                  <Sparkles className="size-4 shrink-0 mt-0.5" />
+                  <span>
+                    {eventInfo.isFull
+                      ? locale === "ar"
+                        ? "المقاعد المتاحة لهذه الفعالية مكتملة حالياً. يمكنك إتمام التسجيل للانضمام إلى قائمة الانتظار، وسيتم إشعارك فور توفر مقعد."
+                        : "This event is currently at full capacity. Register to join the waitlist, and you will be notified if a seat opens up."
+                      : locale === "ar"
+                        ? "هذه الفعالية ذات مقاعد محدودة وتخضع لموافقة الإدارة. بعد التحقق من بريدك، سيكون طلبك قيد المراجعة."
+                        : "This event has limited capacity and requires admin approval. After verification, your booking will be reviewed."}
+                  </span>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={submitting}
                 className="bg-brass-gradient mt-2 h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
               >
-                {submitting
-                  ? locale === "ar"
-                    ? "جاري إرسال الرمز..."
-                    : "Sending code..."
-                  : t("booking.continue")}
-                <ArrowRight className="size-5 rtl:rotate-180" />
+                {submitting ? (
+                  <span>
+                    {locale === "ar" ? "جاري الإرسال..." : "Sending..."}
+                  </span>
+                ) : eventInfo?.capacityType === "LIMITED" && eventInfo.isFull ? (
+                  <>
+                    <span>{locale === "ar" ? "الانضمام لقائمة الانتظار" : "Join Waitlist"}</span>
+                    <ArrowRight className="size-5 rtl:rotate-180" />
+                  </>
+                ) : (
+                  <>
+                    <span>{t("booking.nextStep")}</span>
+                    <ArrowRight className="size-5 rtl:rotate-180" />
+                  </>
+                )}
               </Button>
             </motion.form>
           ) : null}
@@ -576,21 +635,80 @@ export function BookingStepper() {
                   stiffness: 200,
                   damping: 12,
                 }}
-                className="bg-brass-gradient grid size-20 place-items-center rounded-full text-night shadow-layered"
+                className={cn(
+                  "grid size-20 place-items-center rounded-full shadow-layered",
+                  bookingStatus === "PENDING"
+                    ? "bg-amber-500/20 text-amber-500 border border-amber-500/40"
+                    : bookingStatus === "WAITLISTED"
+                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                      : "bg-brass-gradient text-night",
+                )}
               >
-                <Check className="size-10" />
+                {bookingStatus === "PENDING" ? (
+                  <Clock className="size-10 text-amber-500" />
+                ) : bookingStatus === "WAITLISTED" ? (
+                  <Users className="size-10 text-purple-400" />
+                ) : (
+                  <Check className="size-10" />
+                )}
               </motion.span>
 
-              <h2 className="font-heading text-2xl font-bold sm:text-3xl">
-                {t("booking.confirmTitle")}
+              <h2
+                data-testid="booking-confirmation-title"
+                className="font-heading text-2xl font-bold sm:text-3xl"
+              >
+                {bookingStatus === "PENDING"
+                  ? locale === "ar"
+                    ? "تم استلام طلبك وهو قيد المراجعة"
+                    : "Your booking is pending approval"
+                  : bookingStatus === "WAITLISTED"
+                    ? locale === "ar"
+                      ? "تمت إضافتك إلى قائمة الانتظار"
+                      : "You've been added to the waitlist"
+                    : t("booking.confirmTitle")}
               </h2>
               <p className="text-muted-foreground text-sm max-w-md">
-                {t("booking.confirmDesc")}
+                {bookingStatus === "PENDING"
+                  ? locale === "ar"
+                    ? "نظراً لمحدودية المقاعد، يخضع طلبك لمراجعة الإدارة. سنرسل لك إشعاراً بالبريد الإلكتروني فور الموافقة وتأكيد حجزك."
+                    : "Due to limited capacity, your request is pending admin approval. You will receive an email once approved."
+                  : bookingStatus === "WAITLISTED"
+                    ? locale === "ar"
+                      ? `ترتيبك في قائمة الانتظار هو #${waitlistOrder || 1}. في حال اعتذار أي مشارك أو توفر مقعد شاغر، ستتم ترقية طلبك وتأكيده تلقائياً وإشعارك بالبريد الإلكتروني.`
+                      : `Your position on the waitlist is #${waitlistOrder || 1}. If a place opens up, you will be promoted and notified.`
+                    : t("booking.confirmDesc")}
               </p>
 
               <OrnamentDivider compact />
 
               <div className="w-full rounded-2xl bg-muted/60 p-5 text-start space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{locale === "ar" ? "حالة الحجز" : "Status"}:</span>
+                  <span
+                    data-testid="booking-status-badge"
+                    className={cn(
+                      "px-2.5 py-0.5 rounded-full font-bold text-xs",
+                      bookingStatus === "CONFIRMED" &&
+                        "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30",
+                      bookingStatus === "PENDING" &&
+                        "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30",
+                      bookingStatus === "WAITLISTED" &&
+                        "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30",
+                    )}
+                  >
+                    {bookingStatus === "CONFIRMED"
+                      ? locale === "ar"
+                        ? "مؤكد"
+                        : "Confirmed"
+                      : bookingStatus === "PENDING"
+                        ? locale === "ar"
+                          ? "قيد المراجعة والموافقة"
+                          : "Pending Approval"
+                        : locale === "ar"
+                          ? `قائمة الانتظار (#${waitlistOrder || 1})`
+                          : `Waitlist (#${waitlistOrder || 1})`}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{t("booking.ref")}:</span>
                   <span

@@ -10,12 +10,40 @@ export async function getEvents() {
     const events = await prisma.event.findMany({
       orderBy: { date: "desc" },
       include: {
-        _count: {
-          select: { bookings: true },
+        bookings: {
+          select: {
+            id: true,
+            status: true,
+            confirmed: true,
+          },
         },
       },
     });
-    return { success: true, events };
+
+    const enrichedEvents = events.map((ev) => {
+      const confirmedCount = ev.bookings.filter(
+        (b) => b.status === "CONFIRMED" || (b.confirmed && b.status !== "REJECTED"),
+      ).length;
+      const pendingCount = ev.bookings.filter((b) => b.status === "PENDING").length;
+      const waitlistCount = ev.bookings.filter((b) => b.status === "WAITLISTED").length;
+      const rejectedCount = ev.bookings.filter((b) => b.status === "REJECTED").length;
+
+      return {
+        ...ev,
+        _count: {
+          bookings: ev.bookings.length,
+        },
+        counts: {
+          total: ev.bookings.length,
+          confirmed: confirmedCount,
+          pending: pendingCount,
+          waitlisted: waitlistCount,
+          rejected: rejectedCount,
+        },
+      };
+    });
+
+    return { success: true, events: enrichedEvents };
   } catch (error) {
     console.error("Error fetching events:", error);
     return {
@@ -30,19 +58,54 @@ export async function getPublicEvents() {
   try {
     const events = await prisma.event.findMany({
       orderBy: { date: "desc" },
+      include: {
+        bookings: {
+          select: {
+            id: true,
+            status: true,
+            confirmed: true,
+          },
+        },
+      },
+    });
+
+    const enriched = events.map((ev) => {
+      const confirmedCount = ev.bookings.filter(
+        (b) => b.status === "CONFIRMED" || (b.confirmed && b.status !== "REJECTED"),
+      ).length;
+      const isLimited = ev.capacityType === "LIMITED";
+      const isFull = isLimited && ev.capacity !== null && confirmedCount >= ev.capacity;
+
+      return {
+        id: ev.id,
+        titleAr: ev.titleAr,
+        titleEn: ev.titleEn,
+        descriptionAr: ev.descriptionAr,
+        descriptionEn: ev.descriptionEn,
+        date: ev.date,
+        time: ev.time,
+        location: ev.location,
+        posterUrl: ev.posterUrl,
+        isNew: ev.isNew,
+        bookingOpen: ev.bookingOpen,
+        capacityType: ev.capacityType,
+        capacity: ev.capacity,
+        confirmedCount,
+        isFull,
+      };
     });
 
     const now = new Date();
     // An event is open/active if its date has not passed and booking is open
-    const openEvents = events.filter(
+    const openEvents = enriched.filter(
       (e) => new Date(e.date) >= now && e.bookingOpen,
     );
-    const pastEvents = events.filter(
+    const pastEvents = enriched.filter(
       (e) => new Date(e.date) < now || !e.bookingOpen,
     );
     const hasNew = openEvents.length > 0;
 
-    return { success: true, events, openEvents, pastEvents, hasNew };
+    return { success: true, events: enriched, openEvents, pastEvents, hasNew };
   } catch (error) {
     console.error("Error fetching public events:", error);
     return {
@@ -52,6 +115,60 @@ export async function getPublicEvents() {
       openEvents: [],
       pastEvents: [],
       hasNew: false,
+    };
+  }
+}
+
+export async function getEventById(id: string) {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        bookings: {
+          select: {
+            id: true,
+            status: true,
+            confirmed: true,
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      return { success: false, error: "Event not found" };
+    }
+
+    const confirmedCount = event.bookings.filter(
+      (b) => b.status === "CONFIRMED" || (b.confirmed && b.status !== "REJECTED"),
+    ).length;
+    const isLimited = event.capacityType === "LIMITED";
+    const isFull =
+      isLimited && event.capacity !== null && confirmedCount >= event.capacity;
+
+    return {
+      success: true,
+      event: {
+        id: event.id,
+        titleAr: event.titleAr,
+        titleEn: event.titleEn,
+        descriptionAr: event.descriptionAr,
+        descriptionEn: event.descriptionEn,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        posterUrl: event.posterUrl,
+        bookingOpen: event.bookingOpen,
+        capacityType: event.capacityType,
+        capacity: event.capacity,
+        confirmedCount,
+        isFull,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to fetch event",
     };
   }
 }
@@ -67,6 +184,17 @@ export async function createEvent(formData: FormData) {
     const location = (formData.get("location") as string)?.trim();
     const isNew = formData.get("isNew") === "true" || formData.get("isNew") === "on";
     const bookingOpen = formData.get("bookingOpen") === "true" || formData.get("bookingOpen") === "on";
+
+    const capacityTypeRaw = (formData.get("capacityType") as string)?.trim()?.toUpperCase();
+    const capacityType = capacityTypeRaw === "LIMITED" ? "LIMITED" : "OPEN";
+    let capacity: number | null = null;
+    if (capacityType === "LIMITED") {
+      const capParsed = parseInt((formData.get("capacity") as string) || "0", 10);
+      if (isNaN(capParsed) || capParsed <= 0) {
+        return { success: false, error: "Capacity must be greater than 0 for limited events." };
+      }
+      capacity = capParsed;
+    }
 
     const file = formData.get("image") as File | null;
     let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
@@ -107,6 +235,8 @@ export async function createEvent(formData: FormData) {
         posterUrl,
         isNew,
         bookingOpen,
+        capacityType,
+        capacity,
       },
     });
 
@@ -137,6 +267,17 @@ export async function updateEvent(id: string, formData: FormData) {
     const isNew = formData.get("isNew") === "true" || formData.get("isNew") === "on";
     const bookingOpen = formData.get("bookingOpen") === "true" || formData.get("bookingOpen") === "on";
 
+    const capacityTypeRaw = (formData.get("capacityType") as string)?.trim()?.toUpperCase();
+    const capacityType = capacityTypeRaw === "LIMITED" ? "LIMITED" : "OPEN";
+    let capacity: number | null = null;
+    if (capacityType === "LIMITED") {
+      const capParsed = parseInt((formData.get("capacity") as string) || "0", 10);
+      if (isNaN(capParsed) || capParsed <= 0) {
+        return { success: false, error: "Capacity must be greater than 0 for limited events." };
+      }
+      capacity = capParsed;
+    }
+
     const file = formData.get("image") as File | null;
     const posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
 
@@ -150,6 +291,8 @@ export async function updateEvent(id: string, formData: FormData) {
       location,
       isNew,
       bookingOpen,
+      capacityType,
+      capacity,
     };
 
     if (file && file.size > 0) {

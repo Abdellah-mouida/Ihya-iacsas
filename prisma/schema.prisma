@@ -42,30 +42,37 @@ model Event {
   posterUrl     String
   isNew         Boolean   @default(false)
   bookingOpen   Boolean   @default(true)
+  capacityType  String    @default("OPEN")
+  capacity      Int?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   bookings      Booking[]
 
   @@index([date])
   @@index([bookingOpen])
+  @@index([capacityType])
 }
 
 model Booking {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  fullName  String
-  email     String
-  city      String
-  age       Int
-  motive    String?
-  confirmed Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id            String   @id @default(cuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fullName      String
+  email         String
+  city          String
+  age           Int
+  motive        String?
+  confirmed     Boolean  @default(false)
+  status        String   @default("CONFIRMED")
+  waitlistOrder Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
   @@index([eventId])
   @@index([email])
   @@index([createdAt])
+  @@index([status])
+  @@index([eventId, status])
 }
 
 model OtpVerification {

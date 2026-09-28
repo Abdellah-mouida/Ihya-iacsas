@@ -23,6 +23,10 @@ type FeaturedEventProps = {
     time: string;
     location: string;
     posterUrl: string;
+    capacityType?: string;
+    capacity?: number | null;
+    confirmedCount?: number;
+    isFull?: boolean;
   };
 };
 
@@ -126,6 +130,24 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
               {title}
             </h3>
 
+            {event?.capacityType === "LIMITED" && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {event.isFull ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1 text-xs font-bold text-purple-700 dark:text-purple-300">
+                    <span>{locale === "ar" ? "المقاعد مكتملة • التسجيل متاح في قائمة الانتظار" : "Event Full • Waitlist Open"}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <span>
+                      {locale === "ar"
+                        ? `مقاعد محدودة (${event.confirmedCount || 0}/${event.capacity}) • يتطلب موافقة الإدارة`
+                        : `Limited Seats (${event.confirmedCount || 0}/${event.capacity}) • Approval Required`}
+                    </span>
+                  </span>
+                )}
+              </div>
+            )}
+
             <ul className="mt-6 flex flex-col gap-4">
               {details.map((d) => (
                 <li key={d.label} className="flex items-center gap-3">
@@ -160,7 +182,17 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
                   asChild
                   className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
                 >
-                  <Link href={bookHref}>{t("event.cta")}</Link>
+                  <Link href={bookHref}>
+                    {event?.capacityType === "LIMITED"
+                      ? event.isFull
+                        ? locale === "ar"
+                          ? "الانضمام لقائمة الانتظار"
+                          : "Join Waitlist"
+                        : locale === "ar"
+                          ? "طلب حجز مقعد"
+                          : "Request Booking"
+                      : t("event.cta")}
+                  </Link>
                 </Button>
               )}
               <a

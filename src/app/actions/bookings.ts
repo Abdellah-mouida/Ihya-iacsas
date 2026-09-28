@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
-import { sendOTPEmail } from "@/lib/email";
+import { sendOTPEmail, sendWaitlistPromotionEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
@@ -274,7 +274,7 @@ export async function requestBookingOtp(data: {
       });
     }
 
-    // Send the verification code via MailerSend
+    // Send the verification code via Brevo API
     const emailResult = await sendOTPEmail(cleanEmail, otp, locale);
 
     if (!emailResult.success) {
@@ -449,9 +449,47 @@ export async function verifyBookingOtp(data: {
       };
     }
 
+    const event = booking.event;
+    const isLimited = event.capacityType === "LIMITED";
+    let newStatus = "CONFIRMED";
+    let isConfirmed = true;
+    let waitlistOrder: number | null = null;
+
+    if (isLimited) {
+      const confirmedCount = await prisma.booking.count({
+        where: {
+          eventId: event.id,
+          status: "CONFIRMED",
+        },
+      });
+
+      const capacity = event.capacity ?? 0;
+      if (confirmedCount < capacity) {
+        // Limited event with capacity remaining: needs admin approval
+        newStatus = "PENDING";
+        isConfirmed = false;
+      } else {
+        // Limited event at capacity: place on waitlist
+        newStatus = "WAITLISTED";
+        isConfirmed = false;
+        const lastWaitlisted = await prisma.booking.findFirst({
+          where: {
+            eventId: event.id,
+            status: "WAITLISTED",
+          },
+          orderBy: { waitlistOrder: "desc" },
+        });
+        waitlistOrder = (lastWaitlisted?.waitlistOrder ?? 0) + 1;
+      }
+    }
+
     const confirmedBooking = await prisma.booking.update({
       where: { id: booking.id },
-      data: { confirmed: true },
+      data: {
+        confirmed: isConfirmed,
+        status: newStatus,
+        waitlistOrder,
+      },
     });
 
     // Set signed/recognizing cookies
@@ -483,12 +521,15 @@ export async function verifyBookingOtp(data: {
     });
 
     revalidatePath(`/events/${booking.eventId}`);
+    revalidatePath("/events");
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
 
     return {
       success: true,
       bookingRef: `IHY-${confirmedBooking.id.slice(-6).toUpperCase()}`,
+      status: newStatus,
+      waitlistOrder,
       eventId: booking.eventId,
     };
   } catch (error) {
@@ -602,13 +643,17 @@ export async function isEventBookedByVisitor(eventId: string): Promise<boolean> 
   }
 }
 
-export async function getBookings(eventId?: string) {
+export async function getBookings(eventId?: string, status?: string) {
   try {
     const bookings = await prisma.booking.findMany({
       where: {
         ...(eventId && eventId !== "all" ? { eventId } : {}),
+        ...(status && status !== "all" ? { status } : {}),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { waitlistOrder: "asc" },
+        { createdAt: "desc" },
+      ],
       include: {
         event: {
           select: {
@@ -616,7 +661,10 @@ export async function getBookings(eventId?: string) {
             titleAr: true,
             titleEn: true,
             date: true,
+            time: true,
             location: true,
+            capacityType: true,
+            capacity: true,
           },
         },
       },
@@ -635,13 +683,226 @@ export async function getBookings(eventId?: string) {
   }
 }
 
-export async function deleteBooking(id: string) {
+export async function approveBooking(id: string) {
   try {
-    await prisma.booking.delete({
+    const booking = await prisma.booking.findUnique({
       where: { id },
+      include: { event: true },
     });
+
+    if (!booking) {
+      return { success: false, error: "Booking not found" };
+    }
+
+    await prisma.booking.update({
+      where: { id },
+      data: {
+        status: "CONFIRMED",
+        confirmed: true,
+        waitlistOrder: null,
+      },
+    });
+
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
+    revalidatePath(`/events/${booking.eventId}`);
+    revalidatePath("/events");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error approving booking:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to approve booking",
+    };
+  }
+}
+
+export async function rejectBooking(id: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { event: true },
+    });
+
+    if (!booking) {
+      return { success: false, error: "Booking not found" };
+    }
+
+    const wasConfirmed = booking.status === "CONFIRMED" || booking.confirmed;
+
+    await prisma.booking.update({
+      where: { id },
+      data: {
+        status: "REJECTED",
+        confirmed: false,
+        waitlistOrder: null,
+      },
+    });
+
+    let autoPromotedName: string | null = null;
+
+    // If an approved/confirmed booking was rejected, freeing up a spot in a limited event
+    if (wasConfirmed && booking.event.capacityType === "LIMITED") {
+      const nextWaitlisted = await prisma.booking.findFirst({
+        where: {
+          eventId: booking.eventId,
+          status: "WAITLISTED",
+        },
+        orderBy: [
+          { waitlistOrder: "asc" },
+          { createdAt: "asc" },
+        ],
+      });
+
+      if (nextWaitlisted) {
+        await prisma.booking.update({
+          where: { id: nextWaitlisted.id },
+          data: {
+            status: "CONFIRMED",
+            confirmed: true,
+            waitlistOrder: null,
+          },
+        });
+
+        autoPromotedName = nextWaitlisted.fullName;
+
+        // Send Brevo congratulations email
+        try {
+          await sendWaitlistPromotionEmail(nextWaitlisted.email, {
+            titleAr: booking.event.titleAr,
+            titleEn: booking.event.titleEn,
+            date: booking.event.date,
+            time: booking.event.time,
+            location: booking.event.location,
+          });
+        } catch (emailErr) {
+          console.error("Error sending auto-promotion email:", emailErr);
+        }
+      }
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/bookings");
+    revalidatePath(`/events/${booking.eventId}`);
+    revalidatePath("/events");
+
+    return { success: true, autoPromotedName };
+  } catch (error) {
+    console.error("Error rejecting booking:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to reject booking",
+    };
+  }
+}
+
+export async function promoteWaitlistBooking(id: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { event: true },
+    });
+
+    if (!booking) {
+      return { success: false, error: "Booking not found" };
+    }
+
+    await prisma.booking.update({
+      where: { id },
+      data: {
+        status: "CONFIRMED",
+        confirmed: true,
+        waitlistOrder: null,
+      },
+    });
+
+    // Send Brevo congratulations email
+    try {
+      await sendWaitlistPromotionEmail(booking.email, {
+        titleAr: booking.event.titleAr,
+        titleEn: booking.event.titleEn,
+        date: booking.event.date,
+        time: booking.event.time,
+        location: booking.event.location,
+      });
+    } catch (emailErr) {
+      console.error("Error sending promotion email:", emailErr);
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/bookings");
+    revalidatePath(`/events/${booking.eventId}`);
+    revalidatePath("/events");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error promoting waitlist booking:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to promote booking",
+    };
+  }
+}
+
+export async function deleteBooking(id: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { event: true },
+    });
+
+    if (booking) {
+      const wasConfirmed = booking.status === "CONFIRMED" || booking.confirmed;
+
+      await prisma.booking.delete({
+        where: { id },
+      });
+
+      // If a confirmed booking was deleted from a limited event, auto-promote next in waitlist
+      if (wasConfirmed && booking.event.capacityType === "LIMITED") {
+        const nextWaitlisted = await prisma.booking.findFirst({
+          where: {
+            eventId: booking.eventId,
+            status: "WAITLISTED",
+          },
+          orderBy: [
+            { waitlistOrder: "asc" },
+            { createdAt: "asc" },
+          ],
+        });
+
+        if (nextWaitlisted) {
+          await prisma.booking.update({
+            where: { id: nextWaitlisted.id },
+            data: {
+              status: "CONFIRMED",
+              confirmed: true,
+              waitlistOrder: null,
+            },
+          });
+
+          try {
+            await sendWaitlistPromotionEmail(nextWaitlisted.email, {
+              titleAr: booking.event.titleAr,
+              titleEn: booking.event.titleEn,
+              date: booking.event.date,
+              time: booking.event.time,
+              location: booking.event.location,
+            });
+          } catch (emailErr) {
+            console.error("Error sending auto-promotion email:", emailErr);
+          }
+        }
+      }
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/bookings");
+    revalidatePath("/events");
     return { success: true };
   } catch (error) {
     console.error("Error deleting booking:", error);

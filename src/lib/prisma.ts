@@ -9,9 +9,15 @@ function getDatabaseUrl(): string | undefined {
   if (!url) return undefined;
 
   // Neon pooler requires pgbouncer=true to disable prepared statements and keep connections stable
-  if (url.includes("-pooler") && !url.includes("pgbouncer=true")) {
+  if (url.includes("-pooler")) {
     const separator = url.includes("?") ? "&" : "?";
-    url = `${url}${separator}pgbouncer=true`;
+    if (!url.includes("pgbouncer=true")) {
+      url = `${url}${separator}pgbouncer=true`;
+    }
+    if (!url.includes("connection_limit=")) {
+      const sep = url.includes("?") ? "&" : "?";
+      url = `${url}${sep}connection_limit=25&pool_timeout=30`;
+    }
   }
   return url;
 }
