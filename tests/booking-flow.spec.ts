@@ -11,7 +11,9 @@ function computeHash(otp: string, email: string): string {
     .digest("hex");
 }
 
-test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
+test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
+  test.setTimeout(45_000);
+
   const testEmail = "playwright.test@gmail.com";
 
   test.beforeEach(async () => {
@@ -117,7 +119,7 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
     await page.click('button[type="submit"]');
 
     const otpError = page.getByTestId("otp-error");
-    await expect(otpError).toBeVisible();
+    await expect(otpError).toBeVisible({ timeout: 15000 });
     await expect(otpError).toContainText(/غير صحيح|invalid/i);
   });
 
@@ -152,7 +154,7 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
     await page.click('button[type="submit"]');
 
     const otpError = page.getByTestId("otp-error");
-    await expect(otpError).toBeVisible();
+    await expect(otpError).toBeVisible({ timeout: 15000 });
     await expect(otpError).toContainText(/صلاحيت|انتهت|expired/i);
   });
 
@@ -168,6 +170,9 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
     await page.fill("#b-age", "22");
 
     await page.click('button[type="submit"]');
+
+    const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpFirstBox).toBeVisible({ timeout: 25000 });
 
     const countdown = page.getByTestId("resend-timer-countdown");
     await expect(countdown).toBeVisible({ timeout: 10000 });
@@ -244,12 +249,12 @@ test.describe("Booking Flow Overhaul, MailerSend & Secure OTP", () => {
   test("7. Light mode & Dark mode verification", async ({ page }) => {
     // Light mode test
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/events/majlis-ihyaa/book");
+    await page.goto("/events/majlis-ihyaa/book", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
 
     // Dark mode test
     await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/events/majlis-ihyaa/book");
+    await page.goto("/events/majlis-ihyaa/book", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
   });
 });

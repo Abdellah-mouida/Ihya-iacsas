@@ -33,7 +33,7 @@ This web platform serves as the central digital hub for the organization, provid
   - Step 1: Attendee details input with an interactive, searchable Moroccan city combobox and allowed email domain validation.
   - Step 2: Rate-limited verification via 6-digit one-time passcodes (OTP), secured by HMAC-SHA256 hashing with salt and 10-minute expirations.
   - Step 3: Registration confirmation displaying a unique booking reference, automatic localStorage persistence, and countdown redirect.
-  - Transactional email dispatch powered by MailerSend with branded Arabic and English templates.
+  - Transactional email dispatch powered by Brevo API with branded Arabic and English templates.
 - **Activity Gallery**: Responsive media showcase with category filtering, bilingual descriptions, and modal zoom preview.
 - **Interactive Morocco Chapter Map**: Visual map component highlighting Ihyaa regional hubs across Morocco.
 - **Contact & Inquiries**: Direct messaging form with database logging for administrative review.
@@ -61,7 +61,7 @@ This web platform serves as the central digital hub for the organization, provid
 | **3D Graphics** | Three.js / React Three Fiber / Drei | `^0.185.1` / `^9.7.0` / `^10.7.8` | Interactive 3D particle canvas on homepage |
 | **Database & ORM** | PostgreSQL (Neon) & Prisma ORM | `^6.4.1` | Relational database schema, connection pooling, and typed queries |
 | **Media Hosting** | Cloudinary SDK | `^2.11.0` | Cloud media storage and image optimization for posters and gallery |
-| **Transactional Email** | MailerSend REST API | — | Secure delivery of branded OTP verification emails |
+| **Transactional Email** | Brevo REST API | — | Secure delivery of branded OTP verification emails |
 | **UI Components** | Radix UI Primitives & Lucide Icons | `^1.6.7` / `^1.33.0` | Accessible dialogs, dropdowns, and SVG iconography |
 | **Notifications** | Sonner | `^2.0.8` | Toast feedback for administrative actions |
 | **End-to-End Testing** | Playwright | `^1.63.0` | Automated testing for booking flow, rate limiting, and OTP logic |
@@ -106,7 +106,7 @@ This web platform serves as the central digital hub for the organization, provid
 │   └── lib/
 │       ├── cloudinary.ts        # Cloudinary uploader utility
 │       ├── constants.ts         # Moroccan cities list and allowed email domains
-│       ├── email.ts             # MailerSend transactional email templates & client
+│       ├── email.ts             # Brevo transactional email templates & client
 │       ├── motion.ts            # Framer Motion animation curves and presets
 │       ├── prisma.ts            # PrismaClient singleton with connection pooling
 │       └── utils.ts             # Tailwind class merging utility
@@ -135,9 +135,7 @@ cp .env.example .env.local
 | `CLOUDINARY_CLOUD_NAME` | **Yes** | Cloudinary account cloud name (used if `CLOUDINARY_URL` is omitted). |
 | `CLOUDINARY_API_KEY` | **Yes** | Cloudinary API access key. |
 | `CLOUDINARY_API_SECRET` | **Yes** | Cloudinary API secret key. |
-| `MAILERSEND_API_TOKEN` | **Yes** | API authentication token for sending emails via MailerSend. |
-| `MAILERSEND_SENDER_EMAIL` | Optional | Verified sender email address configured in MailerSend. |
-| `MAILERSEND_SENDER_NAME` | Optional | Sender display name for outgoing emails (e.g. `Ihyaa Association`). |
+| `BREVO_API_KEY` | **Yes** | API key for transactional emails via Brevo (v3 REST API). |
 | `OTP_SECRET` | Optional | Secret salt string used for HMAC-SHA256 OTP hashing (falls back to a default salt in development). |
 | `NEXT_PUBLIC_APP_URL` | Optional | Base URL of the deployment (e.g. `https://ihyaa.org`) used for absolute email asset URLs. |
 | `ALLOWED_DEV_ORIGINS` | Optional | Comma-separated LAN IP addresses or hostnames allowed to access the Next.js dev server. |
