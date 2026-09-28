@@ -133,7 +133,7 @@ async function main() {
           city: "تطوان",
           age: 24,
           confirmed: true,
-          motive: "الرغبة في الاستفادة من المحاور الإيمانية والتعرف على شباب الجمعية",
+          motive: "الرغبة في الاستفادة من المحاور الإيمانية والتعرف على شباب البرنامج",
         },
         {
           eventId: upcomingEvent.id,

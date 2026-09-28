@@ -197,7 +197,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.click('[data-testid="city-option-tangier"]');
 
     await page.fill("#b-age", "24");
-    await page.fill("#b-motive", "المشاركة في أنشطة جمعية إحياء الهادفة");
+    await page.fill("#b-motive", "المشاركة في أنشطة برنامج إحياء الهادفة");
 
     await page.click('button[type="submit"]');
 

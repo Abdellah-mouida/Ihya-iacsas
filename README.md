@@ -5,7 +5,7 @@
 <h1 align="center">Ihyaa Community Platform</h1>
 
 <p align="center">
-  Official web platform for <strong>Ihyaa</strong> — a Moroccan non-profit youth community association dedicated to personal development, education, spiritual growth, and community service.
+  Official web platform for <strong>Ihyaa</strong> — a Moroccan youth community program dedicated to personal development, education, spiritual growth, and community service.
 </p>
 
 ---
@@ -220,4 +220,4 @@ The administrative dashboard located at `/admin` is designed for internal operat
 
 ## License & Internal Use
 
-This repository is proprietary software maintained for the internal operations and community activities of the **Ihyaa Cultural and Development Association** (Morocco). All rights reserved.
+This repository is proprietary software maintained for the internal operations and community activities of the **Ihyaa Cultural and Development Program** (Morocco). All rights reserved.

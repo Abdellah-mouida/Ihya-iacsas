@@ -25,7 +25,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
 
     await page.fill("#name", "أحمد الإدريسي");
     await page.fill("#email", testContactEmail);
-    await page.fill("#message", "السلام عليكم، نود الاستفسار عن برامج وأنشطة الجمعية القادمة.");
+    await page.fill("#message", "السلام عليكم، نود الاستفسار عن فعاليات وأنشطة البرنامج القادمة.");
 
     await page.click('#contact button[type="submit"]');
 
@@ -67,7 +67,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
           email: "soufiane.test@gmail.com",
           city: "طنجة",
           age: 26,
-          motive: "الرغبة في حضور المجلس القرآني والتعرف على الجمعية",
+          motive: "الرغبة في حضور المجلس القرآني والتعرف على البرنامج",
           confirmed: true,
         },
       });

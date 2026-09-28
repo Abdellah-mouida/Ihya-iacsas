@@ -239,7 +239,7 @@ export default function AdminLoginPage() {
       <footer className="py-4 text-center text-[11px] text-muted-foreground/70 px-4">
         <span>
           {isRtl
-            ? "نظام حماية مؤقت مخصص لجمعية إحياء • للوصول الإداري المصرح به فقط"
+            ? "نظام حماية مخصص لبرنامج إحياء • للوصول الإداري المصرح به فقط"
             : "Temporary access gate for Ihyaa Platform • Authorized personnel only"}
         </span>
       </footer>

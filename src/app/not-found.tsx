@@ -52,7 +52,7 @@ export default function NotFound() {
         </p>
 
         <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
-          يبدو أن الرابط الذي تبحث عنه غير متاح أو تم نقله. يمكنك العودة واستكشاف فعاليات وأنشطة الجمعية.
+          يبدو أن الرابط الذي تبحث عنه غير متاح أو تم نقله. يمكنك العودة واستكشاف فعاليات وأنشطة البرنامج.
         </p>
 
         <div className="my-6">
