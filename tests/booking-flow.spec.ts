@@ -15,14 +15,16 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   test.setTimeout(45_000);
 
   const testEmail = "playwright.test@gmail.com";
+  const testEmailA = "playwright.flowa@gmail.com";
+  const testEmailB = "playwright.flowb@gmail.com";
 
   test.beforeEach(async () => {
     // Clean up test bookings, OTPs and rate limits
     await prisma.booking.deleteMany({
-      where: { email: { in: [testEmail, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, "unapproved@bad-domain.xyz"] } },
     });
     await prisma.otpVerification.deleteMany({
-      where: { email: { in: [testEmail, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, "unapproved@bad-domain.xyz"] } },
     });
     await prisma.rateLimit.deleteMany({
       where: {
@@ -31,6 +33,12 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
             `otp_gen_cooldown:${testEmail}`,
             `otp_gen_window:${testEmail}`,
             `otp_ver_rate:${testEmail}`,
+            `otp_gen_cooldown:${testEmailA}`,
+            `otp_gen_window:${testEmailA}`,
+            `otp_ver_rate:${testEmailA}`,
+            `otp_gen_cooldown:${testEmailB}`,
+            `otp_gen_window:${testEmailB}`,
+            `otp_ver_rate:${testEmailB}`,
           ],
         },
       },
@@ -256,5 +264,83 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/events/majlis-ihyaa/book", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
+  });
+
+  test("8. Changing email mid-flow creates strictly ONE booking for email B and ZERO for email A", async ({
+    page,
+  }) => {
+    await page.goto("/events/majlis-ihyaa/book");
+
+    // 1. Fill details with Email A
+    await page.fill("#b-name", "Flow Test User");
+    await page.fill("#b-email", testEmailA);
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-rabat"]');
+    await page.fill("#b-age", "22");
+    await page.fill("#b-motive", "Testing email change mid-flow");
+    await page.click('button[type="submit"]');
+
+    // 2. Wait for Step 2 OTP screen
+    const otpBox0 = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpBox0).toBeVisible({ timeout: 25000 });
+
+    // Assert that NO booking record was created in the database for email A at OTP-send time
+    const countAInitial = await prisma.booking.count({
+      where: { email: testEmailA },
+    });
+    expect(countAInitial).toBe(0);
+
+    // 3. User goes back to Step 1 to change email
+    const backBtn = page.locator('[data-testid="verify-back-button"]');
+    await expect(backBtn).toBeVisible();
+    await backBtn.click();
+
+    // 4. Change email to Email B
+    const emailInput = page.locator("#b-email");
+    await expect(emailInput).toBeVisible();
+    await emailInput.fill(testEmailB);
+    await page.click('button[type="submit"]');
+
+    // 5. Wait for Step 2 OTP screen again
+    await expect(otpBox0).toBeVisible({ timeout: 25000 });
+
+    // 6. Retrieve active OTP record for Email B and set test hash
+    const activeOtpB = await prisma.otpVerification.findFirst({
+      where: { email: testEmailB, usedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(activeOtpB).toBeTruthy();
+
+    const testOtp = "654321";
+    const testHash = computeHash(testOtp, testEmailB);
+    await prisma.otpVerification.update({
+      where: { id: activeOtpB!.id },
+      data: {
+        otpHash: testHash,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    // 7. Verify with Email B's OTP code
+    for (let i = 0; i < testOtp.length; i++) {
+      await page.fill(`[data-testid="otp-box-${i}"]`, testOtp[i]);
+    }
+
+    // 8. Wait for Step 3 confirmation
+    const bookingRef = page.getByTestId("booking-ref-display");
+    await expect(bookingRef).toBeVisible({ timeout: 15000 });
+    await expect(bookingRef).toContainText(/IHY-/);
+
+    // 9. Assert database state: exactly 1 booking for Email B, and 0 for Email A
+    const bookingsA = await prisma.booking.findMany({
+      where: { email: testEmailA },
+    });
+    const bookingsB = await prisma.booking.findMany({
+      where: { email: testEmailB },
+    });
+
+    expect(bookingsA.length).toBe(0);
+    expect(bookingsB.length).toBe(1);
+    expect(bookingsB[0].email).toBe(testEmailB);
   });
 });

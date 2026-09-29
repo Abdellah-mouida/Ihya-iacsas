@@ -591,6 +591,7 @@ export function BookingStepper() {
                 <Button
                   type="button"
                   variant="outline"
+                  data-testid="verify-back-button"
                   onClick={() => {
                     setStep(1);
                     setErrors({});

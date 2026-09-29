@@ -230,49 +230,28 @@ export async function requestBookingOtp(data: {
       },
     });
 
-    // Create new secure OTP verification record
-    await prisma.otpVerification.create({
+    // Clean up any legacy unconfirmed booking records for this email
+    await prisma.booking.deleteMany({
+      where: {
+        email: cleanEmail,
+        confirmed: false,
+      },
+    });
+
+    // Create new secure OTP verification record with registration payload
+    const otpRecord = await prisma.otpVerification.create({
       data: {
         email: cleanEmail,
         otpHash,
         expiresAt,
         attempts: 0,
-      },
-    });
-
-    // Check if there's an existing unconfirmed booking attempt or create one
-    let booking = await prisma.booking.findFirst({
-      where: {
         eventId: event.id,
-        email: cleanEmail,
-        confirmed: false,
+        fullName: fullName.trim(),
+        city: city.trim(),
+        age,
+        motive: motive?.trim() || null,
       },
-      orderBy: { createdAt: "desc" },
     });
-
-    if (booking) {
-      booking = await prisma.booking.update({
-        where: { id: booking.id },
-        data: {
-          fullName: fullName.trim(),
-          city: city.trim(),
-          age,
-          motive: motive?.trim() || null,
-        },
-      });
-    } else {
-      booking = await prisma.booking.create({
-        data: {
-          eventId: event.id,
-          fullName: fullName.trim(),
-          email: cleanEmail,
-          city: city.trim(),
-          age,
-          motive: motive?.trim() || null,
-          confirmed: false,
-        },
-      });
-    }
 
     // Send the verification code via Brevo API
     const emailResult = await sendOTPEmail(cleanEmail, otp, locale);
@@ -286,7 +265,8 @@ export async function requestBookingOtp(data: {
 
     return {
       success: true,
-      bookingId: booking.id,
+      bookingId: otpRecord.id,
+      verificationId: otpRecord.id,
       email: cleanEmail,
       eventId: event.id,
     };
@@ -338,14 +318,26 @@ export async function verifyBookingOtp(data: {
       };
     }
 
-    // Find the latest active OTP record for this email
-    const otpRecord = await prisma.otpVerification.findFirst({
-      where: {
-        email: cleanEmail,
-        usedAt: null,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    // Find active OTP record for this email (matching bookingId/verificationId if provided)
+    let otpRecord = bookingId
+      ? await prisma.otpVerification.findFirst({
+          where: {
+            id: bookingId,
+            email: cleanEmail,
+            usedAt: null,
+          },
+        })
+      : null;
+
+    if (!otpRecord) {
+      otpRecord = await prisma.otpVerification.findFirst({
+        where: {
+          email: cleanEmail,
+          usedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     if (!otpRecord) {
       return {
@@ -420,36 +412,29 @@ export async function verifyBookingOtp(data: {
       data: { usedAt: now },
     });
 
-    // Find and confirm booking
-    let booking = bookingId
-      ? await prisma.booking.findUnique({
-          where: { id: bookingId },
-          include: { event: true },
-        })
+    // Resolve target event from OTP record
+    const targetEventId = otpRecord.eventId;
+    let event = targetEventId
+      ? await prisma.event.findUnique({ where: { id: targetEventId } })
       : null;
 
-    if (!booking) {
-      booking = await prisma.booking.findFirst({
-        where: {
-          email: cleanEmail,
-          confirmed: false,
-        },
-        orderBy: { createdAt: "desc" },
-        include: { event: true },
+    if (!event) {
+      event = await prisma.event.findFirst({
+        where: { bookingOpen: true },
+        orderBy: { date: "asc" },
       });
     }
 
-    if (!booking) {
+    if (!event) {
       return {
         success: false,
         error:
           locale === "ar"
-            ? "طلب الحجز غير موجود"
-            : "Booking attempt not found",
+            ? "الفعالية غير موجودة أو انتهت"
+            : "Event not found or has ended",
       };
     }
 
-    const event = booking.event;
     const isLimited = event.capacityType === "LIMITED";
     let newStatus = "CONFIRMED";
     let isConfirmed = true;
@@ -483,9 +468,24 @@ export async function verifyBookingOtp(data: {
       }
     }
 
-    const confirmedBooking = await prisma.booking.update({
-      where: { id: booking.id },
+    // Clean up any legacy unconfirmed booking record for this email and event
+    await prisma.booking.deleteMany({
+      where: {
+        eventId: event.id,
+        email: cleanEmail,
+        confirmed: false,
+      },
+    });
+
+    // Create the booking record strictly after successful OTP verification
+    const confirmedBooking = await prisma.booking.create({
       data: {
+        eventId: event.id,
+        fullName: otpRecord.fullName || "مشارك",
+        email: cleanEmail,
+        city: otpRecord.city || "تطوان",
+        age: otpRecord.age || 20,
+        motive: otpRecord.motive || null,
         confirmed: isConfirmed,
         status: newStatus,
         waitlistOrder,
@@ -494,7 +494,7 @@ export async function verifyBookingOtp(data: {
 
     // Set signed/recognizing cookies
     const cookieStore = await cookies();
-    cookieStore.set(`ihyaa_booked_${booking.eventId}`, "true", {
+    cookieStore.set(`ihyaa_booked_${confirmedBooking.eventId}`, "true", {
       maxAge: 60 * 60 * 24 * 60, // 60 days
       path: "/",
       httpOnly: false,
@@ -510,8 +510,8 @@ export async function verifyBookingOtp(data: {
         bookedEvents = [];
       }
     }
-    if (!bookedEvents.includes(booking.eventId)) {
-      bookedEvents.push(booking.eventId);
+    if (!bookedEvents.includes(confirmedBooking.eventId)) {
+      bookedEvents.push(confirmedBooking.eventId);
     }
     cookieStore.set("ihyaa_booked_events", JSON.stringify(bookedEvents), {
       maxAge: 60 * 60 * 24 * 60,
@@ -520,7 +520,7 @@ export async function verifyBookingOtp(data: {
       sameSite: "lax",
     });
 
-    revalidatePath(`/events/${booking.eventId}`);
+    revalidatePath(`/events/${confirmedBooking.eventId}`);
     revalidatePath("/events");
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
@@ -530,7 +530,7 @@ export async function verifyBookingOtp(data: {
       bookingRef: `IHY-${confirmedBooking.id.slice(-6).toUpperCase()}`,
       status: newStatus,
       waitlistOrder,
-      eventId: booking.eventId,
+      eventId: confirmedBooking.eventId,
     };
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {

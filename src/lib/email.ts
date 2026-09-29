@@ -50,65 +50,71 @@ async function sendBrevoEmail(payload: {
     };
   }
 
-  try {
-    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "api-key": apiKey,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        sender: {
-          name: SENDER_NAME,
-          email: SENDER_EMAIL,
-        },
-        to: [
-          {
-            email: payload.to,
-          },
-        ],
-        subject: payload.subject,
-        htmlContent: payload.htmlContent,
-        textContent: payload.textContent,
-      }),
-    });
+  let lastError = "Could not connect to email service.";
 
-    if (res.status === 201 || res.status === 200 || res.status === 202) {
-      const data = await res.json().catch(() => ({}));
-      return {
-        success: true,
-        messageId: (data as { messageId?: string }).messageId,
-      };
-    }
-
-    let errorMessage = `Brevo API returned status ${res.status}`;
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const errData = await res.json();
-      if (errData?.message) {
-        errorMessage = errData.message;
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: SENDER_NAME,
+            email: SENDER_EMAIL,
+          },
+          to: [
+            {
+              email: payload.to,
+            },
+          ],
+          subject: payload.subject,
+          htmlContent: payload.htmlContent,
+          textContent: payload.textContent,
+        }),
+      });
+
+      if (res.status === 201 || res.status === 200 || res.status === 202) {
+        const data = await res.json().catch(() => ({}));
+        return {
+          success: true,
+          messageId: (data as { messageId?: string }).messageId,
+        };
       }
-    } catch {
-      // ignore
+
+      let errorMessage = `Brevo API returned status ${res.status}`;
+      try {
+        const errData = await res.json();
+        if (errData?.message) {
+          errorMessage = errData.message;
+        }
+      } catch {
+        // ignore
+      }
+
+      lastError = errorMessage;
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[Brevo] Email sending attempt ${attempt} failed:`, errorMessage);
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Could not connect to email service.";
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[Brevo] Network error on attempt ${attempt}:`, err);
+      }
     }
 
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("[Brevo] Email sending failed:", errorMessage);
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
     }
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Brevo] Network error:", err);
-    }
-    return {
-      success: false,
-      error: "Could not connect to email service.",
-    };
   }
+
+  return {
+    success: false,
+    error: lastError,
+  };
 }
 
 /**

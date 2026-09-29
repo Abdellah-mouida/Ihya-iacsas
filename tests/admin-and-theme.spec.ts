@@ -18,6 +18,9 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await prisma.contactMessage.deleteMany({
       where: { email: testContactEmail },
     });
+    await prisma.rateLimit.deleteMany({
+      where: { key: { contains: "admin_login_fail" } },
+    });
   });
 
   test("1. Homepage contact form submits and saves to database", async ({ page }) => {
