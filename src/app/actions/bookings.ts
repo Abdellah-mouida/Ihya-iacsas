@@ -152,29 +152,6 @@ export async function requestBookingOtp(data: {
       };
     }
 
-    // Rate limit: max 1 request per 30 seconds, max 5 per 15 minutes per email
-    const cooldownLimit = await checkRateLimit(`otp_gen_cooldown:${cleanEmail}`, 1, 30);
-    if (!cooldownLimit.allowed) {
-      return {
-        success: false,
-        error:
-          locale === "ar"
-            ? `يرجى الانتظار ${cooldownLimit.retryAfter || 30} ثانية قبل طلب رمز جديد.`
-            : `Please wait ${cooldownLimit.retryAfter || 30}s before requesting a new code.`,
-      };
-    }
-
-    const maxGenLimit = await checkRateLimit(`otp_gen_window:${cleanEmail}`, 5, 900);
-    if (!maxGenLimit.allowed) {
-      return {
-        success: false,
-        error:
-          locale === "ar"
-            ? "تجاوزت الحد الأقصى لطلبات الرمز. يرجى المحاولة بعد 15 دقيقة."
-            : "Too many code requests. Please try again after 15 minutes.",
-      };
-    }
-
     // Find target event (either specified ID or the latest open event)
     let event = await prisma.event.findFirst({
       where: eventId ? { id: eventId } : { bookingOpen: true },
@@ -211,6 +188,49 @@ export async function requestBookingOtp(data: {
           locale === "ar"
             ? "الحجز لهذه الفعالية مغلق حالياً"
             : "Booking for this event is currently closed",
+      };
+    }
+
+    // Task 2: Email uniqueness check BEFORE generating or sending OTP
+    const existingBooking = await prisma.booking.findUnique({
+      where: {
+        eventId_email: {
+          eventId: event.id,
+          email: cleanEmail,
+        },
+      },
+    });
+
+    if (existingBooking) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+            : "You have already booked for this event",
+      };
+    }
+
+    // Rate limit: max 1 request per 30 seconds, max 5 per 15 minutes per email
+    const cooldownLimit = await checkRateLimit(`otp_gen_cooldown:${cleanEmail}`, 1, 30);
+    if (!cooldownLimit.allowed) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? `يرجى الانتظار ${cooldownLimit.retryAfter || 30} ثانية قبل طلب رمز جديد.`
+            : `Please wait ${cooldownLimit.retryAfter || 30}s before requesting a new code.`,
+      };
+    }
+
+    const maxGenLimit = await checkRateLimit(`otp_gen_window:${cleanEmail}`, 5, 900);
+    if (!maxGenLimit.allowed) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "تجاوزت الحد الأقصى لطلبات الرمز. يرجى المحاولة بعد 15 دقيقة."
+            : "Too many code requests. Please try again after 15 minutes.",
       };
     }
 
@@ -477,20 +497,55 @@ export async function verifyBookingOtp(data: {
       },
     });
 
-    // Create the booking record strictly after successful OTP verification
-    const confirmedBooking = await prisma.booking.create({
-      data: {
-        eventId: event.id,
-        fullName: otpRecord.fullName || "مشارك",
-        email: cleanEmail,
-        city: otpRecord.city || "تطوان",
-        age: otpRecord.age || 20,
-        motive: otpRecord.motive || null,
-        confirmed: isConfirmed,
-        status: newStatus,
-        waitlistOrder,
+    // Check uniqueness before create
+    const existingUniqueBooking = await prisma.booking.findUnique({
+      where: {
+        eventId_email: {
+          eventId: event.id,
+          email: cleanEmail,
+        },
       },
     });
+
+    if (existingUniqueBooking) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+            : "You have already booked for this event",
+      };
+    }
+
+    // Create the booking record strictly after successful OTP verification
+    let confirmedBooking;
+    try {
+      confirmedBooking = await prisma.booking.create({
+        data: {
+          eventId: event.id,
+          fullName: otpRecord.fullName || "مشارك",
+          email: cleanEmail,
+          city: otpRecord.city || "تطوان",
+          age: otpRecord.age || 20,
+          motive: otpRecord.motive || null,
+          confirmed: isConfirmed,
+          status: newStatus,
+          waitlistOrder,
+        },
+      });
+    } catch (createErr: unknown) {
+      const err = createErr as { code?: string };
+      if (err?.code === "P2002") {
+        return {
+          success: false,
+          error:
+            locale === "ar"
+              ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+              : "You have already booked for this event",
+        };
+      }
+      throw createErr;
+    }
 
     // Set signed/recognizing cookies
     const cookieStore = await cookies();
@@ -577,6 +632,32 @@ export async function resendBookingOtp(data: {
       };
     }
 
+    // Find previous registration payload to preserve
+    const prevOtp = await prisma.otpVerification.findFirst({
+      where: { email: cleanEmail },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (prevOtp?.eventId) {
+      const existing = await prisma.booking.findUnique({
+        where: {
+          eventId_email: {
+            eventId: prevOtp.eventId,
+            email: cleanEmail,
+          },
+        },
+      });
+      if (existing) {
+        return {
+          success: false,
+          error:
+            locale === "ar"
+              ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+              : "You have already booked for this event",
+        };
+      }
+    }
+
     // Invalidate existing active OTPs
     await prisma.otpVerification.updateMany({
       where: {
@@ -599,6 +680,11 @@ export async function resendBookingOtp(data: {
         otpHash,
         expiresAt,
         attempts: 0,
+        eventId: prevOtp?.eventId || null,
+        fullName: prevOtp?.fullName || null,
+        city: prevOtp?.city || null,
+        age: prevOtp?.age || null,
+        motive: prevOtp?.motive || null,
       },
     });
 

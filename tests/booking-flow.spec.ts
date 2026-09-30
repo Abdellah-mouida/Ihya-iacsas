@@ -17,14 +17,15 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   const testEmail = "playwright.test@gmail.com";
   const testEmailA = "playwright.flowa@gmail.com";
   const testEmailB = "playwright.flowb@gmail.com";
+  const testEmailUnique = "playwright.unique@gmail.com";
 
   test.beforeEach(async () => {
     // Clean up test bookings, OTPs and rate limits
     await prisma.booking.deleteMany({
-      where: { email: { in: [testEmail, testEmailA, testEmailB, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, "unapproved@bad-domain.xyz"] } },
     });
     await prisma.otpVerification.deleteMany({
-      where: { email: { in: [testEmail, testEmailA, testEmailB, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, "unapproved@bad-domain.xyz"] } },
     });
     await prisma.rateLimit.deleteMany({
       where: {
@@ -39,6 +40,9 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
             `otp_gen_cooldown:${testEmailB}`,
             `otp_gen_window:${testEmailB}`,
             `otp_ver_rate:${testEmailB}`,
+            `otp_gen_cooldown:${testEmailUnique}`,
+            `otp_gen_window:${testEmailUnique}`,
+            `otp_ver_rate:${testEmailUnique}`,
           ],
         },
       },
@@ -342,5 +346,161 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(bookingsA.length).toBe(0);
     expect(bookingsB.length).toBe(1);
     expect(bookingsB[0].email).toBe(testEmailB);
+  });
+
+  test("9. Email uniqueness check per event before sending OTP (Task 2)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+
+    page.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
+    page.on("pageerror", (err) => console.log("BROWSER ERROR:", err.message));
+    page.on("requestfailed", (req) =>
+      console.log("REQ FAILED:", req.url(), req.failure()?.errorText)
+    );
+    page.on("response", (res) => {
+      if (res.status() >= 400) console.log("RES ERROR:", res.status(), res.url());
+    });
+
+    // 1. Ensure second test event exists with bookingOpen = true
+    await prisma.event.upsert({
+      where: { id: "test-event-second" },
+      update: { bookingOpen: true, capacityType: "OPEN" },
+      create: {
+        id: "test-event-second",
+        titleAr: "الفعالية الثانية للاختبار",
+        titleEn: "Second Test Event",
+        descriptionAr: "وصف الفعالية الثانية للاختبار",
+        descriptionEn: "Description of the second test event",
+        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        time: "19:00",
+        location: "طنجة",
+        posterUrl: "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/event_poster.jpg",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    // 2. Book Event 1 with testEmailUnique
+    await page.goto("/events/majlis-ihyaa/book");
+    await page.fill("#b-name", "Unique Test User");
+    await page.fill("#b-email", testEmailUnique);
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-rabat"]');
+
+    await page.fill("#b-age", "25");
+    await page.fill("#b-motive", "Testing uniqueness before OTP");
+    await page.click('button[type="submit"]');
+
+    // Wait for Step 2 OTP
+    const otpBox0 = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpBox0).toBeVisible({ timeout: 25000 });
+
+    const activeOtp1 = await prisma.otpVerification.findFirst({
+      where: { email: testEmailUnique, usedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(activeOtp1).toBeTruthy();
+
+    const otpCode1 = "112233";
+    await prisma.otpVerification.update({
+      where: { id: activeOtp1!.id },
+      data: {
+        otpHash: computeHash(otpCode1, testEmailUnique),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    for (let i = 0; i < otpCode1.length; i++) {
+      await page.fill(`[data-testid="otp-box-${i}"]`, otpCode1[i]);
+    }
+
+    const bookingRef = page.getByTestId("booking-ref-display");
+    await expect(bookingRef).toBeVisible({ timeout: 15000 });
+
+    // Assert booking exists for Event 1
+    const event1Bookings = await prisma.booking.findMany({
+      where: { email: testEmailUnique, eventId: "majlis-ihyaa-2026" },
+    });
+    expect(event1Bookings.length).toBe(1);
+
+    // Count OTPs generated so far
+    const initialOtpCount = await prisma.otpVerification.count({
+      where: { email: testEmailUnique },
+    });
+
+    // 3. Try to book Event 1 AGAIN with the same email
+    await page.goto("/events/majlis-ihyaa/book");
+    await page.fill("#b-name", "Unique Test User Again");
+    await page.fill("#b-email", testEmailUnique);
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-rabat"]');
+
+    await page.fill("#b-age", "25");
+    await page.fill("#b-motive", "Attempt duplicate booking for event 1");
+    await page.click('button[type="submit"]');
+
+    // 4. Assert that Step 2 OTP is NOT shown and error banner IS shown
+    const errorBanner = page.locator('[data-testid="booking-error-banner"]');
+    await expect(errorBanner).toBeVisible({ timeout: 10000 });
+    await expect(errorBanner).toContainText(/مسبقاً|already booked/i);
+    await expect(otpBox0).not.toBeVisible();
+
+    // Verify NO new OTP verification was created in DB
+    const finalOtpCount = await prisma.otpVerification.count({
+      where: { email: testEmailUnique },
+    });
+    expect(finalOtpCount).toBe(initialOtpCount);
+
+    // 5. Try to book Event 2 with the same email -> Should SUCCEED
+    // Clear cooldown rate limit key so test doesn't have to wait 30s
+    await prisma.rateLimit.deleteMany({
+      where: { key: `otp_gen_cooldown:${testEmailUnique}` },
+    });
+
+    await page.goto("/events/majlis-ihyaa/book?eventId=test-event-second");
+    await page.fill("#b-name", "Unique Test User Event 2");
+    await page.fill("#b-email", testEmailUnique);
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-rabat"]');
+
+    await page.fill("#b-age", "25");
+    await page.fill("#b-motive", "Booking second event should be allowed");
+    await page.click('button[type="submit"]');
+
+    // Step 2 OTP screen DOES appear for Event 2
+    await expect(otpBox0).toBeVisible({ timeout: 25000 });
+
+    const activeOtp2 = await prisma.otpVerification.findFirst({
+      where: { email: testEmailUnique, usedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(activeOtp2).toBeTruthy();
+
+    const otpCode2 = "445566";
+    await prisma.otpVerification.update({
+      where: { id: activeOtp2!.id },
+      data: {
+        otpHash: computeHash(otpCode2, testEmailUnique),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    for (let i = 0; i < otpCode2.length; i++) {
+      await page.fill(`[data-testid="otp-box-${i}"]`, otpCode2[i]);
+    }
+
+    await expect(bookingRef).toBeVisible({ timeout: 15000 });
+
+    // 6. Assert DB has exactly 1 booking for Event 1 and 1 booking for Event 2
+    const allBookings = await prisma.booking.findMany({
+      where: { email: testEmailUnique },
+    });
+    expect(allBookings.length).toBe(2);
+    expect(allBookings.some((b) => b.eventId === "majlis-ihyaa-2026")).toBe(true);
+    expect(allBookings.some((b) => b.eventId === "test-event-second")).toBe(true);
   });
 });

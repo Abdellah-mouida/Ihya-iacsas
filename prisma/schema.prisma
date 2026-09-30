@@ -68,6 +68,7 @@ model Booking {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
 
+  @@unique([eventId, email])
   @@index([eventId])
   @@index([email])
   @@index([createdAt])

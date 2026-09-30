@@ -233,6 +233,7 @@
     "errEmail": "Invalid email address",
     "errDomain": "Please use an email from a well-known provider (Gmail, Yahoo, Outlook...)",
     "errAge": "Please enter a valid age",
+    "errAlreadyBooked": "You have already booked for this event",
     "errOtpRequired": "Please enter the 6-digit verification code"
   },
   "dashboard": {

@@ -184,7 +184,16 @@ export function BookingStepper() {
       setResendTimer(30); // 30-second cooldown
       setStep(2);
     } else {
-      setErrors({ form: res.error || "Failed to process registration" });
+      const err = res.error || "Failed to process registration";
+      const isEmailErr =
+        err.includes("مسبقاً") ||
+        err.toLowerCase().includes("already booked") ||
+        err.toLowerCase().includes("domain") ||
+        err.includes("نطاق");
+      setErrors({
+        form: err,
+        ...(isEmailErr ? { email: err } : {}),
+      });
     }
   }
 
@@ -344,7 +353,11 @@ export function BookingStepper() {
               </header>
 
               {errors.form ? (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <div
+                  data-testid="booking-error-banner"
+                  role="alert"
+                  className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+                >
                   {errors.form}
                 </div>
               ) : null}
