@@ -18,6 +18,10 @@ type DbEvent = {
   time: string;
   location: string;
   posterUrl: string;
+  capacityType?: string;
+  capacity?: number | null;
+  confirmedCount?: number;
+  isFull?: boolean;
 };
 
 export function OpenEvents() {
@@ -56,7 +60,11 @@ export function OpenEvents() {
     );
   }
 
-  const primaryEvent = openEvents && openEvents.length > 0 ? openEvents[0] : undefined;
-
-  return <FeaturedEvent event={primaryEvent} />;
+  return (
+    <div className="flex flex-col divide-y divide-border/20">
+      {activeEvents.map((ev, idx) => (
+        <FeaturedEvent key={ev.id} event={ev} isFirst={idx === 0} />
+      ))}
+    </div>
+  );
 }

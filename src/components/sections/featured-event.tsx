@@ -3,68 +3,64 @@
 import { motion } from "framer-motion";
 import { CalendarDays, CheckCircle2, Clock, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import { EventPoster } from "@/components/common/event-poster";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
+import { useIsEventBooked } from "@/lib/booking-state";
 import { EVENT, IMAGES } from "@/lib/content";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
 type FeaturedEventProps = {
   event?: {
     id: string;
-    titleAr: string;
-    titleEn: string;
-    descriptionAr: string;
-    descriptionEn: string;
-    date: Date;
-    time: string;
-    location: string;
-    posterUrl: string;
+    titleAr?: string;
+    titleEn?: string;
+    descriptionAr?: string;
+    descriptionEn?: string;
+    date?: Date | string;
+    time?: string;
+    location?: string;
+    posterUrl?: string;
     capacityType?: string;
     capacity?: number | null;
     confirmedCount?: number;
     isFull?: boolean;
+    poster?: string;
+    titleKey?: string;
+    dateKey?: string;
+    timeKey?: string;
+    locationKey?: string;
   };
+  isFirst?: boolean;
 };
 
-export function FeaturedEvent({ event }: FeaturedEventProps) {
+export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const { t, locale, dir } = useLocale();
-  const [isBooked, setIsBooked] = useState(false);
-
   const eventId = event?.id || "majlis-ihyaa";
-
-  useEffect(() => {
-    // Check cookie and localStorage for booking recognition
-    const hasLocal = localStorage.getItem(`ihyaa_booked_${eventId}`) === "true" ||
-      localStorage.getItem("ihyaa_booked_latest") === "true";
-    const hasCookie = document.cookie.includes(`ihyaa_booked_${eventId}=true`) ||
-      document.cookie.includes("ihyaa_booked_events");
-
-    if (hasLocal || hasCookie) {
-      setIsBooked(true);
-    }
-  }, [eventId]);
+  const isBooked = useIsEventBooked(eventId);
 
   const title = event
     ? locale === "ar"
-      ? event.titleAr
-      : event.titleEn
+      ? event.titleAr || (event.titleKey ? t(event.titleKey) : "")
+      : event.titleEn || (event.titleKey ? t(event.titleKey) : "")
     : t("event.name");
 
-  const dateStr = event
+  const dateStr = event?.date
     ? new Date(event.date).toLocaleDateString(
         locale === "ar" ? "ar-MA" : "en-US",
         { year: "numeric", month: "long", day: "numeric" },
       )
-    : t("event.date");
+    : event?.dateKey
+      ? t(event.dateKey)
+      : t("event.date");
 
-  const timeStr = event ? event.time : t("event.time");
-  const locationStr = event ? event.location : t("event.location");
-  const poster = event ? event.posterUrl : IMAGES.eventPoster;
-  const bookHref = event ? `/events/majlis-ihyaa/book?eventId=${event.id}` : EVENT.bookHref;
+  const timeStr = event?.time || (event?.timeKey ? t(event.timeKey) : t("event.time"));
+  const locationStr =
+    event?.location || (event?.locationKey ? t(event.locationKey) : t("event.location"));
+  const poster = event?.posterUrl || event?.poster || IMAGES.eventPoster;
+  const bookHref = event?.id ? `/events/majlis-ihyaa/book?eventId=${event.id}` : EVENT.bookHref;
 
   const details = [
     { icon: CalendarDays, label: t("event.dateLabel"), value: dateStr },
@@ -77,7 +73,11 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
   ];
 
   return (
-    <section id="event" className="relative overflow-hidden py-24 sm:py-32">
+    <section
+      id={isFirst ? "event" : `event-${eventId}`}
+      data-testid={`event-card-${eventId}`}
+      className="relative overflow-hidden py-24 sm:py-32"
+    >
       <div className="bg-spirit-gradient absolute inset-x-0 top-1/2 -z-10 h-[28rem] -translate-y-1/2 opacity-[0.07] blur-3xl" />
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Poster */}
@@ -168,6 +168,8 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
               {isBooked ? (
                 <div
                   data-testid="booked-state-badge"
+                  data-event-id={eventId}
+                  id={`booked-badge-${eventId}`}
                   className="flex items-center gap-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-6 py-3 text-emerald-700 dark:text-emerald-300 font-semibold shadow-sm"
                 >
                   <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -180,6 +182,7 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
               ) : (
                 <Button
                   asChild
+                  data-testid={`book-btn-${eventId}`}
                   className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
                 >
                   <Link href={bookHref}>

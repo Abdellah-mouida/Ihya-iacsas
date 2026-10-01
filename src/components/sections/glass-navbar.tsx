@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/lib/content";
 import { getPublicEvents } from "@/app/actions/events";
+import { isEventBooked } from "@/lib/booking-state";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -46,19 +47,7 @@ export function GlassNavbar() {
   useEffect(() => {
     getPublicEvents().then((res) => {
       if (res.success && res.openEvents) {
-        // Check if visitor has booked the active event
-        const isBooked = (id: string) => {
-          if (typeof window === "undefined") return false;
-          const localBooked =
-            localStorage.getItem(`ihyaa_booked_${id}`) === "true" ||
-            localStorage.getItem("ihyaa_booked_latest") === "true";
-          const cookieBooked =
-            document.cookie.includes(`ihyaa_booked_${id}=true`) ||
-            document.cookie.includes("ihyaa_booked_events");
-          return localBooked || cookieBooked;
-        };
-
-        const unbookedEvents = res.openEvents.filter((e) => !isBooked(e.id));
+        const unbookedEvents = res.openEvents.filter((e) => !isEventBooked(e.id));
         setHasNewEvent(unbookedEvents.length > 0);
       } else if (res.success) {
         setHasNewEvent(res.hasNew);

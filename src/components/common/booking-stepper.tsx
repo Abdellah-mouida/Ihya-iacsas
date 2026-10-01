@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
+import { markEventBooked } from "@/lib/booking-state";
 import { EVENT } from "@/lib/content";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
@@ -225,17 +226,8 @@ export function BookingStepper() {
         setWaitlistOrder(res.waitlistOrder ?? null);
       }
 
-      // Store in localStorage for client-side recognition
-      try {
-        localStorage.setItem(
-          `ihyaa_booked_${res.eventId || targetEventId}`,
-          "true",
-        );
-        localStorage.setItem("ihyaa_booked_latest", "true");
-        localStorage.setItem("ihyaa_booked_ref", res.bookingRef);
-      } catch (e) {
-        console.warn("Storage error", e);
-      }
+      // Store for client-side recognition per event
+      markEventBooked(res.eventId || targetEventId, res.bookingRef);
 
       setStep(3);
     } else {

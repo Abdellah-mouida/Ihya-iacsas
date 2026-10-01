@@ -382,7 +382,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
 
     // 2. Book Event 1 with testEmailUnique
-    await page.goto("/events/majlis-ihyaa/book");
+    await page.goto("/events/majlis-ihyaa/book?eventId=majlis-ihyaa-2026");
     await page.fill("#b-name", "Unique Test User");
     await page.fill("#b-email", testEmailUnique);
 
@@ -431,7 +431,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
 
     // 3. Try to book Event 1 AGAIN with the same email
-    await page.goto("/events/majlis-ihyaa/book");
+    await page.goto("/events/majlis-ihyaa/book?eventId=majlis-ihyaa-2026");
     await page.fill("#b-name", "Unique Test User Again");
     await page.fill("#b-email", testEmailUnique);
 
@@ -502,5 +502,97 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(allBookings.length).toBe(2);
     expect(allBookings.some((b) => b.eventId === "majlis-ihyaa-2026")).toBe(true);
     expect(allBookings.some((b) => b.eventId === "test-event-second")).toBe(true);
+  });
+
+  test("10. Event listing displays all open events; booking Event 1 marks ONLY Event 1 as booked, Event 2 remains bookable", async ({
+    page,
+    context,
+  }) => {
+    // 1. Ensure two open events exist in the database with future dates
+    await prisma.event.upsert({
+      where: { id: "majlis-ihyaa-2026" },
+      update: {
+        date: new Date("2026-10-15T18:00:00Z"),
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+      create: {
+        id: "majlis-ihyaa-2026",
+        titleAr: "مجلس إحياء الشبابي 2026",
+        titleEn: "Ihyaa Youth Gathering 2026",
+        descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
+        descriptionEn: "Opening gathering for Ihyaa Youth Program",
+        date: new Date("2026-10-15T18:00:00Z"),
+        time: "18:00",
+        location: "الرباط، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    await prisma.event.upsert({
+      where: { id: "test-event-second" },
+      update: {
+        date: new Date("2026-11-20T18:00:00Z"),
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+      create: {
+        id: "test-event-second",
+        titleAr: "الملتقى الثاني لبرنامج إحياء",
+        titleEn: "Second Ihyaa Program Gathering",
+        descriptionAr: "اللقاء الثاني للبرنامج الشبابي",
+        descriptionEn: "Second session for youth",
+        date: new Date("2026-11-20T18:00:00Z"),
+        time: "18:00",
+        location: "الدار البيضاء، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    // 2. Clear storage to simulate a fresh visitor
+    await context.clearCookies();
+    await page.goto("/events");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    // 3. Verify BOTH events appear in the listing
+    const event1Card = page.locator('[data-testid="event-card-majlis-ihyaa-2026"]');
+    const event2Card = page.locator('[data-testid="event-card-test-event-second"]');
+
+    await expect(event1Card).toBeVisible({ timeout: 15000 });
+    await expect(event2Card).toBeVisible({ timeout: 15000 });
+
+    const event1BookBtn = page.locator('[data-testid="book-btn-majlis-ihyaa-2026"]');
+    const event2BookBtn = page.locator('[data-testid="book-btn-test-event-second"]');
+
+    await expect(event1BookBtn).toBeVisible();
+    await expect(event2BookBtn).toBeVisible();
+
+    // Neither event should be marked as booked yet
+    await expect(event1Card.locator('[data-testid="booked-state-badge"]')).not.toBeVisible();
+    await expect(event2Card.locator('[data-testid="booked-state-badge"]')).not.toBeVisible();
+
+    // 4. Simulate visitor having booked Event 1 ONLY
+    await page.evaluate(() => {
+      localStorage.setItem("ihyaa_booked_majlis-ihyaa-2026", "true");
+      document.cookie = `ihyaa_booked_events=${encodeURIComponent(JSON.stringify(["majlis-ihyaa-2026"]))}; path=/; max-age=31536000; SameSite=Lax`;
+    });
+    await page.reload();
+
+    // 5. Assert: Event 1 is marked as booked, Event 2 is STILL active and bookable!
+    await expect(event1Card.locator('[data-testid="booked-state-badge"]')).toBeVisible({ timeout: 10000 });
+    await expect(event1BookBtn).not.toBeVisible();
+
+    await expect(event2Card.locator('[data-testid="booked-state-badge"]')).not.toBeVisible();
+    await expect(event2BookBtn).toBeVisible();
+
+    // 6. Click the book button on Event 2 -> should take visitor to Event 2 booking
+    await event2BookBtn.click();
+    await page.waitForURL(/.*test-event-second.*/, { timeout: 10000 });
+    expect(page.url()).toContain("test-event-second");
   });
 });
