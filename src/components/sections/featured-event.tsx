@@ -60,7 +60,7 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const locationStr =
     event?.location || (event?.locationKey ? t(event.locationKey) : t("event.location"));
   const poster = event?.posterUrl || event?.poster || IMAGES.eventPoster;
-  const bookHref = event?.id ? `/events/majlis-ihyaa/book?eventId=${event.id}` : EVENT.bookHref;
+  const bookHref = event?.id ? `/events/${event.id}/book` : EVENT.bookHref;
 
   const details = [
     { icon: CalendarDays, label: t("event.dateLabel"), value: dateStr },

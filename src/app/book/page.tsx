@@ -12,8 +12,8 @@ import { IMAGES } from "@/lib/content";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
-  title: "حجز — مجالس إحياء | Ihyaa Booking",
-  description: "Booking flow for the Ihyaa Majalis event.",
+  title: "حجز — برنامج إحياء | Ihyaa Booking",
+  description: "Booking page for Ihyaa Program events.",
 };
 
 export default async function BookPage({

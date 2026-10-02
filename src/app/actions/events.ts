@@ -121,7 +121,7 @@ export async function getPublicEvents() {
 
 export async function getEventById(id: string) {
   try {
-    const event = await prisma.event.findUnique({
+    let event = await prisma.event.findUnique({
       where: { id },
       include: {
         bookings: {
@@ -133,6 +133,27 @@ export async function getEventById(id: string) {
         },
       },
     });
+
+    if (!event) {
+      event = await prisma.event.findFirst({
+        where: {
+          OR: [
+            { id: { startsWith: id } },
+            { id: { contains: id } },
+          ],
+        },
+        orderBy: { date: "asc" },
+        include: {
+          bookings: {
+            select: {
+              id: true,
+              status: true,
+              confirmed: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!event) {
       return { success: false, error: "Event not found" };

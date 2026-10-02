@@ -13,25 +13,36 @@ import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "حجز — مجالس إحياء | Ihyaa Booking",
-  description: "Booking flow for the Ihyaa Majalis event.",
+  description: "Booking flow for Ihyaa events.",
 };
 
-export default async function BookPage({
+export default async function EventBookPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ slug: string }>;
   searchParams?: Promise<{ eventId?: string }>;
 }) {
-  const params = searchParams ? await searchParams : {};
+  const { slug } = await params;
+  const sParams = searchParams ? await searchParams : {};
   const cookieStore = await cookies();
 
-  let targetEventId = params?.eventId;
-  if (!targetEventId) {
-    const defaultEvent = await prisma.event.findFirst({
-      where: { bookingOpen: true },
-      orderBy: { date: "asc" },
-      select: { id: true },
-    });
-    targetEventId = defaultEvent?.id || "majlis-ihyaa";
+  let targetEventId = sParams?.eventId || slug;
+
+  // Resolve event from database if needed
+  const event = await prisma.event.findFirst({
+    where: {
+      OR: [
+        { id: targetEventId },
+        { id: { startsWith: targetEventId } },
+        { id: { contains: targetEventId } },
+      ],
+    },
+    select: { id: true, bookingOpen: true },
+  });
+
+  if (event) {
+    targetEventId = event.id;
   }
 
   // Server-side check: if already booked cookie exists, redirect to event page

@@ -26,7 +26,7 @@ export const IMAGES = {
 export const EVENT = {
   phone: "0615789337",
   phoneHref: "tel:+212615789337",
-  bookHref: "/events/majlis-ihyaa/book",
+  bookHref: "/book",
 } as const;
 
 export const EVENTS_HREF = "/events";

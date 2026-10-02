@@ -45,7 +45,7 @@ type Details = {
   motive: string;
 };
 
-export function BookingStepper() {
+export function BookingStepper({ initialEventId }: { initialEventId?: string } = {}) {
   const { t, locale } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -68,7 +68,7 @@ export function BookingStepper() {
   const [otp, setOtp] = useState<string>("");
   const [bookingRef, setBookingRef] = useState<string>("");
   const [targetEventId, setTargetEventId] = useState<string>(
-    eventIdParam || "majlis-ihyaa",
+    initialEventId || eventIdParam || "majlis-ihyaa",
   );
   const [eventInfo, setEventInfo] = useState<{
     id?: string;
@@ -85,7 +85,7 @@ export function BookingStepper() {
   const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
 
   useEffect(() => {
-    if (targetEventId && targetEventId !== "majlis-ihyaa") {
+    if (targetEventId) {
       getEventById(targetEventId).then((res) => {
         if (res.success && res.event) {
           setEventInfo(res.event);

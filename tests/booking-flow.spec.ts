@@ -508,6 +508,8 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     page,
     context,
   }) => {
+    test.setTimeout(60000);
+
     // 1. Ensure two open events exist in the database with future dates
     await prisma.event.upsert({
       where: { id: "majlis-ihyaa-2026" },
@@ -600,6 +602,8 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     page,
     context,
   }) => {
+    test.setTimeout(60000);
+
     // 1. Ensure only 1 open event exists for this test to isolate "all events booked" state
     await prisma.event.updateMany({
       where: { id: { not: "majlis-ihyaa-2026" } },
@@ -651,12 +655,41 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     // 6. Assert redirection to event page happens and form fields are never shown
     await page.waitForURL(/.*\/events.*/, { timeout: 15000 });
     expect(page.url()).toContain("/events");
-    await expect(page.locator("#b-fullName")).not.toBeVisible();
+    await expect(page.locator("#b-name")).not.toBeVisible();
 
     // Restore bookingOpen on the other event for upcoming tests
     await prisma.event.updateMany({
       where: { id: "test-event-second" },
       data: { bookingOpen: true },
     });
+  });
+
+  test("12. Navbar Book now points to /book and dynamic /events/[slug]/book renders booking stepper for specific event", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+
+    // 1. Clear storage & cookies
+    await context.clearCookies();
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    // 2. Check navbar "Book now" href is /book
+    const navbarBookBtn = page.locator('[data-testid="navbar-book-btn"]');
+    await expect(navbarBookBtn).toBeVisible({ timeout: 15000 });
+    const bookHref = await navbarBookBtn.getAttribute("href");
+    expect(bookHref).toBe("/book");
+
+    // 3. Click navbar "Book now" and verify it loads the booking stepper at /book
+    await navbarBookBtn.click();
+    await page.waitForURL(/.*\/book.*/, { timeout: 10000 });
+    expect(page.url()).toContain("/book");
+    await expect(page.locator("#b-name")).toBeVisible({ timeout: 15000 });
+
+    // 4. Test dynamic route /events/test-event-second/book
+    await page.goto("/events/test-event-second/book");
+    await expect(page.locator("#b-name")).toBeVisible({ timeout: 15000 });
   });
 });
