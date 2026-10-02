@@ -595,4 +595,68 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.waitForURL(/.*test-event-second.*/, { timeout: 10000 });
     expect(page.url()).toContain("test-event-second");
   });
+
+  test("11. Already-booked visitors: navbar hides Book now when all events booked; booking page blocks form and redirects to event", async ({
+    page,
+    context,
+  }) => {
+    // 1. Ensure only 1 open event exists for this test to isolate "all events booked" state
+    await prisma.event.updateMany({
+      where: { id: { not: "majlis-ihyaa-2026" } },
+      data: { bookingOpen: false },
+    });
+    await prisma.event.upsert({
+      where: { id: "majlis-ihyaa-2026" },
+      update: {
+        bookingOpen: true,
+        date: new Date("2026-10-15T18:00:00Z"),
+      },
+      create: {
+        id: "majlis-ihyaa-2026",
+        titleAr: "مجلس إحياء الشبابي 2026",
+        titleEn: "Ihyaa Youth Gathering 2026",
+        descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
+        descriptionEn: "Opening gathering for Ihyaa Youth Program",
+        date: new Date("2026-10-15T18:00:00Z"),
+        time: "18:00",
+        location: "الرباط، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+      },
+    });
+
+    // 2. Fresh visitor sees the navbar "Book now" button
+    await context.clearCookies();
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    const navbarBookBtn = page.locator('[data-testid="navbar-book-btn"]');
+    await expect(navbarBookBtn).toBeVisible({ timeout: 15000 });
+
+    // 3. Mark the visitor as having booked the event
+    await page.evaluate(() => {
+      localStorage.setItem("ihyaa_booked_majlis-ihyaa-2026", "true");
+      document.cookie = "ihyaa_booked_majlis-ihyaa-2026=true; path=/; max-age=31536000; SameSite=Lax";
+      document.cookie = `ihyaa_booked_events=${encodeURIComponent(JSON.stringify(["majlis-ihyaa-2026"]))}; path=/; max-age=31536000; SameSite=Lax`;
+    });
+    await page.reload();
+
+    // 4. Since the visitor already booked all open events, navbar "Book now" is HIDDEN
+    await expect(navbarBookBtn).not.toBeVisible({ timeout: 10000 });
+
+    // 5. Try navigating directly to the booking page for this event
+    await page.goto("/events/majlis-ihyaa/book?eventId=majlis-ihyaa-2026");
+
+    // 6. Assert redirection to event page happens and form fields are never shown
+    await page.waitForURL(/.*\/events.*/, { timeout: 15000 });
+    expect(page.url()).toContain("/events");
+    await expect(page.locator("#b-fullName")).not.toBeVisible();
+
+    // Restore bookingOpen on the other event for upcoming tests
+    await prisma.event.updateMany({
+      where: { id: "test-event-second" },
+      data: { bookingOpen: true },
+    });
+  });
 });

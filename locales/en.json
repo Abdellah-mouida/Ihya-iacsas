@@ -234,7 +234,11 @@
     "errDomain": "Please use an email from a well-known provider (Gmail, Yahoo, Outlook...)",
     "errAge": "Please enter a valid age",
     "errAlreadyBooked": "You have already booked for this event",
-    "errOtpRequired": "Please enter the 6-digit verification code"
+    "errOtpRequired": "Please enter the 6-digit verification code",
+    "nextStep": "Next Step",
+    "alreadyRegisteredTitle": "You are already registered for this event",
+    "alreadyRegisteredDesc": "Your booking for this event is already confirmed. You do not need to submit the registration form again.",
+    "alreadyRegisteredBack": "Back to event details"
   },
   "dashboard": {
     "title": "Dashboard",

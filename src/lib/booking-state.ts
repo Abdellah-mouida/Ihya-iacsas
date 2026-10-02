@@ -13,6 +13,9 @@ function subscribeBookingState(callback: () => void) {
 
 function notifyBookingChange() {
   listeners.forEach((listener) => listener());
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("ihyaa_booking_change"));
+  }
 }
 
 export function isEventBooked(eventId: string): boolean {

@@ -43,16 +43,33 @@ export function GlassNavbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
+  const [hasBookableEvents, setHasBookableEvents] = useState(true);
 
   useEffect(() => {
-    getPublicEvents().then((res) => {
-      if (res.success && res.openEvents) {
-        const unbookedEvents = res.openEvents.filter((e) => !isEventBooked(e.id));
-        setHasNewEvent(unbookedEvents.length > 0);
-      } else if (res.success) {
-        setHasNewEvent(res.hasNew);
-      }
-    });
+    let mounted = true;
+    const updateEvents = () => {
+      getPublicEvents().then((res) => {
+        if (!mounted) return;
+        if (res.success && res.openEvents) {
+          const unbookedEvents = res.openEvents.filter((e) => !isEventBooked(e.id));
+          const hasAny = unbookedEvents.length > 0;
+          setHasNewEvent(hasAny);
+          setHasBookableEvents(hasAny);
+        } else if (res.success) {
+          setHasNewEvent(res.hasNew);
+          setHasBookableEvents(res.hasNew);
+        }
+      });
+    };
+
+    updateEvents();
+    window.addEventListener("ihyaa_booking_change", updateEvents);
+    window.addEventListener("storage", updateEvents);
+    return () => {
+      mounted = false;
+      window.removeEventListener("ihyaa_booking_change", updateEvents);
+      window.removeEventListener("storage", updateEvents);
+    };
   }, [pathname]);
 
   const isActive = (href: string) =>
@@ -199,15 +216,18 @@ export function GlassNavbar() {
             onDark={transparentTop}
           />
           <ThemeToggle onDark={transparentTop} />
-          <Button
-            asChild
-            className={cn(
-              "bg-brass-gradient hidden h-10 rounded-full px-5 text-sm font-semibold text-night transition-all hover:-translate-y-0.5 hover:opacity-95 sm:inline-flex",
-              transparentTop ? "shadow-none" : "shadow-layered",
-            )}
-          >
-            <Link href={EVENT.bookHref}>{t("nav.book")}</Link>
-          </Button>
+          {hasBookableEvents && (
+            <Button
+              asChild
+              data-testid="navbar-book-btn"
+              className={cn(
+                "bg-brass-gradient hidden h-10 rounded-full px-5 text-sm font-semibold text-night transition-all hover:-translate-y-0.5 hover:opacity-95 sm:inline-flex",
+                transparentTop ? "shadow-none" : "shadow-layered",
+              )}
+            >
+              <Link href={EVENT.bookHref}>{t("nav.book")}</Link>
+            </Button>
+          )}
 
           {/* Animated hamburger */}
           <button
@@ -301,14 +321,17 @@ export function GlassNavbar() {
               </motion.ul>
               <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
                 <LanguageSwitcher className="flex-1 justify-center" />
-                <Button
-                  asChild
-                  className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
-                >
-                  <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
-                    {t("nav.book")}
-                  </Link>
-                </Button>
+                {hasBookableEvents && (
+                  <Button
+                    asChild
+                    data-testid="navbar-book-btn-mobile"
+                    className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
+                  >
+                    <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
+                      {t("nav.book")}
+                    </Link>
+                  </Button>
+                )}
               </div>
             </motion.div>
           </>

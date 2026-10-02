@@ -234,7 +234,11 @@
     "errDomain": "يرجى استخدام بريد إلكتروني من مزود معروف (Gmail, Yahoo, Outlook...)",
     "errAge": "يرجى إدخال عمر صحيح",
     "errAlreadyBooked": "لقد قمت بالحجز في هذه الفعالية مسبقاً",
-    "errOtpRequired": "يرجى إدخال رمز التحقق المكون من 6 أرقام"
+    "errOtpRequired": "يرجى إدخال رمز التحقق المكون من 6 أرقام",
+    "nextStep": "الخطوة التالية",
+    "alreadyRegisteredTitle": "أنت مسجل بالفعل في هذه الفعالية",
+    "alreadyRegisteredDesc": "تم تأكيد حجزك في هذه الفعالية مسبقاً. لا داعي لإعادة ملء استمارة التسجيل.",
+    "alreadyRegisteredBack": "العودة إلى تفاصيل الفعالية"
   },
   "dashboard": {
     "title": "لوحة التحكم",

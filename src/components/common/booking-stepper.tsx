@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
-import { markEventBooked } from "@/lib/booking-state";
+import { markEventBooked, useIsEventBooked } from "@/lib/booking-state";
 import { EVENT } from "@/lib/content";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
@@ -259,6 +259,47 @@ export function BookingStepper() {
     } else {
       setErrors({ otp: res.error || "Failed to resend verification code" });
     }
+  }
+
+  const isAlreadyBooked = useIsEventBooked(targetEventId);
+
+  useEffect(() => {
+    if (isAlreadyBooked && step !== 3) {
+      const timer = setTimeout(() => {
+        router.replace(`/events#event-${targetEventId}`);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAlreadyBooked, step, targetEventId, router]);
+
+  if (isAlreadyBooked && step !== 3) {
+    return (
+      <div
+        data-testid="already-booked-gate"
+        className="mx-auto w-full max-w-lg text-center py-12 px-6 rounded-3xl border border-brass/20 bg-card/60 backdrop-blur-sm shadow-layered"
+      >
+        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-brass/10 text-brass">
+          <CheckCircle2 className="size-8" />
+        </div>
+        <h2 className="font-amiri text-2xl font-bold text-foreground">
+          {t("booking.alreadyRegisteredTitle")}
+        </h2>
+        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+          {t("booking.alreadyRegisteredDesc")}
+        </p>
+        <div className="mt-8 flex justify-center">
+          <Button
+            asChild
+            data-testid="already-booked-back-btn"
+            className="rounded-full bg-brass-gradient px-8 py-3 text-night font-bold shadow-layered hover:brightness-110"
+          >
+            <Link href={`/events#event-${targetEventId}`}>
+              {t("booking.alreadyRegisteredBack")}
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
