@@ -59,7 +59,7 @@ export default async function BookPage({
       <div className="pattern-islamic absolute inset-0 -z-10" />
       <div className="bg-brass-gradient absolute -top-24 start-1/2 -z-10 size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl" />
 
-      <header className="mx-auto flex max-w-2xl items-center justify-between px-5 pt-6">
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
           <span className="relative shrink-0">
             <Image
@@ -81,7 +81,7 @@ export default async function BookPage({
         </div>
       </header>
 
-      <main className="px-5 py-10 sm:py-14">
+      <main className="mx-auto max-w-5xl px-5 py-8 sm:py-12">
         <Suspense fallback={<div className="text-center py-10 font-amiri text-muted-foreground">جاري التحميل...</div>}>
           <BookingStepper initialEventId={targetEventId} />
         </Suspense>

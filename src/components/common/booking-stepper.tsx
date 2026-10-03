@@ -4,15 +4,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  Calendar,
   Check,
   CheckCircle2,
   Clock,
   Home,
   KeyRound,
+  MapPin,
+  Phone,
   RefreshCw,
   Sparkles,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
@@ -31,8 +35,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
-import { isEventBooked, markEventBooked, useIsEventBooked } from "@/lib/booking-state";
-import { EVENT } from "@/lib/content";
+import { isEventBooked, markEventBooked } from "@/lib/booking-state";
+import { EVENT, IMAGES } from "@/lib/content";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -74,6 +78,12 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     id?: string;
     titleAr?: string;
     titleEn?: string;
+    descriptionAr?: string;
+    descriptionEn?: string;
+    date?: Date | string;
+    time?: string;
+    location?: string;
+    posterUrl?: string | null;
     capacityType?: string;
     capacity?: number | null;
     confirmedCount?: number;
@@ -302,8 +312,25 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     );
   }
 
+  const summaryTitle =
+    (locale === "ar" ? eventInfo?.titleAr : eventInfo?.titleEn) ||
+    t("event.name");
+
+  const summaryDate = eventInfo?.date
+    ? new Date(eventInfo.date).toLocaleDateString(
+        locale === "ar" ? "ar-MA" : "en-US",
+        { weekday: "long", year: "numeric", month: "long", day: "numeric" },
+      )
+    : t("event.date");
+
+  const summaryTime = eventInfo?.time || t("event.time");
+  const summaryLocation = eventInfo?.location || t("event.location");
+  const summaryPoster = eventInfo?.posterUrl || IMAGES.eventPoster;
+  const isLimited = eventInfo?.capacityType === "LIMITED";
+  const isFull = eventInfo?.isFull;
+
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <div className="mx-auto w-full max-w-5xl">
       {/* Back link */}
       <Link
         href="/events"
@@ -362,8 +389,11 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
         })}
       </div>
 
-      <div className="glass-strong mt-8 overflow-hidden rounded-3xl p-6 shadow-layered sm:p-8">
-        <AnimatePresence mode="wait">
+      <div className="mt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8 items-start">
+        {/* Main form container */}
+        <div className="w-full order-2 lg:order-1 lg:col-span-7">
+          <div className="glass-strong overflow-hidden rounded-3xl p-6 shadow-layered sm:p-8">
+            <AnimatePresence mode="wait">
           {/* STEP 1 — DETAILS */}
           {step === 1 ? (
             <motion.form
@@ -830,5 +860,108 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
         </AnimatePresence>
       </div>
     </div>
+
+    {/* Event summary card: on mobile above form (order-1), on desktop beside form (order-2, col-span-5) */}
+    <div className="w-full order-1 lg:order-2 lg:col-span-5">
+      <aside
+        data-testid="event-summary-card"
+        className="w-full rounded-3xl border border-brass/20 bg-card/60 p-5 sm:p-6 backdrop-blur-md shadow-layered space-y-5"
+      >
+        {/* Header / Title */}
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-brass">
+              {locale === "ar" ? "تفاصيل الفعالية" : "Event Overview"}
+            </span>
+
+            {/* Capacity badge */}
+            {isLimited ? (
+              isFull ? (
+                <span
+                  data-testid="summary-capacity-badge"
+                  className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                >
+                  <Users className="size-3" />
+                  {locale === "ar" ? "قائمة الانتظار" : "Waitlist"}
+                </span>
+              ) : (
+                <span
+                  data-testid="summary-capacity-badge"
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                >
+                  <Users className="size-3" />
+                  {locale === "ar"
+                    ? `مقاعد محدودة (${eventInfo?.confirmedCount || 0}/${eventInfo?.capacity || 0})`
+                    : `Limited (${eventInfo?.confirmedCount || 0}/${eventInfo?.capacity || 0})`}
+                </span>
+              )
+            ) : (
+              <span
+                data-testid="summary-capacity-badge"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+              >
+                <Users className="size-3" />
+                {locale === "ar" ? "حجز مفتوح" : "Open"}
+              </span>
+            )}
+          </div>
+
+          <h2 className="font-heading text-lg sm:text-xl font-bold text-foreground leading-snug">
+            {summaryTitle}
+          </h2>
+        </div>
+
+        {/* Poster image 16:9 ratio */}
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-brass/15 bg-muted/40 shadow-inner">
+          <Image
+            src={summaryPoster}
+            alt={summaryTitle}
+            fill
+            sizes="(max-width: 1024px) 100vw, 400px"
+            className="object-cover"
+            priority
+          />
+        </div>
+
+        {/* Event details list */}
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-3 text-foreground/90">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-brass/10 text-brass">
+              <Calendar className="size-4" />
+            </div>
+            <span className="font-medium">{summaryDate}</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-foreground/90">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-brass/10 text-brass">
+              <Clock className="size-4" />
+            </div>
+            <span className="font-medium">{summaryTime}</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-foreground/90">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-brass/10 text-brass">
+              <MapPin className="size-4" />
+            </div>
+            <span className="font-medium">{summaryLocation}</span>
+          </div>
+        </div>
+
+        <OrnamentDivider className="opacity-40" />
+
+        {/* Inquiries / Contact phone */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            <Phone className="size-3.5 text-brass" />
+            {locale === "ar" ? "لأي استفسار:" : "Questions:"}
+          </span>
+          <span dir="ltr" className="font-semibold text-foreground/90">
+            {EVENT.phone}
+          </span>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
   );
 }

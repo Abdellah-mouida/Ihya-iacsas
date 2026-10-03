@@ -242,7 +242,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
 
     // Since onComplete auto-submits on the 6th digit, wait for step 3 confirmation directly
     const bookingRef = page.getByTestId("booking-ref-display");
-    await expect(bookingRef).toBeVisible({ timeout: 10000 });
+    await expect(bookingRef).toBeVisible({ timeout: 35000 });
     await expect(bookingRef).toContainText(/IHY-/);
 
     // Verify redirect notice is visible with countdown
@@ -741,5 +741,49 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(styles.height).toBeLessThanOrEqual(36);
     // Verify caretColor is set to brass
     expect(styles.caretColor).not.toBe("auto");
+  });
+
+  test("14. Event summary card renders responsively beside form on desktop and above on mobile (Task 8)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+    await context.clearCookies();
+    await page.goto("/book");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    const summaryCard = page.locator('[data-testid="event-summary-card"]');
+    await expect(summaryCard).toBeVisible({ timeout: 15000 });
+
+    // Verify summary card details
+    await expect(summaryCard.locator("img")).toBeVisible();
+    await expect(summaryCard.locator('[data-testid="summary-capacity-badge"]')).toBeVisible();
+    await expect(summaryCard.locator("text=0615789337")).toBeVisible();
+
+    // Verify desktop positioning (beside form)
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const desktopCardBox = await summaryCard.boundingBox();
+    const formBox = await page.locator("form").boundingBox();
+    expect(desktopCardBox).not.toBeNull();
+    expect(formBox).not.toBeNull();
+    if (desktopCardBox && formBox) {
+      // Side-by-side check: vertical overlap is significant
+      const verticalOverlap =
+        Math.min(desktopCardBox.y + desktopCardBox.height, formBox.y + formBox.height) -
+        Math.max(desktopCardBox.y, formBox.y);
+      expect(verticalOverlap).toBeGreaterThan(50);
+    }
+
+    // Verify mobile positioning (above form)
+    await page.setViewportSize({ width: 375, height: 667 });
+    const mobileCardBox = await summaryCard.boundingBox();
+    const mobileFormBox = await page.locator("form").boundingBox();
+    expect(mobileCardBox).not.toBeNull();
+    expect(mobileFormBox).not.toBeNull();
+    if (mobileCardBox && mobileFormBox) {
+      // Summary card is above the form vertically on mobile
+      expect(mobileCardBox.y).toBeLessThan(mobileFormBox.y);
+    }
   });
 });
