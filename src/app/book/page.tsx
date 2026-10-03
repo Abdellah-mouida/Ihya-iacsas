@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,7 +34,10 @@ export default async function BookPage({
     targetEventId = defaultEvent?.id || "majlis-ihyaa";
   }
 
-  // Server-side check: if already booked cookie exists, redirect to event page
+  // Server-side check: if already booked cookie exists, redirect to event page (except during Server Action)
+  const headerList = await headers();
+  const isServerAction = headerList.has("next-action");
+
   const hasEventCookie = cookieStore.get(`ihyaa_booked_${targetEventId}`)?.value === "true";
   let hasListCookie = false;
   const bookedListRaw = cookieStore.get("ihyaa_booked_events")?.value;
@@ -47,7 +50,7 @@ export default async function BookPage({
     } catch {}
   }
 
-  if (hasEventCookie || hasListCookie) {
+  if (!isServerAction && (hasEventCookie || hasListCookie)) {
     redirect(`/events#event-${targetEventId}`);
   }
 

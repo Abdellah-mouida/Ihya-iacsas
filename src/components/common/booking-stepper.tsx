@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
-import { markEventBooked, useIsEventBooked } from "@/lib/booking-state";
+import { isEventBooked, markEventBooked, useIsEventBooked } from "@/lib/booking-state";
 import { EVENT } from "@/lib/content";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
@@ -261,18 +261,18 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     }
   }
 
-  const isAlreadyBooked = useIsEventBooked(targetEventId);
+  const [arrivedAlreadyBooked] = useState<boolean>(() => isEventBooked(targetEventId));
 
   useEffect(() => {
-    if (isAlreadyBooked && step !== 3) {
+    if (arrivedAlreadyBooked && step !== 3) {
       const timer = setTimeout(() => {
         router.replace(`/events#event-${targetEventId}`);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isAlreadyBooked, step, targetEventId, router]);
+  }, [arrivedAlreadyBooked, step, targetEventId, router]);
 
-  if (isAlreadyBooked && step !== 3) {
+  if (arrivedAlreadyBooked && step !== 3) {
     return (
       <div
         data-testid="already-booked-gate"

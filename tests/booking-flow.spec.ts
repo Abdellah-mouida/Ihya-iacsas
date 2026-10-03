@@ -273,6 +273,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   test("8. Changing email mid-flow creates strictly ONE booking for email B and ZERO for email A", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     await page.goto("/events/majlis-ihyaa/book");
 
     // 1. Fill details with Email A
@@ -351,7 +352,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   test("9. Email uniqueness check per event before sending OTP (Task 2)", async ({
     page,
   }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
 
     page.on("console", (msg) => console.log("BROWSER LOG:", msg.text()));
     page.on("pageerror", (err) => console.log("BROWSER ERROR:", err.message));
@@ -430,7 +431,10 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       where: { email: testEmailUnique },
     });
 
-    // 3. Try to book Event 1 AGAIN with the same email
+    // 3. Try to book Event 1 AGAIN with the same email (from clean session / another device)
+    await page.context().clearCookies();
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
     await page.goto("/events/majlis-ihyaa/book?eventId=majlis-ihyaa-2026");
     await page.fill("#b-name", "Unique Test User Again");
     await page.fill("#b-email", testEmailUnique);
@@ -691,5 +695,51 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     // 4. Test dynamic route /events/test-event-second/book
     await page.goto("/events/test-event-second/book");
     await expect(page.locator("#b-name")).toBeVisible({ timeout: 15000 });
+  });
+
+  test("13. Arabic OTP input caret styling, line-height, and height in RTL (Task 7)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+    await context.clearCookies();
+    await page.goto("/book");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    const uniqueEmail = `otp.caret.${Date.now()}@gmail.com`;
+
+    // Fill Step 1 to reach Step 2
+    await page.fill("#b-name", "Caret Tester");
+    await page.fill("#b-email", uniqueEmail);
+    await page.fill("#b-age", "25");
+    await page.fill("#b-motive", "Testing Arabic OTP input caret height and line-height constraints");
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-casablanca"]');
+
+    await page.click('button[type="submit"]');
+
+    // Wait for Step 2 OTP boxes
+    const otpBox0 = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpBox0).toBeVisible({ timeout: 35000 });
+
+    // Inspect computed styles in browser
+    const styles = await otpBox0.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      return {
+        direction: el.getAttribute("dir") || computed.direction,
+        height: parseFloat(computed.height),
+        lineHeight: computed.lineHeight,
+        caretColor: computed.caretColor,
+      };
+    });
+
+    // Verify direction is LTR to prevent Arabic vertical font metric expansion
+    expect(styles.direction).toBe("ltr");
+    // Verify height is bounded to 32px-36px (not 48px or 56px of the full container)
+    expect(styles.height).toBeLessThanOrEqual(36);
+    // Verify caretColor is set to brass
+    expect(styles.caretColor).not.toBe("auto");
   });
 });

@@ -547,35 +547,6 @@ export async function verifyBookingOtp(data: {
       throw createErr;
     }
 
-    // Set signed/recognizing cookies
-    const cookieStore = await cookies();
-    cookieStore.set(`ihyaa_booked_${confirmedBooking.eventId}`, "true", {
-      maxAge: 60 * 60 * 24 * 60, // 60 days
-      path: "/",
-      httpOnly: false,
-      sameSite: "lax",
-    });
-
-    const existingBookedCookie = cookieStore.get("ihyaa_booked_events")?.value;
-    let bookedEvents: string[] = [];
-    if (existingBookedCookie) {
-      try {
-        bookedEvents = JSON.parse(existingBookedCookie);
-      } catch {
-        bookedEvents = [];
-      }
-    }
-    if (!bookedEvents.includes(confirmedBooking.eventId)) {
-      bookedEvents.push(confirmedBooking.eventId);
-    }
-    cookieStore.set("ihyaa_booked_events", JSON.stringify(bookedEvents), {
-      maxAge: 60 * 60 * 24 * 60,
-      path: "/",
-      httpOnly: false,
-      sameSite: "lax",
-    });
-
-    revalidatePath(`/events/${confirmedBooking.eventId}`);
     revalidatePath("/events");
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");

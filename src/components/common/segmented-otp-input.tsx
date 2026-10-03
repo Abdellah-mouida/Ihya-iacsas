@@ -40,6 +40,7 @@ export function SegmentedOtpInput({
     const firstEmpty = chars.findIndex((c) => !c);
     const targetIdx = firstEmpty === -1 ? 0 : firstEmpty;
     inputRefs.current[targetIdx]?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (index: number, val: string) => {
@@ -154,7 +155,9 @@ export function SegmentedOtpInput({
               onPaste={handlePaste}
               onFocus={() => setFocusedIndex(index)}
               onBlur={() => setFocusedIndex(null)}
-              className="size-full bg-transparent text-center font-heading text-xl sm:text-2xl font-bold text-foreground outline-none selection:bg-transparent"
+              dir="ltr"
+              style={{ caretColor: "var(--brass)", lineHeight: 1 }}
+              className="h-8 sm:h-9 w-full bg-transparent text-center font-heading text-xl sm:text-2xl font-bold leading-none text-foreground outline-none selection:bg-transparent caret-brass p-0"
               autoComplete="one-time-code"
             />
 

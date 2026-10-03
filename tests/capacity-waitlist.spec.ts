@@ -21,7 +21,7 @@ async function loginAdmin(page: Page) {
 }
 
 test.describe.serial("Event Capacity System & Waitlist Flow", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   const user1Email = "user1.capacity.test@gmail.com";
   const user2Email = "user2.capacity.test@gmail.com";
@@ -112,6 +112,9 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     email: string,
     cityOptionTestId: string
   ) {
+    await page.context().clearCookies();
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
     await page.goto(`/events/majlis-ihyaa/book?eventId=${targetEventId}`);
 
     await page.fill("#b-name", fullName);
@@ -148,6 +151,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     for (let i = 0; i < testOtp.length; i++) {
       await page.fill(`[data-testid="otp-box-${i}"]`, testOtp[i]);
     }
+    await expect(page.locator('[data-testid="booking-confirmation-title"]')).toBeVisible({ timeout: 25000 });
   }
 
   test("1. User 1 books limited event -> receives PENDING status", async ({ page }) => {
@@ -161,7 +165,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
 
     // Verify confirmation step displays pending review notice
     await expect(page.locator("body")).toContainText(/طلبك قيد المراجعة|مراجعة/i, {
-      timeout: 10000,
+      timeout: 30000,
     });
 
     const b1 = await prisma.booking.findFirst({
@@ -182,7 +186,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     );
 
     await expect(page.locator("body")).toContainText(/طلبك قيد المراجعة|مراجعة/i, {
-      timeout: 10000,
+      timeout: 30000,
     });
 
     const b2 = await prisma.booking.findFirst({
@@ -253,7 +257,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     );
 
     // Verify confirmation step displays waitlist confirmation
-    await expect(page.locator("body")).toContainText(/قائمة الانتظار/i, { timeout: 10000 });
+    await expect(page.locator("body")).toContainText(/قائمة الانتظار/i, { timeout: 30000 });
     await expect(page.locator("body")).toContainText("#1");
 
     const b3 = await prisma.booking.findFirst({

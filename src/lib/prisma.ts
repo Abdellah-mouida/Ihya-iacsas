@@ -16,7 +16,7 @@ function getDatabaseUrl(): string | undefined {
     }
     if (!url.includes("connection_limit=")) {
       const sep = url.includes("?") ? "&" : "?";
-      url = `${url}${sep}connection_limit=25&pool_timeout=30`;
+      url = `${url}${sep}connection_limit=25&pool_timeout=30&connect_timeout=30`;
     }
   }
   return url;
