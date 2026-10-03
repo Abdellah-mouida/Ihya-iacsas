@@ -786,4 +786,58 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       expect(mobileCardBox.y).toBeLessThan(mobileFormBox.y);
     }
   });
+
+  test("15. Event card booked status as small top badge and single-line inquiries without wrapping (Task 9)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+    await context.clearCookies();
+
+    // 1. Visit /events with unbooked state first
+    await page.goto("/events");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    const eventCard = page.locator('[data-testid="event-card-majlis-ihyaa-2026"]');
+    await expect(eventCard).toBeVisible({ timeout: 15000 });
+
+    // Inquiries link exists and is single-line (nowrap)
+    const inquiryLink = eventCard.locator('a[href*="tel:"]');
+    await expect(inquiryLink).toBeVisible();
+    const isNoWrap = await inquiryLink.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      return computed.whiteSpace === "nowrap" || el.classList.contains("whitespace-nowrap");
+    });
+    expect(isNoWrap).toBe(true);
+
+    // Book button is visible when unbooked
+    await expect(eventCard.locator('[data-testid="book-btn-majlis-ihyaa-2026"]')).toBeVisible();
+
+    // 2. Simulate user booked for majlis-ihyaa-2026
+    await page.evaluate(() => {
+      localStorage.setItem("ihyaa_booked_majlis-ihyaa-2026", "true");
+      document.cookie = `ihyaa_booked_events=${encodeURIComponent(JSON.stringify(["majlis-ihyaa-2026"]))}; path=/; max-age=31536000; SameSite=Lax`;
+    });
+    await page.reload();
+
+    // 3. When booked:
+    // a. Book button is hidden
+    await expect(eventCard.locator('[data-testid="book-btn-majlis-ihyaa-2026"]')).not.toBeVisible();
+
+    // b. Small top badge is visible
+    const badge = eventCard.locator('[data-testid="booked-state-badge"]');
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText(/أنت مسجل|You're booked/i);
+
+    // c. Badge is positioned at the top of the details card, above the event title
+    const title = eventCard.locator("h3");
+    const badgeBox = await badge.boundingBox();
+    const titleBox = await title.boundingBox();
+    expect(badgeBox).not.toBeNull();
+    expect(titleBox).not.toBeNull();
+    if (badgeBox && titleBox) {
+      expect(badgeBox.y).toBeLessThan(titleBox.y);
+    }
+  });
 });

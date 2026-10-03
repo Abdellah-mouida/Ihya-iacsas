@@ -126,6 +126,24 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
             variants={fadeUp}
             className="glass-strong w-full rounded-3xl p-6 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30 sm:p-8"
           >
+            {isBooked && (
+              <div className="mb-4">
+                <span
+                  data-testid="booked-state-badge"
+                  data-event-id={eventId}
+                  id={`booked-badge-${eventId}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-sm"
+                >
+                  <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    {locale === "ar"
+                      ? "أنت مسجل — تم تأكيد حجزك"
+                      : "You're booked — registration confirmed"}
+                  </span>
+                </span>
+              </div>
+            )}
+
             <h3 className="font-heading text-xl font-semibold text-balance sm:text-2xl">
               {title}
             </h3>
@@ -164,22 +182,8 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
               ))}
             </ul>
 
-            <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center">
-              {isBooked ? (
-                <div
-                  data-testid="booked-state-badge"
-                  data-event-id={eventId}
-                  id={`booked-badge-${eventId}`}
-                  className="flex items-center gap-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-6 py-3 text-emerald-700 dark:text-emerald-300 font-semibold shadow-sm"
-                >
-                  <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  <span>
-                    {locale === "ar"
-                      ? "أنت مسجل — تم تأكيد حجزك بنجاح!"
-                      : "You're booked — your booking was successful!"}
-                  </span>
-                </div>
-              ) : (
+            <div className="mt-7 flex flex-wrap items-center gap-4">
+              {isBooked ? null : (
                 <Button
                   asChild
                   data-testid={`book-btn-${eventId}`}
@@ -200,11 +204,14 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
               )}
               <a
                 href={EVENT.phoneHref}
-                className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-brass"
+                className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-brass whitespace-nowrap shrink-0"
               >
-                <Phone className="size-4" />
-                <span dir="ltr">
-                  {t("event.inquiryLabel")}: {t("event.phone")}
+                <Phone className="size-4 shrink-0" />
+                <span className="whitespace-nowrap">
+                  {t("event.inquiryLabel")}:{" "}
+                  <span dir="ltr" className="font-semibold">
+                    {t("event.phone")}
+                  </span>
                 </span>
               </a>
             </div>
