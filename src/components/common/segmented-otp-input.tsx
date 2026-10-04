@@ -106,7 +106,7 @@ export function SegmentedOtpInput({
           : {}
       }
       transition={{ duration: 0.4 }}
-      className="flex items-center justify-center gap-2 sm:gap-3 dir-ltr"
+      className="flex items-center justify-center gap-1.5 min-[370px]:gap-2 sm:gap-3 dir-ltr"
       dir="ltr"
     >
       {Array.from({ length: digits }).map((_, index) => {
@@ -130,7 +130,7 @@ export function SegmentedOtpInput({
             }}
             transition={{ duration: 0.15 }}
             className={cn(
-              "relative flex size-12 sm:size-14 items-center justify-center rounded-2xl border bg-background/50 backdrop-blur-md transition-shadow",
+              "relative flex size-10 min-[370px]:size-11 sm:size-14 items-center justify-center rounded-xl sm:rounded-2xl border bg-background/50 backdrop-blur-md transition-shadow",
               isFocused &&
                 "shadow-[0_0_15px_rgba(212,175,55,0.25)] ring-2 ring-brass/40",
               hasError &&
@@ -157,7 +157,7 @@ export function SegmentedOtpInput({
               onBlur={() => setFocusedIndex(null)}
               dir="ltr"
               style={{ caretColor: "var(--brass)", lineHeight: 1 }}
-              className="h-8 sm:h-9 w-full bg-transparent text-center font-heading text-xl sm:text-2xl font-bold leading-none text-foreground outline-none selection:bg-transparent caret-brass p-0"
+              className="h-7 sm:h-9 w-full bg-transparent text-center font-heading text-lg min-[370px]:text-xl sm:text-2xl font-bold leading-none text-foreground outline-none selection:bg-transparent caret-brass p-0"
               autoComplete="one-time-code"
             />
 

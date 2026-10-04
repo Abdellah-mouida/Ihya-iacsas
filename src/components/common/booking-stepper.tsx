@@ -392,7 +392,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
       <div className="mt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8 items-start">
         {/* Main form container */}
         <div className="w-full order-2 lg:order-1 lg:col-span-7">
-          <div className="glass-strong overflow-hidden rounded-3xl p-6 shadow-layered sm:p-8">
+          <div className="glass-strong overflow-hidden rounded-3xl p-4 min-[400px]:p-6 shadow-layered sm:p-8">
             <AnimatePresence mode="wait">
           {/* STEP 1 — DETAILS */}
           {step === 1 ? (

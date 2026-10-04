@@ -840,4 +840,67 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       expect(badgeBox.y).toBeLessThan(titleBox.y);
     }
   });
+
+  test("16. Small screen (<360px) responsive OTP layout and email template branding (Task 10)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+    await context.clearCookies();
+
+    // 1. Set viewport to small 320px screen width
+    await page.setViewportSize({ width: 320, height: 600 });
+    await page.goto("/book");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    const uniqueEmail = `smallscreen.${Date.now()}@gmail.com`;
+
+    // Fill Step 1 to reach Step 2
+    await page.fill("#b-name", "Small Screen Tester");
+    await page.fill("#b-email", uniqueEmail);
+    await page.fill("#b-age", "22");
+    await page.fill("#b-motive", "Testing small screen responsive OTP layout");
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-casablanca"]');
+
+    await page.click('button[type="submit"]');
+
+    // Wait for OTP boxes on Step 2
+    const otpBox0 = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpBox0).toBeVisible({ timeout: 35000 });
+
+    // Verify all 6 OTP boxes fit within the 320px viewport without horizontal cutoff
+    for (let i = 0; i < 6; i++) {
+      const box = await page.locator(`[data-testid="otp-box-${i}"]`).boundingBox();
+      expect(box).not.toBeNull();
+      if (box) {
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(320);
+      }
+    }
+
+    // Verify page horizontal scroll does not exceed viewport width
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
+
+    // 2. Email template verification: Ensure "للثقافة والتنمية" branding is completely removed
+    const emailModule = await import("../src/lib/email");
+    expect(typeof emailModule.sendOTPEmail).toBe("function");
+    expect(typeof emailModule.sendWaitlistPromotionEmail).toBe("function");
+
+    // Read email source code directly to ensure branding removal and media queries exist
+    const fs = await import("fs");
+    const path = await import("path");
+    const emailSource = fs.readFileSync(
+      path.join(process.cwd(), "src/lib/email.ts"),
+      "utf8",
+    );
+    expect(emailSource).not.toContain("للثقافة والتنمية");
+    expect(emailSource).toContain("@media only screen and (max-width: 360px)");
+    expect(emailSource).toContain('SENDER_NAME = "Ihyaa Program"');
+    expect(emailSource).toContain('SENDER_EMAIL = "no-reply@ihyaa.is-cool.dev"');
+  });
 });
