@@ -18,24 +18,23 @@ export const metadata: Metadata = {
 
 export default async function EventBookPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ eventId?: string }>;
 }) {
   const { slug } = await params;
-  const sParams = searchParams ? await searchParams : {};
   const cookieStore = await cookies();
 
-  let targetEventId = sParams?.eventId || slug;
+  // The route slug is the single source of truth for the event
+  let targetEventId = slug;
 
-  // Resolve event from database if needed
+  // Resolve event from database strictly by slug or ID
   const event = await prisma.event.findFirst({
     where: {
       OR: [
-        { id: targetEventId },
-        { id: { startsWith: targetEventId } },
-        { id: { contains: targetEventId } },
+        { id: slug },
+        { id: { startsWith: slug } },
+        { id: { contains: slug } },
       ],
     },
     select: { id: true, bookingOpen: true },

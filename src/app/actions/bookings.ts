@@ -97,6 +97,38 @@ async function checkRateLimit(
   }
 }
 
+/**
+ * Resolve target event by ID/slug without falling back to a different event
+ */
+async function resolveTargetEvent(eventId?: string) {
+  if (eventId) {
+    const trimmed = eventId.trim();
+    // 1. Direct match on ID
+    let event = await prisma.event.findUnique({
+      where: { id: trimmed },
+    });
+    if (event) return event;
+
+    // 2. Prefix or substring match for slug compatibility (e.g. "majlis-ihyaa" -> "majlis-ihyaa-2026")
+    event = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { id: { startsWith: trimmed } },
+          { id: { contains: trimmed } },
+        ],
+      },
+      orderBy: { date: "asc" },
+    });
+    return event;
+  }
+
+  // Fallback only when NO event was specified: pick the active open event
+  return await prisma.event.findFirst({
+    where: { bookingOpen: true },
+    orderBy: { date: "asc" },
+  });
+}
+
 export async function requestBookingOtp(data: {
   eventId?: string;
   fullName: string;
@@ -152,33 +184,17 @@ export async function requestBookingOtp(data: {
       };
     }
 
-    // Find target event (either specified ID or the latest open event)
-    let event = await prisma.event.findFirst({
-      where: eventId ? { id: eventId } : { bookingOpen: true },
-      orderBy: { date: "asc" },
-    });
+    // Find target event (strictly by specified ID/slug, or first open event if omitted)
+    const event = await resolveTargetEvent(eventId);
 
     if (!event) {
-      event = await prisma.event.findFirst({
-        orderBy: { date: "desc" },
-      });
-    }
-
-    if (!event) {
-      event = await prisma.event.create({
-        data: {
-          titleAr: "مجلس إحياء الشبابي",
-          titleEn: "Ihyaa Youth Gathering",
-          descriptionAr: "لقاء إيماني شبابي لتزكية النفوس ومدارسة العلم",
-          descriptionEn: "A youth gathering for spiritual growth and study",
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          time: "20:30",
-          location: "المقر الرئيسي — تطوان",
-          posterUrl:
-            "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/event_poster.jpg",
-          bookingOpen: true,
-        },
-      });
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "الفعالية المطلوبة غير موجودة"
+            : "The requested event was not found",
+      };
     }
 
     if (!event.bookingOpen) {
@@ -308,10 +324,11 @@ export async function verifyBookingOtp(data: {
   bookingId?: string;
   email: string;
   otp: string;
+  eventId?: string;
   locale?: string;
 }) {
   try {
-    const { bookingId, email, otp, locale = "ar" } = data;
+    const { bookingId, email, otp, eventId, locale = "ar" } = data;
 
     if (!email || !otp) {
       return {
@@ -426,32 +443,39 @@ export async function verifyBookingOtp(data: {
       };
     }
 
+    // Server-side slug/event re-verification: ensure submitted event matches OTP record
+    if (eventId && otpRecord.eventId) {
+      const expectedEvent = await resolveTargetEvent(eventId);
+      if (expectedEvent && expectedEvent.id !== otpRecord.eventId) {
+        return {
+          success: false,
+          error:
+            locale === "ar"
+              ? "الفعالية لا تطابق سجل الحجز الأصلي"
+              : "The event does not match the original booking record",
+        };
+      }
+    }
+
     // Single-use: mark OTP as used immediately
     await prisma.otpVerification.update({
       where: { id: otpRecord.id },
       data: { usedAt: now },
     });
 
-    // Resolve target event from OTP record
+    // Resolve target event strictly from OTP record (no silent fallback to different events)
     const targetEventId = otpRecord.eventId;
-    let event = targetEventId
+    const event = targetEventId
       ? await prisma.event.findUnique({ where: { id: targetEventId } })
       : null;
-
-    if (!event) {
-      event = await prisma.event.findFirst({
-        where: { bookingOpen: true },
-        orderBy: { date: "asc" },
-      });
-    }
 
     if (!event) {
       return {
         success: false,
         error:
           locale === "ar"
-            ? "الفعالية غير موجودة أو انتهت"
-            : "Event not found or has ended",
+            ? "الفعالية غير موجودة أو تم حذفها"
+            : "Event not found or has been removed",
       };
     }
 
@@ -574,10 +598,11 @@ export async function verifyBookingOtp(data: {
 
 export async function resendBookingOtp(data: {
   email: string;
+  eventId?: string;
   locale?: string;
 }) {
   try {
-    const { email, locale = "ar" } = data;
+    const { email, eventId, locale = "ar" } = data;
 
     if (!email) {
       return {
@@ -608,6 +633,19 @@ export async function resendBookingOtp(data: {
       where: { email: cleanEmail },
       orderBy: { createdAt: "desc" },
     });
+
+    if (eventId && prevOtp?.eventId) {
+      const expectedEvent = await resolveTargetEvent(eventId);
+      if (expectedEvent && expectedEvent.id !== prevOtp.eventId) {
+        return {
+          success: false,
+          error:
+            locale === "ar"
+              ? "الفعالية لا تطابق سجل الحجز الأصلي"
+              : "The event does not match the original booking record",
+        };
+      }
+    }
 
     if (prevOtp?.eventId) {
       const existing = await prisma.booking.findUnique({

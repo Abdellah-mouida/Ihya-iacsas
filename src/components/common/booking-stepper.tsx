@@ -72,7 +72,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
   const [otp, setOtp] = useState<string>("");
   const [bookingRef, setBookingRef] = useState<string>("");
   const [targetEventId, setTargetEventId] = useState<string>(
-    initialEventId || eventIdParam || "majlis-ihyaa",
+    initialEventId || eventIdParam || "majlis-ihyaa-2026",
   );
   const [eventInfo, setEventInfo] = useState<{
     id?: string;
@@ -178,7 +178,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     setSubmitting(true);
 
     const res = await requestBookingOtp({
-      eventId: eventIdParam,
+      eventId: targetEventId,
       fullName: details.fullName,
       email: details.email,
       city: details.city,
@@ -191,7 +191,15 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
 
     if (res.success && res.bookingId) {
       setBookingId(res.bookingId);
-      if (res.eventId) setTargetEventId(res.eventId);
+      // Strictly prevent switching to a different event: only refine to canonical ID if related
+      if (
+        res.eventId &&
+        (res.eventId === targetEventId ||
+          res.eventId.startsWith(targetEventId) ||
+          targetEventId.startsWith(res.eventId))
+      ) {
+        setTargetEventId(res.eventId);
+      }
       setResendTimer(30); // 30-second cooldown
       setStep(2);
     } else {
@@ -223,6 +231,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
       bookingId,
       email: details.email,
       otp: cleanOtp,
+      eventId: targetEventId,
       locale,
     });
 
@@ -230,7 +239,14 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
 
     if (res.success && res.bookingRef) {
       setBookingRef(res.bookingRef);
-      if (res.eventId) setTargetEventId(res.eventId);
+      if (
+        res.eventId &&
+        (res.eventId === targetEventId ||
+          res.eventId.startsWith(targetEventId) ||
+          targetEventId.startsWith(res.eventId))
+      ) {
+        setTargetEventId(res.eventId);
+      }
       if (res.status) setBookingStatus(res.status);
       if (res.waitlistOrder !== undefined) {
         setWaitlistOrder(res.waitlistOrder ?? null);
@@ -258,6 +274,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
 
     const res = await resendBookingOtp({
       email: details.email,
+      eventId: targetEventId,
       locale,
     });
 

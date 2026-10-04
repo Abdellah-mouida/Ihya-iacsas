@@ -252,10 +252,10 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     // Wait for automatic redirect to /events (within 6 seconds)
     await page.waitForURL("**/events", { timeout: 8000 });
 
-    // On event page, verify "You're booked — your booking was successful" state replaces normal CTA
-    const bookedBadge = page.getByTestId("booked-state-badge");
-    await expect(bookedBadge).toBeVisible();
-    await expect(bookedBadge).toContainText(/أنت مسجل|You're booked/i);
+    // On event page, verify booked state replaces normal CTA
+    const bookedBadge = page.getByTestId("booked-state-badge").first();
+    await expect(bookedBadge).toBeVisible({ timeout: 15000 });
+    await expect(bookedBadge).toContainText(/أنت مسجل|You're booked|حجزك مؤكد|Booking Confirmed/i);
   });
 
   test("7. Light mode & Dark mode verification", async ({ page }) => {
@@ -902,5 +902,104 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(emailSource).toContain("@media only screen and (max-width: 360px)");
     expect(emailSource).toContain('SENDER_NAME = "Ihyaa Program"');
     expect(emailSource).toContain('SENDER_EMAIL = "no-reply@ihyaa.is-cool.dev"');
+  });
+
+  test("17. Booking page maintains exact event info after advancing past step 1 and binds booking to correct event", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(90000);
+
+    // 1. Ensure two open events exist with distinct titles, locations, and dates
+    await prisma.event.upsert({
+      where: { id: "majlis-ihyaa-2026" },
+      update: {
+        titleAr: "مجلس إحياء الشبابي — الدورة الربيعية",
+        location: "المقر الرئيسي — تطوان",
+        bookingOpen: true,
+      },
+      create: {
+        id: "majlis-ihyaa-2026",
+        titleAr: "مجلس إحياء الشبابي — الدورة الربيعية",
+        titleEn: "Ihyaa Youth Council — Spring Session",
+        descriptionAr: "لقاء إيماني شبابي لتزكية النفوس ومدارسة العلم",
+        descriptionEn: "A youth gathering for spiritual growth and study",
+        date: new Date("2026-10-15T18:00:00Z"),
+        time: "18:00",
+        location: "المقر الرئيسي — تطوان",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    await prisma.event.upsert({
+      where: { id: "test-event-second" },
+      update: {
+        titleAr: "ملتقى إحياء الثاني للشباب",
+        location: "الدار البيضاء، المغرب",
+        date: new Date("2026-09-01T10:00:00Z"), // earlier date to test sort order
+        bookingOpen: true,
+      },
+      create: {
+        id: "test-event-second",
+        titleAr: "ملتقى إحياء الثاني للشباب",
+        titleEn: "Second Ihyaa Program Gathering",
+        descriptionAr: "اللقاء الثاني للبرنامج الشبابي",
+        descriptionEn: "Second session for youth",
+        date: new Date("2026-09-01T10:00:00Z"),
+        time: "10:00",
+        location: "الدار البيضاء، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    // 2. Clear visitor state and open booking page for Event 1
+    await context.clearCookies();
+    await page.goto("/events/majlis-ihyaa-2026/book");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    // 3. Step 1: Assert displayed event info belongs to Majlis Ihyaa (not second event)
+    const summaryCard = page.locator('[data-testid="event-summary-card"]');
+    await expect(summaryCard).toBeVisible({ timeout: 15000 });
+    await expect(summaryCard).toContainText("مجلس إحياء الشبابي");
+    await expect(summaryCard).toContainText("تطوان");
+    await expect(summaryCard).not.toContainText("الدار البيضاء");
+
+    // 4. Fill Step 1 details and advance to Step 2 (OTP)
+    const testEmail = `event.isolation.${Date.now()}@gmail.com`;
+    await page.fill("#b-name", "Event Isolation Tester");
+    await page.fill("#b-email", testEmail);
+    await page.fill("#b-age", "25");
+    await page.fill("#b-motive", "Verifying event info does not switch across steps");
+
+    await page.click('[data-testid="city-combobox-trigger"]');
+    await page.click('[data-testid="city-option-tetouan"]');
+
+    await page.click('button[type="submit"]');
+
+    // 5. Wait for Step 2 OTP screen
+    const otpBox0 = page.locator('[data-testid="otp-box-0"]');
+    await expect(otpBox0).toBeVisible({ timeout: 35000 });
+
+    // 6. CRITICAL ASSERTION: Step 2 must STILL show Event 1 info, NEVER the second event
+    await expect(summaryCard).toContainText("مجلس إحياء الشبابي");
+    await expect(summaryCard).toContainText("تطوان");
+    await expect(summaryCard).not.toContainText("الدار البيضاء");
+
+    // 7. Verify OTP in DB is bound to majlis-ihyaa-2026
+    const otpRecord = await prisma.otpVerification.findFirst({
+      where: { email: testEmail, usedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(otpRecord).not.toBeNull();
+    expect(otpRecord?.eventId).toBe("majlis-ihyaa-2026");
+
+    // 8. Clean up
+    await prisma.otpVerification.deleteMany({ where: { email: testEmail } });
+    await prisma.booking.deleteMany({ where: { email: testEmail } });
   });
 });

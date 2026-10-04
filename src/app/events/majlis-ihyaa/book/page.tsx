@@ -24,14 +24,19 @@ export default async function BookPage({
   const params = searchParams ? await searchParams : {};
   const cookieStore = await cookies();
 
-  let targetEventId = params?.eventId;
-  if (!targetEventId) {
-    const defaultEvent = await prisma.event.findFirst({
-      where: { bookingOpen: true },
-      orderBy: { date: "asc" },
-      select: { id: true },
-    });
-    targetEventId = defaultEvent?.id || "majlis-ihyaa";
+  let targetEventId = params?.eventId || "majlis-ihyaa-2026";
+  const event = await prisma.event.findFirst({
+    where: {
+      OR: [
+        { id: targetEventId },
+        { id: { startsWith: "majlis-ihyaa" } },
+        { id: { contains: "majlis-ihyaa" } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (event) {
+    targetEventId = event.id;
   }
 
   // Server-side check: if already booked cookie exists, redirect to event page (except during Server Action)
