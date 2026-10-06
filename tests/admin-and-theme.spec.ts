@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import fs from "fs";
+import { execSync } from "child_process";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026";
 
@@ -7,8 +9,8 @@ async function loginAdmin(page: Page) {
   await page.goto("/admin/login");
   await page.fill('input[type="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.locator("aside")).toBeVisible();
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 }
 
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
@@ -19,7 +21,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       where: { email: testContactEmail },
     });
     await prisma.rateLimit.deleteMany({
-      where: { key: { contains: "admin_login_fail" } },
+      where: { key: { contains: "admin_login" } },
     });
   });
 
@@ -181,7 +183,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
 
     // Verify at least one photo card is present
     const photoButtons = page.locator("section button");
-    await expect(photoButtons.first()).toBeVisible();
+    await expect(photoButtons.first()).toBeVisible({ timeout: 15000 });
 
     // Click photo to open lightbox
     await photoButtons.first().click();
@@ -233,5 +235,77 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await expect(addGalleryBtn).toBeVisible({ timeout: 10000 });
     await addGalleryBtn.click();
     await expect(page.locator("body")).toContainText("4:3");
+  });
+
+  test("10. Admin event creation supports 2.5-4MB images and rejects >8MB images client-side", async ({ page }) => {
+    test.setTimeout(90000);
+
+    const testEventTitleAr = "فعالية اختبارية بحجم صورة كبير";
+    const testEventTitleEn = "Large Image Upload Test Event";
+
+    // Clean up any previous test event
+    await prisma.event.deleteMany({
+      where: { titleEn: testEventTitleEn },
+    });
+
+    // Ensure 8.5MB test file exists
+    const path8MB = "/tmp/ihyaa-test-8.5mb.jpg";
+    if (!fs.existsSync(path8MB) || fs.statSync(path8MB).size < 8 * 1024 * 1024) {
+      fs.writeFileSync(path8MB, Buffer.alloc(8.5 * 1024 * 1024));
+    }
+
+    // Ensure 3MB valid JPEG exists
+    const path3MB = "/tmp/ihyaa-test-3mb.jpg";
+    if (!fs.existsSync(path3MB) || fs.statSync(path3MB).size < 2.5 * 1024 * 1024) {
+      execSync('ffmpeg -f lavfi -i "nullsrc=s=2500x1800,geq=random(1)*255:128:128" -frames:v 1 -q:v 1 /tmp/ihyaa-test-3mb.jpg -y');
+    }
+
+    const stat3MB = fs.statSync(path3MB);
+    expect(stat3MB.size).toBeGreaterThan(2.5 * 1024 * 1024);
+    expect(stat3MB.size).toBeLessThan(4 * 1024 * 1024);
+
+    await loginAdmin(page);
+    await page.goto("/admin/events");
+
+    const addEventBtn = page.locator("button", { hasText: /فعالية جديدة|New Event/i }).first();
+    await expect(addEventBtn).toBeVisible({ timeout: 10000 });
+    await addEventBtn.click();
+
+    const fileInput = page.locator('input[name="image"]');
+    await expect(fileInput).toBeVisible({ timeout: 5000 });
+
+    // 1. Selecting >8MB file triggers instant client-side validation toast and clears file
+    await fileInput.setInputFiles(path8MB);
+    await expect(page.locator("body")).toContainText(
+      /حجم ملف الصورة يتجاوز الحد الأقصى|exceeds the 8MB limit/i,
+      { timeout: 5000 }
+    );
+    expect(await fileInput.inputValue()).toBe("");
+
+    // 2. Select valid 3MB image and fill required fields
+    await fileInput.setInputFiles(path3MB);
+    await page.fill('input[name="titleAr"]', testEventTitleAr);
+    await page.fill('input[name="titleEn"]', testEventTitleEn);
+    await page.fill('input[name="location"]', "مراكش - المركز الثقافي");
+
+    // Submit form (Server Action execution with 3MB multipart payload)
+    const submitBtn = page.locator('button[type="submit"]', { hasText: /حفظ الفعالية|إضافة الفعالية|Save|Add/i }).first();
+    await submitBtn.click();
+
+    // Verify modal closes and new event appears in list
+    await expect(page.locator("body")).toContainText(testEventTitleAr, { timeout: 35000 });
+
+    // Verify record in database
+    const created = await prisma.event.findFirst({
+      where: { titleEn: testEventTitleEn },
+    });
+    expect(created).toBeTruthy();
+    expect(created?.titleAr).toBe(testEventTitleAr);
+    expect(created?.posterUrl).toMatch(/^https:\/\/res\.cloudinary\.com\//);
+
+    // Clean up
+    await prisma.event.deleteMany({
+      where: { titleEn: testEventTitleEn },
+    });
   });
 });

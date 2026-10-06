@@ -115,7 +115,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     await page.context().clearCookies();
     await page.goto("/");
     await page.evaluate(() => localStorage.clear());
-    await page.goto(`/events/majlis-ihyaa/book?eventId=${targetEventId}`);
+    await page.goto(`/events/${targetEventId}/book`);
 
     await page.fill("#b-name", fullName);
     await page.fill("#b-email", email);
@@ -245,7 +245,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
 
   test("5. User 3 books full event -> joins WAITLIST with position #1", async ({ page }) => {
     // Check booking page reflects capacity full status
-    await page.goto(`/events/majlis-ihyaa/book?eventId=${eventId}`);
+    await page.goto(`/events/${eventId}/book`);
     await expect(page.locator("body")).toContainText(/قائمة الانتظار|waitlist/i);
 
     await completeBookingForm(

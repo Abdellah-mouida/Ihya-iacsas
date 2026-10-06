@@ -220,6 +220,10 @@ export async function createEvent(formData: FormData) {
     const file = formData.get("image") as File | null;
     let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
 
+    if (file && file.size > 8 * 1024 * 1024) {
+      return { success: false, error: "Image file size exceeds the 8MB limit." };
+    }
+
     if (file && file.size > 0) {
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -301,6 +305,10 @@ export async function updateEvent(id: string, formData: FormData) {
 
     const file = formData.get("image") as File | null;
     const posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
+
+    if (file && file.size > 8 * 1024 * 1024) {
+      return { success: false, error: "Image file size exceeds the 8MB limit." };
+    }
 
     const dataToUpdate: Record<string, unknown> = {
       titleAr,

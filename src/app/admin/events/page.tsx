@@ -108,7 +108,17 @@ export default function AdminEventsPage() {
   };
 
   useEffect(() => {
-    fetchEvents();
+    let ignore = false;
+    getEvents().then((res) => {
+      if (ignore) return;
+      if (res.success && res.events) {
+        setEvents(res.events);
+      }
+      setLoading(false);
+    });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleToggleStatus = async (
@@ -158,6 +168,16 @@ export default function AdminEventsPage() {
     const formData = new FormData(e.currentTarget);
     const file = formData.get("image") as File | null;
     const posterUrl = formData.get("posterUrl") as string | null;
+
+    if (file && file.size > 8 * 1024 * 1024) {
+      toast.error(
+        locale === "ar"
+          ? "حجم ملف الصورة يتجاوز الحد الأقصى المسموح به (8 ميجابايت)"
+          : "Image file size exceeds the 8MB limit",
+      );
+      setSubmitting(false);
+      return;
+    }
 
     if (!file && !posterUrl) {
       toast.error(locale === "ar" ? "الرجاء اختيار صورة أو إدخال رابط صورة" : "Please select an image file or enter an image URL");
@@ -549,7 +569,7 @@ export default function AdminEventsPage() {
                     {locale === "ar" ? "ملصق الفعالية (Poster Image)" : "Event Poster Image"}
                   </label>
                   <span className="text-[11px] font-medium text-brass/90 bg-brass/10 px-2 py-0.5 rounded-md border border-brass/20">
-                    {locale === "ar" ? "المقاس المقترح: 4:5 عمودي (1024×1280px)" : "Recommended: 4:5 portrait (1024×1280px)"}
+                    {locale === "ar" ? "المقاس: 4:5 (1024×1280 - حد أقصى 8MB)" : "Recommended: 4:5 (1024×1280 - max 8MB)"}
                   </span>
                 </div>
 
@@ -572,6 +592,16 @@ export default function AdminEventsPage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      if (file.size > 8 * 1024 * 1024) {
+                        toast.error(
+                          locale === "ar"
+                            ? "حجم ملف الصورة يتجاوز الحد الأقصى المسموح به (8 ميجابايت)"
+                            : "Image file size exceeds the 8MB limit",
+                        );
+                        e.target.value = "";
+                        setSafePosterPreview(editingEvent?.posterUrl || null);
+                        return;
+                      }
                       const blobUrl = URL.createObjectURL(file);
                       setSafePosterPreview(blobUrl);
                     }
