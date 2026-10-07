@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { generateUniqueEventSlug } from "@/lib/slug";
 
 export async function getEvents() {
   try {
@@ -78,6 +79,7 @@ export async function getPublicEvents() {
 
       return {
         id: ev.id,
+        slug: ev.slug,
         titleAr: ev.titleAr,
         titleEn: ev.titleEn,
         descriptionAr: ev.descriptionAr,
@@ -121,8 +123,13 @@ export async function getPublicEvents() {
 
 export async function getEventById(id: string) {
   try {
-    let event = await prisma.event.findUnique({
-      where: { id },
+    let event = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { slug: id },
+          { id },
+        ],
+      },
       include: {
         bookings: {
           select: {
@@ -138,6 +145,8 @@ export async function getEventById(id: string) {
       event = await prisma.event.findFirst({
         where: {
           OR: [
+            { slug: { startsWith: id } },
+            { slug: { contains: id } },
             { id: { startsWith: id } },
             { id: { contains: id } },
           ],
@@ -170,6 +179,7 @@ export async function getEventById(id: string) {
       success: true,
       event: {
         id: event.id,
+        slug: event.slug,
         titleAr: event.titleAr,
         titleEn: event.titleEn,
         descriptionAr: event.descriptionAr,
@@ -248,8 +258,12 @@ export async function createEvent(formData: FormData) {
       posterUrl = "/images/event-poster.jpg"; // Default fallback poster
     }
 
+    const slugRaw = (formData.get("slug") as string)?.trim() || titleEn || titleAr;
+    const slug = await generateUniqueEventSlug(slugRaw);
+
     const event = await prisma.event.create({
       data: {
+        slug,
         titleAr,
         titleEn,
         descriptionAr,
@@ -323,6 +337,11 @@ export async function updateEvent(id: string, formData: FormData) {
       capacityType,
       capacity,
     };
+
+    const slugRaw = (formData.get("slug") as string)?.trim();
+    if (slugRaw) {
+      dataToUpdate.slug = await generateUniqueEventSlug(slugRaw, id);
+    }
 
     if (file && file.size > 0) {
       try {

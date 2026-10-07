@@ -32,16 +32,19 @@ export default async function EventBookPage({
   const event = await prisma.event.findFirst({
     where: {
       OR: [
+        { slug: slug },
         { id: slug },
+        { slug: { startsWith: slug } },
         { id: { startsWith: slug } },
+        { slug: { contains: slug } },
         { id: { contains: slug } },
       ],
     },
-    select: { id: true, bookingOpen: true },
+    select: { id: true, slug: true, bookingOpen: true },
   });
 
   if (event) {
-    targetEventId = event.id;
+    targetEventId = event.slug || event.id;
   }
 
   // Server-side check: if already booked cookie exists, redirect to event page (except during Server Action)

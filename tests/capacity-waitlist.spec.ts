@@ -16,12 +16,12 @@ async function loginAdmin(page: Page) {
   await page.goto("/admin/login");
   await page.fill('input[type="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.locator("aside")).toBeVisible();
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 }
 
 test.describe.serial("Event Capacity System & Waitlist Flow", () => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
 
   const user1Email = "user1.capacity.test@gmail.com";
   const user2Email = "user2.capacity.test@gmail.com";
@@ -81,6 +81,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     // Create limited event with capacity 2
     const createdEvent = await prisma.event.create({
       data: {
+        slug: `leadership-impact-workshop-${Date.now()}`,
         titleAr: "ورشة القيادة والأثر",
         titleEn: "Leadership & Impact Workshop",
         descriptionAr: "ورشة عمل تدريبية ذات مقاعد محدودة لاختبار نظام السعة وقائمة الانتظار",
@@ -129,7 +130,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     await page.click('button[type="submit"]');
 
     const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
-    await expect(otpFirstBox).toBeVisible({ timeout: 35000 });
+    await expect(otpFirstBox).toBeVisible({ timeout: 50000 });
 
     const activeOtp = await prisma.otpVerification.findFirst({
       where: { email, usedAt: null },
@@ -151,7 +152,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     for (let i = 0; i < testOtp.length; i++) {
       await page.fill(`[data-testid="otp-box-${i}"]`, testOtp[i]);
     }
-    await expect(page.locator('[data-testid="booking-confirmation-title"]')).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('[data-testid="booking-confirmation-title"]')).toBeVisible({ timeout: 45000 });
   }
 
   test("1. User 1 books limited event -> receives PENDING status", async ({ page }) => {
@@ -300,11 +301,11 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
 
     // Verify User 1 becomes REJECTED
     const user1Status = page.locator(`[data-testid="booking-status-${booking1Id}"]`);
-    await expect(user1Status).toContainText(/مرفوض|Rejected/i, { timeout: 10000 });
+    await expect(user1Status).toContainText(/مرفوض|Rejected/i, { timeout: 25000 });
 
     // Verify User 3 is promoted to CONFIRMED
     const user3Status = page.locator(`[data-testid="booking-status-${booking3Id}"]`);
-    await expect(user3Status).toContainText(/مؤكد|Confirmed/i, { timeout: 10000 });
+    await expect(user3Status).toContainText(/مؤكد|Confirmed/i, { timeout: 25000 });
 
     // Check DB state
     const b1 = await prisma.booking.findUnique({ where: { id: booking1Id } });

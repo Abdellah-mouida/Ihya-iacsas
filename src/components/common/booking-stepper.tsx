@@ -386,7 +386,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
   const isFull = eventInfo?.isFull;
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div data-testid="booking-stepper" className="mx-auto w-full max-w-5xl">
       {/* Back link */}
       <Link
         href="/events"

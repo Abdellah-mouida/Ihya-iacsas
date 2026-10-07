@@ -103,16 +103,23 @@ async function checkRateLimit(
 async function resolveTargetEvent(eventId?: string) {
   if (eventId) {
     const trimmed = eventId.trim();
-    // 1. Direct match on ID
-    let event = await prisma.event.findUnique({
-      where: { id: trimmed },
+    // 1. Direct match on slug or ID
+    let event = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { slug: trimmed },
+          { id: trimmed },
+        ],
+      },
     });
     if (event) return event;
 
-    // 2. Prefix or substring match for slug compatibility (e.g. "majlis-ihyaa" -> "majlis-ihyaa-2026")
+    // 2. Prefix or substring match for slug or id compatibility
     event = await prisma.event.findFirst({
       where: {
         OR: [
+          { slug: { startsWith: trimmed } },
+          { slug: { contains: trimmed } },
           { id: { startsWith: trimmed } },
           { id: { contains: trimmed } },
         ],

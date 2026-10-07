@@ -32,6 +32,7 @@ model GalleryPhoto {
 
 model Event {
   id            String    @id @default(cuid())
+  slug          String    @unique
   titleAr       String
   titleEn       String
   descriptionAr String

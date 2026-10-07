@@ -31,6 +31,7 @@ import { useLocale } from "@/i18n/locale-provider";
 
 type EventItem = {
   id: string;
+  slug?: string;
   titleAr: string;
   titleEn: string;
   descriptionAr: string;
@@ -332,6 +333,12 @@ export default function AdminEventsPage() {
                       </span>
                     )}
 
+                    {evt.slug && (
+                      <span className="inline-flex items-center gap-1 text-[0.65rem] px-2 py-0.5 rounded-md font-mono bg-brass/10 text-brass border border-brass/20 whitespace-nowrap">
+                        /{evt.slug}
+                      </span>
+                    )}
+
                     {new Date(evt.date) >= new Date() && evt.bookingOpen && (
                       <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
                         <Sparkles className="size-3 shrink-0" />
@@ -512,6 +519,26 @@ export default function AdminEventsPage() {
                     className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass dir-ltr"
                   />
                 </div>
+              </div>
+
+              {/* URL Slug */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                  {locale === "ar" ? "المعرف الرابط (Slug)" : "URL Slug"}
+                </label>
+                <input
+                  type="text"
+                  name="slug"
+                  dir="ltr"
+                  defaultValue={editingEvent?.slug || ""}
+                  placeholder="e.g. majlis-ihyaa-spring-2026"
+                  className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brass"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {locale === "ar"
+                    ? "يُستخدم في مسار الحجز المباشر (/events/[slug]/book). يُترك فارغاً للتوليد التلقائي."
+                    : "Used in direct booking link (/events/[slug]/book). Leave blank to auto-generate."}
+                </p>
               </div>
 
               {/* Date, Time, Location */}

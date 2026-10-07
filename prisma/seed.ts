@@ -66,6 +66,7 @@ async function main() {
     const upcomingEvent = await prisma.event.create({
       data: {
         id: "majlis-ihyaa-2026",
+        slug: "majlis-ihyaa-2026",
         titleAr: "مجلس إحياء الشبابي — الدورة الربيعية",
         titleEn: "Ihyaa Youth Council — Spring Session",
         descriptionAr: "لقاء إيماني وثقافي يجمع شباب الأمة على موائد القرآن والتزكية وبناء الشخصية المسلمة الرائدة.",
@@ -83,6 +84,7 @@ async function main() {
       data: [
         {
           id: "past-winter-retreat",
+          slug: "past-winter-retreat",
           titleAr: "الملتقى الشتوي للشباب 2025",
           titleEn: "Winter Youth Retreat 2025",
           descriptionAr: "ثلاثة أيام من التكوين والرياضة والأخوة الصادقة في أحضان الطبيعة.",
@@ -96,6 +98,7 @@ async function main() {
         },
         {
           id: "past-football-cup",
+          slug: "past-football-cup",
           titleAr: "دوري الأخوة لكرة القدم",
           titleEn: "Brotherhood Football Tournament",
           descriptionAr: "دوري رياضي تنافسي يجمع فروع إحياء بمختلف المدن.",
@@ -109,6 +112,7 @@ async function main() {
         },
         {
           id: "past-gathering-retreat",
+          slug: "past-gathering-retreat",
           titleAr: "مجلس مدارسة السيرة النبوية",
           titleEn: "Prophetic Biography Study Circle",
           descriptionAr: "جلسة إيمانية حول دروس وعبر من السيرة العطرة في واقع الشباب المعاصر.",

@@ -52,11 +52,11 @@ async function sendBrevoEmail(payload: {
 
   let lastError = "Could not connect to email service.";
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(25000),
         headers: {
           accept: "application/json",
           "api-key": apiKey,

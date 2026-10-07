@@ -12,6 +12,7 @@ import { FeaturedEvent } from "./featured-event";
 
 type DisplayEvent = {
   id: string;
+  slug?: string;
   titleAr?: string;
   titleEn?: string;
   titleKey?: string;

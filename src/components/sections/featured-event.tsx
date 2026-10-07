@@ -15,6 +15,7 @@ import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 type FeaturedEventProps = {
   event?: {
     id: string;
+    slug?: string;
     titleAr?: string;
     titleEn?: string;
     descriptionAr?: string;
@@ -60,7 +61,11 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const locationStr =
     event?.location || (event?.locationKey ? t(event.locationKey) : t("event.location"));
   const poster = event?.posterUrl || event?.poster || IMAGES.eventPoster;
-  const bookHref = event?.id ? `/events/${event.id}/book` : EVENT.bookHref;
+  const bookHref = event?.slug
+    ? `/events/${event.slug}/book`
+    : event?.id
+      ? `/events/${event.id}/book`
+      : EVENT.bookHref;
 
   const details = [
     { icon: CalendarDays, label: t("event.dateLabel"), value: dateStr },

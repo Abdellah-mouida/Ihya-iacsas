@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import crypto from "crypto";
 import { prisma } from "../src/lib/prisma";
+import { generateUniqueEventSlug } from "../src/lib/slug";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 
@@ -369,6 +370,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       update: { bookingOpen: true, capacityType: "OPEN" },
       create: {
         id: "test-event-second",
+        slug: "test-event-second",
         titleAr: "الفعالية الثانية للاختبار",
         titleEn: "Second Test Event",
         descriptionAr: "وصف الفعالية الثانية للاختبار",
@@ -531,6 +533,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "majlis-ihyaa-2026",
+        slug: "majlis-ihyaa-2026",
         titleAr: "مجلس إحياء الشبابي 2026",
         titleEn: "Ihyaa Youth Gathering 2026",
         descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
@@ -553,6 +556,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "test-event-second",
+        slug: "test-event-second",
         titleAr: "الملتقى الثاني لبرنامج إحياء",
         titleEn: "Second Ihyaa Program Gathering",
         descriptionAr: "اللقاء الثاني للبرنامج الشبابي",
@@ -628,6 +632,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "majlis-ihyaa-2026",
+        slug: "majlis-ihyaa-2026",
         titleAr: "مجلس إحياء الشبابي 2026",
         titleEn: "Ihyaa Youth Gathering 2026",
         descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
@@ -927,6 +932,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "majlis-ihyaa-2026",
+        slug: "majlis-ihyaa-2026",
         titleAr: "مجلس إحياء الشبابي — الدورة الربيعية",
         titleEn: "Ihyaa Youth Council — Spring Session",
         descriptionAr: "لقاء إيماني شبابي لتزكية النفوس ومدارسة العلم",
@@ -950,6 +956,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "test-event-second",
+        slug: "test-event-second",
         titleAr: "ملتقى إحياء الثاني للشباب",
         titleEn: "Second Ihyaa Program Gathering",
         descriptionAr: "اللقاء الثاني للبرنامج الشبابي",
@@ -1026,6 +1033,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "majlis-ihyaa-2026",
+        slug: "majlis-ihyaa-2026",
         titleAr: "مجلس إحياء الشبابي 2026",
         titleEn: "Ihyaa Youth Gathering 2026",
         descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
@@ -1048,6 +1056,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       },
       create: {
         id: "test-event-second",
+        slug: "test-event-second",
         titleAr: "الملتقى الثاني لبرنامج إحياء",
         titleEn: "Second Ihyaa Program Gathering",
         descriptionAr: "اللقاء الثاني للبرنامج الشبابي",
@@ -1101,5 +1110,83 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await event2BookBtn.click();
     await page.waitForURL(/.*test-event-second.*/, { timeout: 15000 });
     expect(page.url()).toContain("test-event-second");
+  });
+
+  test("19. Enforce unique event slugs, collision auto-suffixing, and slug-based booking route (Task 5)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+    await context.clearCookies();
+
+    // 1. Verify generateUniqueEventSlug generates unique suffix on collision with existing event
+    const generatedSlug = await generateUniqueEventSlug("majlis-ihyaa-2026");
+    expect(generatedSlug).toMatch(/^majlis-ihyaa-2026-\d+$/);
+
+    const testSlugId = "test-slug-collision-event";
+    const testSlug = "custom-test-slug-unique";
+
+    // Clean up any existing test event
+    await prisma.event.deleteMany({
+      where: { OR: [{ id: testSlugId }, { slug: testSlug }] },
+    });
+
+    // 2. Create an event with a custom slug
+    const createdEvent = await prisma.event.create({
+      data: {
+        id: testSlugId,
+        slug: testSlug,
+        titleAr: "فعالية اختبار المعرف الرابط",
+        titleEn: "Test Slug Unique Event",
+        descriptionAr: "وصف فعالية اختبار المعرف الرابط",
+        descriptionEn: "Test Slug Unique Event Description",
+        date: new Date("2026-12-15T18:00:00Z"),
+        time: "18:00",
+        location: "الرباط، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+    expect(createdEvent.slug).toBe(testSlug);
+
+    // 3. Test generateUniqueEventSlug generates suffix for the now-existing test slug
+    const collisionSlug = await generateUniqueEventSlug(testSlug);
+    expect(collisionSlug).toBe(`${testSlug}-2`);
+
+    // 4. Test database unique constraint enforces rejection of duplicate slug insertion
+    let dbDuplicateFailed = false;
+    try {
+      await prisma.event.create({
+        data: {
+          id: "another-duplicate-event-id",
+          slug: testSlug, // Same slug violates unique constraint!
+          titleAr: "فعالية مكررة",
+          titleEn: "Duplicate Event",
+          descriptionAr: "وصف",
+          descriptionEn: "desc",
+          date: new Date("2026-12-20T18:00:00Z"),
+          time: "18:00",
+          location: "الرباط",
+          posterUrl: "/images/events/opening-majlis.webp",
+          bookingOpen: true,
+          capacityType: "OPEN",
+        },
+      });
+    } catch (err: unknown) {
+      dbDuplicateFailed = true;
+      expect((err as { code?: string })?.code).toBe("P2002");
+    }
+    expect(dbDuplicateFailed).toBe(true);
+
+    // 5. Navigate directly to the booking route via its unique slug (/events/[slug]/book)
+    await page.goto(`/events/${testSlug}/book`);
+    await expect(page.locator('[data-testid="booking-stepper"]')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("body")).toContainText(/فعالية اختبار المعرف الرابط|Test Slug Unique Event/);
+
+    // 6. Cleanup
+    await prisma.event.deleteMany({
+      where: { id: testSlugId },
+    });
   });
 });
