@@ -20,7 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <LocaleProvider>
         {children}
-        <Toaster richColors position="top-center" closeButton />
+        <Toaster position="top-center" closeButton />
       </LocaleProvider>
     </ThemeProvider>
   );

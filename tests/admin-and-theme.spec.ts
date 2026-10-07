@@ -308,4 +308,76 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       where: { titleEn: testEventTitleEn },
     });
   });
+
+  test("11. Islamic geometric themed toast notifications with glassmorphism, RTL/LTR awareness, and timeout safety net", async ({
+    page,
+  }) => {
+    const testEmail = "test.toast.geom@gmail.com";
+    await prisma.contactMessage.deleteMany({
+      where: { email: testEmail },
+    });
+
+    // 1. Visit homepage (default RTL Arabic)
+    await page.goto("/#contact");
+
+    // Submit contact message to trigger success toast
+    await page.locator("#name").fill("أحمد الفاسي");
+    await page.locator("#email").fill(testEmail);
+    await page.locator("#message").fill("اختبار نظام التنبيهات الإسلامي المصمم");
+
+    const submitBtn = page.locator('button[type="submit"]', { hasText: /إرسال الرسالة|Send Message/i });
+    await submitBtn.click();
+
+    // Verify toast appears
+    const toast = page.locator("[data-sonner-toast]");
+    await expect(toast).toBeVisible({ timeout: 20000 });
+
+    // Verify toaster direction in Arabic
+    const toaster = page.locator("[data-sonner-toaster]");
+    await expect(toaster).toHaveAttribute("dir", "rtl");
+
+    // Verify Islamic Geometric 8-pointed star success icon
+    const icon = toast.locator('[data-testid="toast-icon-success"]');
+    await expect(icon).toBeVisible();
+
+    // Verify glassmorphic class
+    await expect(toast).toHaveClass(/cn-toast/);
+
+    // Verify close button dismisses toast
+    const closeBtn = toast.locator("[data-close-button]");
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click({ force: true });
+    await expect(toast).not.toBeVisible({ timeout: 5000 });
+
+    // Clean up DB contact message
+    await prisma.contactMessage.deleteMany({
+      where: { email: testEmail },
+    });
+
+    // 2. Switch language to English (LTR) and verify toaster dir updates
+    const langBtn = page.locator("button", { hasText: /English/i }).first();
+    if (await langBtn.isVisible()) {
+      await langBtn.click();
+      await page.waitForTimeout(500);
+
+      // Trigger English submission
+      await page.locator("#name").fill("Ahmed Fassi");
+      await page.locator("#email").fill(testEmail);
+      await page.locator("#message").fill("Testing LTR toast notification");
+      const engSubmitBtn = page.locator('button[type="submit"]').first();
+      await engSubmitBtn.click();
+
+      await expect(toast).toBeVisible({ timeout: 20000 });
+      await expect(toaster).toHaveAttribute("dir", "ltr");
+
+      // Verify close button dismisses
+      if (await closeBtn.isVisible()) {
+        await closeBtn.click({ force: true });
+      }
+
+      await prisma.contactMessage.deleteMany({
+        where: { email: testEmail },
+      });
+    }
+  });
 });

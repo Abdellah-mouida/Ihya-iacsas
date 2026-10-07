@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Copy,
   Home,
   KeyRound,
   MapPin,
@@ -36,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
 import { isEventBooked, markEventBooked } from "@/lib/booking-state";
+import { notify } from "@/lib/toast";
 import { EVENT, IMAGES } from "@/lib/content";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
@@ -177,42 +179,52 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     setErrors({});
     setSubmitting(true);
 
-    const res = await requestBookingOtp({
-      eventId: targetEventId,
-      fullName: details.fullName,
-      email: details.email,
-      city: details.city,
-      age: parseInt(details.age, 10),
-      motive: details.motive,
-      locale,
-    });
-
-    setSubmitting(false);
-
-    if (res.success && res.bookingId) {
-      setBookingId(res.bookingId);
-      // Strictly prevent switching to a different event: only refine to canonical ID if related
-      if (
-        res.eventId &&
-        (res.eventId === targetEventId ||
-          res.eventId.startsWith(targetEventId) ||
-          targetEventId.startsWith(res.eventId))
-      ) {
-        setTargetEventId(res.eventId);
-      }
-      setResendTimer(30); // 30-second cooldown
-      setStep(2);
-    } else {
-      const err = res.error || "Failed to process registration";
-      const isEmailErr =
-        err.includes("مسبقاً") ||
-        err.toLowerCase().includes("already booked") ||
-        err.toLowerCase().includes("domain") ||
-        err.includes("نطاق");
-      setErrors({
-        form: err,
-        ...(isEmailErr ? { email: err } : {}),
+    try {
+      const res = await requestBookingOtp({
+        eventId: targetEventId,
+        fullName: details.fullName,
+        email: details.email,
+        city: details.city,
+        age: parseInt(details.age, 10),
+        motive: details.motive,
+        locale,
       });
+
+      if (res.success && res.bookingId) {
+        setBookingId(res.bookingId);
+        // Strictly prevent switching to a different event: only refine to canonical ID if related
+        if (
+          res.eventId &&
+          (res.eventId === targetEventId ||
+            res.eventId.startsWith(targetEventId) ||
+            targetEventId.startsWith(res.eventId))
+        ) {
+          setTargetEventId(res.eventId);
+        }
+        setResendTimer(30); // 30-second cooldown
+        setStep(2);
+      } else {
+        const err = res.error || "Failed to process registration";
+        const isEmailErr =
+          err.includes("مسبقاً") ||
+          err.toLowerCase().includes("already booked") ||
+          err.toLowerCase().includes("domain") ||
+          err.includes("نطاق");
+        setErrors({
+          form: err,
+          ...(isEmailErr ? { email: err } : {}),
+        });
+        notify.error(err);
+      }
+    } catch {
+      const fallbackErr =
+        locale === "ar"
+          ? "تعذر إرسال رمز التحقق. يرجى المحاولة لاحقاً."
+          : "Failed to send verification code. Please try again later.";
+      setErrors({ form: fallbackErr });
+      notify.error(fallbackErr);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -227,37 +239,48 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     setErrors({});
     setSubmitting(true);
 
-    const res = await verifyBookingOtp({
-      bookingId,
-      email: details.email,
-      otp: cleanOtp,
-      eventId: targetEventId,
-      locale,
-    });
+    try {
+      const res = await verifyBookingOtp({
+        bookingId,
+        email: details.email,
+        otp: cleanOtp,
+        eventId: targetEventId,
+        locale,
+      });
 
-    setSubmitting(false);
+      if (res.success && res.bookingRef) {
+        setBookingRef(res.bookingRef);
+        if (
+          res.eventId &&
+          (res.eventId === targetEventId ||
+            res.eventId.startsWith(targetEventId) ||
+            targetEventId.startsWith(res.eventId))
+        ) {
+          setTargetEventId(res.eventId);
+        }
+        if (res.status) setBookingStatus(res.status);
+        if (res.waitlistOrder !== undefined) {
+          setWaitlistOrder(res.waitlistOrder ?? null);
+        }
 
-    if (res.success && res.bookingRef) {
-      setBookingRef(res.bookingRef);
-      if (
-        res.eventId &&
-        (res.eventId === targetEventId ||
-          res.eventId.startsWith(targetEventId) ||
-          targetEventId.startsWith(res.eventId))
-      ) {
-        setTargetEventId(res.eventId);
+        // Store for client-side recognition per event
+        markEventBooked(res.eventId || targetEventId, res.bookingRef);
+
+        setStep(3);
+      } else {
+        const err = res.error || "Invalid verification code";
+        setErrors({ otp: err });
+        notify.error(err);
       }
-      if (res.status) setBookingStatus(res.status);
-      if (res.waitlistOrder !== undefined) {
-        setWaitlistOrder(res.waitlistOrder ?? null);
-      }
-
-      // Store for client-side recognition per event
-      markEventBooked(res.eventId || targetEventId, res.bookingRef);
-
-      setStep(3);
-    } else {
-      setErrors({ otp: res.error || "Invalid verification code" });
+    } catch {
+      const fallbackErr =
+        locale === "ar"
+          ? "تعذر تأكيد الحجز. يرجى المحاولة لاحقاً."
+          : "Failed to verify booking. Please try again later.";
+      setErrors({ otp: fallbackErr });
+      notify.error(fallbackErr);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -272,19 +295,35 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     setResending(true);
     setErrors({});
 
-    const res = await resendBookingOtp({
-      email: details.email,
-      eventId: targetEventId,
-      locale,
-    });
+    try {
+      const res = await resendBookingOtp({
+        email: details.email,
+        eventId: targetEventId,
+        locale,
+      });
 
-    setResending(false);
-
-    if (res.success) {
-      setResendTimer(30);
-      setOtp("");
-    } else {
-      setErrors({ otp: res.error || "Failed to resend verification code" });
+      if (res.success) {
+        setResendTimer(30);
+        setOtp("");
+        notify.success(
+          locale === "ar"
+            ? "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني"
+            : "A new verification code has been sent to your email",
+        );
+      } else {
+        const err = res.error || "Failed to resend verification code";
+        setErrors({ otp: err });
+        notify.error(err);
+      }
+    } catch {
+      const fallbackErr =
+        locale === "ar"
+          ? "تعذر إعادة إرسال الرمز. يرجى المحاولة لاحقاً."
+          : "Failed to resend code. Please try again later.";
+      setErrors({ otp: fallbackErr });
+      notify.error(fallbackErr);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -805,12 +844,33 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{t("booking.ref")}:</span>
-                  <span
-                    data-testid="booking-ref-display"
-                    className="font-mono font-bold text-brass text-sm"
-                  >
-                    {bookingRef}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      data-testid="booking-ref-display"
+                      className="font-mono font-bold text-brass text-sm"
+                    >
+                      {bookingRef}
+                    </span>
+                    <button
+                      type="button"
+                      data-testid="copy-booking-ref-btn"
+                      onClick={() => {
+                        if (bookingRef) {
+                          navigator.clipboard?.writeText?.(bookingRef);
+                          notify.success(
+                            locale === "ar"
+                              ? "تم نسخ رقم الحجز بنجاح"
+                              : "Booking reference copied to clipboard",
+                          );
+                        }
+                      }}
+                      className="p-1 rounded-md text-muted-foreground hover:text-brass hover:bg-brass/10 transition-colors"
+                      title={locale === "ar" ? "نسخ رقم الحجز" : "Copy reference"}
+                      aria-label={locale === "ar" ? "نسخ رقم الحجز" : "Copy reference"}
+                    >
+                      <Copy className="size-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{t("booking.fName")}:</span>

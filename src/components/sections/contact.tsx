@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Phone, Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/toast";
 
 import { submitContactMessage } from "@/app/actions/contacts";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
@@ -18,7 +18,7 @@ import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 type Errors = { name?: string; email?: string; message?: string };
 
 export function Contact() {
-  const { t, dir } = useLocale();
+  const { t, dir, locale } = useLocale();
   const [values, setValues] = useState({ name: "", email: "", message: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<"idle" | "sending" | "success">("idle");
@@ -37,14 +37,23 @@ export function Contact() {
     e.preventDefault();
     if (!validate()) return;
     setStatus("sending");
-    const res = await submitContactMessage(values);
-    if (res.success) {
-      setStatus("success");
-      toast.success(t("contact.success"), { description: t("contact.successDesc") });
-      setValues({ name: "", email: "", message: "" });
-    } else {
+    try {
+      const res = await submitContactMessage(values);
+      if (res.success) {
+        setStatus("success");
+        notify.success(t("contact.success"), { description: t("contact.successDesc") });
+        setValues({ name: "", email: "", message: "" });
+      } else {
+        setStatus("idle");
+        notify.error(res.error || "Failed to submit message");
+      }
+    } catch {
       setStatus("idle");
-      toast.error(res.error || "Failed to submit message");
+      notify.error(
+        locale === "ar"
+          ? "تعذر إرسال الرسالة. يرجى المحاولة لاحقاً."
+          : "Failed to send message. Please try again later.",
+      );
     }
   }
 
@@ -127,6 +136,7 @@ export function Contact() {
               <Label htmlFor="name">{t("contact.name")}</Label>
               <Input
                 id="name"
+                name="name"
                 value={values.name}
                 aria-invalid={!!errors.name}
                 placeholder={t("contact.namePh")}
@@ -142,6 +152,7 @@ export function Contact() {
               <Label htmlFor="email">{t("contact.email")}</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 dir="ltr"
                 value={values.email}
@@ -159,6 +170,7 @@ export function Contact() {
               <Label htmlFor="message">{t("contact.message")}</Label>
               <Textarea
                 id="message"
+                name="message"
                 rows={5}
                 value={values.message}
                 aria-invalid={!!errors.message}

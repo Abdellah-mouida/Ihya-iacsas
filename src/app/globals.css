@@ -553,3 +553,123 @@ textarea::-webkit-scrollbar {
     animation: none;
   }
 }
+
+/* =========================================================================
+   Islamic Themed Glassmorphic Toast Notification System
+   ========================================================================= */
+[data-sonner-toaster] {
+  --normal-bg: color-mix(in oklch, var(--card) 88%, transparent);
+  --normal-border: color-mix(in oklch, var(--brass) 30%, transparent);
+  --normal-text: var(--foreground);
+}
+
+[data-sonner-toast] {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: color-mix(in oklch, var(--card) 88%, transparent) !important;
+  border-radius: 1rem !important;
+  border: 1px solid color-mix(in oklch, var(--brass) 30%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 15px -3px color-mix(in oklch, var(--brass) 15%, transparent) !important;
+  padding: 0.875rem 1rem !important;
+  font-family: inherit !important;
+  position: relative !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dark [data-sonner-toast] {
+  background: color-mix(in oklch, var(--card) 85%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px -3px color-mix(in oklch, var(--brass) 20%, transparent) !important;
+}
+
+/* Subtle Islamic Girih watermark */
+[data-sonner-toast]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.04;
+  -webkit-mask: url(/patterns/girih.svg) 0 0 / 48px 48px repeat;
+  mask: url(/patterns/girih.svg) 0 0 / 48px 48px repeat;
+  background-color: currentColor;
+}
+.dark [data-sonner-toast]::before {
+  opacity: 0.08;
+}
+
+/* Islamic Geometric brass corner accent */
+[data-sonner-toast]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, color-mix(in oklch, var(--brass) 45%, transparent) 0%, transparent 70%);
+  pointer-events: none;
+}
+[dir="rtl"] [data-sonner-toast]::after,
+[data-sonner-toaster][dir="rtl"] [data-sonner-toast]::after {
+  right: auto;
+  left: 0;
+  background: linear-gradient(-135deg, color-mix(in oklch, var(--brass) 45%, transparent) 0%, transparent 70%);
+}
+
+/* Status variants */
+[data-sonner-toast][data-type="success"] {
+  border-color: color-mix(in oklch, var(--emerald) 45%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--emerald) 25%, transparent) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  border-color: color-mix(in oklch, var(--destructive) 45%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--destructive) 25%, transparent) !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  border-color: color-mix(in oklch, var(--gold) 45%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--gold) 25%, transparent) !important;
+}
+
+[data-sonner-toast][data-type="info"] {
+  border-color: color-mix(in oklch, var(--brass) 45%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--brass) 25%, transparent) !important;
+}
+
+/* Typography */
+[data-sonner-toast] [data-title],
+[data-sonner-toast] .cn-toast-title {
+  font-family: var(--font-heading), var(--font-sans), sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.35 !important;
+  color: var(--foreground) !important;
+}
+
+[data-sonner-toast] [data-description],
+[data-sonner-toast] .cn-toast-description {
+  font-family: var(--font-sans), sans-serif !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.45 !important;
+  color: var(--muted-foreground) !important;
+  margin-top: 0.25rem !important;
+}
+
+/* Close button */
+[data-sonner-toast] [data-close-button],
+[data-sonner-toast] .cn-toast-close {
+  pointer-events: auto !important;
+  z-index: 50 !important;
+  border-radius: 9999px !important;
+  border: 1px solid color-mix(in oklch, var(--border) 60%, transparent) !important;
+  background: color-mix(in oklch, var(--card) 80%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  transition: all 0.2s ease !important;
+}
+[data-sonner-toast] [data-close-button]:hover,
+[data-sonner-toast] .cn-toast-close:hover {
+  background: color-mix(in oklch, var(--brass) 20%, transparent) !important;
+  color: var(--foreground) !important;
+  border-color: var(--brass) !important;
+}
+
