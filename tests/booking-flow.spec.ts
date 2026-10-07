@@ -459,12 +459,19 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(finalOtpCount).toBe(initialOtpCount);
 
     // 5. Try to book Event 2 with the same email -> Should SUCCEED
-    // Clear cooldown rate limit key so test doesn't have to wait 30s
+    // Clear cooldown and window rate limit keys so test doesn't have to wait 30s
     await prisma.rateLimit.deleteMany({
-      where: { key: `otp_gen_cooldown:${testEmailUnique}` },
+      where: {
+        key: {
+          in: [
+            `otp_gen_cooldown:${testEmailUnique}`,
+            `otp_gen_window:${testEmailUnique}`,
+          ],
+        },
+      },
     });
 
-    await page.goto("/events/majlis-ihyaa/book?eventId=test-event-second");
+    await page.goto("/events/test-event-second/book");
     await page.fill("#b-name", "Unique Test User Event 2");
     await page.fill("#b-email", testEmailUnique);
 
@@ -1001,5 +1008,98 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     // 8. Clean up
     await prisma.otpVerification.deleteMany({ where: { email: testEmail } });
     await prisma.booking.deleteMany({ where: { email: testEmail } });
+  });
+
+  test("18. Multiple open events carousel/switcher cycles events, updates active tab & counter, and links to per-event booking", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+
+    // 1. Ensure two open events exist
+    await prisma.event.upsert({
+      where: { id: "majlis-ihyaa-2026" },
+      update: {
+        date: new Date("2026-10-15T18:00:00Z"),
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+      create: {
+        id: "majlis-ihyaa-2026",
+        titleAr: "مجلس إحياء الشبابي 2026",
+        titleEn: "Ihyaa Youth Gathering 2026",
+        descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
+        descriptionEn: "Opening gathering for Ihyaa Youth Program",
+        date: new Date("2026-10-15T18:00:00Z"),
+        time: "18:00",
+        location: "الرباط، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    await prisma.event.upsert({
+      where: { id: "test-event-second" },
+      update: {
+        date: new Date("2026-11-20T18:00:00Z"),
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+      create: {
+        id: "test-event-second",
+        titleAr: "الملتقى الثاني لبرنامج إحياء",
+        titleEn: "Second Ihyaa Program Gathering",
+        descriptionAr: "اللقاء الثاني للبرنامج الشبابي",
+        descriptionEn: "Second session for youth",
+        date: new Date("2026-11-20T18:00:00Z"),
+        time: "18:00",
+        location: "الدار البيضاء، المغرب",
+        posterUrl: "/images/events/opening-majlis.webp",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    await context.clearCookies();
+    await page.goto("/events");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    // 2. Verify switcher bar is visible when multiple open events exist
+    const switcher = page.locator('[data-testid="event-switcher"]');
+    await expect(switcher).toBeVisible({ timeout: 15000 });
+
+    const tab1 = page.locator('[data-testid="event-tab-majlis-ihyaa-2026"]');
+    const tab2 = page.locator('[data-testid="event-tab-test-event-second"]');
+    await expect(tab1).toBeVisible();
+    await expect(tab2).toBeVisible();
+
+    // Verify exactly one tab is initially active
+    const initialActive = (await tab1.getAttribute("aria-selected")) === "true" ? tab1 : tab2;
+    const initialInactive = initialActive === tab1 ? tab2 : tab1;
+    await expect(initialActive).toHaveAttribute("aria-selected", "true");
+    await expect(initialInactive).toHaveAttribute("aria-selected", "false");
+
+    // 3. Click Next button in switcher -> active tab cycles
+    const nextBtn = page.locator('[data-testid="carousel-next-btn"]');
+    await expect(nextBtn).toBeVisible();
+    await nextBtn.click();
+
+    // Wait for transition to cycle active tab
+    await expect(initialInactive).toHaveAttribute("aria-selected", "true", { timeout: 10000 });
+    await expect(initialActive).toHaveAttribute("aria-selected", "false", { timeout: 10000 });
+
+    // 4. Click initial active tab to switch back
+    await initialActive.click();
+    await expect(initialActive).toHaveAttribute("aria-selected", "true", { timeout: 10000 });
+    await expect(initialInactive).toHaveAttribute("aria-selected", "false", { timeout: 10000 });
+
+    // 5. Verify direct per-event book button for Event 2 navigates to Event 2 booking route
+    const event2BookBtn = page.locator('[data-testid="book-btn-test-event-second"]');
+    await expect(event2BookBtn).toBeVisible();
+    await event2BookBtn.click();
+    await page.waitForURL(/.*test-event-second.*/, { timeout: 15000 });
+    expect(page.url()).toContain("test-event-second");
   });
 });

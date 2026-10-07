@@ -56,6 +56,7 @@ async function sendBrevoEmail(payload: {
     try {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
+        signal: AbortSignal.timeout(12000),
         headers: {
           accept: "application/json",
           "api-key": apiKey,
