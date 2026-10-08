@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { getPublicEvents } from "@/app/actions/events";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
-import { PAST_EVENTS } from "@/lib/content";
 import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
 
 type DisplayPastEvent = {
@@ -24,8 +23,10 @@ export function PastEvents() {
   const [pastEvents, setPastEvents] = useState<DisplayPastEvent[] | null>(null);
 
   useEffect(() => {
+    let ignore = false;
     getPublicEvents().then((res) => {
-      if (res.success && res.pastEvents && res.pastEvents.length > 0) {
+      if (ignore) return;
+      if (res.success && res.pastEvents) {
         setPastEvents(
           res.pastEvents.map((pe) => ({
             id: pe.id,
@@ -38,22 +39,18 @@ export function PastEvents() {
             poster: pe.posterUrl,
           })),
         );
+      } else {
+        setPastEvents([]);
       }
     });
+    return () => {
+      ignore = true;
+    };
   }, [locale]);
 
-  const displayList: DisplayPastEvent[] =
-    pastEvents !== null
-      ? pastEvents
-      : PAST_EVENTS.map((ev) => ({
-          id: ev.id,
-          title: t(ev.titleKey),
-          dateStr: t(ev.dateKey),
-          locationStr: t(ev.locationKey),
-          poster: ev.poster,
-        }));
+  if (!pastEvents || pastEvents.length === 0) return null;
 
-  if (displayList.length === 0) return null;
+  const displayList: DisplayPastEvent[] = pastEvents;
 
   return (
     <section id="past-events" className="relative overflow-x-clip py-24 sm:py-32">

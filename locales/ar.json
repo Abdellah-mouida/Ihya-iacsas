@@ -101,15 +101,10 @@
     "pastDesc": "لمحة عن لقاءات أُقيمت من قبل.",
     "endedBadge": "انتهت",
     "newBadge": "جديد",
-    "pastRetreatTitle": "خلوة روحية شتوية",
-    "pastRetreatDate": "دجنبر 2025",
-    "pastRetreatLocation": "تارودانت",
-    "pastCupTitle": "دوري إحياء لكرة القدم",
-    "pastCupDate": "غشت 2025",
-    "pastCupLocation": "أولاد تايمة",
-    "pastGatheringTitle": "أمسية رمضانية",
-    "pastGatheringDate": "مارس 2025",
-    "pastGatheringLocation": "مراكش"
+    "nonePastTitle": "لا توجد فعاليات سابقة مسجلة",
+    "nonePastDesc": "ستظهر هنا الفعاليات بعد انتهائها.",
+    "emptyAllTitle": "لا توجد أي فعاليات حالياً",
+    "emptyAllDesc": "ترقبوا إعلاناتنا القادمة قريباً عبر موقعنا أو منصات التواصل."
   },
   "branches": {
     "kicker": "أين تجدنا",

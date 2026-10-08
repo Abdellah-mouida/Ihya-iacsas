@@ -1189,4 +1189,29 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       where: { id: testSlugId },
     });
   });
+
+  test("20. Events page is fully dynamic from database with no mock/static events, and handles empty states", async ({
+    page,
+  }) => {
+    test.setTimeout(60000);
+
+    // 1. Visit /events
+    await page.goto("/events");
+    await page.waitForLoadState("domcontentloaded");
+
+    // 2. Assert that old mock events are completely gone
+    const bodyText = await page.locator("body").innerText();
+    expect(bodyText).not.toContain("Winter spiritual retreat");
+    expect(bodyText).not.toContain("خلوة روحية شتوية");
+    expect(bodyText).not.toContain("Ihyaa Football Cup");
+    expect(bodyText).not.toContain("دوري إحياء لكرة القدم");
+    expect(bodyText).not.toContain("Ramadan night gathering");
+    expect(bodyText).not.toContain("أمسية رمضانية");
+
+    // 3. Verify content.ts has empty mock constants
+    const contentModule = await import("../src/lib/content");
+    expect(contentModule.OPEN_EVENTS).toEqual([]);
+    expect(contentModule.PAST_EVENTS).toEqual([]);
+    expect(contentModule.EVENTS).toEqual([]);
+  });
 });

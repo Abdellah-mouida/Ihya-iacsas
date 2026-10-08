@@ -114,7 +114,7 @@ export default function AdminBookingsPage() {
       const res = await getBookings(selectedEventId);
       if (!ignore) {
         if (res.success && res.bookings) {
-          setBookings(res.bookings as BookingItem[]);
+          setBookings(res.bookings as BookingRecord[]);
         }
         setLoading(false);
       }

@@ -50,50 +50,12 @@ export type IhyaaEvent = {
   isNew?: boolean;
 };
 
-export const EVENTS: IhyaaEvent[] = [
-  {
-    id: "majlis-ihyaa",
-    poster: IMAGES.eventPoster,
-    titleKey: "event.name",
-    dateKey: "event.date",
-    timeKey: "event.time",
-    locationKey: "event.location",
-    status: "open",
-    badgeKey: "event.badge",
-    bookHref: EVENT.bookHref,
-    isNew: true,
-  },
-  // Placeholder archive so the page structure supports future content.
-  {
-    id: "past-winter-retreat",
-    poster: IMAGES.groupPortrait,
-    titleKey: "events.pastRetreatTitle",
-    dateKey: "events.pastRetreatDate",
-    locationKey: "events.pastRetreatLocation",
-    status: "past",
-  },
-  {
-    id: "past-football-cup",
-    poster: IMAGES.football,
-    titleKey: "events.pastCupTitle",
-    dateKey: "events.pastCupDate",
-    locationKey: "events.pastCupLocation",
-    status: "past",
-  },
-  {
-    id: "past-gathering",
-    poster: IMAGES.gathering,
-    titleKey: "events.pastGatheringTitle",
-    dateKey: "events.pastGatheringDate",
-    locationKey: "events.pastGatheringLocation",
-    status: "past",
-  },
-];
+export const EVENTS: IhyaaEvent[] = [];
 
-export const OPEN_EVENTS = EVENTS.filter((e) => e.status === "open");
-export const PAST_EVENTS = EVENTS.filter((e) => e.status === "past");
-// Drives the navbar "new event" indicator — tied to the events data above.
-export const hasNewEvent = OPEN_EVENTS.some((e) => e.isNew);
+export const OPEN_EVENTS: IhyaaEvent[] = [];
+export const PAST_EVENTS: IhyaaEvent[] = [];
+// Drives the navbar "new event" indicator — determined dynamically from DB events.
+export const hasNewEvent = false;
 
 // Primary navigation — intentionally minimal (Home + Events) and easy to
 // extend later. `indicator: true` links surface the "new event" dot when

@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getPublicEvents } from "@/app/actions/events";
 import { useLocale } from "@/i18n/locale-provider";
 import { useIsEventBooked } from "@/lib/booking-state";
-import { OPEN_EVENTS } from "@/lib/content";
 import { cn } from "@/lib/utils";
 import { FeaturedEvent } from "./featured-event";
 
@@ -96,16 +95,19 @@ export function OpenEvents() {
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
+    let ignore = false;
     getPublicEvents().then((res) => {
-      if (res.success && res.openEvents && res.openEvents.length > 0) {
+      if (ignore) return;
+      if (res.success && res.openEvents) {
         setOpenEvents(res.openEvents as unknown as DisplayEvent[]);
-      } else if (res.success) {
+      } else {
         setOpenEvents([]);
       }
     });
+    return () => {
+      ignore = true;
+    };
   }, []);
-
-  const activeEvents = openEvents !== null ? openEvents : OPEN_EVENTS;
 
   const scrollToEvent = useCallback((index: number) => {
     setActiveIndex(index);
@@ -121,7 +123,7 @@ export function OpenEvents() {
 
   // Update activeIndex using IntersectionObserver on slides
   useEffect(() => {
-    if (activeEvents.length <= 1) return;
+    if (!openEvents || openEvents.length <= 1) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -145,7 +147,31 @@ export function OpenEvents() {
     });
 
     return () => observer.disconnect();
-  }, [activeEvents.length]);
+  }, [openEvents]);
+
+  if (openEvents === null) {
+    return null;
+  }
+
+  if (openEvents.length === 0) {
+    return (
+      <div data-testid="no-open-events" className="mx-auto max-w-4xl px-5 py-16 text-center">
+        <div className="glass relative mx-auto flex flex-col items-center justify-center rounded-3xl p-10 ring-1 ring-border/60 shadow-layered">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-brass/10 text-brass ring-1 ring-brass/25 mb-4">
+            <CalendarClock className="size-7" />
+          </div>
+          <h3 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
+            {t("events.noneTitle")}
+          </h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            {t("events.noneDesc")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const activeEvents = openEvents;
 
   const handlePrev = () => {
     if (activeEvents.length <= 1) return;

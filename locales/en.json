@@ -101,15 +101,10 @@
     "pastDesc": "A glimpse of gatherings that have already taken place.",
     "endedBadge": "Ended",
     "newBadge": "New",
-    "pastRetreatTitle": "Winter spiritual retreat",
-    "pastRetreatDate": "December 2025",
-    "pastRetreatLocation": "Taroudant",
-    "pastCupTitle": "Ihyaa Football Cup",
-    "pastCupDate": "August 2025",
-    "pastCupLocation": "Ouled Teima",
-    "pastGatheringTitle": "Ramadan night gathering",
-    "pastGatheringDate": "March 2025",
-    "pastGatheringLocation": "Marrakech"
+    "nonePastTitle": "No past events recorded yet",
+    "nonePastDesc": "Past events will appear here once concluded.",
+    "emptyAllTitle": "No events found at this time",
+    "emptyAllDesc": "Stay tuned for upcoming event announcements on our website and social channels."
   },
   "branches": {
     "kicker": "Where to find us",
