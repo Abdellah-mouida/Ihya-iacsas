@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { getPublicEvents } from "@/app/actions/events";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
+import { IMAGES } from "@/lib/content";
 import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
 
 type DisplayPastEvent = {
@@ -36,7 +37,7 @@ export function PastEvents() {
               { year: "numeric", month: "long" },
             ),
             locationStr: pe.location,
-            poster: pe.posterUrl,
+            poster: pe.posterUrl || IMAGES.eventPoster,
           })),
         );
       } else {

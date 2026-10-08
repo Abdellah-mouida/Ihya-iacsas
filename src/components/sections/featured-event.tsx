@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { useIsEventBooked } from "@/lib/booking-state";
 import { EVENT, IMAGES } from "@/lib/content";
+import { isEventEnded } from "@/lib/event-time";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
 type FeaturedEventProps = {
@@ -41,6 +42,7 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const { t, locale, dir } = useLocale();
   const eventId = event?.id || "majlis-ihyaa";
   const isBooked = useIsEventBooked(eventId);
+  const isEnded = event?.date ? isEventEnded(event.date, event.time) : false;
 
   const title = event
     ? locale === "ar"
@@ -188,7 +190,14 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
             </ul>
 
             <div className="mt-7 flex flex-wrap items-center gap-4">
-              {isBooked ? null : (
+              {isEnded ? (
+                <span
+                  data-testid={`ended-badge-${eventId}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-stone-500/40 bg-stone-500/15 px-5 py-2.5 text-sm font-semibold text-muted-foreground shadow-sm"
+                >
+                  {locale === "ar" ? "انتهت الفعالية" : "Event Ended"}
+                </span>
+              ) : isBooked ? null : (
                 <Button
                   asChild
                   data-testid={`book-btn-${eventId}`}

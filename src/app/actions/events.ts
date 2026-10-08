@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
 
@@ -31,6 +32,7 @@ export async function getEvents() {
 
       return {
         ...ev,
+        isEnded: isEventEnded(ev.date, ev.time),
         _count: {
           bookings: ev.bookings.length,
         },
@@ -97,13 +99,12 @@ export async function getPublicEvents() {
       };
     });
 
-    const now = new Date();
-    // An event is open/active if its date has not passed and booking is open
+    // An event is open/active if its date/time has not ended and booking is open
     const openEvents = enriched.filter(
-      (e) => new Date(e.date) >= now && e.bookingOpen,
+      (e) => !isEventEnded(e.date, e.time) && e.bookingOpen,
     );
     const pastEvents = enriched.filter(
-      (e) => new Date(e.date) < now || !e.bookingOpen,
+      (e) => isEventEnded(e.date, e.time) || !e.bookingOpen,
     );
     const hasNew = openEvents.length > 0;
 
@@ -193,6 +194,12 @@ export async function getEventById(id: string) {
         capacity: event.capacity,
         confirmedCount,
         isFull,
+        isEnded: isEventEnded(event.date, event.time),
+        isRegistrationOpen: isEventRegistrationOpen(
+          event.date,
+          event.time,
+          event.bookingOpen,
+        ),
       },
     };
   } catch (error) {

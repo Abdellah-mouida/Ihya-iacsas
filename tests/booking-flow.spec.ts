@@ -1214,4 +1214,129 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(contentModule.PAST_EVENTS).toEqual([]);
     expect(contentModule.EVENTS).toEqual([]);
   });
+
+  test("21. Automatic classification of events as open vs. ended based on event date/time, and edge cases", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+
+    const pastEventId = "test-auto-past-event";
+    const futureEventId = "test-auto-future-event";
+    const todayEventId = "test-auto-today-event";
+
+    // Clean up any stale records first
+    await prisma.event.deleteMany({
+      where: { id: { in: [pastEventId, futureEventId, todayEventId] } },
+    });
+
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const todayMidnight = new Date(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}T00:00:00.000Z`);
+    const futureHour = (today.getHours() + 2) % 24;
+    const todayTimeStr = `${pad(futureHour)}:00`;
+
+    // 1. Create a past event (date yesterday, bookingOpen: true in DB)
+    await prisma.event.create({
+      data: {
+        id: pastEventId,
+        slug: pastEventId,
+        titleAr: "فعالية سابقة منتهية تلقائياً",
+        titleEn: "Auto Past Event",
+        descriptionAr: "وصف",
+        descriptionEn: "desc",
+        date: yesterday,
+        time: "18:00",
+        location: "الرباط",
+        posterUrl: "/images/event-poster.jpg",
+        bookingOpen: true, // Intentionally left true in DB to test automatic classification
+        capacityType: "OPEN",
+      },
+    });
+
+    // 2. Create a future event (date tomorrow, bookingOpen: true)
+    await prisma.event.create({
+      data: {
+        id: futureEventId,
+        slug: futureEventId,
+        titleAr: "فعالية مستقبلية مفتوحة",
+        titleEn: "Auto Future Open Event",
+        descriptionAr: "وصف",
+        descriptionEn: "desc",
+        date: tomorrow,
+        time: "18:00",
+        location: "الدار البيضاء",
+        posterUrl: "/images/event-poster.jpg",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    // 3. Create a today event with UTC midnight and future time today
+    await prisma.event.create({
+      data: {
+        id: todayEventId,
+        slug: todayEventId,
+        titleAr: "فعالية اليوم في وقت لاحق",
+        titleEn: "Today Later Event",
+        descriptionAr: "وصف",
+        descriptionEn: "desc",
+        date: todayMidnight,
+        time: todayTimeStr,
+        location: "مراكش",
+        posterUrl: "/images/event-poster.jpg",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    // 4. Test Server Action classification via getPublicEvents()
+    const { getPublicEvents } = await import("../src/app/actions/events");
+    const publicRes = await getPublicEvents();
+    expect(publicRes.success).toBe(true);
+
+    const openIds = (publicRes.openEvents || []).map((e: { id: string }) => e.id);
+    const pastIds = (publicRes.pastEvents || []).map((e: { id: string }) => e.id);
+
+    // Yesterday's event must be automatically in pastEvents, NOT in openEvents
+    expect(openIds).not.toContain(pastEventId);
+    expect(pastIds).toContain(pastEventId);
+
+    // Tomorrow's event must be in openEvents
+    expect(openIds).toContain(futureEventId);
+    expect(pastIds).not.toContain(futureEventId);
+
+    // Today's event with future time must NOT be prematurely classified as ended
+    expect(openIds).toContain(todayEventId);
+    expect(pastIds).not.toContain(todayEventId);
+
+    // 5. Test Server Action booking block on ended event
+    const { requestBookingOtp } = await import("../src/app/actions/bookings");
+    const bookRes = await requestBookingOtp({
+      fullName: "Test Attendee",
+      email: "test.auto.past@gmail.com",
+      city: "الرباط",
+      age: 25,
+      motive: "الحضور",
+      eventId: pastEventId,
+      locale: "ar",
+    });
+    expect(bookRes.success).toBe(false);
+    expect(bookRes.error).toContain("انتهت هذه الفعالية");
+
+    // 6. Test on UI: Navigate to /events
+    await page.goto("/events");
+    await page.waitForLoadState("domcontentloaded");
+
+    // Past event should appear in the past events section
+    const pastSection = page.locator("#past-events");
+    await expect(pastSection).toBeVisible({ timeout: 25000 });
+    await expect(pastSection).toContainText("فعالية سابقة منتهية تلقائياً");
+
+    // 7. Cleanup
+    await prisma.event.deleteMany({
+      where: { id: { in: [pastEventId, futureEventId, todayEventId] } },
+    });
+  });
 });

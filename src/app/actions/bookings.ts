@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { sendOTPEmail, sendWaitlistPromotionEmail } from "@/lib/email";
+import { isEventEnded } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
@@ -204,13 +205,13 @@ export async function requestBookingOtp(data: {
       };
     }
 
-    if (!event.bookingOpen) {
+    if (!event.bookingOpen || isEventEnded(event.date, event.time)) {
       return {
         success: false,
         error:
           locale === "ar"
-            ? "الحجز لهذه الفعالية مغلق حالياً"
-            : "Booking for this event is currently closed",
+            ? "انتهت هذه الفعالية أو أُغلق التسجيل فيها"
+            : "This event has ended or registration is closed",
       };
     }
 

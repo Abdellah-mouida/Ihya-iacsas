@@ -42,6 +42,7 @@ type EventItem = {
   posterUrl: string;
   isNew: boolean;
   bookingOpen: boolean;
+  isEnded?: boolean;
   capacityType?: string;
   capacity?: number | null;
   createdAt: Date;
@@ -322,14 +323,19 @@ export default function AdminEventsPage() {
                     </h3>
 
                     {/* Badges */}
-                    {evt.bookingOpen ? (
+                    {evt.isEnded ? (
+                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border whitespace-nowrap">
+                        <Clock className="size-3 shrink-0" />
+                        <span>{locale === "ar" ? "انتهت الفعالية" : "Ended"}</span>
+                      </span>
+                    ) : evt.bookingOpen ? (
                       <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
                         <CheckCircle2 className="size-3 shrink-0" />
                         <span>{locale === "ar" ? "مفتوحة للحجز" : "Booking Open"}</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border whitespace-nowrap">
-                        <span>{locale === "ar" ? "أرشيف / انتهت" : "Past Event"}</span>
+                      <span className="inline-flex items-center gap-1 text-[0.7rem] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap">
+                        <span>{locale === "ar" ? "مغلقة للحجز" : "Booking Closed"}</span>
                       </span>
                     )}
 
