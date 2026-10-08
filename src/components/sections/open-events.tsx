@@ -240,91 +240,91 @@ export function OpenEvents() {
   return (
     <div className="relative w-full" onKeyDown={handleKeyDown}>
       {/* Switcher Control Bar */}
-      <div className="mx-auto max-w-6xl px-5 pt-8 sm:pt-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-10">
         <div
           data-testid="event-switcher"
-          className="glass-strong flex flex-col gap-4 rounded-3xl p-4 sm:p-5 shadow-layered border border-brass/20"
+          className="relative flex items-center justify-between gap-3 sm:gap-6 bg-transparent"
         >
-          {/* Top header: Kicker badge, counter, and navigation arrows */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brass/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brass">
+          {/* Side arrow (Start / Previous): Left side in LTR, Right side in RTL */}
+          <button
+            type="button"
+            onClick={handlePrev}
+            data-testid="carousel-prev-btn"
+            aria-label={t("events.switcherPrev")}
+            className="shrink-0 flex size-10 sm:size-12 items-center justify-center rounded-full bg-card/60 backdrop-blur-md border border-brass/25 text-foreground transition-all duration-200 hover:border-brass/70 hover:text-brass hover:bg-brass/10 hover:scale-105 active:scale-95 shadow-sm"
+          >
+            {dir === "rtl" ? (
+              <ChevronRight className="size-5 sm:size-6" />
+            ) : (
+              <ChevronLeft className="size-5 sm:size-6" />
+            )}
+          </button>
+
+          {/* Centered Content: Kicker + Counter, Tabs, Indicator dots */}
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 sm:gap-3.5 text-center min-w-0">
+            {/* Top row: Centered kicker badge & counter */}
+            <div className="flex items-center justify-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-brass/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brass ring-1 ring-brass/25">
                 <Sparkles className="size-3" />
                 {t("events.switcherKicker")}
               </span>
-              <span className="text-xs font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground font-mono">
                 {t("events.switcherCounter")
                   .replace("{current}", String(activeIndex + 1))
                   .replace("{total}", String(activeEvents.length))}
               </span>
             </div>
 
-            {/* Navigation buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handlePrev}
-                data-testid="carousel-prev-btn"
-                aria-label={t("events.switcherPrev")}
-                className="flex size-9 items-center justify-center rounded-full glass border border-border/40 text-foreground transition-all hover:border-brass/40 hover:text-brass hover:scale-105 active:scale-95"
-              >
-                {dir === "rtl" ? (
-                  <ChevronRight className="size-5" />
-                ) : (
-                  <ChevronLeft className="size-5" />
-                )}
-              </button>
+            {/* Middle row: Centered Interactive Event Tabs */}
+            <div
+              role="tablist"
+              className="flex items-center justify-center gap-2 overflow-x-auto max-w-full py-0.5 no-scrollbar"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {activeEvents.map((ev, idx) => (
+                <EventTabButton
+                  key={ev.id}
+                  event={ev}
+                  index={idx}
+                  isActive={activeIndex === idx}
+                  onClick={() => scrollToEvent(idx)}
+                />
+              ))}
+            </div>
 
-              <button
-                type="button"
-                onClick={handleNext}
-                data-testid="carousel-next-btn"
-                aria-label={t("events.switcherNext")}
-                className="flex size-9 items-center justify-center rounded-full glass border border-border/40 text-foreground transition-all hover:border-brass/40 hover:text-brass hover:scale-105 active:scale-95"
-              >
-                {dir === "rtl" ? (
-                  <ChevronLeft className="size-5" />
-                ) : (
-                  <ChevronRight className="size-5" />
-                )}
-              </button>
+            {/* Bottom row: Centered Indicator dots */}
+            <div className="flex items-center justify-center gap-1.5 pt-0.5">
+              {activeEvents.map((ev, idx) => (
+                <button
+                  key={ev.id}
+                  type="button"
+                  aria-label={`Slide ${idx + 1}`}
+                  onClick={() => scrollToEvent(idx)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    activeIndex === idx
+                      ? "w-6 bg-brass"
+                      : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50",
+                  )}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Interactive Event Tabs */}
-          <div
-            role="tablist"
-            className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar"
-            style={{ scrollbarWidth: "none" }}
+          {/* Side arrow (End / Next): Right side in LTR, Left side in RTL */}
+          <button
+            type="button"
+            onClick={handleNext}
+            data-testid="carousel-next-btn"
+            aria-label={t("events.switcherNext")}
+            className="shrink-0 flex size-10 sm:size-12 items-center justify-center rounded-full bg-card/60 backdrop-blur-md border border-brass/25 text-foreground transition-all duration-200 hover:border-brass/70 hover:text-brass hover:bg-brass/10 hover:scale-105 active:scale-95 shadow-sm"
           >
-            {activeEvents.map((ev, idx) => (
-              <EventTabButton
-                key={ev.id}
-                event={ev}
-                index={idx}
-                isActive={activeIndex === idx}
-                onClick={() => scrollToEvent(idx)}
-              />
-            ))}
-          </div>
-
-          {/* Indicator dots */}
-          <div className="flex items-center justify-center gap-1.5 pt-1">
-            {activeEvents.map((ev, idx) => (
-              <button
-                key={ev.id}
-                type="button"
-                aria-label={`Slide ${idx + 1}`}
-                onClick={() => scrollToEvent(idx)}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  activeIndex === idx
-                    ? "w-6 bg-brass"
-                    : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50",
-                )}
-              />
-            ))}
-          </div>
+            {dir === "rtl" ? (
+              <ChevronLeft className="size-5 sm:size-6" />
+            ) : (
+              <ChevronRight className="size-5 sm:size-6" />
+            )}
+          </button>
         </div>
       </div>
 

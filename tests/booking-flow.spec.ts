@@ -1075,9 +1075,24 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    // 2. Verify switcher bar is visible when multiple open events exist
+    // 2. Verify switcher bar is visible when multiple open events exist and has transparent background
     const switcher = page.locator('[data-testid="event-switcher"]');
     await expect(switcher).toBeVisible({ timeout: 15000 });
+    const switcherClass = await switcher.getAttribute("class");
+    expect(switcherClass).toContain("bg-transparent");
+
+    const prevBtn = page.locator('[data-testid="carousel-prev-btn"]');
+    const nextBtn = page.locator('[data-testid="carousel-next-btn"]');
+    await expect(prevBtn).toBeVisible();
+    await expect(nextBtn).toBeVisible();
+
+    // Verify left/right side navigation arrows flank the centered content
+    const prevBox = await prevBtn.boundingBox();
+    const nextBox = await nextBtn.boundingBox();
+    expect(prevBox).not.toBeNull();
+    expect(nextBox).not.toBeNull();
+    // In RTL, prev button (start) is on the right side and next button (end) is on the left side
+    expect(Math.abs((prevBox?.x ?? 0) - (nextBox?.x ?? 0))).toBeGreaterThan(200);
 
     const tab1 = page.locator('[data-testid="event-tab-majlis-ihyaa-2026"]');
     const tab2 = page.locator('[data-testid="event-tab-test-event-second"]');
@@ -1091,8 +1106,6 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await expect(initialInactive).toHaveAttribute("aria-selected", "false");
 
     // 3. Click Next button in switcher -> active tab cycles
-    const nextBtn = page.locator('[data-testid="carousel-next-btn"]');
-    await expect(nextBtn).toBeVisible();
     await nextBtn.click();
 
     // Wait for transition to cycle active tab
