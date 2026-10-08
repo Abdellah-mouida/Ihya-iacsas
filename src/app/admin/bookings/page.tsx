@@ -2,9 +2,7 @@
 
 import { motion } from "framer-motion";
 import {
-  AlertCircle,
   Calendar,
-  Check,
   CheckCircle2,
   Clock,
   Filter,
@@ -19,7 +17,6 @@ import {
   Users,
   UserCheck,
   UserX,
-  X,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -111,7 +108,20 @@ export default function AdminBookingsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    let ignore = false;
+    void (async () => {
+      setLoading(true);
+      const res = await getBookings(selectedEventId);
+      if (!ignore) {
+        if (res.success && res.bookings) {
+          setBookings(res.bookings as BookingItem[]);
+        }
+        setLoading(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
   }, [selectedEventId]);
 
   const handleApprove = async (e: React.MouseEvent, id: string) => {
