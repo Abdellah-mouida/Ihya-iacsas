@@ -4,6 +4,7 @@ import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Sparkles } from
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getPublicEvents } from "@/app/actions/events";
+import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useLocale } from "@/i18n/locale-provider";
 import { useIsEventBooked } from "@/lib/booking-state";
 import { cn } from "@/lib/utils";
@@ -150,7 +151,16 @@ export function OpenEvents() {
   }, [openEvents]);
 
   if (openEvents === null) {
-    return null;
+    return (
+      <div
+        data-testid="events-loading"
+        className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center py-20 min-h-[380px]"
+      >
+        <div className="glass relative flex w-full max-w-md flex-col items-center justify-center rounded-3xl p-10 ring-1 ring-border/60 shadow-layered">
+          <IslamicLoader size="lg" message={t("events.loading")} />
+        </div>
+      </div>
+    );
   }
 
   if (openEvents.length === 0) {

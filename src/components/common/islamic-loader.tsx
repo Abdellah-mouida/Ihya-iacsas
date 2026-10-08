@@ -105,7 +105,7 @@ export function IslamicLoader({
         <motion.p
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-xs sm:text-sm font-semibold tracking-wider text-muted-foreground"
+          className="text-sm sm:text-base font-heading font-medium tracking-wide text-foreground/85 text-center select-none"
         >
           {message}
         </motion.p>

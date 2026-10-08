@@ -29,6 +29,7 @@ import {
 } from "@/app/actions/bookings";
 import { getEventById } from "@/app/actions/events";
 import { CityCombobox } from "@/components/common/city-combobox";
+import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { SegmentedOtpInput } from "@/components/common/segmented-otp-input";
 import { Button } from "@/components/ui/button";
@@ -95,15 +96,28 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
   const [waitlistOrder, setWaitlistOrder] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
+  const [eventLoading, setEventLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let ignore = false;
     if (targetEventId) {
-      getEventById(targetEventId).then((res) => {
-        if (res.success && res.event) {
-          setEventInfo(res.event);
-        }
-      });
+      setEventLoading(true);
+      getEventById(targetEventId)
+        .then((res) => {
+          if (ignore) return;
+          if (res.success && res.event) {
+            setEventInfo(res.event);
+          }
+        })
+        .finally(() => {
+          if (!ignore) setEventLoading(false);
+        });
+    } else {
+      setEventLoading(false);
     }
+    return () => {
+      ignore = true;
+    };
   }, [targetEventId]);
 
   const steps = [
@@ -368,19 +382,34 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     );
   }
 
+  if (eventLoading && !eventInfo) {
+    return (
+      <div
+        data-testid="booking-loading"
+        className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center py-20 min-h-[420px]"
+      >
+        <div className="glass relative flex w-full max-w-md flex-col items-center justify-center rounded-3xl p-10 ring-1 ring-border/60 shadow-layered">
+          <IslamicLoader size="lg" message={t("booking.loading")} />
+        </div>
+      </div>
+    );
+  }
+
   const summaryTitle =
     (locale === "ar" ? eventInfo?.titleAr : eventInfo?.titleEn) ||
-    t("event.name");
+    eventInfo?.titleAr ||
+    eventInfo?.titleEn ||
+    "";
 
   const summaryDate = eventInfo?.date
     ? new Date(eventInfo.date).toLocaleDateString(
         locale === "ar" ? "ar-MA" : "en-US",
         { weekday: "long", year: "numeric", month: "long", day: "numeric" },
       )
-    : t("event.date");
+    : "";
 
-  const summaryTime = eventInfo?.time || t("event.time");
-  const summaryLocation = eventInfo?.location || t("event.location");
+  const summaryTime = eventInfo?.time || "";
+  const summaryLocation = eventInfo?.location || "";
   const summaryPoster = eventInfo?.posterUrl || IMAGES.eventPoster;
   const isLimited = eventInfo?.capacityType === "LIMITED";
   const isFull = eventInfo?.isFull;

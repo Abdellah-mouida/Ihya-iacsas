@@ -96,6 +96,7 @@
     "switcherNext": "Next Event",
     "noneTitle": "No open events right now",
     "noneDesc": "Check back soon — new gatherings are announced regularly.",
+    "loading": "Loading events...",
     "pastKicker": "Archive",
     "pastTitle": "Past events",
     "pastDesc": "A glimpse of gatherings that have already taken place.",
@@ -195,6 +196,7 @@
     "made": "Made with love to serve the community."
   },
   "booking": {
+    "loading": "Loading event details and booking form...",
     "back": "Back to event",
     "demoBanner": "Direct individual registration — free and open to everyone.",
     "title": "Booking: Ihyaa Majalis",

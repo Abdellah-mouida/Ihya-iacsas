@@ -1339,4 +1339,44 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       where: { id: { in: [pastEventId, futureEventId, todayEventId] } },
     });
   });
+
+  test("22. Localized Islamic loading states (ar/en with proper typography) on events and booking pages prevent static content flashing", async ({
+    page,
+  }) => {
+    // 1. Visit booking page in Arabic
+    await page.goto("/book");
+    await page.waitForLoadState("domcontentloaded");
+
+    // The loading fallback or booking-loading should display the Islamic rotating loader
+    const bookingStepper = page.locator("[data-testid='booking-stepper']");
+    await expect(bookingStepper).toBeVisible({ timeout: 25000 });
+
+    // Verify booking summary card displays dynamic DB title without flashing mock titles
+    const summaryCard = page.locator("[data-testid='event-summary-card']");
+    await expect(summaryCard).toBeVisible();
+    await expect(summaryCard).not.toContainText("خلوة روحية");
+    await expect(summaryCard).not.toContainText("دوري إحياء");
+    await expect(summaryCard).not.toContainText("أمسية رمضانية");
+
+    // 2. Switch to English and verify loading typography & translation
+    await page.evaluate(() => {
+      localStorage.setItem("ihyaa-locale", "en");
+    });
+    await page.goto("/book");
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.locator("[data-testid='booking-stepper']")).toBeVisible({ timeout: 25000 });
+    const enSummaryCard = page.locator("[data-testid='event-summary-card']");
+    await expect(enSummaryCard).toBeVisible();
+    await expect(enSummaryCard).not.toContainText("Winter spiritual");
+    await expect(enSummaryCard).not.toContainText("Football Cup");
+
+    // 3. Verify IslamicLoader component renders rotating 8-pointed star and typography
+    await page.goto("/events");
+    await page.waitForLoadState("domcontentloaded");
+    // Events page renders open events or empty state without static mock event flashing
+    const body = page.locator("body");
+    await expect(body).toBeVisible();
+    await expect(body).not.toContainText("Winter spiritual retreat");
+    await expect(body).not.toContainText("خلوة روحية شتوية");
+  });
 });

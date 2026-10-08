@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { BookingFallback } from "@/components/common/booking-fallback";
 import { BookingStepper } from "@/components/common/booking-stepper";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
@@ -95,7 +96,7 @@ export default async function EventBookPage({
       </header>
 
       <main className="mx-auto max-w-5xl px-5 py-8 sm:py-12">
-        <Suspense fallback={<div className="text-center py-10 font-amiri text-muted-foreground">جاري التحميل...</div>}>
+        <Suspense fallback={<BookingFallback />}>
           <BookingStepper initialEventId={targetEventId} />
         </Suspense>
       </main>
