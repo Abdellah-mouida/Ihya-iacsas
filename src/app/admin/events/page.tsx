@@ -26,6 +26,7 @@ import {
   updateEvent,
 } from "@/app/actions/events";
 import { BilingualFields } from "@/components/common/bilingual-fields";
+import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -73,6 +74,7 @@ function isValidImageUrl(url: string | null | undefined): boolean {
 
 export default function AdminEventsPage() {
   const { locale } = useLocale();
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -143,15 +145,17 @@ export default function AdminEventsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: locale === "ar" ? "حذف الفعالية" : "Delete Event",
+      description:
         locale === "ar"
-          ? "هل أنت تأكد من رغبتك في حذف هذه الفعالية بجميع حجوزاتها؟"
-          : "Are you sure you want to delete this event and its bookings?",
-      )
-    ) {
-      return;
-    }
+          ? "هل أنت متأكد من رغبتك في حذف هذه الفعالية بجميع حجوزاتها؟ لا يمكن التراجع عن هذا الإجراء."
+          : "Are you sure you want to delete this event and all its bookings? This action cannot be undone.",
+      confirmText: locale === "ar" ? "حذف الفعالية" : "Delete Event",
+      cancelText: locale === "ar" ? "إلغاء" : "Cancel",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setEvents((prev) => prev.filter((e) => e.id !== id));
     const res = await deleteEvent(id);
@@ -789,6 +793,7 @@ export default function AdminEventsPage() {
           </motion.div>
         </div>
       )}
+      {ConfirmDialogComponent}
     </div>
   );
 }

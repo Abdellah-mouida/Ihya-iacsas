@@ -384,4 +384,72 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       });
     }
   });
+
+  test("12. In-app confirmation dialog replaces native confirm() sitewide with accessible modal, cancel and confirm actions", async ({
+    page,
+  }) => {
+    // Flag to ensure NO native browser dialog is triggered
+    let nativeDialogTriggered = false;
+    page.on("dialog", () => {
+      nativeDialogTriggered = true;
+    });
+
+    const testContactEmail = "dialog-test@ihyaa.org";
+    await prisma.contactMessage.deleteMany({ where: { email: testContactEmail } });
+    const contact = await prisma.contactMessage.create({
+      data: {
+        name: "Confirm Dialog Tester",
+        email: testContactEmail,
+        message: "Testing custom accessible confirmation dialog",
+      },
+    });
+
+    try {
+      await loginAdmin(page);
+      await page.goto("/admin/contacts");
+
+      const messageCard = page.locator("div", { hasText: testContactEmail }).first();
+      await expect(messageCard).toBeVisible({ timeout: 10000 });
+
+      // Click delete button for the message
+      const deleteBtn = page.locator(`[data-testid="delete-contact-${contact.id}"]`);
+      await expect(deleteBtn).toBeVisible({ timeout: 5000 });
+      await deleteBtn.click();
+
+      // Assert custom in-app confirm dialog appears
+      const confirmDialog = page.locator('[data-testid="confirm-dialog"]');
+      await expect(confirmDialog).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('[data-testid="confirm-dialog-title"]')).toBeVisible();
+      await expect(page.locator('[data-testid="confirm-dialog-description"]')).toBeVisible();
+
+      // 1. Cancel action: clicking cancel closes dialog, message remains
+      const cancelBtn = page.locator('[data-testid="confirm-dialog-cancel"]');
+      await cancelBtn.click();
+      await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+
+      // Message still exists in DB and on page
+      const checkRecord = await prisma.contactMessage.findUnique({ where: { id: contact.id } });
+      expect(checkRecord).not.toBeNull();
+      await expect(messageCard).toBeVisible();
+
+      // 2. Confirm action: clicking delete again, then clicking confirm executes deletion
+      await deleteBtn.click();
+      await expect(confirmDialog).toBeVisible({ timeout: 5000 });
+      const confirmActionBtn = page.locator('[data-testid="confirm-dialog-confirm"]');
+      await confirmActionBtn.click();
+
+      // Dialog dismisses and message disappears
+      await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+      await expect(page.locator("div", { hasText: testContactEmail })).not.toBeVisible({ timeout: 10000 });
+
+      // DB record is gone
+      const deletedRecord = await prisma.contactMessage.findUnique({ where: { id: contact.id } });
+      expect(deletedRecord).toBeNull();
+
+      // Ensure NO native browser confirm/alert dialog was triggered
+      expect(nativeDialogTriggered).toBe(false);
+    } finally {
+      await prisma.contactMessage.deleteMany({ where: { email: testContactEmail } });
+    }
+  });
 });

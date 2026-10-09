@@ -20,6 +20,7 @@ import {
   updateGalleryPhoto,
 } from "@/app/actions/gallery";
 import { BilingualFields } from "@/components/common/bilingual-fields";
+import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -46,6 +47,7 @@ function isValidImageUrl(url: string | null | undefined): boolean {
 
 export default function AdminGalleryPage() {
   const { locale } = useLocale();
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,15 +88,17 @@ export default function AdminGalleryPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: locale === "ar" ? "حذف الصورة" : "Delete Photo",
+      description:
         locale === "ar"
-          ? "هل أنت تأكد من رغبتك في حذف هذه الصورة من المعرض؟"
-          : "Are you sure you want to delete this photo from the gallery?",
-      )
-    ) {
-      return;
-    }
+          ? "هل أنت متأكد من رغبتك في حذف هذه الصورة من المعرض؟ لا يمكن التراجع عن هذا الإجراء."
+          : "Are you sure you want to delete this photo from the gallery? This action cannot be undone.",
+      confirmText: locale === "ar" ? "حذف الصورة" : "Delete Photo",
+      cancelText: locale === "ar" ? "إلغاء" : "Cancel",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setPhotos((prev) => prev.filter((p) => p.id !== id));
     const res = await deleteGalleryPhoto(id);
@@ -422,6 +426,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           </motion.div>
         </div>
       )}
+      {ConfirmDialogComponent}
     </div>
   );
 }

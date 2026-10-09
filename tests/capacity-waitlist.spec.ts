@@ -299,6 +299,12 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     await expect(rejectBtn).toBeVisible({ timeout: 10000 });
     await rejectBtn.click();
 
+    // Confirm in custom in-app confirm dialog if present
+    const confirmBtn = page.locator('[data-testid="confirm-dialog-confirm"]');
+    if (await confirmBtn.isVisible({ timeout: 4000 }).catch(() => false)) {
+      await confirmBtn.click();
+    }
+
     // Verify User 1 becomes REJECTED
     const user1Status = page.locator(`[data-testid="booking-status-${booking1Id}"]`);
     await expect(user1Status).toContainText(/مرفوض|Rejected/i, { timeout: 25000 });

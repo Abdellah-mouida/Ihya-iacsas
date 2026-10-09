@@ -32,6 +32,7 @@ import {
 import { getEvents } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
 import { IslamicLoader } from "@/components/common/islamic-loader";
+import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,7 @@ export default function AdminBookingsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeModalBooking, setActiveModalBooking] =
     useState<BookingRecord | null>(null);
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   const fetchData = async () => {
     setLoading(true);
@@ -141,15 +143,16 @@ export default function AdminBookingsPage() {
 
   const handleReject = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: locale === "ar" ? "تأكيد رفض الحجز" : "Confirm Reject Booking",
+      description:
         locale === "ar"
           ? "هل أنت متأكد من رفض هذا الحجز؟ في حال توفر مقعد سيتم ترقية الحجز التالي في قائمة الانتظار تلقائياً."
           : "Are you sure you want to reject this booking? If a spot opens, the next waitlisted attendee will be auto-promoted.",
-      )
-    ) {
-      return;
-    }
+      confirmText: locale === "ar" ? "رفض الحجز" : "Reject Booking",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     const res = await rejectBooking(id);
     if (res.success) {
@@ -177,15 +180,16 @@ export default function AdminBookingsPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: locale === "ar" ? "تأكيد حذف الحجز" : "Confirm Delete Booking",
+      description:
         locale === "ar"
           ? "هل أنت متأكد من رغبتك في حذف هذا الحجز؟"
           : "Are you sure you want to delete this booking record?",
-      )
-    ) {
-      return;
-    }
+      confirmText: locale === "ar" ? "حذف الحجز" : "Delete Booking",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setBookings((prev) => prev.filter((b) => b.id !== id));
     const res = await deleteBooking(id);
@@ -770,6 +774,8 @@ export default function AdminBookingsPage() {
           </DialogContent>
         ) : null}
       </Dialog>
+
+      {ConfirmDialogComponent}
     </div>
   );
 }

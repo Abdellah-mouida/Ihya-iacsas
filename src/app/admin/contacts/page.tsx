@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { deleteContactMessage, getContactMessages } from "@/app/actions/contacts";
+import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
@@ -28,6 +29,7 @@ type ContactRecord = {
 
 export default function AdminContactsPage() {
   const { locale } = useLocale();
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<ContactRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,15 +52,17 @@ export default function AdminContactsPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: locale === "ar" ? "حذف الرسالة" : "Delete Message",
+      description:
         locale === "ar"
-          ? "هل أنت متأكد من رغبتك في حذف هذه الرسالة؟"
-          : "Are you sure you want to delete this contact message?",
-      )
-    ) {
-      return;
-    }
+          ? "هل أنت متأكد من رغبتك في حذف هذه الرسالة؟ لا يمكن التراجع عن هذا الإجراء."
+          : "Are you sure you want to delete this contact message? This action cannot be undone.",
+      confirmText: locale === "ar" ? "حذف الرسالة" : "Delete Message",
+      cancelText: locale === "ar" ? "إلغاء" : "Cancel",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setMessages((prev) => prev.filter((m) => m.id !== id));
     const res = await deleteContactMessage(id);
@@ -222,6 +226,7 @@ export default function AdminContactsPage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    data-testid={`delete-contact-${record.id}`}
                     onClick={() => handleDelete(record.id)}
                     className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
@@ -237,6 +242,7 @@ export default function AdminContactsPage() {
           ))}
         </motion.div>
       )}
+      {ConfirmDialogComponent}
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
   updateCarouselPost,
 } from "@/app/actions/carousel";
 import { Button } from "@/components/ui/button";
+import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -51,6 +52,7 @@ function isValidImageUrl(url: string | null | undefined): boolean {
 
 export default function AdminCarouselPage() {
   const { locale } = useLocale();
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<CarouselItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -107,15 +109,17 @@ export default function AdminCarouselPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: locale === "ar" ? "حذف الملصق" : "Delete Poster",
+      description:
         locale === "ar"
-          ? "هل أنت تأكد من رغبتك في حذف هذا الملصق؟"
-          : "Are you sure you want to delete this poster?",
-      )
-    ) {
-      return;
-    }
+          ? "هل أنت متأكد من رغبتك في حذف هذا الملصق؟ لا يمكن التراجع عن هذا الإجراء."
+          : "Are you sure you want to delete this poster? This action cannot be undone.",
+      confirmText: locale === "ar" ? "حذف الملصق" : "Delete Poster",
+      cancelText: locale === "ar" ? "إلغاء" : "Cancel",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setPosts((prev) => prev.filter((p) => p.id !== id));
     const res = await deleteCarouselPost(id);
@@ -499,6 +503,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           </motion.div>
         </div>
       )}
+      {ConfirmDialogComponent}
     </div>
   );
 }
