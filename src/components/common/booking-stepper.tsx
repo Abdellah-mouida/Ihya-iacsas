@@ -8,7 +8,6 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  Copy,
   Home,
   KeyRound,
   MapPin,
@@ -73,7 +72,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
 
   const [bookingId, setBookingId] = useState<string>("");
   const [otp, setOtp] = useState<string>("");
-  const [bookingRef, setBookingRef] = useState<string>("");
   const [targetEventId, setTargetEventId] = useState<string>(
     initialEventId || eventIdParam || "majlis-ihyaa-2026",
   );
@@ -95,26 +93,23 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
   const [bookingStatus, setBookingStatus] = useState<string>("CONFIRMED");
   const [waitlistOrder, setWaitlistOrder] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
-  const [eventLoading, setEventLoading] = useState<boolean>(true);
+  const [eventLoading, setEventLoading] = useState<boolean>(() => Boolean(targetEventId));
 
   useEffect(() => {
     let ignore = false;
-    if (targetEventId) {
-      setEventLoading(true);
-      getEventById(targetEventId)
-        .then((res) => {
-          if (ignore) return;
-          if (res.success && res.event) {
-            setEventInfo(res.event);
-          }
-        })
-        .finally(() => {
-          if (!ignore) setEventLoading(false);
-        });
-    } else {
-      setEventLoading(false);
-    }
+    if (!targetEventId) return;
+
+    getEventById(targetEventId)
+      .then((res) => {
+        if (ignore) return;
+        if (res.success && res.event) {
+          setEventInfo(res.event);
+        }
+      })
+      .finally(() => {
+        if (!ignore) setEventLoading(false);
+      });
+
     return () => {
       ignore = true;
     };
@@ -134,24 +129,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     }, 1000);
     return () => clearInterval(interval);
   }, [resendTimer]);
-
-  // Auto-redirect countdown timer on Step 3
-  useEffect(() => {
-    if (step !== 3) return;
-
-    const interval = setInterval(() => {
-      setRedirectCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [step]);
-
-  // Navigate when countdown reaches 0
-  useEffect(() => {
-    if (step === 3 && redirectCountdown === 0) {
-      router.push("/events");
-    }
-  }, [step, redirectCountdown, router]);
 
   function validateDetails(): boolean {
     const e: Record<string, string> = {};
@@ -263,7 +240,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
       });
 
       if (res.success && res.bookingRef) {
-        setBookingRef(res.bookingRef);
         if (
           res.eventId &&
           (res.eventId === targetEventId ||
@@ -872,36 +848,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t("booking.ref")}:</span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      data-testid="booking-ref-display"
-                      className="font-mono font-bold text-brass text-sm"
-                    >
-                      {bookingRef}
-                    </span>
-                    <button
-                      type="button"
-                      data-testid="copy-booking-ref-btn"
-                      onClick={() => {
-                        if (bookingRef) {
-                          navigator.clipboard?.writeText?.(bookingRef);
-                          notify.success(
-                            locale === "ar"
-                              ? "تم نسخ رقم الحجز بنجاح"
-                              : "Booking reference copied to clipboard",
-                          );
-                        }
-                      }}
-                      className="p-1 rounded-md text-muted-foreground hover:text-brass hover:bg-brass/10 transition-colors"
-                      title={locale === "ar" ? "نسخ رقم الحجز" : "Copy reference"}
-                      aria-label={locale === "ar" ? "نسخ رقم الحجز" : "Copy reference"}
-                    >
-                      <Copy className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{t("booking.fName")}:</span>
                   <span className="font-semibold text-foreground">
                     {details.fullName}
@@ -921,17 +867,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                 </div>
               </div>
 
-              {/* Redirect notice banner */}
-              <div
-                data-testid="redirect-notice"
-                className="w-full rounded-xl border border-brass/30 bg-brass/10 py-3 px-4 text-xs font-medium text-brass flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="size-3.5 animate-spin" />
-                <span>
-                  {t("booking.redirectNotice", { seconds: redirectCountdown })}
-                </span>
-              </div>
-
               <div className="mt-2 flex w-full flex-col gap-3 sm:flex-row">
                 <Button
                   asChild
@@ -940,8 +875,8 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                   <Link href="/events">
                     <ArrowLeft className="size-5 rtl:rotate-180" />
                     {locale === "ar"
-                      ? "الذهاب لصفحة الفعالية الآن"
-                      : "Go to Event Page Now"}
+                      ? "الذهاب لصفحة الفعاليات"
+                      : "Go to Events Page"}
                   </Link>
                 </Button>
 

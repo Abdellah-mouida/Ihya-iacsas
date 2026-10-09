@@ -242,16 +242,22 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     }
 
     // Since onComplete auto-submits on the 6th digit, wait for step 3 confirmation directly
-    const bookingRef = page.getByTestId("booking-ref-display");
-    await expect(bookingRef).toBeVisible({ timeout: 35000 });
-    await expect(bookingRef).toContainText(/IHY-/);
+    const statusBadge = page.getByTestId("booking-status-badge");
+    await expect(statusBadge).toBeVisible({ timeout: 35000 });
+    await expect(statusBadge).toContainText(/مؤكد|Confirmed/i);
 
-    // Verify redirect notice is visible with countdown
-    const redirectNotice = page.getByTestId("redirect-notice");
-    await expect(redirectNotice).toBeVisible();
+    // Verify booking reference number is hidden and redirect notice banner is removed (Task 5)
+    await expect(page.locator('[data-testid="booking-ref-display"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="redirect-notice"]')).toHaveCount(0);
 
-    // Wait for automatic redirect to /events (within 6 seconds)
-    await page.waitForURL("**/events", { timeout: 8000 });
+    // Verify NO automatic redirect happens: wait 3.5 seconds and URL remains on booking page
+    await page.waitForTimeout(3500);
+    expect(page.url()).toContain("/book");
+
+    // Click "الذهاب لصفحة الفعاليات" button to navigate to /events
+    const toEventsBtn = page.locator('a[href="/events"]').first();
+    await toEventsBtn.click();
+    await page.waitForURL("**/events", { timeout: 15000 });
 
     // On event page, verify booked state replaces normal CTA
     const bookedBadge = page.getByTestId("booked-state-badge").first();
@@ -333,9 +339,10 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     }
 
     // 8. Wait for Step 3 confirmation
-    const bookingRef = page.getByTestId("booking-ref-display");
-    await expect(bookingRef).toBeVisible({ timeout: 15000 });
-    await expect(bookingRef).toContainText(/IHY-/);
+    const statusBadge = page.getByTestId("booking-status-badge");
+    await expect(statusBadge).toBeVisible({ timeout: 15000 });
+    await expect(statusBadge).toContainText(/مؤكد|Confirmed|قيد المراجعة/i);
+    await expect(page.locator('[data-testid="booking-ref-display"]')).toHaveCount(0);
 
     // 9. Assert database state: exactly 1 booking for Email B, and 0 for Email A
     const bookingsA = await prisma.booking.findMany({
@@ -419,8 +426,10 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       await page.fill(`[data-testid="otp-box-${i}"]`, otpCode1[i]);
     }
 
-    const bookingRef = page.getByTestId("booking-ref-display");
-    await expect(bookingRef).toBeVisible({ timeout: 15000 });
+    const statusBadge = page.getByTestId("booking-status-badge");
+    await expect(statusBadge).toBeVisible({ timeout: 15000 });
+    await expect(statusBadge).toContainText(/مؤكد|Confirmed|قيد المراجعة/i);
+    await expect(page.locator('[data-testid="booking-ref-display"]')).toHaveCount(0);
 
     // Assert booking exists for Event 1
     const event1Bookings = await prisma.booking.findMany({
@@ -506,7 +515,8 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
       await page.fill(`[data-testid="otp-box-${i}"]`, otpCode2[i]);
     }
 
-    await expect(bookingRef).toBeVisible({ timeout: 15000 });
+    const statusBadge2 = page.getByTestId("booking-status-badge");
+    await expect(statusBadge2).toBeVisible({ timeout: 15000 });
 
     // 6. Assert DB has exactly 1 booking for Event 1 and 1 booking for Event 2
     const allBookings = await prisma.booking.findMany({
