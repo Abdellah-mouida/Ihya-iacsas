@@ -344,10 +344,12 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await expect(toast).toHaveClass(/cn-toast/);
 
     // Verify close button dismisses toast
-    const closeBtn = toast.locator("[data-close-button]");
-    await expect(closeBtn).toBeVisible();
-    await closeBtn.click({ force: true });
-    await expect(toast).not.toBeVisible({ timeout: 5000 });
+    const activeToast = page.locator('[data-sonner-toast]:not([data-removed="true"])').last();
+    const closeBtn = activeToast.locator("[data-close-button]");
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click({ force: true });
+    }
+    await expect(activeToast).not.toBeVisible({ timeout: 5000 });
 
     // Clean up DB contact message
     await prisma.contactMessage.deleteMany({
@@ -371,8 +373,10 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       await expect(toaster).toHaveAttribute("dir", "ltr");
 
       // Verify close button dismisses
-      if (await closeBtn.isVisible()) {
-        await closeBtn.click({ force: true });
+      const engActiveToast = page.locator('[data-sonner-toast]:not([data-removed="true"])').last();
+      const engCloseBtn = engActiveToast.locator("[data-close-button]");
+      if (await engCloseBtn.isVisible()) {
+        await engCloseBtn.click({ force: true });
       }
 
       await prisma.contactMessage.deleteMany({

@@ -558,27 +558,61 @@ textarea::-webkit-scrollbar {
    Islamic Themed Glassmorphic Toast Notification System
    ========================================================================= */
 [data-sonner-toaster] {
-  --normal-bg: color-mix(in oklch, var(--card) 88%, transparent);
-  --normal-border: color-mix(in oklch, var(--brass) 30%, transparent);
+  --normal-bg: color-mix(in oklch, var(--card) 96%, transparent);
+  --normal-border: color-mix(in oklch, var(--brass) 55%, transparent);
   --normal-text: var(--foreground);
+  padding: 1rem !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+
+[data-sonner-toaster] > ol {
+  overflow: visible !important;
 }
 
 [data-sonner-toast] {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: color-mix(in oklch, var(--card) 88%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: color-mix(in oklch, var(--card) 96%, transparent) !important;
   border-radius: 1rem !important;
-  border: 1px solid color-mix(in oklch, var(--brass) 30%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 15px -3px color-mix(in oklch, var(--brass) 15%, transparent) !important;
+  border: 1px solid color-mix(in oklch, var(--brass) 55%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 16px -2px color-mix(in oklch, var(--brass) 20%, transparent) !important;
   padding: 0.875rem 1rem !important;
   font-family: inherit !important;
   position: relative !important;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  overflow: visible !important;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+}
+
+[data-sonner-toast]:hover {
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.16), 0 0 20px -2px color-mix(in oklch, var(--brass) 28%, transparent) !important;
 }
 
 .dark [data-sonner-toast] {
-  background: color-mix(in oklch, var(--card) 85%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px -3px color-mix(in oklch, var(--brass) 20%, transparent) !important;
+  background: color-mix(in oklch, var(--card) 94%, black) !important;
+  border-color: color-mix(in oklch, var(--brass) 60%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.55), 0 0 16px -2px color-mix(in oklch, var(--brass) 25%, transparent) !important;
+}
+
+.dark [data-sonner-toast]:hover {
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.65), 0 0 22px -2px color-mix(in oklch, var(--brass) 32%, transparent) !important;
+}
+
+/* Smooth exit without texture flash */
+[data-sonner-toast][data-removed="true"],
+[data-sonner-toast][data-mounted="false"] {
+  opacity: 0 !important;
+  transform: scale(0.95) translateY(4px) !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+  pointer-events: none !important;
+}
+
+[data-sonner-toast][data-removed="true"]::before,
+[data-sonner-toast][data-mounted="false"]::before,
+[data-sonner-toast][data-removed="true"]::after,
+[data-sonner-toast][data-mounted="false"]::after {
+  opacity: 0 !important;
+  transition: opacity 0.15s ease !important;
 }
 
 /* Subtle Islamic Girih watermark */
@@ -592,6 +626,7 @@ textarea::-webkit-scrollbar {
   -webkit-mask: url(/patterns/girih.svg) 0 0 / 48px 48px repeat;
   mask: url(/patterns/girih.svg) 0 0 / 48px 48px repeat;
   background-color: currentColor;
+  transition: opacity 0.2s ease;
 }
 .dark [data-sonner-toast]::before {
   opacity: 0.08;
@@ -605,35 +640,36 @@ textarea::-webkit-scrollbar {
   right: 0;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, color-mix(in oklch, var(--brass) 45%, transparent) 0%, transparent 70%);
+  background: linear-gradient(135deg, color-mix(in oklch, var(--brass) 50%, transparent) 0%, transparent 70%);
   pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 [dir="rtl"] [data-sonner-toast]::after,
 [data-sonner-toaster][dir="rtl"] [data-sonner-toast]::after {
   right: auto;
   left: 0;
-  background: linear-gradient(-135deg, color-mix(in oklch, var(--brass) 45%, transparent) 0%, transparent 70%);
+  background: linear-gradient(-135deg, color-mix(in oklch, var(--brass) 50%, transparent) 0%, transparent 70%);
 }
 
-/* Status variants */
+/* Status variants with high contrast borders */
 [data-sonner-toast][data-type="success"] {
-  border-color: color-mix(in oklch, var(--emerald) 45%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--emerald) 25%, transparent) !important;
+  border-color: color-mix(in oklch, var(--emerald) 70%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--emerald) 30%, transparent) !important;
 }
 
 [data-sonner-toast][data-type="error"] {
-  border-color: color-mix(in oklch, var(--destructive) 45%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--destructive) 25%, transparent) !important;
+  border-color: color-mix(in oklch, var(--destructive) 75%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--destructive) 30%, transparent) !important;
 }
 
 [data-sonner-toast][data-type="warning"] {
-  border-color: color-mix(in oklch, var(--gold) 45%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--gold) 25%, transparent) !important;
+  border-color: color-mix(in oklch, var(--gold) 75%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--gold) 30%, transparent) !important;
 }
 
 [data-sonner-toast][data-type="info"] {
-  border-color: color-mix(in oklch, var(--brass) 45%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 18px -2px color-mix(in oklch, var(--brass) 25%, transparent) !important;
+  border-color: color-mix(in oklch, var(--brass) 70%, transparent) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--brass) 30%, transparent) !important;
 }
 
 /* Typography */
