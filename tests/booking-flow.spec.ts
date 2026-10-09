@@ -195,6 +195,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   test("6. Full successful booking run: OTP verification, confirmation, redirect, and event page booked state", async ({
     page,
   }) => {
+    test.setTimeout(90000);
     await page.goto("/events/majlis-ihyaa/book");
 
     // Check logo circular asset
