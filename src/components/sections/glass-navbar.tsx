@@ -37,13 +37,19 @@ function NewEventDot({ label }: { label: string }) {
   );
 }
 
-export function GlassNavbar() {
+export function GlassNavbar({
+  initialBookable = null,
+}: {
+  initialBookable?: boolean | null;
+} = {}) {
   const { t } = useLocale();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
-  const [hasBookableEvents, setHasBookableEvents] = useState(true);
+  // Render nothing until known to eliminate button flicker:
+  // Starts null (unknown), only renders when explicitly true.
+  const [hasBookableEvents, setHasBookableEvents] = useState<boolean | null>(initialBookable);
 
   useEffect(() => {
     let mounted = true;
@@ -58,6 +64,8 @@ export function GlassNavbar() {
         } else if (res.success) {
           setHasNewEvent(res.hasNew);
           setHasBookableEvents(res.hasNew);
+        } else {
+          setHasBookableEvents(false);
         }
       });
     };
@@ -216,7 +224,7 @@ export function GlassNavbar() {
             onDark={transparentTop}
           />
           <ThemeToggle onDark={transparentTop} />
-          {hasBookableEvents && (
+          {hasBookableEvents === true ? (
             <Button
               asChild
               data-testid="navbar-book-btn"
@@ -227,7 +235,7 @@ export function GlassNavbar() {
             >
               <Link href={EVENT.bookHref}>{t("nav.book")}</Link>
             </Button>
-          )}
+          ) : null}
 
           {/* Animated hamburger */}
           <button
@@ -321,7 +329,7 @@ export function GlassNavbar() {
               </motion.ul>
               <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
                 <LanguageSwitcher className="flex-1 justify-center" />
-                {hasBookableEvents && (
+                {hasBookableEvents === true ? (
                   <Button
                     asChild
                     data-testid="navbar-book-btn-mobile"
@@ -331,7 +339,7 @@ export function GlassNavbar() {
                       {t("nav.book")}
                     </Link>
                   </Button>
-                )}
+                ) : null}
               </div>
             </motion.div>
           </>
