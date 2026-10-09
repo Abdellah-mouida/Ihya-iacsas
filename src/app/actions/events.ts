@@ -345,9 +345,18 @@ export async function updateEvent(id: string, formData: FormData) {
       capacity,
     };
 
-    const slugRaw = (formData.get("slug") as string)?.trim();
-    if (slugRaw) {
-      dataToUpdate.slug = await generateUniqueEventSlug(slugRaw, id);
+    // Preserve immutable slug on title or details edit.
+    // If the event already has a slug, it remains strictly immutable.
+    // Only generate a slug if a legacy record has no slug.
+    const existing = await prisma.event.findUnique({
+      where: { id },
+      select: { slug: true },
+    });
+    if (!existing) {
+      return { success: false, error: "Event not found" };
+    }
+    if (!existing.slug) {
+      dataToUpdate.slug = await generateUniqueEventSlug(titleEn || titleAr, id);
     }
 
     if (file && file.size > 0) {

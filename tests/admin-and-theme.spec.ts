@@ -452,4 +452,80 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       await prisma.contactMessage.deleteMany({ where: { email: testContactEmail } });
     }
   });
+
+  test("13. Admin cleanup: slugs and slug input hidden, Auto Dot Active removed, immutable slug preserved on title edit (Task 8)", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+
+    const testEventId = "majlis-ihyaa-2026";
+    const initialEvent = await prisma.event.findUnique({ where: { id: testEventId } });
+    expect(initialEvent).not.toBeNull();
+    const originalSlug = initialEvent!.slug;
+    const originalTitleAr = initialEvent!.titleAr;
+    const originalTitleEn = initialEvent!.titleEn;
+
+    try {
+      await loginAdmin(page);
+      await page.goto("/admin/events");
+
+      // 1. Assert "Auto Dot Active" / "مؤشر نشط تلقائياً" text is NOT present anywhere on the page
+      await expect(page.locator("body")).not.toContainText("Auto Dot Active");
+      await expect(page.locator("body")).not.toContainText("مؤشر نشط تلقائياً");
+
+      // 2. Assert slug badge (e.g. `/{majlis-ihyaa-2026}`) is NOT rendered in event list
+      await expect(page.locator("body")).not.toContainText(`/${originalSlug}`);
+
+      // 3. Assert "Add Event" modal has NO slug input
+      const addEventBtn = page.locator("button", { hasText: /فعالية جديدة|New Event/i }).first();
+      await expect(addEventBtn).toBeVisible({ timeout: 10000 });
+      await addEventBtn.click();
+
+      // Check modal does NOT have slug input
+      const slugInput = page.locator('input[name="slug"]');
+      expect(await slugInput.count()).toBe(0);
+      await expect(page.locator("body")).not.toContainText("URL Slug");
+      await expect(page.locator("body")).not.toContainText("المعرف الرابط (Slug)");
+
+      // Close modal and wait for it to disappear
+      const closeBtn = page.locator("button", { hasText: /إلغاء|Cancel/i }).first();
+      await closeBtn.click();
+      await expect(slugInput).not.toBeVisible({ timeout: 5000 });
+
+      // 4. Edit existing event and verify slug is hidden in edit modal
+      const editBtn = page.locator(`[data-testid="edit-event-${testEventId}"]`).first();
+      await expect(editBtn).toBeVisible({ timeout: 10000 });
+      await editBtn.click();
+
+      // Wait for edit modal to appear
+      await expect(page.locator("text=تعديل الفعالية")).toBeVisible({ timeout: 5000 });
+      expect(await slugInput.count()).toBe(0);
+
+      // 5. Change event title and save
+      const updatedTitleAr = `${originalTitleAr} - نسخة معدلة`;
+      const titleArInput = page.locator('input[name="titleAr"]');
+      await titleArInput.fill(updatedTitleAr);
+
+      const submitBtn = page.locator('button[type="submit"]', { hasText: /حفظ التغييرات|حفظ|Save|Add/i }).first();
+      await submitBtn.click();
+
+      // Wait for modal to close and update to appear
+      await expect(page.locator("body")).toContainText(updatedTitleAr, { timeout: 30000 });
+
+      // 6. Verify slug is STILL strictly identical in database (IMMUTABLE on title edit)
+      const afterUpdate = await prisma.event.findUnique({ where: { id: testEventId } });
+      expect(afterUpdate?.titleAr).toBe(updatedTitleAr);
+      expect(afterUpdate?.slug).toBe(originalSlug);
+    } finally {
+      // Restore original title
+      await prisma.event.update({
+        where: { id: testEventId },
+        data: {
+          titleAr: originalTitleAr,
+          titleEn: originalTitleEn,
+          slug: originalSlug,
+        },
+      });
+    }
+  });
 });
