@@ -1,12 +1,11 @@
 "use client";
 
-import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getPublicEvents } from "@/app/actions/events";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useLocale } from "@/i18n/locale-provider";
-import { useIsEventBooked } from "@/lib/booking-state";
 import { cn } from "@/lib/utils";
 import { FeaturedEvent } from "./featured-event";
 
@@ -32,68 +31,18 @@ type DisplayEvent = {
   isFull?: boolean;
 };
 
-function EventTabButton({
-  event,
-  index,
-  isActive,
-  onClick,
-}: {
-  event: DisplayEvent;
-  index: number;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const { t, locale } = useLocale();
-  const isBooked = useIsEventBooked(event.id);
-  const title = event.titleKey
-    ? t(event.titleKey)
-    : locale === "ar"
-      ? event.titleAr || ""
-      : event.titleEn || "";
-
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={isActive}
-      data-testid={`event-tab-${event.id}`}
-      onClick={onClick}
-      className={cn(
-        "group relative flex items-center gap-2.5 rounded-full px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-300",
-        isActive
-          ? "bg-brass/20 text-brass ring-1 ring-brass/50 shadow-sm"
-          : "glass text-muted-foreground hover:text-foreground hover:bg-card/60",
-      )}
-    >
-      <span
-        className={cn(
-          "flex size-5 items-center justify-center rounded-full text-[10px] font-bold font-mono transition-colors",
-          isActive
-            ? "bg-brass text-night"
-            : "bg-muted text-muted-foreground group-hover:bg-foreground/10 group-hover:text-foreground",
-        )}
-      >
-        0{index + 1}
-      </span>
-      <span className="max-w-[140px] sm:max-w-[200px] truncate">{title}</span>
-      {isBooked && (
-        <span
-          title="حجزك مؤكد"
-          className="flex size-4 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-        >
-          <CheckCircle2 className="size-3" />
-        </span>
-      )}
-    </button>
-  );
-}
-
 export function OpenEvents() {
   const { t, dir } = useLocale();
   const [openEvents, setOpenEvents] = useState<DisplayEvent[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isTouching, setIsTouching] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
   const trackRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -107,6 +56,21 @@ export function OpenEvents() {
     });
     return () => {
       ignore = true;
+    };
+  }, []);
+
+  // Listen for prefers-reduced-motion
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
+
+    const handler = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    mq.addEventListener?.("change", handler);
+    return () => {
+      mq.removeEventListener?.("change", handler);
     };
   }, []);
 
@@ -150,6 +114,99 @@ export function OpenEvents() {
     return () => observer.disconnect();
   }, [openEvents]);
 
+  const advanceNext = useCallback(() => {
+    if (!openEvents || openEvents.length <= 1) return;
+    setActiveIndex((curr) => {
+      const next = (curr + 1) % openEvents.length;
+      const targetSlide = slideRefs.current[next];
+      if (targetSlide) {
+        targetSlide.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+      return next;
+    });
+  }, [openEvents]);
+
+  const isPaused = isHovered || isFocused || isTouching || prefersReducedMotion;
+
+  const resetAutoAdvanceTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (!isPaused && openEvents && openEvents.length > 1) {
+      timerRef.current = setInterval(() => {
+        advanceNext();
+      }, 5000);
+    }
+  }, [isPaused, openEvents, advanceNext]);
+
+  useEffect(() => {
+    resetAutoAdvanceTimer();
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [resetAutoAdvanceTimer]);
+
+  const handlePrev = useCallback(() => {
+    if (!openEvents || openEvents.length <= 1) return;
+    setActiveIndex((curr) => {
+      const newIndex = (curr - 1 + openEvents.length) % openEvents.length;
+      const targetSlide = slideRefs.current[newIndex];
+      if (targetSlide) {
+        targetSlide.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+      return newIndex;
+    });
+    resetAutoAdvanceTimer();
+  }, [openEvents, resetAutoAdvanceTimer]);
+
+  const handleNext = useCallback(() => {
+    if (!openEvents || openEvents.length <= 1) return;
+    setActiveIndex((curr) => {
+      const newIndex = (curr + 1) % openEvents.length;
+      const targetSlide = slideRefs.current[newIndex];
+      if (targetSlide) {
+        targetSlide.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+      return newIndex;
+    });
+    resetAutoAdvanceTimer();
+  }, [openEvents, resetAutoAdvanceTimer]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        if (dir === "rtl") {
+          handleNext();
+        } else {
+          handlePrev();
+        }
+      } else if (e.key === "ArrowRight") {
+        if (dir === "rtl") {
+          handlePrev();
+        } else {
+          handleNext();
+        }
+      }
+    },
+    [dir, handleNext, handlePrev],
+  );
+
   if (openEvents === null) {
     return (
       <div
@@ -183,151 +240,30 @@ export function OpenEvents() {
 
   const activeEvents = openEvents;
 
-  const handlePrev = () => {
-    if (activeEvents.length <= 1) return;
-    const newIndex = (activeIndex - 1 + activeEvents.length) % activeEvents.length;
-    scrollToEvent(newIndex);
-  };
-
-  const handleNext = () => {
-    if (activeEvents.length <= 1) return;
-    const newIndex = (activeIndex + 1) % activeEvents.length;
-    scrollToEvent(newIndex);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowLeft") {
-      if (dir === "rtl") {
-        handleNext();
-      } else {
-        handlePrev();
-      }
-    } else if (e.key === "ArrowRight") {
-      if (dir === "rtl") {
-        handlePrev();
-      } else {
-        handleNext();
-      }
-    }
-  };
-
-  if (activeEvents.length === 0) {
-    return (
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-2xl px-5">
-          <div className="glass-strong flex flex-col items-center gap-4 rounded-3xl p-10 text-center shadow-layered">
-            <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25">
-              <CalendarClock className="size-7" />
-            </span>
-            <h2 className="font-heading text-2xl font-semibold">
-              {t("events.noneTitle")}
-            </h2>
-            <p className="max-w-md text-muted-foreground">
-              {t("events.noneDesc")}
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  // Single event view: render without carousel switcher controls
+  // Single event view: render without carousel controls or timer
   if (activeEvents.length === 1) {
     return <FeaturedEvent event={activeEvents[0]} isFirst={true} />;
   }
 
-  // Multiple events view: render carousel with interactive switcher
+  // Multiple events view: render carousel with centered arrows & indicators underneath
   return (
-    <div className="relative w-full" onKeyDown={handleKeyDown}>
-      {/* Switcher Control Bar */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-10">
-        <div
-          data-testid="event-switcher"
-          className="relative flex items-center justify-between gap-3 sm:gap-6 bg-transparent"
-        >
-          {/* Side arrow (Start / Previous): Left side in LTR, Right side in RTL */}
-          <button
-            type="button"
-            onClick={handlePrev}
-            data-testid="carousel-prev-btn"
-            aria-label={t("events.switcherPrev")}
-            className="shrink-0 flex size-10 sm:size-12 items-center justify-center rounded-full bg-card/60 backdrop-blur-md border border-brass/25 text-foreground transition-all duration-200 hover:border-brass/70 hover:text-brass hover:bg-brass/10 hover:scale-105 active:scale-95 shadow-sm"
-          >
-            {dir === "rtl" ? (
-              <ChevronRight className="size-5 sm:size-6" />
-            ) : (
-              <ChevronLeft className="size-5 sm:size-6" />
-            )}
-          </button>
-
-          {/* Centered Content: Kicker + Counter, Tabs, Indicator dots */}
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 sm:gap-3.5 text-center min-w-0">
-            {/* Top row: Centered kicker badge & counter */}
-            <div className="flex items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brass/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brass ring-1 ring-brass/25">
-                <Sparkles className="size-3" />
-                {t("events.switcherKicker")}
-              </span>
-              <span className="text-xs font-medium text-muted-foreground font-mono">
-                {t("events.switcherCounter")
-                  .replace("{current}", String(activeIndex + 1))
-                  .replace("{total}", String(activeEvents.length))}
-              </span>
-            </div>
-
-            {/* Middle row: Centered Interactive Event Tabs */}
-            <div
-              role="tablist"
-              className="flex items-center justify-center gap-2 overflow-x-auto max-w-full py-0.5 no-scrollbar"
-              style={{ scrollbarWidth: "none" }}
-            >
-              {activeEvents.map((ev, idx) => (
-                <EventTabButton
-                  key={ev.id}
-                  event={ev}
-                  index={idx}
-                  isActive={activeIndex === idx}
-                  onClick={() => scrollToEvent(idx)}
-                />
-              ))}
-            </div>
-
-            {/* Bottom row: Centered Indicator dots */}
-            <div className="flex items-center justify-center gap-1.5 pt-0.5">
-              {activeEvents.map((ev, idx) => (
-                <button
-                  key={ev.id}
-                  type="button"
-                  aria-label={`Slide ${idx + 1}`}
-                  onClick={() => scrollToEvent(idx)}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all duration-300",
-                    activeIndex === idx
-                      ? "w-6 bg-brass"
-                      : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50",
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Side arrow (End / Next): Right side in LTR, Left side in RTL */}
-          <button
-            type="button"
-            onClick={handleNext}
-            data-testid="carousel-next-btn"
-            aria-label={t("events.switcherNext")}
-            className="shrink-0 flex size-10 sm:size-12 items-center justify-center rounded-full bg-card/60 backdrop-blur-md border border-brass/25 text-foreground transition-all duration-200 hover:border-brass/70 hover:text-brass hover:bg-brass/10 hover:scale-105 active:scale-95 shadow-sm"
-          >
-            {dir === "rtl" ? (
-              <ChevronLeft className="size-5 sm:size-6" />
-            ) : (
-              <ChevronRight className="size-5 sm:size-6" />
-            )}
-          </button>
-        </div>
-      </div>
-
+    <div
+      className="relative w-full"
+      onKeyDown={handleKeyDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setIsFocused(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsFocused(false);
+        }
+      }}
+      onTouchStart={() => setIsTouching(true)}
+      onTouchEnd={() => {
+        setIsTouching(false);
+        resetAutoAdvanceTimer();
+      }}
+    >
       {/* Carousel Track */}
       <div
         ref={trackRef}
@@ -348,6 +284,70 @@ export function OpenEvents() {
             <FeaturedEvent event={ev} isFirst={idx === 0} />
           </div>
         ))}
+      </div>
+
+      {/* Centered Controls under the carousel */}
+      <div
+        data-testid="carousel-controls"
+        className="mx-auto flex items-center justify-center gap-4 pt-4 pb-8"
+      >
+        {/* Previous Arrow Button */}
+        <button
+          type="button"
+          onClick={handlePrev}
+          data-testid="carousel-prev-btn"
+          aria-label={t("events.carouselPrev")}
+          className="flex size-11 sm:size-12 items-center justify-center rounded-full bg-card/70 backdrop-blur-md border border-brass/25 text-foreground transition-all duration-200 hover:border-brass/70 hover:text-brass hover:bg-brass/10 hover:scale-105 active:scale-95 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+        >
+          {dir === "rtl" ? (
+            <ChevronRight className="size-5 sm:size-6" />
+          ) : (
+            <ChevronLeft className="size-5 sm:size-6" />
+          )}
+        </button>
+
+        {/* Slide indicator dots */}
+        <div
+          className="flex items-center justify-center gap-2 px-2"
+          role="tablist"
+          aria-label="Slides"
+        >
+          {activeEvents.map((ev, idx) => (
+            <button
+              key={ev.id}
+              type="button"
+              role="tab"
+              aria-selected={activeIndex === idx}
+              aria-label={`Slide ${idx + 1}`}
+              data-testid={`carousel-dot-${idx}`}
+              onClick={() => {
+                scrollToEvent(idx);
+                resetAutoAdvanceTimer();
+              }}
+              className={cn(
+                "h-2 rounded-full transition-all duration-300",
+                activeIndex === idx
+                  ? "w-7 bg-brass shadow-sm"
+                  : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50",
+              )}
+            />
+          ))}
+        </div>
+
+        {/* Next Arrow Button */}
+        <button
+          type="button"
+          onClick={handleNext}
+          data-testid="carousel-next-btn"
+          aria-label={t("events.carouselNext")}
+          className="flex size-11 sm:size-12 items-center justify-center rounded-full bg-card/70 backdrop-blur-md border border-brass/25 text-foreground transition-all duration-200 hover:border-brass/70 hover:text-brass hover:bg-brass/10 hover:scale-105 active:scale-95 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+        >
+          {dir === "rtl" ? (
+            <ChevronLeft className="size-5 sm:size-6" />
+          ) : (
+            <ChevronRight className="size-5 sm:size-6" />
+          )}
+        </button>
       </div>
     </div>
   );

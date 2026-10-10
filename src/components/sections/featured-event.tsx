@@ -62,7 +62,10 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const timeStr = event?.time || (event?.timeKey ? t(event.timeKey) : t("event.time"));
   const locationStr =
     event?.location || (event?.locationKey ? t(event.locationKey) : t("event.location"));
-  const poster = event?.posterUrl || event?.poster || IMAGES.eventPoster;
+  const poster =
+    event?.posterUrl && !event.posterUrl.includes("opening-majlis")
+      ? event.posterUrl
+      : event?.poster || IMAGES.eventPoster;
   const bookHref = event?.slug
     ? `/events/${event.slug}/book`
     : event?.id

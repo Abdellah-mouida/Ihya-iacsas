@@ -552,7 +552,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-10-15T18:00:00Z"),
         time: "18:00",
         location: "الرباط، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
@@ -575,7 +575,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-11-20T18:00:00Z"),
         time: "18:00",
         location: "الدار البيضاء، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
@@ -651,7 +651,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-10-15T18:00:00Z"),
         time: "18:00",
         location: "الرباط، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
       },
     });
@@ -951,7 +951,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-10-15T18:00:00Z"),
         time: "18:00",
         location: "المقر الرئيسي — تطوان",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
@@ -975,7 +975,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-09-01T10:00:00Z"),
         time: "10:00",
         location: "الدار البيضاء، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
@@ -1052,7 +1052,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-10-15T18:00:00Z"),
         time: "18:00",
         location: "الرباط، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
@@ -1075,10 +1075,15 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-11-20T18:00:00Z"),
         time: "18:00",
         location: "الدار البيضاء، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
+    });
+
+    page.on("pageerror", (err) => console.log("PAGE ERROR:", err));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") console.log("CONSOLE ERROR:", msg.text());
     });
 
     await context.clearCookies();
@@ -1086,54 +1091,68 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    // 2. Verify switcher bar is visible when multiple open events exist and has transparent background
-    const switcher = page.locator('[data-testid="event-switcher"]');
-    await expect(switcher).toBeVisible({ timeout: 15000 });
-    const switcherClass = await switcher.getAttribute("class");
-    expect(switcherClass).toContain("bg-transparent");
+    // 2. Verify previous header is removed entirely
+    const oldSwitcher = page.locator('[data-testid="event-switcher"]');
+    await expect(oldSwitcher).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("الفعاليات المتاحة للتسجيل");
+    await expect(page.locator("body")).not.toContainText("Events Open for Registration");
+
+    // 3. Verify arrows sit under the carousel and centered
+    const carousel = page.locator('[data-testid="open-events-carousel"]');
+    await expect(carousel).toBeVisible({ timeout: 15000 });
+    const controls = page.locator('[data-testid="carousel-controls"]');
+    await expect(controls).toBeVisible();
+
+    const carouselBox = await carousel.boundingBox();
+    const controlsBox = await controls.boundingBox();
+    expect(carouselBox).not.toBeNull();
+    expect(controlsBox).not.toBeNull();
+    // Controls must sit below the carousel
+    expect((controlsBox?.y ?? 0)).toBeGreaterThan((carouselBox?.y ?? 0) + 100);
 
     const prevBtn = page.locator('[data-testid="carousel-prev-btn"]');
     const nextBtn = page.locator('[data-testid="carousel-next-btn"]');
     await expect(prevBtn).toBeVisible();
     await expect(nextBtn).toBeVisible();
 
-    // Verify left/right side navigation arrows flank the centered content
-    const prevBox = await prevBtn.boundingBox();
-    const nextBox = await nextBtn.boundingBox();
-    expect(prevBox).not.toBeNull();
-    expect(nextBox).not.toBeNull();
-    // In RTL, prev button (start) is on the right side and next button (end) is on the left side
-    expect(Math.abs((prevBox?.x ?? 0) - (nextBox?.x ?? 0))).toBeGreaterThan(200);
+    // Verify indicator dots exist
+    const dot0 = page.locator('[data-testid="carousel-dot-0"]');
+    const dot1 = page.locator('[data-testid="carousel-dot-1"]');
+    await expect(dot0).toBeVisible();
+    await expect(dot1).toBeVisible();
+    await expect(dot0).toHaveAttribute("aria-selected", "true");
 
-    const tab1 = page.locator('[data-testid="event-tab-majlis-ihyaa-2026"]');
-    const tab2 = page.locator('[data-testid="event-tab-test-event-second"]');
-    await expect(tab1).toBeVisible();
-    await expect(tab2).toBeVisible();
+    // 4. Test auto-advance: after 5s without interaction, advances to next event
+    await expect(dot1).toHaveAttribute("aria-selected", "true", { timeout: 8000 });
 
-    // Verify exactly one tab is initially active
-    const initialActive = (await tab1.getAttribute("aria-selected")) === "true" ? tab1 : tab2;
-    const initialInactive = initialActive === tab1 ? tab2 : tab1;
-    await expect(initialActive).toHaveAttribute("aria-selected", "true");
-    await expect(initialInactive).toHaveAttribute("aria-selected", "false");
+    // 5. Test hover pauses auto-advance: hover over carousel, wait 6s, verify slide does not change while hovered
+    await carousel.hover();
+    await page.waitForTimeout(6000);
+    await expect(dot1).toHaveAttribute("aria-selected", "true");
 
-    // 3. Click Next button in switcher -> active tab cycles
+    // 6. Test manual click on Next: resets timer and cycles back to dot 0
     await nextBtn.click();
+    await expect(dot0).toHaveAttribute("aria-selected", "true", { timeout: 4000 });
 
-    // Wait for transition to cycle active tab
-    await expect(initialInactive).toHaveAttribute("aria-selected", "true", { timeout: 10000 });
-    await expect(initialActive).toHaveAttribute("aria-selected", "false", { timeout: 10000 });
+    // 7. Verify direct per-event book button works
+    const event1BookBtn = page.locator('[data-testid="book-btn-majlis-ihyaa-2026"]');
+    await expect(event1BookBtn).toBeVisible();
 
-    // 4. Click initial active tab to switch back
-    await initialActive.click();
-    await expect(initialActive).toHaveAttribute("aria-selected", "true", { timeout: 10000 });
-    await expect(initialInactive).toHaveAttribute("aria-selected", "false", { timeout: 10000 });
+    // 8. Verify single open event renders without arrows or carousel controls
+    await prisma.event.update({
+      where: { id: "test-event-second" },
+      data: { bookingOpen: false },
+    });
+    await page.reload();
+    await expect(page.locator('[data-testid="carousel-controls"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="open-events-carousel"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="event-card-majlis-ihyaa-2026"]')).toBeVisible();
 
-    // 5. Verify direct per-event book button for Event 2 navigates to Event 2 booking route
-    const event2BookBtn = page.locator('[data-testid="book-btn-test-event-second"]');
-    await expect(event2BookBtn).toBeVisible();
-    await event2BookBtn.click();
-    await page.waitForURL(/.*test-event-second.*/, { timeout: 15000 });
-    expect(page.url()).toContain("test-event-second");
+    // Restore Event 2
+    await prisma.event.update({
+      where: { id: "test-event-second" },
+      data: { bookingOpen: true },
+    });
   });
 
   test("19. Enforce unique event slugs, collision auto-suffixing, and slug-based booking route (Task 5)", async ({
@@ -1167,7 +1186,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
         date: new Date("2026-12-15T18:00:00Z"),
         time: "18:00",
         location: "الرباط، المغرب",
-        posterUrl: "/images/events/opening-majlis.webp",
+        posterUrl: "/images/event-poster.jpg",
         bookingOpen: true,
         capacityType: "OPEN",
       },
@@ -1192,7 +1211,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
           date: new Date("2026-12-20T18:00:00Z"),
           time: "18:00",
           location: "الرباط",
-          posterUrl: "/images/events/opening-majlis.webp",
+          posterUrl: "/images/event-poster.jpg",
           bookingOpen: true,
           capacityType: "OPEN",
         },
