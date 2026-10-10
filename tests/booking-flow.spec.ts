@@ -1422,4 +1422,100 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await expect(body).not.toContainText("Winter spiritual retreat");
     await expect(body).not.toContainText("خلوة روحية شتوية");
   });
+
+  test("23. Events page on small phones shows poster first (on top) and event info below it across 320px, 360px, 390px, and tablet (Task 2)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60000);
+    await context.clearCookies();
+
+    // 1. Ensure an open event exists
+    await prisma.event.upsert({
+      where: { id: "majlis-ihyaa-2026" },
+      update: {
+        date: new Date("2026-10-15T18:00:00Z"),
+        bookingOpen: true,
+        capacityType: "OPEN",
+        posterUrl: "/images/event-poster.jpg",
+      },
+      create: {
+        id: "majlis-ihyaa-2026",
+        slug: "majlis-ihyaa-2026",
+        titleAr: "مجلس إحياء الشبابي 2026",
+        titleEn: "Ihyaa Youth Gathering 2026",
+        descriptionAr: "اللقاء الافتتاحي لبرنامج إحياء",
+        descriptionEn: "Opening gathering for Ihyaa Youth Program",
+        date: new Date("2026-10-15T18:00:00Z"),
+        time: "18:00",
+        location: "الرباط، المغرب",
+        posterUrl: "/images/event-poster.jpg",
+        bookingOpen: true,
+        capacityType: "OPEN",
+      },
+    });
+
+    const mobileWidths = [320, 360, 390, 768];
+
+    // 2. Test in Arabic (RTL) across small mobile & tablet widths
+    for (const width of mobileWidths) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/events");
+      await page.waitForLoadState("domcontentloaded");
+
+      const poster = page.locator('[data-testid="event-poster-container"]').first();
+      const details = page.locator('[data-testid="event-details-container"]').first();
+      await expect(poster).toBeVisible({ timeout: 15000 });
+      await expect(details).toBeVisible();
+
+      const posterBox = await poster.boundingBox();
+      const detailsBox = await details.boundingBox();
+      expect(posterBox, `Poster bounding box at width ${width}`).not.toBeNull();
+      expect(detailsBox, `Details bounding box at width ${width}`).not.toBeNull();
+
+      // Poster must be on top of the details
+      expect(
+        (posterBox?.y ?? 0),
+        `Poster y (${posterBox?.y}) must be strictly less than Details y (${detailsBox?.y}) at width ${width}`,
+      ).toBeLessThan(detailsBox?.y ?? 0);
+    }
+
+    // 3. Test in English (LTR) at 360px
+    await page.evaluate(() => {
+      localStorage.setItem("ihyaa-locale", "en");
+    });
+    await page.setViewportSize({ width: 360, height: 900 });
+    await page.goto("/events");
+    await page.waitForLoadState("domcontentloaded");
+
+    const enPoster = page.locator('[data-testid="event-poster-container"]').first();
+    const enDetails = page.locator('[data-testid="event-details-container"]').first();
+    await expect(enPoster).toBeVisible({ timeout: 15000 });
+    await expect(enDetails).toBeVisible();
+
+    const enPosterBox = await enPoster.boundingBox();
+    const enDetailsBox = await enDetails.boundingBox();
+    expect(enPosterBox).not.toBeNull();
+    expect(enDetailsBox).not.toBeNull();
+    expect((enPosterBox?.y ?? 0)).toBeLessThan(enDetailsBox?.y ?? 0);
+
+    // 4. Verify desktop layout at 1280px stays side-by-side
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/events");
+    await page.waitForLoadState("domcontentloaded");
+
+    const dtPoster = page.locator('[data-testid="event-poster-container"]').first();
+    const dtDetails = page.locator('[data-testid="event-details-container"]').first();
+    await expect(dtPoster).toBeVisible();
+    await expect(dtDetails).toBeVisible();
+
+    const dtPosterBox = await dtPoster.boundingBox();
+    const dtDetailsBox = await dtDetails.boundingBox();
+    expect(dtPosterBox).not.toBeNull();
+    expect(dtDetailsBox).not.toBeNull();
+
+    // On desktop, they are side-by-side: substantial horizontal separation, vertical overlap
+    expect(Math.abs((dtPosterBox?.x ?? 0) - (dtDetailsBox?.x ?? 0))).toBeGreaterThan(250);
+    expect(Math.abs((dtPosterBox?.y ?? 0) - (dtDetailsBox?.y ?? 0))).toBeLessThan(150);
+  });
 });

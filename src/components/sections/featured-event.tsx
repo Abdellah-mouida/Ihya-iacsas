@@ -96,6 +96,7 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
           initial="hidden"
           whileInView="show"
           viewport={viewportOnce}
+          data-testid="event-poster-container"
           className="order-1 lg:order-none"
         >
           <EventPoster
@@ -111,7 +112,8 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
           initial="hidden"
           whileInView="show"
           viewport={viewportOnce}
-          className="flex flex-col items-start gap-5 text-start"
+          data-testid="event-details-container"
+          className="order-2 lg:order-none flex flex-col items-start gap-5 text-start"
         >
           <motion.span
             variants={fadeUp}
