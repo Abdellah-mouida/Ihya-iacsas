@@ -1,6 +1,6 @@
 {
   "name": "ihyaa-community-website",
-  "version": "0.4.29",
+  "version": "0.4.30",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:i18n": "node scripts/check-i18n.js",
+    "audit:cloudinary": "tsx --env-file=.env.local scripts/audit-cloudinary.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

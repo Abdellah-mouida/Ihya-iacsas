@@ -554,4 +554,119 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       });
     }
   });
+
+  test("14. Cloudinary image lifecycle: derive public_id, delete asset on record deletion and replacement, graceful failure handling", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+
+    const {
+      extractCloudinaryPublicId,
+      deleteImageFromCloudinary,
+      uploadImageToCloudinaryDetailed,
+      cloudinary,
+    } = await import("../src/lib/cloudinary");
+    const { createGalleryPhoto, updateGalleryPhoto, deleteGalleryPhoto } = await import(
+      "../src/app/actions/gallery"
+    );
+
+    // 1. Assert public_id extraction across multiple URL varieties
+    const sampleCloudinaryUrl =
+      "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1791556589/ihyaa-events/test_asset_123.png";
+    const sampleTransformedUrl =
+      "https://res.cloudinary.com/dp5cuxwyi/image/upload/c_fill,w_400/v1791556589/ihyaa-gallery/transformed_asset.jpg";
+    const localUrl = "/images/event-poster.jpg";
+    const externalUrl = "https://images.unsplash.com/photo-1234567";
+
+    expect(extractCloudinaryPublicId(sampleCloudinaryUrl)).toBe("ihyaa-events/test_asset_123");
+    expect(extractCloudinaryPublicId(sampleTransformedUrl)).toBe("ihyaa-gallery/transformed_asset");
+    expect(extractCloudinaryPublicId(localUrl)).toBeNull();
+    expect(extractCloudinaryPublicId(externalUrl)).toBeNull();
+    expect(extractCloudinaryPublicId("ihyaa-carousel/raw_id")).toBe("ihyaa-carousel/raw_id");
+
+    // 2. Upload test image A to Cloudinary
+    const base64Pixel =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const uploadA = await uploadImageToCloudinaryDetailed(base64Pixel, "ihyaa-gallery");
+    expect(uploadA.secure_url).toContain("res.cloudinary.com");
+    expect(uploadA.public_id).toBeTruthy();
+
+    const publicIdA = uploadA.public_id;
+
+    // Verify Asset A exists in Cloudinary
+    const resourceA = await cloudinary.api.resource(publicIdA);
+    expect(resourceA.public_id).toBe(publicIdA);
+
+    // 3. Create a test gallery photo record referencing Asset A
+    const photo = await prisma.galleryPhoto.create({
+      data: {
+        imageUrl: uploadA.secure_url,
+        captionAr: "صورة اختبار دورة حياة الصورة",
+        captionEn: "Test lifecycle photo",
+      },
+    });
+
+    try {
+      // 4. Upload test image B to Cloudinary
+      const uploadB = await uploadImageToCloudinaryDetailed(base64Pixel, "ihyaa-gallery");
+      const publicIdB = uploadB.public_id;
+
+      // 5. Test Replace: update photo with image B
+      const updateFormData = new FormData();
+      updateFormData.set("captionAr", "صورة اختبار معدلة");
+      updateFormData.set("captionEn", "Updated test lifecycle photo");
+      updateFormData.set("imageUrl", uploadB.secure_url);
+
+      const updateRes = await updateGalleryPhoto(photo.id, updateFormData);
+      expect(updateRes.success).toBe(true);
+
+      // Verify asset B exists in Cloudinary
+      const resourceB = await cloudinary.api.resource(publicIdB);
+      expect(resourceB.public_id).toBe(publicIdB);
+
+      // Give Cloudinary destroy callback a moment to complete
+      await new Promise((r) => setTimeout(r, 2000));
+
+      // Verify asset A was destroyed in Cloudinary
+      let assetAStillExists = true;
+      try {
+        await cloudinary.api.resource(publicIdA);
+      } catch (notFoundErr: any) {
+        if (notFoundErr?.error?.http_code === 404 || notFoundErr?.http_code === 404) {
+          assetAStillExists = false;
+        }
+      }
+      expect(assetAStillExists).toBe(false);
+
+      // 6. Test Delete: delete gallery photo
+      const deleteRes = await deleteGalleryPhoto(photo.id);
+      expect(deleteRes.success).toBe(true);
+
+      // Give Cloudinary destroy callback a moment to complete
+      await new Promise((r) => setTimeout(r, 2000));
+
+      // Verify asset B was destroyed in Cloudinary
+      let assetBStillExists = true;
+      try {
+        await cloudinary.api.resource(publicIdB);
+      } catch (notFoundErr: any) {
+        if (notFoundErr?.error?.http_code === 404 || notFoundErr?.http_code === 404) {
+          assetBStillExists = false;
+        }
+      }
+      expect(assetBStillExists).toBe(false);
+
+      // Verify DB record is gone
+      const dbCheck = await prisma.galleryPhoto.findUnique({ where: { id: photo.id } });
+      expect(dbCheck).toBeNull();
+    } finally {
+      // Cleanup safety
+      await deleteImageFromCloudinary(publicIdA);
+      await prisma.galleryPhoto.deleteMany({ where: { id: photo.id } });
+    }
+
+    // 7. Test Graceful Failure: deleting non-existent asset does not throw
+    const nonExistentResult = await deleteImageFromCloudinary("ihyaa-events/non_existent_random_xyz_999");
+    expect(nonExistentResult.success).toBe(true); // destroy returns { result: 'not found' } gracefully
+  });
 });

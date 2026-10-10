@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { safeRevalidatePath } from "@/lib/cache";
+import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 
 export async function getCarouselPosts(onlyActive = false) {
@@ -61,9 +60,9 @@ export async function createCarouselPost(formData: FormData) {
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/carousel");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/carousel");
 
     return { success: true, post };
   } catch (error) {
@@ -77,6 +76,14 @@ export async function createCarouselPost(formData: FormData) {
 
 export async function updateCarouselPost(id: string, formData: FormData) {
   try {
+    const existing = await prisma.carouselPost.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    });
+    if (!existing) {
+      return { success: false, error: "Carousel post not found" };
+    }
+
     const file = formData.get("image") as File | null;
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
@@ -120,9 +127,20 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       data: dataToUpdate,
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/carousel");
+    // Clean up replaced image in Cloudinary if imageUrl was replaced
+    if (
+      existing.imageUrl &&
+      dataToUpdate.imageUrl &&
+      existing.imageUrl !== dataToUpdate.imageUrl
+    ) {
+      deleteImageFromCloudinary(existing.imageUrl).catch((err) => {
+        console.warn("[Cloudinary Warning] Cleanup of replaced carousel image failed:", err);
+      });
+    }
+
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/carousel");
 
     return { success: true, post };
   } catch (error) {
@@ -141,9 +159,9 @@ export async function toggleCarouselActive(id: string, active: boolean) {
       data: { active },
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/carousel");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/carousel");
 
     return { success: true, post };
   } catch (error) {
@@ -157,13 +175,22 @@ export async function toggleCarouselActive(id: string, active: boolean) {
 
 export async function deleteCarouselPost(id: string) {
   try {
+    const existing = await prisma.carouselPost.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    });
+
+    if (existing?.imageUrl) {
+      await deleteImageFromCloudinary(existing.imageUrl);
+    }
+
     await prisma.carouselPost.delete({
       where: { id },
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/carousel");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/carousel");
 
     return { success: true };
   } catch (error) {

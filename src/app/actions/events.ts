@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { safeRevalidatePath } from "@/lib/cache";
+import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
@@ -286,10 +285,10 @@ export async function createEvent(formData: FormData) {
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/events");
-    revalidatePath("/admin");
-    revalidatePath("/admin/events");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/events");
 
     return { success: true, event };
   } catch (error) {
@@ -350,7 +349,7 @@ export async function updateEvent(id: string, formData: FormData) {
     // Only generate a slug if a legacy record has no slug.
     const existing = await prisma.event.findUnique({
       where: { id },
-      select: { slug: true },
+      select: { slug: true, posterUrl: true },
     });
     if (!existing) {
       return { success: false, error: "Event not found" };
@@ -383,10 +382,21 @@ export async function updateEvent(id: string, formData: FormData) {
       data: dataToUpdate,
     });
 
-    revalidatePath("/");
-    revalidatePath("/events");
-    revalidatePath("/admin");
-    revalidatePath("/admin/events");
+    // Clean up replaced image in Cloudinary if poster was replaced
+    if (
+      existing.posterUrl &&
+      dataToUpdate.posterUrl &&
+      existing.posterUrl !== dataToUpdate.posterUrl
+    ) {
+      deleteImageFromCloudinary(existing.posterUrl).catch((err) => {
+        console.warn("[Cloudinary Warning] Cleanup of replaced event poster failed:", err);
+      });
+    }
+
+    safeRevalidatePath("/");
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/events");
 
     return { success: true, event };
   } catch (error) {
@@ -405,10 +415,10 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
       data: { [field]: value },
     });
 
-    revalidatePath("/");
-    revalidatePath("/events");
-    revalidatePath("/admin");
-    revalidatePath("/admin/events");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/events");
 
     return { success: true, event };
   } catch (error) {
@@ -422,14 +432,24 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
 
 export async function deleteEvent(id: string) {
   try {
+    // Retrieve posterUrl before deleting DB record to clean up Cloudinary asset
+    const existing = await prisma.event.findUnique({
+      where: { id },
+      select: { posterUrl: true },
+    });
+
+    if (existing?.posterUrl) {
+      await deleteImageFromCloudinary(existing.posterUrl);
+    }
+
     await prisma.event.delete({
       where: { id },
     });
 
-    revalidatePath("/");
-    revalidatePath("/events");
-    revalidatePath("/admin");
-    revalidatePath("/admin/events");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/events");
 
     return { success: true };
   } catch (error) {

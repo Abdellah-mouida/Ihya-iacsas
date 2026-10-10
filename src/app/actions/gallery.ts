@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { safeRevalidatePath } from "@/lib/cache";
+import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 
 export async function getGalleryPhotos() {
@@ -63,9 +62,9 @@ export async function createGalleryPhoto(formData: FormData) {
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/gallery");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/gallery");
 
     return { success: true, photo };
   } catch (error) {
@@ -87,6 +86,14 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
         success: false,
         error: "Both Arabic and English captions are required.",
       };
+    }
+
+    const existing = await prisma.galleryPhoto.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    });
+    if (!existing) {
+      return { success: false, error: "Gallery photo not found" };
     }
 
     const file = formData.get("image") as File | null;
@@ -125,9 +132,20 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
       data: dataToUpdate,
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/gallery");
+    // Clean up replaced image in Cloudinary if imageUrl was replaced
+    if (
+      existing.imageUrl &&
+      dataToUpdate.imageUrl &&
+      existing.imageUrl !== dataToUpdate.imageUrl
+    ) {
+      deleteImageFromCloudinary(existing.imageUrl).catch((err) => {
+        console.warn("[Cloudinary Warning] Cleanup of replaced gallery image failed:", err);
+      });
+    }
+
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/gallery");
 
     return { success: true, photo };
   } catch (error) {
@@ -141,13 +159,22 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
 
 export async function deleteGalleryPhoto(id: string) {
   try {
+    const existing = await prisma.galleryPhoto.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    });
+
+    if (existing?.imageUrl) {
+      await deleteImageFromCloudinary(existing.imageUrl);
+    }
+
     await prisma.galleryPhoto.delete({
       where: { id },
     });
 
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/gallery");
+    safeRevalidatePath("/");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/gallery");
 
     return { success: true };
   } catch (error) {
