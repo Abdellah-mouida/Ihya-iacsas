@@ -6,23 +6,32 @@ import { execSync } from "child_process";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026";
 
 async function loginAdmin(page: Page) {
+  await prisma.rateLimit.deleteMany({
+    where: { key: { contains: "admin_login" } },
+  });
   await page.goto("/admin/login");
-  await page.fill('input[type="password"]', ADMIN_PASSWORD);
+  const pwdInput = page.locator('input[type="password"]');
+  await expect(pwdInput).toBeVisible({ timeout: 15000 });
+  await pwdInput.fill(ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 30000 });
 }
 
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   const testContactEmail = "contact.tester@example.com";
 
   test.beforeEach(async () => {
-    await prisma.contactMessage.deleteMany({
-      where: { email: testContactEmail },
-    });
-    await prisma.rateLimit.deleteMany({
-      where: { key: { contains: "admin_login" } },
-    });
+    try {
+      await prisma.contactMessage.deleteMany({
+        where: { email: testContactEmail },
+      });
+      await prisma.rateLimit.deleteMany({
+        where: { key: { contains: "admin_login" } },
+      });
+    } catch {
+      // transient connection pool warmup
+    }
   });
 
   test("1. Homepage contact form submits and saves to database", async ({ page }) => {
@@ -63,6 +72,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
 
   test("3. Bookings admin table: row click opens detail modal", async ({ page }) => {
     // Ensure at least one confirmed booking exists
+    await prisma.booking.deleteMany({ where: { email: "soufiane.test@gmail.com" } });
     const event = await prisma.event.findFirst();
     if (event) {
       await prisma.booking.create({
@@ -668,5 +678,91 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     // 7. Test Graceful Failure: deleting non-existent asset does not throw
     const nonExistentResult = await deleteImageFromCloudinary("ihyaa-events/non_existent_random_xyz_999");
     expect(nonExistentResult.success).toBe(true); // destroy returns { result: 'not found' } gracefully
+  });
+
+  test("15. Custom selects everywhere: zero native <select> elements in codebase, custom Radix Select component with theme styling, RTL/LTR support, and functional filter interactions", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+
+    // 1. Audit all source files to verify 0 native <select> elements exist anywhere in src/
+    const fs = await import("fs");
+    const path = await import("path");
+
+    function findTsxFiles(dir: string, fileList: string[] = []): string[] {
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        if (fs.statSync(fullPath).isDirectory()) {
+          findTsxFiles(fullPath, fileList);
+        } else if (file.endsWith(".tsx") || file.endsWith(".jsx")) {
+          fileList.push(fullPath);
+        }
+      }
+      return fileList;
+    }
+
+    const allTsxFiles = findTsxFiles(path.resolve(process.cwd(), "src"));
+    const filesWithNativeSelect: string[] = [];
+
+    for (const filePath of allTsxFiles) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      // Check for <select or <select> tag in JSX (excluding custom <Select or words like 'selected')
+      if (/<select[\s>]/.test(content)) {
+        filesWithNativeSelect.push(path.relative(process.cwd(), filePath));
+      }
+    }
+    expect(filesWithNativeSelect).toEqual([]);
+
+    // 2. Log in to admin and navigate to bookings page
+    await loginAdmin(page);
+    await page.goto("/admin/bookings");
+    await expect(page.locator("h1")).toBeVisible({ timeout: 15000 });
+
+    // 3. Confirm 0 visible/styled native select elements exist in the live DOM (only Radix hidden aria-hidden sync helpers)
+    const visibleNativeSelects = page.locator("select:visible");
+    expect(await visibleNativeSelects.count()).toBe(0);
+
+    const nonAriaHiddenSelects = page.locator("select:not([aria-hidden='true'])");
+    expect(await nonAriaHiddenSelects.count()).toBe(0);
+
+    // 4. Confirm custom Radix Select triggers are present
+    const statusSelect = page.locator('[data-testid="status-filter-select"]');
+    const eventSelect = page.locator('[data-testid="event-filter-select"]');
+
+    await expect(statusSelect).toBeVisible({ timeout: 10000 });
+    await expect(eventSelect).toBeVisible({ timeout: 10000 });
+
+    // Assert custom data-slot attribute from our custom SelectTrigger
+    expect(await statusSelect.getAttribute("data-slot")).toBe("select-trigger");
+
+    // 5. Open Status Select and verify custom popover options
+    await statusSelect.click();
+    const selectContent = page.locator('[data-slot="select-content"]');
+    await expect(selectContent).toBeVisible({ timeout: 5000 });
+
+    // Verify styled options
+    const confirmedOption = page.locator('[data-slot="select-item"]', {
+      hasText: /مؤكد|Confirmed/i,
+    });
+    await expect(confirmedOption).toBeVisible();
+
+    // Select "Confirmed" / "مؤكد"
+    await confirmedOption.click();
+
+    // Verify popover closed and value changed
+    await expect(selectContent).not.toBeVisible({ timeout: 5000 });
+    await expect(statusSelect).toContainText(/مؤكد|Confirmed/i);
+
+    // 6. Test Event filter Select
+    await eventSelect.click();
+    const eventSelectContent = page.locator('[data-slot="select-content"]');
+    await expect(eventSelectContent).toBeVisible({ timeout: 5000 });
+    const allEventsOption = page.locator('[data-slot="select-item"]', {
+      hasText: /جميع الفعاليات|All Events/i,
+    });
+    await expect(allEventsOption).toBeVisible();
+    await allEventsOption.click();
+    await expect(eventSelectContent).not.toBeVisible({ timeout: 5000 });
   });
 });

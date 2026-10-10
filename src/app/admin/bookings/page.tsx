@@ -31,6 +31,13 @@ import {
 } from "@/app/actions/bookings";
 import { getEvents } from "@/app/actions/events";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import {
@@ -340,46 +347,48 @@ export default function AdminBookingsPage() {
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           {/* Filter Status */}
           <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="rounded-xl border border-border bg-background/50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brass shrink-0 font-medium"
-            >
-              <option value="all">
-                {locale === "ar" ? "جميع الحالات" : "All Statuses"}
-              </option>
-              <option value="CONFIRMED">
-                {locale === "ar" ? "مؤكد" : "Confirmed"}
-              </option>
-              <option value="PENDING">
-                {locale === "ar" ? "قيد الموافقة" : "Pending Approval"}
-              </option>
-              <option value="WAITLISTED">
-                {locale === "ar" ? "قائمة الانتظار" : "Waitlisted"}
-              </option>
-              <option value="REJECTED">
-                {locale === "ar" ? "مرفوض" : "Rejected"}
-              </option>
-            </select>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[150px] sm:w-[170px]" data-testid="status-filter-select">
+                <SelectValue placeholder={locale === "ar" ? "جميع الحالات" : "All Statuses"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {locale === "ar" ? "جميع الحالات" : "All Statuses"}
+                </SelectItem>
+                <SelectItem value="CONFIRMED">
+                  {locale === "ar" ? "مؤكد" : "Confirmed"}
+                </SelectItem>
+                <SelectItem value="PENDING">
+                  {locale === "ar" ? "قيد الموافقة" : "Pending Approval"}
+                </SelectItem>
+                <SelectItem value="WAITLISTED">
+                  {locale === "ar" ? "قائمة الانتظار" : "Waitlisted"}
+                </SelectItem>
+                <SelectItem value="REJECTED">
+                  {locale === "ar" ? "مرفوض" : "Rejected"}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Filter Event Dropdown */}
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-brass shrink-0" />
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="rounded-xl border border-border bg-background/50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brass shrink-0 font-medium"
-            >
-              <option value="all">
-                {locale === "ar" ? "جميع الفعاليات" : "All Events"}
-              </option>
-              {events.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {locale === "ar" ? e.titleAr : e.titleEn}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+              <SelectTrigger className="w-[180px] sm:w-[220px]" data-testid="event-filter-select">
+                <SelectValue placeholder={locale === "ar" ? "جميع الفعاليات" : "All Events"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {locale === "ar" ? "جميع الفعاليات" : "All Events"}
+                </SelectItem>
+                {events.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {locale === "ar" ? e.titleAr : e.titleEn}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
