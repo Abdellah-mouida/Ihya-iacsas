@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { getDashboardStats } from "@/app/actions/dashboard";
 import { Button } from "@/components/ui/button";

@@ -561,7 +561,7 @@ textarea::-webkit-scrollbar {
   --normal-bg: color-mix(in oklch, var(--card) 96%, transparent);
   --normal-border: color-mix(in oklch, var(--brass) 55%, transparent);
   --normal-text: var(--foreground);
-  padding: 1rem !important;
+  padding: 1.25rem !important;
   overflow: visible !important;
   pointer-events: none !important;
 }
@@ -576,26 +576,26 @@ textarea::-webkit-scrollbar {
   background: color-mix(in oklch, var(--card) 96%, transparent) !important;
   border-radius: 1rem !important;
   border: 1px solid color-mix(in oklch, var(--brass) 55%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 16px -2px color-mix(in oklch, var(--brass) 20%, transparent) !important;
-  padding: 0.875rem 1rem !important;
-  font-family: inherit !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.12), 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
+  padding: 0.875rem 1.125rem !important;
+  font-family: var(--font-montserrat), var(--font-arabic), sans-serif !important;
   position: relative !important;
   overflow: visible !important;
   transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
 }
 
 [data-sonner-toast]:hover {
-  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.16), 0 0 20px -2px color-mix(in oklch, var(--brass) 28%, transparent) !important;
+  box-shadow: 0 22px 48px -4px rgba(0, 0, 0, 0.16), 0 8px 20px -2px rgba(0, 0, 0, 0.08) !important;
 }
 
 .dark [data-sonner-toast] {
   background: color-mix(in oklch, var(--card) 94%, black) !important;
   border-color: color-mix(in oklch, var(--brass) 60%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.55), 0 0 16px -2px color-mix(in oklch, var(--brass) 25%, transparent) !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 14px -2px rgba(0, 0, 0, 0.45) !important;
 }
 
 .dark [data-sonner-toast]:hover {
-  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.65), 0 0 22px -2px color-mix(in oklch, var(--brass) 32%, transparent) !important;
+  box-shadow: 0 22px 48px -4px rgba(0, 0, 0, 0.75), 0 8px 20px -2px rgba(0, 0, 0, 0.55) !important;
 }
 
 /* Smooth exit without texture flash */
@@ -608,9 +608,7 @@ textarea::-webkit-scrollbar {
 }
 
 [data-sonner-toast][data-removed="true"]::before,
-[data-sonner-toast][data-mounted="false"]::before,
-[data-sonner-toast][data-removed="true"]::after,
-[data-sonner-toast][data-mounted="false"]::after {
+[data-sonner-toast][data-mounted="false"]::before {
   opacity: 0 !important;
   transition: opacity 0.15s ease !important;
 }
@@ -632,61 +630,55 @@ textarea::-webkit-scrollbar {
   opacity: 0.08;
 }
 
-/* Islamic Geometric brass corner accent */
-[data-sonner-toast]::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(135deg, color-mix(in oklch, var(--brass) 50%, transparent) 0%, transparent 70%);
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-[dir="rtl"] [data-sonner-toast]::after,
-[data-sonner-toaster][dir="rtl"] [data-sonner-toast]::after {
-  right: auto;
-  left: 0;
-  background: linear-gradient(-135deg, color-mix(in oklch, var(--brass) 50%, transparent) 0%, transparent 70%);
-}
-
-/* Status variants with high contrast borders */
+/* Status variants with high contrast borders and clean floating shadows */
 [data-sonner-toast][data-type="success"] {
-  border-color: color-mix(in oklch, var(--emerald) 70%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--emerald) 30%, transparent) !important;
+  border-color: color-mix(in oklch, var(--emerald) 75%, transparent) !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.14), 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
+}
+.dark [data-sonner-toast][data-type="success"] {
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 14px -2px rgba(0, 0, 0, 0.45) !important;
 }
 
 [data-sonner-toast][data-type="error"] {
-  border-color: color-mix(in oklch, var(--destructive) 75%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--destructive) 30%, transparent) !important;
+  border-color: color-mix(in oklch, var(--destructive) 80%, transparent) !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.14), 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
+}
+.dark [data-sonner-toast][data-type="error"] {
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 14px -2px rgba(0, 0, 0, 0.45) !important;
 }
 
 [data-sonner-toast][data-type="warning"] {
-  border-color: color-mix(in oklch, var(--gold) 75%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--gold) 30%, transparent) !important;
+  border-color: color-mix(in oklch, var(--gold) 80%, transparent) !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.14), 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
+}
+.dark [data-sonner-toast][data-type="warning"] {
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 14px -2px rgba(0, 0, 0, 0.45) !important;
 }
 
 [data-sonner-toast][data-type="info"] {
-  border-color: color-mix(in oklch, var(--brass) 70%, transparent) !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 18px -2px color-mix(in oklch, var(--brass) 30%, transparent) !important;
+  border-color: color-mix(in oklch, var(--brass) 75%, transparent) !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.14), 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
+}
+.dark [data-sonner-toast][data-type="info"] {
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 14px -2px rgba(0, 0, 0, 0.45) !important;
 }
 
-/* Typography */
+/* Typography: Montserrat & Arabic Font Pairing with increased size */
 [data-sonner-toast] [data-title],
 [data-sonner-toast] .cn-toast-title {
-  font-family: var(--font-heading), var(--font-sans), sans-serif !important;
-  font-weight: 600 !important;
-  font-size: 0.875rem !important;
-  line-height: 1.35 !important;
+  font-family: var(--font-montserrat), var(--font-arabic), sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.4 !important;
   color: var(--foreground) !important;
 }
 
 [data-sonner-toast] [data-description],
 [data-sonner-toast] .cn-toast-description {
-  font-family: var(--font-sans), sans-serif !important;
-  font-size: 0.8125rem !important;
-  line-height: 1.45 !important;
+  font-family: var(--font-montserrat), var(--font-arabic), sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
   color: var(--muted-foreground) !important;
   margin-top: 0.25rem !important;
 }
@@ -704,8 +696,8 @@ textarea::-webkit-scrollbar {
 }
 [data-sonner-toast] [data-close-button]:hover,
 [data-sonner-toast] .cn-toast-close:hover {
-  background: color-mix(in oklch, var(--brass) 20%, transparent) !important;
+  background: color-mix(in oklch, var(--foreground) 10%, transparent) !important;
   color: var(--foreground) !important;
-  border-color: var(--brass) !important;
+  border-color: var(--border) !important;
 }
 

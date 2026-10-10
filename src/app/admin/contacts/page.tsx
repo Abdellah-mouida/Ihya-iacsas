@@ -11,7 +11,7 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { deleteContactMessage, getContactMessages } from "@/app/actions/contacts";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";

@@ -1,10 +1,69 @@
 "use client";
 
+import React from "react";
 import { toast as sonnerToast, type ExternalToast } from "sonner";
 
 export interface NotifyOptions extends ExternalToast {
+  /** Optional custom title override */
+  title?: React.ReactNode;
   /** Optional timeout safety net in ms for async operations (defaults to 15000ms) */
   timeoutMs?: number;
+}
+
+/**
+ * Detect current document locale (defaults to "ar")
+ */
+function getCurrentLocale(): "ar" | "en" {
+  if (typeof document !== "undefined") {
+    const lang = document.documentElement.lang;
+    if (lang === "en") return "en";
+    if (lang === "ar") return "ar";
+    if (document.documentElement.dir === "ltr") return "en";
+  }
+  return "ar";
+}
+
+function getStatusTitle(type: "success" | "warning" | "error" | "info"): string {
+  const isAr = getCurrentLocale() === "ar";
+  switch (type) {
+    case "success":
+      return isAr ? "نجاح" : "Success";
+    case "warning":
+      return isAr ? "تنبيه" : "Warning";
+    case "error":
+      return isAr ? "خطأ" : "Error";
+    case "info":
+      return isAr ? "معلومة" : "Info";
+  }
+}
+
+function formatToastPayload(
+  type: "success" | "warning" | "error" | "info",
+  message: React.ReactNode,
+  options?: NotifyOptions
+): { title: React.ReactNode; options: ExternalToast } {
+  const statusTitle = options?.title ?? getStatusTitle(type);
+  const restOptions = { ...options };
+  delete restOptions.title;
+
+  let descriptionContent: React.ReactNode = message;
+  if (restOptions.description) {
+    const rawDesc = typeof restOptions.description === "function" ? restOptions.description() : restOptions.description;
+    descriptionContent = (
+      <div className="space-y-0.5">
+        <div>{message}</div>
+        <div className="text-muted-foreground text-xs opacity-90">{rawDesc}</div>
+      </div>
+    );
+  }
+
+  return {
+    title: statusTitle,
+    options: {
+      ...restOptions,
+      description: descriptionContent,
+    },
+  };
 }
 
 /**
@@ -25,39 +84,44 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000, timeoutMessage?:
 
 /**
  * Ihyaa Program Themed Notification System (notify)
- * Provides Islamic geometric styling, glassmorphism, RTL/LTR awareness,
+ * Provides Islamic geometric styling, glassmorphism, soft floating shadow,
+ * Montserrat & Arabic typography pairing, RTL/LTR awareness, localized status titles,
  * and built-in timeout safety nets across all forms.
  */
 export const notify = {
   success: (message: React.ReactNode, options?: NotifyOptions) => {
-    return sonnerToast.success(message, {
+    const { title, options: finalOptions } = formatToastPayload("success", message, options);
+    return sonnerToast.success(title, {
       duration: options?.duration ?? 4500,
       dismissible: true,
-      ...options,
+      ...finalOptions,
     });
   },
 
   error: (message: React.ReactNode, options?: NotifyOptions) => {
-    return sonnerToast.error(message, {
+    const { title, options: finalOptions } = formatToastPayload("error", message, options);
+    return sonnerToast.error(title, {
       duration: options?.duration ?? 5000,
       dismissible: true,
-      ...options,
+      ...finalOptions,
     });
   },
 
   warning: (message: React.ReactNode, options?: NotifyOptions) => {
-    return sonnerToast.warning(message, {
+    const { title, options: finalOptions } = formatToastPayload("warning", message, options);
+    return sonnerToast.warning(title, {
       duration: options?.duration ?? 5000,
       dismissible: true,
-      ...options,
+      ...finalOptions,
     });
   },
 
   info: (message: React.ReactNode, options?: NotifyOptions) => {
-    return sonnerToast.info(message, {
+    const { title, options: finalOptions } = formatToastPayload("info", message, options);
+    return sonnerToast.info(title, {
       duration: options?.duration ?? 4500,
       dismissible: true,
-      ...options,
+      ...finalOptions,
     });
   },
 
@@ -94,4 +158,14 @@ export const notify = {
   },
 };
 
-export { sonnerToast as toast };
+/**
+ * Drop-in enhanced toast replacement with localized status hierarchy
+ */
+export const toast = {
+  success: notify.success,
+  error: notify.error,
+  warning: notify.warning,
+  info: notify.info,
+  promise: notify.promise,
+  dismiss: notify.dismiss,
+};

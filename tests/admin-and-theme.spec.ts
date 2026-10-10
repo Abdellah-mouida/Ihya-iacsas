@@ -343,6 +343,26 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     // Verify glassmorphic class
     await expect(toast).toHaveClass(/cn-toast/);
 
+    // Verify localized status title "نجاح" and description hierarchy
+    const toastTitle = toast.locator("[data-title]");
+    await expect(toastTitle).toHaveText("نجاح");
+    const toastDesc = toast.locator("[data-description]");
+    await expect(toastDesc).toContainText("تم إرسال رسالتك!");
+
+    // Verify typography and clean soft floating shadow (no corner yellow accent ::after)
+    const toastStyles = await toast.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      const afterComputed = window.getComputedStyle(el, "::after");
+      return {
+        boxShadow: computed.boxShadow,
+        afterContent: afterComputed.content,
+        afterWidth: afterComputed.width,
+        fontFamily: computed.fontFamily,
+      };
+    });
+    expect(toastStyles.afterContent === "none" || toastStyles.afterWidth === "0px" || toastStyles.afterWidth === "auto").toBeTruthy();
+    expect(toastStyles.boxShadow).toMatch(/rgba\(0,\s*0,\s*0/);
+
     // Verify close button dismisses toast
     const activeToast = page.locator('[data-sonner-toast]:not([data-removed="true"])').last();
     const closeBtn = activeToast.locator("[data-close-button]");
@@ -371,6 +391,12 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
 
       await expect(toast).toBeVisible({ timeout: 20000 });
       await expect(toaster).toHaveAttribute("dir", "ltr");
+
+      // Verify English localized status title "Success" and description
+      const engToastTitle = toast.locator("[data-title]");
+      await expect(engToastTitle).toHaveText("Success");
+      const engToastDesc = toast.locator("[data-description]");
+      await expect(engToastDesc).toContainText("Your message was sent!");
 
       // Verify close button dismisses
       const engActiveToast = page.locator('[data-sonner-toast]:not([data-removed="true"])').last();
