@@ -543,3 +543,201 @@ export async function sendWaitlistPromotionEmail(
     textContent: plainText,
   });
 }
+
+/**
+ * Send Account Email Verification OTP Email
+ */
+export async function sendAccountVerificationEmail(
+  to: string,
+  otp: string,
+  locale: string = "ar",
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const isArabic = locale === "ar";
+  const subject = isArabic
+    ? "تأكيد بريدك الإلكتروني — برنامج إحياء"
+    : "Verify Your Email — Ihyaa Program";
+
+  const plainText = isArabic
+    ? `السلام عليكم ورحمة الله وبركاته،\n\nرمز التحقق لتأكيد إنشاء حسابك في برنامج إحياء هو:\n\n${otp}\n\nهذا الرمز صالح لمدة 10 دقائق ولا تشاركه مع أي شخص.\n\nبرنامج إحياء`
+    : `Hello,\n\nYour verification code to confirm your account registration with Ihyaa Program is:\n\n${otp}\n\nThis code will expire in 10 minutes. Do not share this code with anyone.\n\nIhyaa Program`;
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  const logoB64 = getCircularLogoBase64();
+  const logoSrc = appUrl
+    ? `${appUrl}/images/logo-circle.png`
+    : logoB64
+      ? `data:image/png;base64,${logoB64}`
+      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+
+  const html = isArabic
+    ? `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    @media only screen and (max-width: 480px) {
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
+      .header-cell { padding: 24px 16px 18px !important; }
+      .content-cell { padding: 8px 16px 20px !important; }
+      .otp-box { padding: 18px 8px !important; margin: 20px 0 !important; }
+      .otp-text { font-size: 26px !important; letter-spacing: 6px !important; text-indent: 6px !important; }
+      .footer-cell { padding: 14px 16px !important; }
+    }
+    @media only screen and (max-width: 360px) {
+      body { padding: 10px 4px !important; }
+      .header-cell { padding: 18px 10px 14px !important; }
+      .content-cell { padding: 6px 10px 16px !important; font-size: 13.5px !important; }
+      .otp-box { padding: 14px 4px !important; margin: 16px 0 !important; }
+      .otp-text { font-size: 20px !important; letter-spacing: 4px !important; text-indent: 4px !important; }
+      .footer-cell { padding: 10px 8px !important; font-size: 10.5px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 28px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', Helvetica, Arial, sans-serif; background-color: #0b1016; color: #f1f5f9;">
+  <table role="presentation" class="email-container" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #111822; border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+    <tr>
+      <td class="header-cell" style="padding: 36px 28px 24px; text-align: center; background: linear-gradient(180deg, rgba(16, 117, 39, 0.25) 0%, rgba(10, 84, 23, 0.05) 75%, transparent 100%);">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
+          <tr>
+            <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
+              <img src="${logoSrc}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+            </td>
+          </tr>
+        </table>
+        
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
+          برنامج إحياء
+        </h1>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(16, 117, 39, 0.25); border: 1px solid rgba(16, 117, 39, 0.45); color: #34d399; font-size: 12px; font-weight: 600;">
+            تأكيد إنشاء الحساب
+          </span>
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="content-cell" style="padding: 8px 32px 28px; text-align: right; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
+        <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">السلام عليكم ورحمة الله وبركاته،</p>
+        <p style="margin: 0 0 20px; color: #cbd5e1;">
+          شكراً لتسجيلك في برنامج إحياء. لتأكيد حسابك والبدء في استخدامه، يرجى إدخال رمز التحقق التالي:
+        </p>
+
+        <div class="otp-box" style="text-align: center; margin: 24px 0; padding: 22px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
+          <span class="otp-text" style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4ade80; text-shadow: 0 2px 10px rgba(74, 222, 128, 0.35); text-indent: 8px; display: inline-block;">
+            ${otp}
+          </span>
+        </div>
+
+        <p style="margin: 0 0 8px; font-size: 13px; color: #94a3b8; text-align: center;">
+          ⏱️ هذا الرمز صالح لمدة <strong style="color: #f1f5f9;">10 دقائق</strong> فقط.
+        </p>
+        <p style="margin: 0; font-size: 12px; color: #64748b; text-align: center;">
+          إذا لم تقم بإنشاء حساب في برنامج إحياء، يمكنك تجاهل هذه الرسالة بأمان.
+        </p>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="footer-cell" style="padding: 18px 28px; background: rgba(0,0,0,0.35); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.6;">
+        جميع الحقوق محفوظة &copy; ${new Date().getFullYear()} برنامج إحياء
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+    : `
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    @media only screen and (max-width: 480px) {
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
+      .header-cell { padding: 24px 16px 18px !important; }
+      .content-cell { padding: 8px 16px 20px !important; }
+      .otp-box { padding: 18px 8px !important; margin: 20px 0 !important; }
+      .otp-text { font-size: 26px !important; letter-spacing: 6px !important; text-indent: 6px !important; }
+      .footer-cell { padding: 14px 16px !important; }
+    }
+    @media only screen and (max-width: 360px) {
+      body { padding: 10px 4px !important; }
+      .header-cell { padding: 18px 10px 14px !important; }
+      .content-cell { padding: 6px 10px 16px !important; font-size: 13.5px !important; }
+      .otp-box { padding: 14px 4px !important; margin: 16px 0 !important; }
+      .otp-text { font-size: 20px !important; letter-spacing: 4px !important; text-indent: 4px !important; }
+      .footer-cell { padding: 10px 8px !important; font-size: 10.5px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 28px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1016; color: #f1f5f9;">
+  <table role="presentation" class="email-container" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #111822; border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+    <tr>
+      <td class="header-cell" style="padding: 36px 28px 24px; text-align: center; background: linear-gradient(180deg, rgba(16, 117, 39, 0.25) 0%, rgba(10, 84, 23, 0.05) 75%, transparent 100%);">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
+          <tr>
+            <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
+              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+            </td>
+          </tr>
+        </table>
+        
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
+          Ihyaa Program
+        </h1>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(16, 117, 39, 0.25); border: 1px solid rgba(16, 117, 39, 0.45); color: #34d399; font-size: 12px; font-weight: 600;">
+            Confirm Account Registration
+          </span>
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="content-cell" style="padding: 8px 32px 28px; text-align: left; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
+        <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">Hello,</p>
+        <p style="margin: 0 0 20px; color: #cbd5e1;">
+          Thank you for signing up with Ihyaa Program. To verify your email address and activate your account, please enter the following verification code:
+        </p>
+
+        <div class="otp-box" style="text-align: center; margin: 24px 0; padding: 22px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
+          <span class="otp-text" style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4ade80; text-shadow: 0 2px 10px rgba(74, 222, 128, 0.35); text-indent: 8px; display: inline-block;">
+            ${otp}
+          </span>
+        </div>
+
+        <p style="margin: 0 0 8px; font-size: 13px; color: #94a3b8; text-align: center;">
+          ⏱️ This code will expire in <strong style="color: #f1f5f9;">10 minutes</strong>.
+        </p>
+        <p style="margin: 0; font-size: 12px; color: #64748b; text-align: center;">
+          If you did not request this account, you can safely ignore this email.
+        </p>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="footer-cell" style="padding: 18px 28px; background: rgba(0,0,0,0.35); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.6;">
+        &copy; ${new Date().getFullYear()} Ihyaa Program. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendBrevoEmail({
+    to,
+    subject,
+    htmlContent: html,
+    textContent: plainText,
+  });
+}

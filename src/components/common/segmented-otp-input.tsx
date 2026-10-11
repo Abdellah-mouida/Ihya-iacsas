@@ -98,6 +98,7 @@ export function SegmentedOtpInput({
 
   return (
     <motion.div
+      data-testid="segmented-otp-input"
       animate={
         hasError
           ? { x: [-6, 6, -4, 4, -2, 2, 0] }
