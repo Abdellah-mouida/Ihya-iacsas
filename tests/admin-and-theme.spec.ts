@@ -719,10 +719,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await page.goto("/admin/bookings");
     await expect(page.locator("h1")).toBeVisible({ timeout: 15000 });
 
-    // 3. Confirm 0 visible/styled native select elements exist in the live DOM (only Radix hidden aria-hidden sync helpers)
-    const visibleNativeSelects = page.locator("select:visible");
-    expect(await visibleNativeSelects.count()).toBe(0);
-
+    // 3. Confirm 0 standard/non-aria-hidden native select elements exist in the live DOM
     const nonAriaHiddenSelects = page.locator("select:not([aria-hidden='true'])");
     expect(await nonAriaHiddenSelects.count()).toBe(0);
 

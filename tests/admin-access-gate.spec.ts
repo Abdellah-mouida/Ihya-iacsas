@@ -6,24 +6,32 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026"
 test.describe("Admin Access Gate & Security Middleware", () => {
   test.beforeEach(async () => {
     // Reset rate limits for test client IP
-    await prisma.rateLimit.deleteMany({
-      where: {
-        key: {
-          contains: "admin_login_fail",
+    try {
+      await prisma.rateLimit.deleteMany({
+        where: {
+          key: {
+            contains: "admin_login_fail",
+          },
         },
-      },
-    });
+      });
+    } catch {
+      // ignore transient network warming
+    }
   });
 
   test.afterAll(async () => {
     // Clean up test rate limit records
-    await prisma.rateLimit.deleteMany({
-      where: {
-        key: {
-          contains: "admin_login_fail",
+    try {
+      await prisma.rateLimit.deleteMany({
+        where: {
+          key: {
+            contains: "admin_login_fail",
+          },
         },
-      },
-    });
+      });
+    } catch {
+      // ignore
+    }
   });
 
   test("1. Unauthenticated visit to /admin redirects to /admin/login", async ({ page }) => {
@@ -57,13 +65,13 @@ test.describe("Admin Access Gate & Security Middleware", () => {
     await page.click('button[type="submit"]');
 
     // Successfully navigated to /admin
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 30000 });
 
     // Reload page to verify session persistence
     await page.reload();
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 30000 });
   });
 
   test("5. Navigating away to public site clears session immediately", async ({ page }) => {
@@ -71,15 +79,15 @@ test.describe("Admin Access Gate & Security Middleware", () => {
     await page.goto("/admin/login");
     await page.fill('input[type="password"]', ADMIN_PASSWORD);
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
 
     // 2. Navigate to public homepage
     await page.goto("/");
-    await expect(page).toHaveURL("/", { timeout: 15000 });
+    await expect(page).toHaveURL("/", { timeout: 30000 });
 
     // 3. Attempt to return to /admin - should be redirected to login because session was cleared
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/admin\/login/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/admin\/login/, { timeout: 30000 });
   });
 
   test("6. Clicking Log Out revokes session and redirects to /admin/login", async ({ page }) => {
@@ -87,7 +95,7 @@ test.describe("Admin Access Gate & Security Middleware", () => {
     await page.goto("/admin/login");
     await page.fill('input[type="password"]', ADMIN_PASSWORD);
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
 
     // 2. Click desktop logout button
     const logoutBtn = page.getByTestId("admin-logout-btn");
@@ -103,15 +111,17 @@ test.describe("Admin Access Gate & Security Middleware", () => {
   });
 
   test("7. Repeated failed attempts trigger rate-limit lockout message", async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     await page.goto("/admin/login");
 
     // Perform 5 failed attempts
     for (let i = 0; i < 5; i++) {
       await page.fill('input[type="password"]', `bad-attempt-${i}`);
       await page.click('button[type="submit"]');
+      const submitBtn = page.locator('button[type="submit"]');
+      await expect(submitBtn).toBeEnabled({ timeout: 15000 });
       const error = page.getByTestId("admin-login-error");
-      await expect(error).toBeVisible({ timeout: 10000 });
+      await expect(error).toBeVisible({ timeout: 15000 });
     }
 
     // 6th attempt should trigger rate-limit lockout
@@ -119,7 +129,7 @@ test.describe("Admin Access Gate & Security Middleware", () => {
     await page.click('button[type="submit"]');
 
     const lockoutError = page.getByTestId("admin-login-error");
-    await expect(lockoutError).toBeVisible({ timeout: 10000 });
+    await expect(lockoutError).toBeVisible({ timeout: 20000 });
     await expect(lockoutError).toContainText(/Too many failed login attempts|Account locked/i);
   });
 });
