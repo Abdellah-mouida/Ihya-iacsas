@@ -97,10 +97,19 @@ export function Footer() {
 
         <OrnamentDivider className="my-8" />
 
-        <div className="flex flex-col items-center justify-between gap-2 text-center text-xs text-muted-foreground sm:flex-row sm:text-start">
+        <div className="flex flex-col items-center justify-between gap-3 text-center text-xs text-muted-foreground sm:flex-row sm:text-start">
           <p>
             © {year} {t("nav.brand")}. {t("footer.rights")}
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
+            <Link href="/terms" className="transition-colors hover:text-brass">
+              {t("terms.title")}
+            </Link>
+            <span className="text-border">•</span>
+            <Link href="/privacy" className="transition-colors hover:text-brass">
+              {t("privacy.title")}
+            </Link>
+          </div>
           <p>{t("footer.made")}</p>
         </div>
       </div>
