@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { useEffect, type ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 
 import { LocaleProvider } from "@/i18n/locale-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -17,11 +18,13 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <LocaleProvider>
-        {children}
-        <Toaster position="top-center" closeButton />
-      </LocaleProvider>
-    </ThemeProvider>
+    <SessionProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <LocaleProvider>
+          {children}
+          <Toaster position="top-center" closeButton />
+        </LocaleProvider>
+      </ThemeProvider>
+    </SessionProvider>
   );
 }
