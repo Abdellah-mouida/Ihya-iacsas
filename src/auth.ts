@@ -1,9 +1,22 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
+import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
+
+export class UnverifiedEmailError extends CredentialsSignin {
+  code = "unverified_email";
+}
+
+export class RateLimitedError extends CredentialsSignin {
+  code = "rate_limited";
+}
+
+export class InvalidCredentialsError extends CredentialsSignin {
+  code = "invalid_credentials";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -23,29 +36,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new InvalidCredentialsError();
         }
 
         const email = String(credentials.email).trim().toLowerCase();
         const password = String(credentials.password);
+
+        // Rate limit: 5 failed attempts within 15 minutes per email
+        const rateLimitKey = `auth_login:${email}`;
+        const check = await checkRateLimit(rateLimitKey, 5, 15 * 60);
+        if (!check.allowed) {
+          throw new RateLimitedError();
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
         });
 
         if (!user) {
-          return null;
+          // Dummy constant-time comparison to mitigate user enumeration timing
+          await bcrypt.compare(
+            password,
+            "$2a$12$e80yq5kZ9xVlF53rN7zG7.qK0N3sZ0sK1y5J5k5.3N3sZ0sK1y5J5",
+          );
+          throw new InvalidCredentialsError();
         }
 
         // Unverified accounts cannot log in directly
         if (!user.emailVerified) {
-          throw new Error("UNVERIFIED_EMAIL");
+          throw new UnverifiedEmailError();
         }
 
         // Check regular password first
         if (user.passwordHash) {
           const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
           if (isPasswordValid) {
+            await clearRateLimit(rateLimitKey);
             return {
               id: user.id,
               name: user.name,
@@ -70,6 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ) {
           const isTempValid = await bcrypt.compare(password, user.tempPasswordHash);
           if (isTempValid) {
+            await clearRateLimit(rateLimitKey);
             // Flag user as mustChangePassword upon successful temp password login
             await prisma.user.update({
               where: { id: user.id },
@@ -92,7 +119,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
 
-        return null;
+        throw new InvalidCredentialsError();
       },
     }),
   ],

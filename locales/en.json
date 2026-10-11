@@ -366,6 +366,14 @@
     "errInvalidOtp": "Verification code is invalid or has expired",
     "errTooManyAttempts": "Too many attempts. Please try again later",
     "errRateLimited": "Please wait before requesting a new code",
-    "emailVerifiedSuccess": "Your email has been verified! You can now sign in"
+    "emailVerifiedSuccess": "Your email has been verified! You can now sign in",
+    "forgotPassword": "Forgot password?",
+    "signingIn": "Signing in...",
+    "errInvalidCredentials": "Invalid email or password",
+    "errAccountUnverified": "Your email address is not verified yet",
+    "verifyNow": "Verify Email Now",
+    "loginSuccess": "Signed in successfully",
+    "sendingCode": "Sending verification code...",
+    "loginRateLimited": "Too many failed login attempts. Please try again in a few minutes"
   }
 }
