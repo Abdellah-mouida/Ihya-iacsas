@@ -31,7 +31,7 @@ export default async function AccountPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
-      <GlassNavbar />
+      <GlassNavbar initialSession={session} />
       <main className="flex-1 pt-24 sm:pt-28 pb-16">
         <Suspense
           fallback={

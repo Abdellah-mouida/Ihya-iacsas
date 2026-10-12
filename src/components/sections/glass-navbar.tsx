@@ -1,7 +1,15 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import {
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  LogOut,
+  User as UserIcon,
+} from "lucide-react";
+import type { Session } from "next-auth";
+import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,6 +18,14 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/lib/content";
 import { getPublicEvents } from "@/app/actions/events";
@@ -39,11 +55,16 @@ function NewEventDot({ label }: { label: string }) {
 
 export function GlassNavbar({
   initialBookable = null,
+  initialSession,
 }: {
   initialBookable?: boolean | null;
+  initialSession?: Session | null;
 } = {}) {
   const { t } = useLocale();
   const pathname = usePathname();
+  const { data: clientSession, status } = useSession();
+  const session = clientSession !== undefined ? clientSession : initialSession;
+  const isAuthKnown = session !== undefined || status !== "loading";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
@@ -237,6 +258,115 @@ export function GlassNavbar({
             </Button>
           ) : null}
 
+          {/* Desktop Auth State / User Menu */}
+          {isAuthKnown ? (
+            session?.user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    data-testid="navbar-user-menu-btn"
+                    aria-label={t("nav.userMenu")}
+                    className={cn(
+                      "hidden sm:inline-flex items-center gap-1.5 rounded-full p-1 outline-none transition-all hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-primary",
+                      transparentTop
+                        ? "bg-foreground/10 text-foreground dark:bg-white/10 dark:text-white"
+                        : "bg-muted/70 text-foreground border border-border/60",
+                    )}
+                  >
+                    {session.user.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt={session.user.name || "User"}
+                        width={32}
+                        height={32}
+                        className="size-8 rounded-full object-cover border border-brass/25 ring-1 ring-primary/20"
+                      />
+                    ) : (
+                      <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-primary font-heading text-xs font-bold text-white shadow-xs">
+                        {(session.user.name || session.user.email || "U").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <ChevronDown className="size-3.5 opacity-60 me-1" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 rounded-2xl border border-border/60 bg-popover/95 p-1.5 shadow-layered backdrop-blur-xl"
+                >
+                  <DropdownMenuLabel className="px-3 py-2">
+                    <p className="font-heading text-sm font-bold text-foreground truncate">
+                      {session.user.name || t("nav.brand")}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate font-sans">
+                      {session.user.email}
+                    </p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/account"
+                      data-testid="navbar-account-link"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      <UserIcon className="size-4" />
+                      {t("nav.account")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/account#bookings"
+                      data-testid="navbar-bookings-link"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Calendar className="size-4" />
+                      {t("nav.myBookings")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    data-testid="navbar-logout-btn"
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <LogOut className="size-4" />
+                    {t("nav.signOut")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="hidden sm:inline-flex items-center gap-2">
+                <Link
+                  href="/login"
+                  data-testid="navbar-login-btn"
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+                    transparentTop
+                      ? "text-foreground/90 hover:text-foreground dark:text-white/90 dark:hover:text-white hover:bg-white/10"
+                      : "text-foreground/85 hover:text-primary hover:bg-muted/60",
+                  )}
+                >
+                  {t("nav.login")}
+                </Link>
+                <Link
+                  href="/signup"
+                  data-testid="navbar-signup-btn"
+                  className={cn(
+                    "rounded-full border border-border/80 px-3.5 py-1.5 text-sm font-semibold transition-colors hover:border-primary/60 hover:text-primary",
+                    transparentTop
+                      ? "border-white/30 text-foreground dark:border-white/40 dark:text-white"
+                      : "bg-background/80 text-foreground",
+                  )}
+                >
+                  {t("nav.signup")}
+                </Link>
+              </div>
+            )
+          ) : (
+            <div className="hidden sm:block size-8 rounded-full bg-muted/40 animate-pulse" />
+          )}
+
           {/* Animated hamburger */}
           <button
             type="button"
@@ -299,6 +429,43 @@ export function GlassNavbar({
                 animate="show"
                 className="flex flex-col gap-1"
               >
+                {/* Mobile User Profile Header if logged in */}
+                {session?.user ? (
+                  <motion.li variants={fadeUp} className="mb-2">
+                    <Link
+                      href="/account"
+                      onClick={() => setOpen(false)}
+                      data-testid="navbar-mobile-account-link"
+                      className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 p-3 transition-colors hover:bg-muted/70"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {session.user.image ? (
+                          <Image
+                            src={session.user.image}
+                            alt={session.user.name || "User"}
+                            width={40}
+                            height={40}
+                            className="size-10 shrink-0 rounded-full object-cover border border-brass/25 ring-1 ring-primary/20"
+                          />
+                        ) : (
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-primary font-heading text-sm font-bold text-white shadow-xs">
+                            {(session.user.name || session.user.email || "U").charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-heading text-sm font-bold text-foreground truncate">
+                            {session.user.name || t("nav.brand")}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate font-sans">
+                            {session.user.email}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
+
                 {NAV_LINKS.map((link) => {
                   const active = isActive(link.href);
                   const showDot = Boolean(link.indicator) && hasNewEvent;
@@ -327,18 +494,60 @@ export function GlassNavbar({
                   );
                 })}
               </motion.ul>
-              <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
-                <LanguageSwitcher className="flex-1 justify-center" />
-                {hasBookableEvents === true ? (
+              <div className="mt-3 flex flex-col gap-2.5 border-t border-border/60 pt-3">
+                <div className="flex items-center gap-2">
+                  <LanguageSwitcher className="flex-1 justify-center" />
+                  <ThemeToggle />
+                  {hasBookableEvents === true ? (
+                    <Button
+                      asChild
+                      data-testid="navbar-book-btn-mobile"
+                      className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
+                    >
+                      <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
+                        {t("nav.book")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+
+                {/* Mobile Auth Actions */}
+                {session?.user ? (
                   <Button
-                    asChild
-                    data-testid="navbar-book-btn-mobile"
-                    className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
+                    type="button"
+                    variant="outline"
+                    data-testid="navbar-mobile-logout-btn"
+                    onClick={() => {
+                      setOpen(false);
+                      signOut({ callbackUrl: "/login" });
+                    }}
+                    className="h-11 w-full rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10"
                   >
-                    <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
-                      {t("nav.book")}
-                    </Link>
+                    <LogOut className="size-4 me-2" />
+                    {t("nav.signOut")}
                   </Button>
+                ) : isAuthKnown ? (
+                  <div className="flex w-full items-center gap-2">
+                    <Button
+                      asChild
+                      variant="outline"
+                      data-testid="navbar-mobile-login-btn"
+                      className="h-11 flex-1 rounded-2xl font-semibold"
+                    >
+                      <Link href="/login" onClick={() => setOpen(false)}>
+                        {t("nav.login")}
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      data-testid="navbar-mobile-signup-btn"
+                      className="h-11 flex-1 rounded-2xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90"
+                    >
+                      <Link href="/signup" onClick={() => setOpen(false)}>
+                        {t("nav.signup")}
+                      </Link>
+                    </Button>
+                  </div>
                 ) : null}
               </div>
             </motion.div>

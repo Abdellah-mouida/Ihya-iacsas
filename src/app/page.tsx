@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import { About } from "@/components/sections/about";
 import { Activities } from "@/components/sections/activities";
 import { Branches } from "@/components/sections/branches";
@@ -9,10 +10,11 @@ import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { Hero } from "@/components/sections/hero";
 import { Program } from "@/components/sections/program";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
   return (
     <>
-      <GlassNavbar />
+      <GlassNavbar initialSession={session} />
       <main>
         <Hero />
         {/* Ambient radial-gradient backdrop for the homepage — everything

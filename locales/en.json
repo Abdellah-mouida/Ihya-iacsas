@@ -16,7 +16,13 @@
     "book": "Book now",
     "brand": "Ihyaa",
     "tagline": "Youth program",
-    "menu": "Menu"
+    "menu": "Menu",
+    "login": "Log In",
+    "signup": "Sign Up",
+    "account": "My Account",
+    "myBookings": "My Bookings",
+    "signOut": "Sign Out",
+    "userMenu": "User Menu"
   },
   "lang": {
     "toggle": "Change language",
