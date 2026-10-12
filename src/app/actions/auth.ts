@@ -9,6 +9,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { generateNumericOtp, hashOtp, verifyOtpConstantTime } from "@/lib/otp";
 import { sendAccountVerificationEmail, sendTempPasswordEmail } from "@/lib/email";
 import { generateTempPassword, validatePasswordStrength } from "@/lib/password";
+import { uploadImageToCloudinaryDetailed, deleteImageFromCloudinary } from "@/lib/cloudinary";
+import { safeRevalidatePath } from "@/lib/cache";
+import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
 
 async function getClientIp(): Promise<string> {
   const headerList = await headers();
@@ -536,5 +539,199 @@ export async function changePassword(
   return {
     success: true,
     sessionVersion: updatedUser.sessionVersion,
+  };
+}
+
+export interface CompleteOnboardingResult {
+  success: boolean;
+  error?: string;
+  onboardingComplete?: boolean;
+}
+
+export async function getOnboardingProfile(): Promise<{
+  success: boolean;
+  unauthorized?: boolean;
+  user?: {
+    name: string | null;
+    email: string | null;
+    city: string | null;
+    age: number | null;
+    image: string | null;
+    termsAccepted: boolean;
+    onboardingCompleted: boolean;
+  };
+}> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, unauthorized: true };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      name: true,
+      email: true,
+      city: true,
+      age: true,
+      image: true,
+      termsAcceptedAt: true,
+      onboardingCompletedAt: true,
+    },
+  });
+
+  if (!user) {
+    return { success: false, unauthorized: true };
+  }
+
+  return {
+    success: true,
+    user: {
+      name: user.name,
+      email: user.email,
+      city: user.city,
+      age: user.age,
+      image: user.image,
+      termsAccepted: Boolean(user.termsAcceptedAt),
+      onboardingCompleted: Boolean(user.onboardingCompletedAt),
+    },
+  };
+}
+
+export async function completeOnboarding(
+  formData: FormData,
+  locale: string = "ar",
+): Promise<CompleteOnboardingResult> {
+  const isAr = locale === "ar";
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: isAr ? "يرجى تسجيل الدخول أولاً" : "Please sign in first",
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  });
+
+  if (!user) {
+    return {
+      success: false,
+      error: isAr ? "لم يتم العثور على الحساب" : "User account not found",
+    };
+  }
+
+  const city = (formData.get("city") as string)?.trim();
+  const ageRaw = formData.get("age");
+  const name = (formData.get("name") as string)?.trim();
+  const clearImage = formData.get("clearImage") === "true";
+  const imageFile = formData.get("image") as File | null;
+  const termsAccepted = formData.get("termsAccepted") === "true" || formData.get("termsAccepted") === "on";
+
+  if (!city) {
+    return {
+      success: false,
+      error: isAr ? "يرجى اختيار مدينتك" : "Please select your city",
+    };
+  }
+
+  // Validate city against MOROCCAN_CITIES list or non-empty string
+  const cityMatch = MOROCCAN_CITIES.find(
+    (c) =>
+      c.id.toLowerCase() === city.toLowerCase() ||
+      c.nameAr.toLowerCase() === city.toLowerCase() ||
+      c.nameEn.toLowerCase() === city.toLowerCase(),
+  );
+
+  const normalizedCity = cityMatch ? (isAr ? cityMatch.nameAr : cityMatch.nameEn) : city;
+
+  const age = typeof ageRaw === "string" ? parseInt(ageRaw, 10) : Number(ageRaw);
+  if (!age || isNaN(age) || age < 10 || age > 120) {
+    return {
+      success: false,
+      error: isAr
+        ? "يجب أن يكون العمر رقماً صحيحاً بين 10 و120 سنة"
+        : "Age must be a valid number between 10 and 120 years",
+    };
+  }
+
+  // If terms have not been accepted yet, require acceptance
+  if (!user.termsAcceptedAt && !termsAccepted) {
+    return {
+      success: false,
+      error: isAr
+        ? "يجب الموافقة على شروط الخدمة وسياسة الخصوصية للمتابعة"
+        : "You must accept the Terms of Service and Privacy Policy to continue",
+    };
+  }
+
+  // Handle avatar image
+  let newImageUrl: string | null = user.image;
+  let newImagePublicId: string | null = user.imagePublicId;
+
+  if (clearImage) {
+    if (user.imagePublicId) {
+      await deleteImageFromCloudinary(user.imagePublicId);
+    }
+    newImageUrl = null;
+    newImagePublicId = null;
+  } else if (imageFile && imageFile instanceof File && imageFile.size > 0) {
+    if (imageFile.size > 5 * 1024 * 1024) {
+      return {
+        success: false,
+        error: isAr
+          ? "يجب أن يكون حجم الصورة أقل من 5 ميغابايت"
+          : "Photo must be less than 5MB",
+      };
+    }
+
+    try {
+      const bytes = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const uploadRes = await uploadImageToCloudinaryDetailed(buffer, "ihyaa-profiles");
+
+      // Delete old photo if it was in Cloudinary and differs
+      if (user.imagePublicId && user.imagePublicId !== uploadRes.public_id) {
+        await deleteImageFromCloudinary(user.imagePublicId);
+      }
+
+      newImageUrl = uploadRes.secure_url;
+      newImagePublicId = uploadRes.public_id;
+    } catch (uploadErr) {
+      console.error("[onboarding] Profile photo upload failed:", uploadErr);
+      return {
+        success: false,
+        error: isAr
+          ? "فشل تحميل الصورة الشخصية. يرجى المحاولة بصورة أخرى أو تخطي هذه الخطوة"
+          : "Profile photo upload failed. Please try another image or skip this step",
+      };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      city: normalizedCity,
+      age,
+      ...(name ? { name } : {}),
+      image: newImageUrl,
+      imagePublicId: newImagePublicId,
+      ...(!user.termsAcceptedAt
+        ? {
+            termsAcceptedAt: new Date(),
+            termsVersion: TERMS_VERSION,
+          }
+        : {}),
+      onboardingCompletedAt: new Date(),
+    },
+  });
+
+  safeRevalidatePath("/onboarding");
+  safeRevalidatePath("/account");
+  safeRevalidatePath("/book");
+
+  return {
+    success: true,
+    onboardingComplete: true,
   };
 }

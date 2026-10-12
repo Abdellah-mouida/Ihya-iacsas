@@ -115,6 +115,11 @@ export function LoginView() {
             router.refresh();
             return;
           }
+          if (!sessionData?.user?.onboardingComplete) {
+            router.push(`/onboarding?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+            router.refresh();
+            return;
+          }
         } catch {}
         router.push(callbackUrl);
         router.refresh();
@@ -159,7 +164,8 @@ export function LoginView() {
   const handleGoogleSignIn = async () => {
     setIsGooglePending(true);
     try {
-      await signIn("google", { callbackUrl });
+      const targetCallback = callbackUrl === "/events" ? "/onboarding" : callbackUrl;
+      await signIn("google", { callbackUrl: targetCallback });
     } catch {
       setIsGooglePending(false);
       toast.error(
