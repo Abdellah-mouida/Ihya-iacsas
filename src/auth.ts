@@ -97,11 +97,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const isTempValid = await bcrypt.compare(password, user.tempPasswordHash);
           if (isTempValid) {
             await clearRateLimit(rateLimitKey);
-            // Flag user as mustChangePassword upon successful temp password login
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { mustChangePassword: true },
-            });
+            // Flag user as mustChangePassword upon successful temp password login if not already set
+            if (!user.mustChangePassword) {
+              try {
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data: { mustChangePassword: true },
+                });
+              } catch (updateErr) {
+                console.warn("[auth] Failed to flag mustChangePassword:", updateErr);
+              }
+            }
 
             return {
               id: user.id,
@@ -216,6 +222,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.onboardingComplete = Boolean(session.onboardingComplete);
         if (session.mustChangePassword !== undefined)
           token.mustChangePassword = Boolean(session.mustChangePassword);
+        if (session.sessionVersion !== undefined)
+          token.sessionVersion = session.sessionVersion;
       }
 
       return token;

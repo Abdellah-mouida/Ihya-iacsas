@@ -374,6 +374,26 @@
     "verifyNow": "Verify Email Now",
     "loginSuccess": "Signed in successfully",
     "sendingCode": "Sending verification code...",
-    "loginRateLimited": "Too many failed login attempts. Please try again in a few minutes"
+    "loginRateLimited": "Too many failed login attempts. Please try again in a few minutes",
+    "forgotTitle": "Reset Your Password",
+    "forgotSubtitle": "Enter your email address and we will send you a temporary password valid for 15 minutes.",
+    "forgotEmailLabel": "Email address",
+    "forgotSubmit": "Send Temporary Password",
+    "forgotSending": "Sending...",
+    "forgotSuccessTitle": "Instructions Sent",
+    "forgotSuccessDesc": "If an account exists with this email, a temporary password has been sent. Please check your inbox (or spam folder).",
+    "backToLogin": "Back to sign in",
+    "forgotRateLimited": "Too many password reset requests. Please wait 15 minutes before trying again.",
+    "changePasswordTitle": "Set New Password",
+    "changePasswordSubtitle": "For your account security, please set a new permanent password to continue.",
+    "currentPasswordLabel": "Current or Temporary Password",
+    "newPasswordLabel": "New Password",
+    "confirmNewPasswordLabel": "Confirm New Password",
+    "changePasswordSubmit": "Save New Password",
+    "changePasswordSubmitting": "Saving...",
+    "changePasswordSuccess": "Password updated successfully! Other sessions have been signed out.",
+    "errCurrentPasswordWrong": "Current or temporary password is incorrect",
+    "errNewPasswordSame": "New password must be different from the previous or temporary password",
+    "mustChangePasswordNotice": "You logged in with a temporary password. You must set a new password before continuing."
   }
 }

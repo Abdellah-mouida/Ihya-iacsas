@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { Footer } from "@/components/sections/footer";
+import { GlassNavbar } from "@/components/sections/glass-navbar";
+import { IslamicLoader } from "@/components/common/islamic-loader";
+import { ForgotPasswordView } from "@/components/auth/forgot-password-view";
+
+export const metadata: Metadata = {
+  title: "إعادة تعيين كلمة المرور — برنامج إحياء | Reset Password — Ihyaa Program",
+  description: "إعادة تعيين كلمة المرور لحسابك في برنامج إحياء.",
+};
+
+export default function ForgotPasswordPage() {
+  return (
+    <>
+      <GlassNavbar />
+      <main className="min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center relative">
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center p-12">
+              <IslamicLoader size="lg" message="جاري التحميل..." />
+            </div>
+          }
+        >
+          <ForgotPasswordView />
+        </Suspense>
+      </main>
+      <Footer />
+    </>
+  );
+}

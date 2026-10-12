@@ -107,6 +107,15 @@ export function LoginView() {
         }
 
         toast.success(t("auth.loginSuccess"));
+        try {
+          const sessionRes = await fetch("/api/auth/session");
+          const sessionData = await sessionRes.json();
+          if (sessionData?.user?.mustChangePassword) {
+            router.push("/change-password");
+            router.refresh();
+            return;
+          }
+        } catch {}
         router.push(callbackUrl);
         router.refresh();
       } catch (err: unknown) {

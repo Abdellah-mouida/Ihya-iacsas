@@ -2,12 +2,13 @@
 
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { TERMS_VERSION } from "@/lib/terms";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateNumericOtp, hashOtp, verifyOtpConstantTime } from "@/lib/otp";
-import { sendAccountVerificationEmail } from "@/lib/email";
-import { validatePasswordStrength } from "@/lib/password";
+import { sendAccountVerificationEmail, sendTempPasswordEmail } from "@/lib/email";
+import { generateTempPassword, validatePasswordStrength } from "@/lib/password";
 
 async function getClientIp(): Promise<string> {
   const headerList = await headers();
@@ -343,4 +344,197 @@ export async function resendAccountVerificationOtp(
   }
 
   return { success: true };
+}
+
+export interface PasswordResetResult {
+  success: boolean;
+  error?: string;
+  email?: string;
+}
+
+export async function requestPasswordReset(
+  formData: FormData,
+  locale: string = "ar",
+): Promise<PasswordResetResult> {
+  const isAr = locale === "ar";
+  const emailRaw = (formData.get("email") as string)?.trim().toLowerCase();
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRaw || !emailRegex.test(emailRaw)) {
+    return {
+      success: false,
+      error: isAr ? "يرجى إدخال بريد إلكتروني صحيح" : "Please enter a valid email address",
+    };
+  }
+
+  const clientIp = await getClientIp();
+
+  // Rate limits: 3 per 15 minutes per email, 10 per 15 minutes per IP
+  const emailRate = await checkRateLimit(`forgot_email_${emailRaw}`, 3, 15 * 60);
+  if (!emailRate.allowed) {
+    return {
+      success: false,
+      error: isAr
+        ? "لقد تجاوزت عدد المحاولات المسموح بها لإعادة تعيين كلمة المرور. يرجى الانتظار 15 دقيقة."
+        : "Too many password reset requests. Please wait 15 minutes before trying again.",
+    };
+  }
+
+  const ipRate = await checkRateLimit(`forgot_ip_${clientIp}`, 10, 15 * 60);
+  if (!ipRate.allowed) {
+    return {
+      success: false,
+      error: isAr
+        ? "لقد تجاوزت عدد المحاولات المسموح بها لإعادة تعيين كلمة المرور. يرجى الانتظار 15 دقيقة."
+        : "Too many password reset requests. Please wait 15 minutes before trying again.",
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: emailRaw },
+  });
+
+  // Security: only proceed if user exists and email is verified
+  // But always return success: true to caller to prevent email enumeration
+  if (user && user.email && user.emailVerified) {
+    const tempPassword = generateTempPassword();
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
+    const tempPasswordExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        tempPasswordHash,
+        tempPasswordExpiresAt,
+        mustChangePassword: true,
+      },
+    });
+
+    await sendTempPasswordEmail(user.email, tempPassword, locale);
+  }
+
+  return {
+    success: true,
+    email: emailRaw,
+  };
+}
+
+export interface ChangePasswordResult {
+  success: boolean;
+  error?: string;
+  sessionVersion?: number;
+}
+
+export async function changePassword(
+  formData: FormData,
+  locale: string = "ar",
+): Promise<ChangePasswordResult> {
+  const isAr = locale === "ar";
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: isAr ? "يجب تسجيل الدخول أولاً" : "You must be signed in to change your password",
+    };
+  }
+
+  const currentPassword = (formData.get("currentPassword") as string) || "";
+  const newPassword = (formData.get("newPassword") as string) || "";
+  const confirmNewPassword = (formData.get("confirmNewPassword") as string) || "";
+
+  if (!currentPassword) {
+    return {
+      success: false,
+      error: isAr ? "يرجى إدخال كلمة المرور الحالية أو المؤقتة" : "Please enter your current or temporary password",
+    };
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    return {
+      success: false,
+      error: isAr ? "كلمتا المرور غير متطابقتين" : "Passwords do not match",
+    };
+  }
+
+  if (currentPassword === newPassword) {
+    return {
+      success: false,
+      error: isAr
+        ? "يجب أن تكون كلمة المرور الجديدة مختلفة عن كلمة المرور السابقة أو المؤقتة"
+        : "New password must be different from previous or temporary password",
+    };
+  }
+
+  const strength = validatePasswordStrength(newPassword);
+  if (!strength.valid) {
+    return {
+      success: false,
+      error: isAr
+        ? "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، وحرف كبير، وحرف صغير، ورقم، ورمز خاص"
+        : "Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character",
+    };
+  }
+
+  // Rate limit: 5 attempts per 15 minutes per user
+  const userRate = await checkRateLimit(`change_pwd_${session.user.id}`, 5, 15 * 60);
+  if (!userRate.allowed) {
+    return {
+      success: false,
+      error: isAr ? "تم تجاوز حد المحاولات المسموح به. يرجى المحاولة لاحقاً" : "Too many attempts. Please try again later",
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  });
+
+  if (!user) {
+    return {
+      success: false,
+      error: isAr ? "لم يتم العثور على المستخدم" : "User not found",
+    };
+  }
+
+  let isCurrentValid = false;
+  if (user.passwordHash) {
+    isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  }
+
+  if (
+    !isCurrentValid &&
+    user.tempPasswordHash &&
+    user.tempPasswordExpiresAt &&
+    user.tempPasswordExpiresAt > new Date()
+  ) {
+    isCurrentValid = await bcrypt.compare(currentPassword, user.tempPasswordHash);
+  }
+
+  if (!isCurrentValid) {
+    return {
+      success: false,
+      error: isAr
+        ? "كلمة المرور الحالية أو المؤقتة غير صحيحة"
+        : "Current or temporary password is incorrect",
+    };
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, 12);
+
+  // Increment sessionVersion to invalidate all other active sessions across devices
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: newPasswordHash,
+      tempPasswordHash: null,
+      tempPasswordExpiresAt: null,
+      mustChangePassword: false,
+      sessionVersion: { increment: 1 },
+    },
+  });
+
+  return {
+    success: true,
+    sessionVersion: updatedUser.sessionVersion,
+  };
 }

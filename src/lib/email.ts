@@ -741,3 +741,189 @@ export async function sendAccountVerificationEmail(
     textContent: plainText,
   });
 }
+
+/**
+ * Sends a temporary password email to a user for password reset.
+ */
+export async function sendTempPasswordEmail(
+  to: string,
+  tempPassword: string,
+  locale: string = "ar",
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const isArabic = locale === "ar";
+  const subject = isArabic
+    ? "كلمة المرور المؤقتة — برنامج إحياء"
+    : "Temporary Password — Ihyaa Program";
+
+  const plainText = isArabic
+    ? `السلام عليكم ورحمة الله وبركاته،\n\nلقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في برنامج إحياء.\n\nكلمة المرور المؤقتة الخاصة بك هي:\n${tempPassword}\n\nصلاحية كلمة المرور هذه 15 دقيقة فقط. يرجى تسجيل الدخول بها وتعيين كلمة مرور جديدة فوراً.\n\nإذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذه الرسالة.\n\nبرنامج إحياء`
+    : `Hello,\n\nWe received a request to reset your password for your Ihyaa Program account.\n\nYour temporary password is:\n${tempPassword}\n\nThis temporary password is valid for 15 minutes only. Please log in with it and set a new password immediately.\n\nIf you did not request this, you can safely ignore this email.\n\nIhyaa Program`;
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  const logoB64 = getCircularLogoBase64();
+  const logoSrc = appUrl
+    ? `${appUrl}/images/logo-circle.png`
+    : logoB64
+      ? `data:image/png;base64,${logoB64}`
+      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+
+  const html = isArabic
+    ? `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    @media only screen and (max-width: 480px) {
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
+      .header-cell { padding: 24px 16px 18px !important; }
+      .content-cell { padding: 8px 16px 20px !important; }
+      .pwd-box { padding: 18px 8px !important; margin: 20px 0 !important; }
+      .pwd-text { font-size: 20px !important; letter-spacing: 2px !important; }
+      .footer-cell { padding: 14px 16px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 28px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1016; color: #f1f5f9;">
+  <table role="presentation" class="email-container" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #111822; border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+    <tr>
+      <td class="header-cell" style="padding: 36px 28px 24px; text-align: center; background: linear-gradient(180deg, rgba(16, 117, 39, 0.25) 0%, rgba(10, 84, 23, 0.05) 75%, transparent 100%);">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
+          <tr>
+            <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
+              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+            </td>
+          </tr>
+        </table>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
+          برنامج إحياء
+        </h1>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(16, 117, 39, 0.25); border: 1px solid rgba(16, 117, 39, 0.45); color: #34d399; font-size: 12px; font-weight: 600;">
+            إعادة تعيين كلمة المرور
+          </span>
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="content-cell" style="padding: 8px 32px 28px; text-align: right; line-height: 1.8; color: #e2e8f0; font-size: 14.5px;">
+        <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">السلام عليكم ورحمة الله وبركاته،</p>
+        <p style="margin: 0 0 20px; color: #cbd5e1;">
+          تلقينا طلباً لتعيين كلمة مرور جديدة لحسابك. استخدم كلمة المرور المؤقتة التالية لتسجيل الدخول:
+        </p>
+
+        <div class="pwd-box" style="text-align: center; margin: 24px 0; padding: 18px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
+          <span class="pwd-text" style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #4ade80; display: inline-block;">
+            ${tempPassword}
+          </span>
+        </div>
+
+        <p style="margin: 0 0 8px; font-size: 13px; color: #94a3b8; text-align: center;">
+          ⏱️ صالحة لمدة <strong style="color: #f1f5f9;">15 دقيقة فقط</strong>.
+        </p>
+        <p style="margin: 0 0 16px; font-size: 12.5px; color: #cbd5e1; text-align: center;">
+          🔒 عند تسجيل الدخول بهذه الكلمة، سيُطلب منك فوراً تحديد كلمة مرورك الجديدة.
+        </p>
+        <p style="margin: 0; font-size: 12px; color: #64748b; text-align: center;">
+          إذا لم تطلب هذا، يمكنك تجاهل هذه الرسالة بأمان.
+        </p>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="footer-cell" style="padding: 18px 28px; background: rgba(0,0,0,0.35); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.6;">
+        &copy; ${new Date().getFullYear()} برنامج إحياء. جميع الحقوق محفوظة.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+    : `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    @media only screen and (max-width: 480px) {
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
+      .header-cell { padding: 24px 16px 18px !important; }
+      .content-cell { padding: 8px 16px 20px !important; }
+      .pwd-box { padding: 18px 8px !important; margin: 20px 0 !important; }
+      .pwd-text { font-size: 20px !important; letter-spacing: 2px !important; }
+      .footer-cell { padding: 14px 16px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 28px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1016; color: #f1f5f9;">
+  <table role="presentation" class="email-container" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background: #111822; border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 24px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+    <tr>
+      <td class="header-cell" style="padding: 36px 28px 24px; text-align: center; background: linear-gradient(180deg, rgba(16, 117, 39, 0.25) 0%, rgba(10, 84, 23, 0.05) 75%, transparent 100%);">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
+          <tr>
+            <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
+              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+            </td>
+          </tr>
+        </table>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
+          Ihyaa Program
+        </h1>
+        <div style="margin-top: 8px;">
+          <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(16, 117, 39, 0.25); border: 1px solid rgba(16, 117, 39, 0.45); color: #34d399; font-size: 12px; font-weight: 600;">
+            Password Reset
+          </span>
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="content-cell" style="padding: 8px 32px 28px; text-align: left; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
+        <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">Hello,</p>
+        <p style="margin: 0 0 20px; color: #cbd5e1;">
+          We received a request to reset your password. Use the following temporary password to log in:
+        </p>
+
+        <div class="pwd-box" style="text-align: center; margin: 24px 0; padding: 18px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
+          <span class="pwd-text" style="font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #4ade80; display: inline-block;">
+            ${tempPassword}
+          </span>
+        </div>
+
+        <p style="margin: 0 0 8px; font-size: 13px; color: #94a3b8; text-align: center;">
+          ⏱️ Valid for <strong style="color: #f1f5f9;">15 minutes only</strong>.
+        </p>
+        <p style="margin: 0 0 16px; font-size: 12.5px; color: #cbd5e1; text-align: center;">
+          🔒 Once you sign in with this temporary password, you will be required to set your new permanent password immediately.
+        </p>
+        <p style="margin: 0; font-size: 12px; color: #64748b; text-align: center;">
+          If you did not request this reset, you can safely ignore this email.
+        </p>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="footer-cell" style="padding: 18px 28px; background: rgba(0,0,0,0.35); border-top: 1px solid rgba(255,255,255,0.06); text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.6;">
+        &copy; ${new Date().getFullYear()} Ihyaa Program. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendBrevoEmail({
+    to,
+    subject,
+    htmlContent: html,
+    textContent: plainText,
+  });
+}
