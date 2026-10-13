@@ -176,7 +176,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // 2. Token refresh / verification against database
+      // 2. Client called useSession().update(...)
+      if (trigger === "update" && session) {
+        if (session.name !== undefined) token.name = session.name;
+        if (session.image !== undefined) token.image = session.image;
+        if (session.city !== undefined) token.city = session.city;
+        if (session.age !== undefined) token.age = session.age;
+        if (session.locale !== undefined) token.locale = session.locale;
+        if (session.onboardingComplete !== undefined)
+          token.onboardingComplete = Boolean(session.onboardingComplete);
+        if (session.mustChangePassword !== undefined)
+          token.mustChangePassword = Boolean(session.mustChangePassword);
+        if (session.sessionVersion !== undefined)
+          token.sessionVersion = session.sessionVersion;
+      }
+
+      // 3. Token refresh / verification against database
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
@@ -209,21 +224,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.age = dbUser.age;
         token.locale = dbUser.locale;
         token.sessionVersion = dbUser.sessionVersion;
-      }
-
-      // 3. Client called useSession().update(...)
-      if (trigger === "update" && session) {
-        if (session.name !== undefined) token.name = session.name;
-        if (session.image !== undefined) token.image = session.image;
-        if (session.city !== undefined) token.city = session.city;
-        if (session.age !== undefined) token.age = session.age;
-        if (session.locale !== undefined) token.locale = session.locale;
-        if (session.onboardingComplete !== undefined)
-          token.onboardingComplete = Boolean(session.onboardingComplete);
-        if (session.mustChangePassword !== undefined)
-          token.mustChangePassword = Boolean(session.mustChangePassword);
-        if (session.sessionVersion !== undefined)
-          token.sessionVersion = session.sessionVersion;
       }
 
       return token;

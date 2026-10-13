@@ -36,6 +36,9 @@ test.describe("Task 4: Login with Credentials & Google, Rate Limiting & Account 
         termsAcceptedAt: new Date(),
         termsVersion: "2026-10-11",
         sessionVersion: 1,
+        city: "الرباط",
+        age: 24,
+        onboardingCompletedAt: new Date(),
       },
     });
 
