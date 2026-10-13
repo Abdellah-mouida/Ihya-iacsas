@@ -244,7 +244,21 @@
     "nextStep": "الخطوة التالية",
     "alreadyRegisteredTitle": "أنت مسجل بالفعل في هذه الفعالية",
     "alreadyRegisteredDesc": "تم تأكيد حجزك في هذه الفعالية مسبقاً. لا داعي لإعادة ملء استمارة التسجيل.",
-    "alreadyRegisteredBack": "العودة إلى تفاصيل الفعالية"
+    "alreadyRegisteredBack": "العودة إلى تفاصيل الفعالية",
+    "accountSnapshotTitle": "بيانات الحساب المعتمدة",
+    "accountSnapshotDesc": "يتم استخدام بياناتك الشخصية المسجلة في حسابك لتأكيد الحجز مباشرة دون الحاجة لرمز تحقق.",
+    "editAccountProfile": "تعديل بيانات الحساب",
+    "submitBookingConfirmed": "تأكيد الحجز",
+    "submitBookingPending": "طلب حجز مقعد",
+    "submitBookingWaitlist": "الانضمام لقائمة الانتظار",
+    "bookingSubmitting": "جارٍ تسجيل الحجز...",
+    "viewMyBookings": "عرض حجوزاتي",
+    "backToEvents": "العودة للفعاليات",
+    "bookingSuccessToast": "تم تسجيل حجزك بنجاح!",
+    "statusPendingTitle": "طلب الحجز قيد المراجعة",
+    "statusPendingDesc": "تم استلام طلب حجزك بنجاح. نظراً لأن المقاعد محدودة، سيتم إشعارك فور موافقة إدارة البرنامج على طلبك.",
+    "statusWaitlistTitle": "أنت في قائمة الانتظار",
+    "statusWaitlistDesc": "المقاعد مكتملة حالياً. تم تسجيلك في قائمة الانتظار بالترتيب، وسيتم حجز مقعدك تلقائياً وإشعارك بالبريد عند توفر مكان شاغر."
   },
   "dashboard": {
     "title": "لوحة التحكم",

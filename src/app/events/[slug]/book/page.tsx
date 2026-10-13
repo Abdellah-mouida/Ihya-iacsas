@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { auth } from "@/auth";
 import { BookingFallback } from "@/components/common/booking-fallback";
 import { BookingStepper } from "@/components/common/booking-stepper";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
@@ -24,6 +25,16 @@ export default async function EventBookPage({
   searchParams?: Promise<{ eventId?: string }>;
 }) {
   const { slug } = await params;
+  const currentPath = `/events/${encodeURIComponent(slug)}/book`;
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
+  }
+  if (!session.user.onboardingComplete) {
+    redirect(`/onboarding?callbackUrl=${encodeURIComponent(currentPath)}`);
+  }
+
   const cookieStore = await cookies();
 
   // The route slug is the single source of truth for the event
@@ -48,9 +59,24 @@ export default async function EventBookPage({
     targetEventId = event.slug || event.id;
   }
 
-  // Server-side check: if already booked cookie exists, redirect to event page (except during Server Action)
+  // Server-side check: if already booked in DB or cookie exists, redirect to event page (except during Server Action)
   const headerList = await headers();
   const isServerAction = headerList.has("next-action");
+
+  if (!isServerAction && event) {
+    const existing = await prisma.booking.findFirst({
+      where: {
+        eventId: event.id,
+        OR: [
+          { userId: session.user.id },
+          { email: session.user.email! },
+        ],
+      },
+    });
+    if (existing) {
+      redirect(`/events#event-${targetEventId}`);
+    }
+  }
 
   const hasEventCookie = cookieStore.get(`ihyaa_booked_${targetEventId}`)?.value === "true";
   let hasListCookie = false;

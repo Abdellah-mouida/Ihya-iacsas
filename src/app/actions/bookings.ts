@@ -4,7 +4,9 @@ import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
+import { auth } from "@/auth";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
+import { safeRevalidatePath } from "@/lib/cache";
 import { sendOTPEmail, sendWaitlistPromotionEmail } from "@/lib/email";
 import { isEventEnded } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
@@ -135,6 +137,282 @@ async function resolveTargetEvent(eventId?: string) {
     where: { bookingOpen: true },
     orderBy: { date: "asc" },
   });
+}
+
+/**
+ * Returns the current authenticated user state for the booking flow:
+ * - whether they are authenticated
+ * - whether they need onboarding
+ * - whether they are already booked for this event
+ * - snapshot of user details (name, email, city, age, image)
+ */
+export async function getBookingUserState(eventId?: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { authenticated: false };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        city: true,
+        age: true,
+        image: true,
+        onboardingCompletedAt: true,
+      },
+    });
+
+    if (!user) {
+      return { authenticated: false };
+    }
+
+    if (!user.onboardingCompletedAt || !user.city || !user.age) {
+      return { authenticated: true, needsOnboarding: true };
+    }
+
+    let alreadyBooked = false;
+    let existingStatus: string | null = null;
+    let existingRef: string | null = null;
+
+    if (eventId) {
+      const event = await resolveTargetEvent(eventId);
+      if (event) {
+        const existing = await prisma.booking.findFirst({
+          where: {
+            eventId: event.id,
+            OR: [
+              { userId: user.id },
+              { email: user.email! },
+            ],
+          },
+        });
+        if (existing) {
+          alreadyBooked = true;
+          existingStatus = existing.status;
+          existingRef = `IHY-${existing.id.slice(-6).toUpperCase()}`;
+        }
+      }
+    }
+
+    return {
+      authenticated: true,
+      needsOnboarding: false,
+      alreadyBooked,
+      existingStatus,
+      existingRef,
+      user: {
+        id: user.id,
+        name: user.name || "",
+        email: user.email || "",
+        city: user.city || "",
+        age: user.age || 0,
+        image: user.image,
+      },
+    };
+  } catch {
+    return { authenticated: false };
+  }
+}
+
+/**
+ * Create a booking for an authenticated user who completed onboarding.
+ * Automatically snapshots user data, enforces per-event uniqueness,
+ * checks capacity and sets status (CONFIRMED, PENDING, or WAITLISTED).
+ */
+export async function createAuthenticatedBooking(data: {
+  eventId?: string;
+  motive?: string;
+  locale?: string;
+}) {
+  try {
+    const { eventId, motive, locale = "ar" } = data;
+    const session = await auth();
+
+    if (!session?.user?.id || !session.user.email) {
+      return {
+        success: false,
+        unauthenticated: true,
+        error:
+          locale === "ar"
+            ? "يرجى تسجيل الدخول أولاً لإتمام الحجز"
+            : "Please sign in first to complete your booking",
+      };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        city: true,
+        age: true,
+        onboardingCompletedAt: true,
+      },
+    });
+
+    if (!user || !user.onboardingCompletedAt || !user.city || !user.age || !user.email) {
+      return {
+        success: false,
+        needsOnboarding: true,
+        error:
+          locale === "ar"
+            ? "يرجى إكمال بياناتك الشخصية أولاً"
+            : "Please complete your profile first",
+      };
+    }
+
+    const userEmail = user.email;
+
+    // Resolve target event
+    const event = await resolveTargetEvent(eventId);
+    if (!event) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "الفعالية المطلوبة غير موجودة"
+            : "The requested event was not found",
+      };
+    }
+
+    if (!event.bookingOpen || isEventEnded(event.date, event.time)) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "انتهت هذه الفعالية أو أُغلق التسجيل فيها"
+            : "This event has ended or registration is closed",
+      };
+    }
+
+    // Rate limit: max 5 bookings per hour per user
+    const rateLimit = await checkRateLimit(`auth_book:${user.id}`, 5, 3600);
+    if (!rateLimit.allowed) {
+      return {
+        success: false,
+        error:
+          locale === "ar"
+            ? "طلبات حجز كثيرة جداً. يرجى المحاولة لاحقاً."
+            : "Too many booking requests. Please try again later.",
+      };
+    }
+
+    // Check uniqueness (by userId or by email)
+    const existingBooking = await prisma.booking.findFirst({
+      where: {
+        eventId: event.id,
+        OR: [
+          { userId: user.id },
+          { email: userEmail },
+        ],
+      },
+    });
+
+    if (existingBooking) {
+      return {
+        success: false,
+        alreadyBooked: true,
+        error:
+          locale === "ar"
+            ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+            : "You have already booked for this event",
+      };
+    }
+
+    // Determine status & capacity
+    const isLimited = event.capacityType === "LIMITED";
+    let newStatus = "CONFIRMED";
+    let isConfirmed = true;
+    let waitlistOrder: number | null = null;
+
+    if (isLimited) {
+      const confirmedCount = await prisma.booking.count({
+        where: {
+          eventId: event.id,
+          status: "CONFIRMED",
+        },
+      });
+
+      const capacity = event.capacity ?? 0;
+      if (confirmedCount < capacity) {
+        newStatus = "PENDING";
+        isConfirmed = false;
+      } else {
+        newStatus = "WAITLISTED";
+        isConfirmed = false;
+        const lastWaitlisted = await prisma.booking.findFirst({
+          where: {
+            eventId: event.id,
+            status: "WAITLISTED",
+          },
+          orderBy: { waitlistOrder: "desc" },
+        });
+        waitlistOrder = (lastWaitlisted?.waitlistOrder ?? 0) + 1;
+      }
+    }
+
+    // Snapshot user data into Booking record
+    let booking;
+    try {
+      booking = await prisma.booking.create({
+        data: {
+          eventId: event.id,
+          userId: user.id,
+          fullName: user.name || "مشارك",
+          email: userEmail,
+          city: user.city,
+          age: user.age,
+          motive: motive?.trim() || null,
+          confirmed: isConfirmed,
+          status: newStatus,
+          waitlistOrder,
+        },
+      });
+    } catch (createErr: unknown) {
+      const err = createErr as { code?: string };
+      if (err?.code === "P2002") {
+        return {
+          success: false,
+          alreadyBooked: true,
+          error:
+            locale === "ar"
+              ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+              : "You have already booked for this event",
+        };
+      }
+      throw createErr;
+    }
+
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/book");
+    safeRevalidatePath("/account");
+    safeRevalidatePath("/admin");
+    safeRevalidatePath("/admin/bookings");
+
+    return {
+      success: true,
+      bookingRef: `IHY-${booking.id.slice(-6).toUpperCase()}`,
+      status: newStatus,
+      waitlistOrder,
+      eventId: event.id,
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error creating authenticated booking:", error);
+    }
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to create booking",
+    };
+  }
 }
 
 export async function requestBookingOtp(data: {

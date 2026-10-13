@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { auth } from "@/auth";
 import { BookingFallback } from "@/components/common/booking-fallback";
 import { BookingStepper } from "@/components/common/booking-stepper";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
@@ -23,21 +24,53 @@ export default async function BookPage({
   searchParams?: Promise<{ eventId?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
+  const currentPath = params?.eventId
+    ? `/book?eventId=${encodeURIComponent(params.eventId)}`
+    : "/book";
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
+  }
+  if (!session.user.onboardingComplete) {
+    redirect(`/onboarding?callbackUrl=${encodeURIComponent(currentPath)}`);
+  }
+
   const cookieStore = await cookies();
 
   let targetEventId = params?.eventId;
-  if (!targetEventId) {
-    const defaultEvent = await prisma.event.findFirst({
-      where: { bookingOpen: true },
-      orderBy: { date: "asc" },
-      select: { id: true },
-    });
-    targetEventId = defaultEvent?.id || "majlis-ihyaa";
-  }
+  const event = targetEventId
+    ? await prisma.event.findFirst({
+        where: {
+          OR: [{ id: targetEventId }, { slug: targetEventId }],
+        },
+        select: { id: true, slug: true },
+      })
+    : await prisma.event.findFirst({
+        where: { bookingOpen: true },
+        orderBy: { date: "asc" },
+        select: { id: true, slug: true },
+      });
 
-  // Server-side check: if already booked cookie exists, redirect to event page (except during Server Action)
+  targetEventId = event?.slug || event?.id || targetEventId || "majlis-ihyaa";
+
   const headerList = await headers();
   const isServerAction = headerList.has("next-action");
+
+  if (!isServerAction && event) {
+    const existing = await prisma.booking.findFirst({
+      where: {
+        eventId: event.id,
+        OR: [
+          { userId: session.user.id },
+          { email: session.user.email! },
+        ],
+      },
+    });
+    if (existing) {
+      redirect(`/events#event-${targetEventId}`);
+    }
+  }
 
   const hasEventCookie = cookieStore.get(`ihyaa_booked_${targetEventId}`)?.value === "true";
   let hasListCookie = false;

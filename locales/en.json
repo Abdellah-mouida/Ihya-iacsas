@@ -244,7 +244,21 @@
     "nextStep": "Next Step",
     "alreadyRegisteredTitle": "You are already registered for this event",
     "alreadyRegisteredDesc": "Your booking for this event is already confirmed. You do not need to submit the registration form again.",
-    "alreadyRegisteredBack": "Back to event details"
+    "alreadyRegisteredBack": "Back to event details",
+    "accountSnapshotTitle": "Account Attendee Details",
+    "accountSnapshotDesc": "Your verified account details are used to confirm your booking directly without needing a verification code.",
+    "editAccountProfile": "Edit account details",
+    "submitBookingConfirmed": "Confirm Booking",
+    "submitBookingPending": "Request Seat",
+    "submitBookingWaitlist": "Join Waitlist",
+    "bookingSubmitting": "Recording your booking...",
+    "viewMyBookings": "View My Bookings",
+    "backToEvents": "Back to Events",
+    "bookingSuccessToast": "Your booking was recorded successfully!",
+    "statusPendingTitle": "Booking Request Under Review",
+    "statusPendingDesc": "Your booking request has been received. As seats are limited, you will be notified as soon as program administration reviews it.",
+    "statusWaitlistTitle": "You are on the Waitlist",
+    "statusWaitlistDesc": "This event is currently at capacity. You have been added to the waitlist in order, and will be automatically promoted and emailed if a spot opens up."
   },
   "dashboard": {
     "title": "Control Panel",

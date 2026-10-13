@@ -9,11 +9,12 @@ import {
   CheckCircle2,
   Clock,
   Home,
-  KeyRound,
   MapPin,
+  Pencil,
   Phone,
-  RefreshCw,
+  ShieldCheck,
   Sparkles,
+  User,
   Users,
 } from "lucide-react";
 import Image from "next/image";
@@ -22,33 +23,29 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import {
-  requestBookingOtp,
-  resendBookingOtp,
-  verifyBookingOtp,
+  createAuthenticatedBooking,
+  getBookingUserState,
 } from "@/app/actions/bookings";
 import { getEventById } from "@/app/actions/events";
-import { CityCombobox } from "@/components/common/city-combobox";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
-import { SegmentedOtpInput } from "@/components/common/segmented-otp-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
 import { isEventBooked, markEventBooked } from "@/lib/booking-state";
 import { notify } from "@/lib/toast";
 import { EVENT, IMAGES } from "@/lib/content";
-import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-type Details = {
-  fullName: string;
+type UserSnapshot = {
+  id: string;
+  name: string;
   email: string;
   city: string;
-  age: string;
-  motive: string;
+  age: number;
+  image?: string | null;
 };
 
 export function BookingStepper({ initialEventId }: { initialEventId?: string } = {}) {
@@ -57,21 +54,12 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
   const searchParams = useSearchParams();
   const eventIdParam = searchParams.get("eventId") || undefined;
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
+  const [userAuthChecked, setUserAuthChecked] = useState(false);
+  const [userSnapshot, setUserSnapshot] = useState<UserSnapshot | null>(null);
 
-  const [details, setDetails] = useState<Details>({
-    fullName: "",
-    email: "",
-    city: "",
-    age: "",
-    motive: "",
-  });
-
-  const [bookingId, setBookingId] = useState<string>("");
-  const [otp, setOtp] = useState<string>("");
+  const [motive, setMotive] = useState<string>("");
   const [targetEventId, setTargetEventId] = useState<string>(
     initialEventId || eventIdParam || "majlis-ihyaa-2026",
   );
@@ -95,6 +83,39 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [eventLoading, setEventLoading] = useState<boolean>(() => Boolean(targetEventId));
 
+  // Check authentication & onboarding status on mount
+  useEffect(() => {
+    let ignore = false;
+    if (!targetEventId) return;
+
+    getBookingUserState(targetEventId).then((res) => {
+      if (ignore) return;
+      if (!res.authenticated) {
+        const dest = `/events/${targetEventId}/book`;
+        router.push(`/login?callbackUrl=${encodeURIComponent(dest)}`);
+        return;
+      }
+      if (res.needsOnboarding) {
+        const dest = `/events/${targetEventId}/book`;
+        router.push(`/onboarding?callbackUrl=${encodeURIComponent(dest)}`);
+        return;
+      }
+      if (res.alreadyBooked) {
+        router.replace(`/events#event-${targetEventId}`);
+        return;
+      }
+      if (res.user) {
+        setUserSnapshot(res.user);
+      }
+      setUserAuthChecked(true);
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [targetEventId, router]);
+
+  // Load target event details
   useEffect(() => {
     let ignore = false;
     if (!targetEventId) return;
@@ -115,212 +136,10 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     };
   }, [targetEventId]);
 
-  const steps = [
-    t("booking.stepDetails"),
-    t("booking.stepVerify"),
-    t("booking.stepConfirm"),
-  ];
-
-  // 30-second resend cooldown timer
-  useEffect(() => {
-    if (resendTimer <= 0) return;
-    const interval = setInterval(() => {
-      setResendTimer((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [resendTimer]);
-
-  function validateDetails(): boolean {
-    const e: Record<string, string> = {};
-
-    if (!details.fullName.trim()) {
-      e.fullName = t("booking.errRequired");
-    }
-
-    const email = details.email.trim().toLowerCase();
-    if (!email) {
-      e.email = t("booking.errRequired");
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      e.email = t("booking.errEmail");
-    } else {
-      const parts = email.split("@");
-      const domain = parts[1];
-      if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
-        e.email = t("booking.errDomain");
-      }
-    }
-
-    if (!details.city.trim()) {
-      e.city = t("booking.errRequired");
-    }
-
-    const ageNum = parseInt(details.age, 10);
-    if (!details.age || isNaN(ageNum) || ageNum < 5 || ageNum > 120) {
-      e.age = t("booking.errAge");
-    }
-
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  async function submitDetails(ev: FormEvent) {
-    ev.preventDefault();
-    if (!validateDetails()) return;
-
-    setErrors({});
-    setSubmitting(true);
-
-    try {
-      const res = await requestBookingOtp({
-        eventId: targetEventId,
-        fullName: details.fullName,
-        email: details.email,
-        city: details.city,
-        age: parseInt(details.age, 10),
-        motive: details.motive,
-        locale,
-      });
-
-      if (res.success && res.bookingId) {
-        setBookingId(res.bookingId);
-        // Strictly prevent switching to a different event: only refine to canonical ID if related
-        if (
-          res.eventId &&
-          (res.eventId === targetEventId ||
-            res.eventId.startsWith(targetEventId) ||
-            targetEventId.startsWith(res.eventId))
-        ) {
-          setTargetEventId(res.eventId);
-        }
-        setResendTimer(30); // 30-second cooldown
-        setStep(2);
-      } else {
-        const err = res.error || "Failed to process registration";
-        const isEmailErr =
-          err.includes("مسبقاً") ||
-          err.toLowerCase().includes("already booked") ||
-          err.toLowerCase().includes("domain") ||
-          err.includes("نطاق");
-        setErrors({
-          form: err,
-          ...(isEmailErr ? { email: err } : {}),
-        });
-        notify.error(err);
-      }
-    } catch {
-      const fallbackErr =
-        locale === "ar"
-          ? "تعذر إرسال رمز التحقق. يرجى المحاولة لاحقاً."
-          : "Failed to send verification code. Please try again later.";
-      setErrors({ form: fallbackErr });
-      notify.error(fallbackErr);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function executeOtpVerification(codeToVerify: string) {
-    const cleanOtp = codeToVerify.trim();
-
-    if (!cleanOtp || cleanOtp.length < 6) {
-      setErrors({ otp: t("booking.errOtpRequired") });
-      return;
-    }
-
-    setErrors({});
-    setSubmitting(true);
-
-    try {
-      const res = await verifyBookingOtp({
-        bookingId,
-        email: details.email,
-        otp: cleanOtp,
-        eventId: targetEventId,
-        locale,
-      });
-
-      if (res.success && res.bookingRef) {
-        if (
-          res.eventId &&
-          (res.eventId === targetEventId ||
-            res.eventId.startsWith(targetEventId) ||
-            targetEventId.startsWith(res.eventId))
-        ) {
-          setTargetEventId(res.eventId);
-        }
-        if (res.status) setBookingStatus(res.status);
-        if (res.waitlistOrder !== undefined) {
-          setWaitlistOrder(res.waitlistOrder ?? null);
-        }
-
-        // Store for client-side recognition per event
-        markEventBooked(res.eventId || targetEventId, res.bookingRef);
-
-        setStep(3);
-      } else {
-        const err = res.error || "Invalid verification code";
-        setErrors({ otp: err });
-        notify.error(err);
-      }
-    } catch {
-      const fallbackErr =
-        locale === "ar"
-          ? "تعذر تأكيد الحجز. يرجى المحاولة لاحقاً."
-          : "Failed to verify booking. Please try again later.";
-      setErrors({ otp: fallbackErr });
-      notify.error(fallbackErr);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function submitOtp(ev: FormEvent) {
-    ev.preventDefault();
-    await executeOtpVerification(otp);
-  }
-
-  async function handleResend() {
-    if (resendTimer > 0 || resending) return;
-
-    setResending(true);
-    setErrors({});
-
-    try {
-      const res = await resendBookingOtp({
-        email: details.email,
-        eventId: targetEventId,
-        locale,
-      });
-
-      if (res.success) {
-        setResendTimer(30);
-        setOtp("");
-        notify.success(
-          locale === "ar"
-            ? "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني"
-            : "A new verification code has been sent to your email",
-        );
-      } else {
-        const err = res.error || "Failed to resend verification code";
-        setErrors({ otp: err });
-        notify.error(err);
-      }
-    } catch {
-      const fallbackErr =
-        locale === "ar"
-          ? "تعذر إعادة إرسال الرمز. يرجى المحاولة لاحقاً."
-          : "Failed to resend code. Please try again later.";
-      setErrors({ otp: fallbackErr });
-      notify.error(fallbackErr);
-    } finally {
-      setResending(false);
-    }
-  }
-
   const [arrivedAlreadyBooked] = useState<boolean>(() => isEventBooked(targetEventId));
 
   useEffect(() => {
-    if (arrivedAlreadyBooked && step !== 3) {
+    if (arrivedAlreadyBooked && step !== 2) {
       const timer = setTimeout(() => {
         router.replace(`/events#event-${targetEventId}`);
       }, 1500);
@@ -328,7 +147,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     }
   }, [arrivedAlreadyBooked, step, targetEventId, router]);
 
-  if (arrivedAlreadyBooked && step !== 3) {
+  if (arrivedAlreadyBooked && step !== 2) {
     return (
       <div
         data-testid="already-booked-gate"
@@ -358,7 +177,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     );
   }
 
-  if (eventLoading && !eventInfo) {
+  if (!userAuthChecked || (eventLoading && !eventInfo)) {
     return (
       <div
         data-testid="booking-loading"
@@ -369,6 +188,54 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
         </div>
       </div>
     );
+  }
+
+  const steps = [
+    t("booking.stepDetails"),
+    t("booking.stepConfirm"),
+  ];
+
+  async function submitBooking(ev: FormEvent) {
+    ev.preventDefault();
+    setErrors({});
+    setSubmitting(true);
+
+    try {
+      const res = await createAuthenticatedBooking({
+        eventId: targetEventId,
+        motive: motive.trim() || undefined,
+        locale,
+      });
+
+      if (res.success) {
+        if (res.eventId) {
+          setTargetEventId(res.eventId);
+        }
+        if (res.status) {
+          setBookingStatus(res.status);
+        }
+        if (res.waitlistOrder !== undefined) {
+          setWaitlistOrder(res.waitlistOrder ?? null);
+        }
+
+        markEventBooked(res.eventId || targetEventId, res.bookingRef);
+        setStep(2);
+        notify.success(t("booking.bookingSuccessToast"));
+      } else {
+        const err = res.error || "Failed to complete booking";
+        setErrors({ form: err });
+        notify.error(err);
+      }
+    } catch {
+      const fallbackErr =
+        locale === "ar"
+          ? "تعذر تأكيد الحجز. يرجى المحاولة لاحقاً."
+          : "Failed to confirm booking. Please try again later.";
+      setErrors({ form: fallbackErr });
+      notify.error(fallbackErr);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const summaryTitle =
@@ -402,9 +269,9 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
       </Link>
 
       {/* Stepper indicator */}
-      <div className="mt-8 flex items-center">
+      <div className="mt-8 flex items-center max-w-md mx-auto">
         {steps.map((label, i) => {
-          const n = (i + 1) as 1 | 2 | 3;
+          const n = (i + 1) as 1 | 2;
           const active = step === n;
           const done = step > n;
           return (
@@ -440,7 +307,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
               {n < steps.length ? (
                 <div
                   className={cn(
-                    "mx-2 h-0.5 flex-1 rounded-full transition-colors",
+                    "mx-4 h-0.5 flex-1 rounded-full transition-colors",
                     step > n ? "bg-brass" : "bg-border",
                   )}
                 />
@@ -455,554 +322,410 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
         <div className="w-full order-2 lg:order-1 lg:col-span-7">
           <div className="glass-strong overflow-hidden rounded-3xl p-4 min-[400px]:p-6 shadow-layered sm:p-8">
             <AnimatePresence mode="wait">
-          {/* STEP 1 — DETAILS */}
-          {step === 1 ? (
-            <motion.form
-              key="details"
-              onSubmit={submitDetails}
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.35, ease: EASE }}
-              className="flex flex-col gap-5"
-              noValidate
-            >
-              <header className="flex flex-col gap-1">
-                <h2 className="font-heading text-2xl font-semibold">
-                  {t("booking.detailsTitle")}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("booking.detailsDesc")}
-                </p>
-              </header>
-
-              {errors.form ? (
-                <div
-                  data-testid="booking-error-banner"
-                  role="alert"
-                  className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              {/* STEP 1 — ATTENDANCE CONFIRMATION & PROFILE SNAPSHOT */}
+              {step === 1 ? (
+                <motion.form
+                  key="details"
+                  onSubmit={submitBooking}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -24 }}
+                  transition={{ duration: 0.35, ease: EASE }}
+                  className="flex flex-col gap-5"
+                  noValidate
                 >
-                  {errors.form}
-                </div>
+                  <header className="flex flex-col gap-1">
+                    <h2 className="font-heading text-2xl font-semibold">
+                      {t("booking.detailsTitle")}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {t("booking.accountSnapshotDesc")}
+                    </p>
+                  </header>
+
+                  {errors.form ? (
+                    <div
+                      data-testid="booking-error-banner"
+                      role="alert"
+                      className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+                    >
+                      {errors.form}
+                    </div>
+                  ) : null}
+
+                  {/* Pre-filled Account Profile Snapshot Card */}
+                  <div
+                    data-testid="account-snapshot-card"
+                    className="rounded-2xl border border-brass/25 bg-muted/40 p-4 sm:p-5 flex flex-col gap-4 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative size-12 shrink-0 rounded-full border border-brass/30 bg-primary/10 overflow-hidden grid place-items-center">
+                          {userSnapshot?.image ? (
+                            <Image
+                              src={userSnapshot.image}
+                              alt={userSnapshot.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <User className="size-6 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-heading font-bold text-foreground">
+                              {userSnapshot?.name}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              <ShieldCheck className="size-3" />
+                              {locale === "ar" ? "موثق" : "Verified"}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground dir-ltr block">
+                            {userSnapshot?.email}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-brass hover:text-brass/80 gap-1.5 h-8 px-2.5 rounded-full"
+                      >
+                        <Link href="/account" target="_blank">
+                          <Pencil className="size-3" />
+                          {t("booking.editAccountProfile")}
+                        </Link>
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="rounded-xl bg-card/60 p-2.5 border border-border/40">
+                        <span className="text-muted-foreground block text-[11px] mb-0.5">
+                          {t("booking.fCity")}
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {userSnapshot?.city || "—"}
+                        </span>
+                      </div>
+                      <div className="rounded-xl bg-card/60 p-2.5 border border-border/40">
+                        <span className="text-muted-foreground block text-[11px] mb-0.5">
+                          {t("booking.fAge")}
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {userSnapshot?.age ? `${userSnapshot.age} ${locale === "ar" ? "سنة" : "years"}` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Motive (Optional) */}
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="b-motive">{t("booking.fMotive")}</Label>
+                    <Textarea
+                      id="b-motive"
+                      value={motive}
+                      placeholder={t("booking.motivePh")}
+                      onChange={(e) => setMotive(e.target.value)}
+                      className="min-h-24 resize-none"
+                    />
+                  </div>
+
+                  {isLimited && (
+                    <div
+                      className={cn(
+                        "rounded-xl p-3.5 text-xs font-medium border flex items-start gap-2.5",
+                        isFull
+                          ? "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                      )}
+                    >
+                      <Sparkles className="size-4 shrink-0 mt-0.5" />
+                      <span>
+                        {isFull
+                          ? locale === "ar"
+                            ? "المقاعد المتاحة لهذه الفعالية مكتملة حالياً. يمكنك إتمام التسجيل للانضمام إلى قائمة الانتظار، وسيتم إشعارك فور توفر مقعد."
+                            : "This event is currently at full capacity. Register to join the waitlist, and you will be notified if a seat opens up."
+                          : locale === "ar"
+                            ? "هذه الفعالية ذات مقاعد محدودة وتخضع لموافقة الإدارة. بعد التأكيد، سيكون طلبك قيد المراجعة."
+                            : "This event has limited capacity and requires admin approval. After confirmation, your booking will be reviewed."}
+                      </span>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    data-testid="submit-booking-btn"
+                    disabled={submitting}
+                    className="bg-brass-gradient mt-2 h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
+                  >
+                    {submitting ? (
+                      <span>{t("booking.bookingSubmitting")}</span>
+                    ) : isLimited && isFull ? (
+                      <>
+                        <span>{t("booking.submitBookingWaitlist")}</span>
+                        <ArrowRight className="size-5 rtl:rotate-180" />
+                      </>
+                    ) : isLimited ? (
+                      <>
+                        <span>{t("booking.submitBookingPending")}</span>
+                        <ArrowRight className="size-5 rtl:rotate-180" />
+                      </>
+                    ) : (
+                      <>
+                        <span>{t("booking.submitBookingConfirmed")}</span>
+                        <ArrowRight className="size-5 rtl:rotate-180" />
+                      </>
+                    )}
+                  </Button>
+                </motion.form>
               ) : null}
 
-              {/* Full Name */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="b-name">{t("booking.fName")} *</Label>
-                <Input
-                  id="b-name"
-                  value={details.fullName}
-                  aria-invalid={!!errors.fullName}
-                  placeholder={t("booking.namePh")}
-                  onChange={(e) =>
-                    setDetails((d) => ({ ...d, fullName: e.target.value }))
-                  }
-                  className="h-11"
-                  required
-                />
-                {errors.fullName ? (
-                  <span className="text-xs text-destructive">
-                    {errors.fullName}
-                  </span>
-                ) : null}
-              </div>
-
-              {/* Email */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="b-email">{t("booking.fEmail")} *</Label>
-                <Input
-                  id="b-email"
-                  type="email"
-                  dir="ltr"
-                  value={details.email}
-                  aria-invalid={!!errors.email}
-                  placeholder={t("booking.emailPh")}
-                  onChange={(e) =>
-                    setDetails((d) => ({ ...d, email: e.target.value }))
-                  }
-                  className="h-11"
-                  required
-                />
-                {errors.email ? (
-                  <span
-                    data-testid="email-error"
-                    className="text-xs text-destructive font-medium"
+              {/* STEP 2 — SUCCESS CONFIRMATION */}
+              {step === 2 ? (
+                <motion.div
+                  key="confirm"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease: EASE }}
+                  className="flex flex-col items-center gap-4 text-center"
+                >
+                  <motion.span
+                    initial={{ scale: 0, rotate: -30 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      delay: 0.1,
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 12,
+                    }}
+                    className={cn(
+                      "grid size-20 place-items-center rounded-full shadow-layered",
+                      bookingStatus === "PENDING"
+                        ? "bg-amber-500/20 text-amber-500 border border-amber-500/40"
+                        : bookingStatus === "WAITLISTED"
+                          ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                          : "bg-brass-gradient text-night",
+                    )}
                   >
-                    {errors.email}
-                  </span>
+                    {bookingStatus === "PENDING" ? (
+                      <Clock className="size-10 text-amber-500" />
+                    ) : bookingStatus === "WAITLISTED" ? (
+                      <Users className="size-10 text-purple-400" />
+                    ) : (
+                      <Check className="size-10" />
+                    )}
+                  </motion.span>
+
+                  <h2
+                    data-testid="booking-confirmation-title"
+                    className="font-heading text-2xl font-bold sm:text-3xl"
+                  >
+                    {bookingStatus === "PENDING"
+                      ? t("booking.statusPendingTitle")
+                      : bookingStatus === "WAITLISTED"
+                        ? t("booking.statusWaitlistTitle")
+                        : t("booking.confirmTitle")}
+                  </h2>
+                  <p className="text-muted-foreground text-sm max-w-md">
+                    {bookingStatus === "PENDING"
+                      ? t("booking.statusPendingDesc")
+                      : bookingStatus === "WAITLISTED"
+                        ? `${t("booking.statusWaitlistDesc")} (#${waitlistOrder || 1})`
+                        : t("booking.confirmDesc")}
+                  </p>
+
+                  <OrnamentDivider compact />
+
+                  <div className="w-full rounded-2xl bg-muted/60 p-5 text-start space-y-2.5">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{locale === "ar" ? "حالة الحجز" : "Status"}:</span>
+                      <span
+                        data-testid="booking-status-badge"
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full font-bold text-xs",
+                          bookingStatus === "CONFIRMED" &&
+                            "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30",
+                          bookingStatus === "PENDING" &&
+                            "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30",
+                          bookingStatus === "WAITLISTED" &&
+                            "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30",
+                        )}
+                      >
+                        {bookingStatus === "CONFIRMED"
+                          ? locale === "ar"
+                            ? "مؤكد"
+                            : "Confirmed"
+                          : bookingStatus === "PENDING"
+                            ? locale === "ar"
+                              ? "قيد المراجعة والموافقة"
+                              : "Pending Approval"
+                            : locale === "ar"
+                              ? `قائمة الانتظار (#${waitlistOrder || 1})`
+                              : `Waitlist (#${waitlistOrder || 1})`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t("booking.fName")}:</span>
+                      <span className="font-semibold text-foreground">
+                        {userSnapshot?.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t("booking.fEmail")}:</span>
+                      <span className="font-semibold text-foreground dir-ltr">
+                        {userSnapshot?.email}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t("booking.fCity")}:</span>
+                      <span className="font-semibold text-foreground">
+                        {userSnapshot?.city}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex w-full flex-col gap-3 sm:flex-row">
+                    <Button
+                      asChild
+                      data-testid="view-my-bookings-btn"
+                      className="bg-brass-gradient h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-1"
+                    >
+                      <Link href="/account#bookings">
+                        {t("booking.viewMyBookings")}
+                      </Link>
+                    </Button>
+
+                    <Button
+                      asChild
+                      variant="outline"
+                      data-testid="back-to-events-btn"
+                      className="glass h-12 rounded-full text-base font-semibold sm:flex-1"
+                    >
+                      <Link href="/events">
+                        {t("booking.backToEvents")}
+                      </Link>
+                    </Button>
+                  </div>
+
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Sparkles className="size-3.5 text-brass" />
+                    {EVENT.phone}
+                  </p>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Event summary card: on mobile above form (order-1), on desktop beside form (order-2, col-span-5) */}
+        <div className="w-full order-1 lg:order-2 lg:col-span-5">
+          <aside
+            data-testid="event-summary-card"
+            className="w-full rounded-3xl border border-brass/20 bg-card/60 p-5 sm:p-6 backdrop-blur-md shadow-layered space-y-5"
+          >
+            {/* Header / Title */}
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-brass">
+                  {locale === "ar" ? "تفاصيل الفعالية" : "Event Overview"}
+                </span>
+
+                {/* Capacity badge */}
+                {isLimited ? (
+                  isFull ? (
+                    <span
+                      data-testid="summary-capacity-badge"
+                      className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                    >
+                      <Users className="size-3" />
+                      {locale === "ar" ? "قائمة الانتظار" : "Waitlist"}
+                    </span>
+                  ) : (
+                    <span
+                      data-testid="summary-capacity-badge"
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                    >
+                      <Users className="size-3" />
+                      {locale === "ar"
+                        ? `مقاعد محدودة (${eventInfo?.confirmedCount || 0}/${eventInfo?.capacity || 0})`
+                        : `Limited (${eventInfo?.confirmedCount || 0}/${eventInfo?.capacity || 0})`}
+                    </span>
+                  )
                 ) : (
-                  <span className="text-[11px] text-muted-foreground">
-                    {locale === "ar"
-                      ? "المزودات المقبولة: Gmail, Yahoo, Outlook, Hotmail, iCloud, ProtonMail..."
-                      : "Accepted: Gmail, Yahoo, Outlook, Hotmail, iCloud, ProtonMail..."}
+                  <span
+                    data-testid="summary-capacity-badge"
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  >
+                    <Users className="size-3" />
+                    {locale === "ar" ? "حجز مفتوح" : "Open"}
                   </span>
                 )}
               </div>
 
-              {/* City (Searchable Select of Moroccan Cities) and Age */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="b-city">{t("booking.fCity")} *</Label>
-                  <CityCombobox
-                    value={details.city}
-                    onChange={(city) =>
-                      setDetails((d) => ({ ...d, city }))
-                    }
-                    locale={locale}
-                    hasError={!!errors.city}
-                  />
-                  {errors.city ? (
-                    <span className="text-xs text-destructive">
-                      {errors.city}
-                    </span>
-                  ) : null}
-                </div>
+              <h2 className="font-heading text-lg sm:text-xl font-bold text-foreground leading-snug">
+                {summaryTitle}
+              </h2>
+            </div>
 
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="b-age">{t("booking.fAge")} *</Label>
-                  <Input
-                    id="b-age"
-                    type="number"
-                    min="5"
-                    max="120"
-                    value={details.age}
-                    aria-invalid={!!errors.age}
-                    placeholder={t("booking.agePh")}
-                    onChange={(e) =>
-                      setDetails((d) => ({ ...d, age: e.target.value }))
-                    }
-                    className="h-11"
-                    required
-                  />
-                  {errors.age ? (
-                    <span className="text-xs text-destructive">
-                      {errors.age}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+            {/* Poster image 16:9 ratio */}
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-brass/15 bg-muted/40 shadow-inner">
+              <Image
+                src={summaryPoster}
+                alt={summaryTitle}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 400px"
+              />
+            </div>
 
-              {/* Motive */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="b-motive">{t("booking.fMotive")}</Label>
-                <Textarea
-                  id="b-motive"
-                  value={details.motive}
-                  placeholder={t("booking.motivePh")}
-                  onChange={(e) =>
-                    setDetails((d) => ({ ...d, motive: e.target.value }))
-                  }
-                  className="min-h-24 resize-none"
-                />
-              </div>
-
-              {eventInfo?.capacityType === "LIMITED" && (
-                <div
-                  className={cn(
-                    "rounded-xl p-3.5 text-xs font-medium border flex items-start gap-2.5",
-                    eventInfo.isFull
-                      ? "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-                  )}
-                >
-                  <Sparkles className="size-4 shrink-0 mt-0.5" />
-                  <span>
-                    {eventInfo.isFull
-                      ? locale === "ar"
-                        ? "المقاعد المتاحة لهذه الفعالية مكتملة حالياً. يمكنك إتمام التسجيل للانضمام إلى قائمة الانتظار، وسيتم إشعارك فور توفر مقعد."
-                        : "This event is currently at full capacity. Register to join the waitlist, and you will be notified if a seat opens up."
-                      : locale === "ar"
-                        ? "هذه الفعالية ذات مقاعد محدودة وتخضع لموافقة الإدارة. بعد التحقق من بريدك، سيكون طلبك قيد المراجعة."
-                        : "This event has limited capacity and requires admin approval. After verification, your booking will be reviewed."}
-                  </span>
+            {/* Meta info list */}
+            <div className="space-y-3 pt-1 text-sm border-t border-border/60">
+              {summaryDate && (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
+                    <Calendar className="size-4" />
+                  </div>
+                  <span>{summaryDate}</span>
                 </div>
               )}
 
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="bg-brass-gradient mt-2 h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
+              {summaryTime && (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
+                    <Clock className="size-4" />
+                  </div>
+                  <span>{summaryTime}</span>
+                </div>
+              )}
+
+              {summaryLocation && (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
+                    <MapPin className="size-4" />
+                  </div>
+                  <span>{summaryLocation}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Questions & Inquiries */}
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
+              <span>{locale === "ar" ? "للاستفسار والتواصل:" : "Questions & inquiries:"}</span>
+              <a
+                href={`tel:${EVENT.phone}`}
+                className="inline-flex items-center gap-1 font-semibold text-foreground hover:text-brass transition-colors dir-ltr"
               >
-                {submitting ? (
-                  <span>
-                    {locale === "ar" ? "جاري الإرسال..." : "Sending..."}
-                  </span>
-                ) : eventInfo?.capacityType === "LIMITED" && eventInfo.isFull ? (
-                  <>
-                    <span>{locale === "ar" ? "الانضمام لقائمة الانتظار" : "Join Waitlist"}</span>
-                    <ArrowRight className="size-5 rtl:rotate-180" />
-                  </>
-                ) : (
-                  <>
-                    <span>{t("booking.nextStep")}</span>
-                    <ArrowRight className="size-5 rtl:rotate-180" />
-                  </>
-                )}
-              </Button>
-            </motion.form>
-          ) : null}
-
-          {/* STEP 2 — OTP VERIFICATION */}
-          {step === 2 ? (
-            <motion.form
-              key="otp-step"
-              onSubmit={submitOtp}
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.35, ease: EASE }}
-              className="flex flex-col gap-5"
-              noValidate
-            >
-              <header className="flex flex-col gap-1 text-center">
-                <div className="mx-auto inline-flex size-12 items-center justify-center rounded-2xl bg-brass/10 text-brass ring-1 ring-brass/25 mb-1">
-                  <KeyRound className="size-6" />
-                </div>
-                <h2 className="font-heading text-2xl font-semibold">
-                  {t("booking.verifyTitle")}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("booking.verifyDesc", { email: details.email })}
-                </p>
-              </header>
-
-              <div className="flex flex-col items-center gap-3 py-2">
-                <Label htmlFor="b-otp" className="text-sm font-semibold">
-                  {t("booking.otpLabel")}
-                </Label>
-
-                {/* 6-box Segmented OTP Input */}
-                <SegmentedOtpInput
-                  value={otp}
-                  onChange={(val) => {
-                    setOtp(val);
-                    if (errors.otp) setErrors((e) => ({ ...e, otp: "" }));
-                  }}
-                  onComplete={(code) => executeOtpVerification(code)}
-                  hasError={!!errors.otp}
-                  disabled={submitting}
-                />
-
-                {errors.otp ? (
-                  <span
-                    data-testid="otp-error"
-                    className="text-xs text-destructive font-medium text-center mt-1"
-                  >
-                    {errors.otp}
-                  </span>
-                ) : null}
-              </div>
-
-              {/* 30-Second Resend Action */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                <span>
-                  {locale === "ar"
-                    ? "لم يصلك الرمز؟"
-                    : "Didn't receive the code?"}
-                </span>
-
-                {resendTimer > 0 ? (
-                  <span
-                    data-testid="resend-timer-countdown"
-                    className="font-semibold text-brass"
-                  >
-                    {t("booking.resendWait", { seconds: resendTimer })}
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    data-testid="resend-otp-btn"
-                    onClick={handleResend}
-                    disabled={resending}
-                    className="inline-flex items-center gap-1.5 font-semibold text-brass hover:underline disabled:opacity-50"
-                  >
-                    <RefreshCw
-                      className={cn("size-3.5", resending && "animate-spin")}
-                    />
-                    <span>{t("booking.resendCode")}</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  data-testid="verify-back-button"
-                  onClick={() => {
-                    setStep(1);
-                    setErrors({});
-                  }}
-                  className="glass h-12 rounded-full px-6 text-base font-semibold sm:flex-1"
-                >
-                  <ArrowLeft className="size-5 rtl:rotate-180" />
-                  {t("booking.verifyBack")}
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submitting || otp.length < 6}
-                  className="bg-brass-gradient h-12 rounded-full px-6 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-[2]"
-                >
-                  <CheckCircle2 className="size-5" />
-                  {submitting
-                    ? locale === "ar"
-                      ? "جاري التحقق..."
-                      : "Verifying..."
-                    : t("booking.verifyButton")}
-                </Button>
-              </div>
-            </motion.form>
-          ) : null}
-
-          {/* STEP 3 — SUCCESS CONFIRMATION */}
-          {step === 3 ? (
-            <motion.div
-              key="confirm"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: EASE }}
-              className="flex flex-col items-center gap-4 text-center"
-            >
-              <motion.span
-                initial={{ scale: 0, rotate: -30 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{
-                  delay: 0.1,
-                  type: "spring",
-                  stiffness: 200,
-                  damping: 12,
-                }}
-                className={cn(
-                  "grid size-20 place-items-center rounded-full shadow-layered",
-                  bookingStatus === "PENDING"
-                    ? "bg-amber-500/20 text-amber-500 border border-amber-500/40"
-                    : bookingStatus === "WAITLISTED"
-                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
-                      : "bg-brass-gradient text-night",
-                )}
-              >
-                {bookingStatus === "PENDING" ? (
-                  <Clock className="size-10 text-amber-500" />
-                ) : bookingStatus === "WAITLISTED" ? (
-                  <Users className="size-10 text-purple-400" />
-                ) : (
-                  <Check className="size-10" />
-                )}
-              </motion.span>
-
-              <h2
-                data-testid="booking-confirmation-title"
-                className="font-heading text-2xl font-bold sm:text-3xl"
-              >
-                {bookingStatus === "PENDING"
-                  ? locale === "ar"
-                    ? "تم استلام طلبك وهو قيد المراجعة"
-                    : "Your booking is pending approval"
-                  : bookingStatus === "WAITLISTED"
-                    ? locale === "ar"
-                      ? "تمت إضافتك إلى قائمة الانتظار"
-                      : "You've been added to the waitlist"
-                    : t("booking.confirmTitle")}
-              </h2>
-              <p className="text-muted-foreground text-sm max-w-md">
-                {bookingStatus === "PENDING"
-                  ? locale === "ar"
-                    ? "نظراً لمحدودية المقاعد، يخضع طلبك لمراجعة الإدارة. سنرسل لك إشعاراً بالبريد الإلكتروني فور الموافقة وتأكيد حجزك."
-                    : "Due to limited capacity, your request is pending admin approval. You will receive an email once approved."
-                  : bookingStatus === "WAITLISTED"
-                    ? locale === "ar"
-                      ? `ترتيبك في قائمة الانتظار هو #${waitlistOrder || 1}. في حال اعتذار أي مشارك أو توفر مقعد شاغر، ستتم ترقية طلبك وتأكيده تلقائياً وإشعارك بالبريد الإلكتروني.`
-                      : `Your position on the waitlist is #${waitlistOrder || 1}. If a place opens up, you will be promoted and notified.`
-                    : t("booking.confirmDesc")}
-              </p>
-
-              <OrnamentDivider compact />
-
-              <div className="w-full rounded-2xl bg-muted/60 p-5 text-start space-y-2.5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{locale === "ar" ? "حالة الحجز" : "Status"}:</span>
-                  <span
-                    data-testid="booking-status-badge"
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-full font-bold text-xs",
-                      bookingStatus === "CONFIRMED" &&
-                        "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30",
-                      bookingStatus === "PENDING" &&
-                        "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30",
-                      bookingStatus === "WAITLISTED" &&
-                        "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30",
-                    )}
-                  >
-                    {bookingStatus === "CONFIRMED"
-                      ? locale === "ar"
-                        ? "مؤكد"
-                        : "Confirmed"
-                      : bookingStatus === "PENDING"
-                        ? locale === "ar"
-                          ? "قيد المراجعة والموافقة"
-                          : "Pending Approval"
-                        : locale === "ar"
-                          ? `قائمة الانتظار (#${waitlistOrder || 1})`
-                          : `Waitlist (#${waitlistOrder || 1})`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t("booking.fName")}:</span>
-                  <span className="font-semibold text-foreground">
-                    {details.fullName}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t("booking.fEmail")}:</span>
-                  <span className="font-semibold text-foreground dir-ltr">
-                    {details.email}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t("booking.fCity")}:</span>
-                  <span className="font-semibold text-foreground">
-                    {details.city}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-2 flex w-full flex-col gap-3 sm:flex-row">
-                <Button
-                  asChild
-                  className="bg-brass-gradient h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-1"
-                >
-                  <Link href="/events">
-                    <ArrowLeft className="size-5 rtl:rotate-180" />
-                    {locale === "ar"
-                      ? "الذهاب لصفحة الفعاليات"
-                      : "Go to Events Page"}
-                  </Link>
-                </Button>
-
-                <Button
-                  asChild
-                  variant="outline"
-                  className="glass h-12 rounded-full text-base font-semibold sm:flex-1"
-                >
-                  <Link href="/">
-                    <Home className="size-5" />
-                    {t("booking.home")}
-                  </Link>
-                </Button>
-              </div>
-
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Sparkles className="size-3.5 text-brass" />
-                {EVENT.phone}
-              </p>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+                <Phone className="size-3 text-brass" />
+                <span>{EVENT.phone}</span>
+              </a>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
-
-    {/* Event summary card: on mobile above form (order-1), on desktop beside form (order-2, col-span-5) */}
-    <div className="w-full order-1 lg:order-2 lg:col-span-5">
-      <aside
-        data-testid="event-summary-card"
-        className="w-full rounded-3xl border border-brass/20 bg-card/60 p-5 sm:p-6 backdrop-blur-md shadow-layered space-y-5"
-      >
-        {/* Header / Title */}
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-brass">
-              {locale === "ar" ? "تفاصيل الفعالية" : "Event Overview"}
-            </span>
-
-            {/* Capacity badge */}
-            {isLimited ? (
-              isFull ? (
-                <span
-                  data-testid="summary-capacity-badge"
-                  className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-500/20"
-                >
-                  <Users className="size-3" />
-                  {locale === "ar" ? "قائمة الانتظار" : "Waitlist"}
-                </span>
-              ) : (
-                <span
-                  data-testid="summary-capacity-badge"
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                >
-                  <Users className="size-3" />
-                  {locale === "ar"
-                    ? `مقاعد محدودة (${eventInfo?.confirmedCount || 0}/${eventInfo?.capacity || 0})`
-                    : `Limited (${eventInfo?.confirmedCount || 0}/${eventInfo?.capacity || 0})`}
-                </span>
-              )
-            ) : (
-              <span
-                data-testid="summary-capacity-badge"
-                className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-              >
-                <Users className="size-3" />
-                {locale === "ar" ? "حجز مفتوح" : "Open"}
-              </span>
-            )}
-          </div>
-
-          <h2 className="font-heading text-lg sm:text-xl font-bold text-foreground leading-snug">
-            {summaryTitle}
-          </h2>
-        </div>
-
-        {/* Poster image 16:9 ratio */}
-        <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-brass/15 bg-muted/40 shadow-inner">
-          <Image
-            src={summaryPoster}
-            alt={summaryTitle}
-            fill
-            sizes="(max-width: 1024px) 100vw, 400px"
-            className="object-cover"
-            priority
-          />
-        </div>
-
-        {/* Event details list */}
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-3 text-foreground/90">
-            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-brass/10 text-brass">
-              <Calendar className="size-4" />
-            </div>
-            <span className="font-medium">{summaryDate}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-foreground/90">
-            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-brass/10 text-brass">
-              <Clock className="size-4" />
-            </div>
-            <span className="font-medium">{summaryTime}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-foreground/90">
-            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-brass/10 text-brass">
-              <MapPin className="size-4" />
-            </div>
-            <span className="font-medium">{summaryLocation}</span>
-          </div>
-        </div>
-
-        <OrnamentDivider className="opacity-40" />
-
-        {/* Inquiries / Contact phone */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-          <span className="inline-flex items-center gap-1.5 font-medium">
-            <Phone className="size-3.5 text-brass" />
-            {locale === "ar" ? "لأي استفسار:" : "Questions:"}
-          </span>
-          <span dir="ltr" className="font-semibold text-foreground/90">
-            {EVENT.phone}
-          </span>
-        </div>
-      </aside>
-    </div>
-  </div>
-</div>
   );
 }
