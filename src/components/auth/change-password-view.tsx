@@ -147,7 +147,7 @@ export function ChangePasswordView() {
         <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/95 text-white border-e border-brass/20">
           <Image
             src="/images/gathering.jpg"
-            alt="Ihyaa Program Community"
+            alt="Ihyaa Program"
             fill
             className="object-cover opacity-20 mix-blend-overlay"
             priority
@@ -232,17 +232,16 @@ export function ChangePasswordView() {
                 >
                   {t("auth.currentPasswordLabel")}
                 </label>
-                <div className="relative">
+                <div className="relative" dir="ltr">
                   <input
                     id="current-password"
                     name="currentPassword"
                     type={showCurrentPassword ? "text" : "password"}
                     required
-                    dir="ltr"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full h-11 px-3.5 pe-10 rounded-xl border border-brass/20 bg-background/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm"
+                    className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-brass/20 bg-background/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm"
                     data-testid="current-password-input"
                     disabled={isPending}
                   />
@@ -271,17 +270,16 @@ export function ChangePasswordView() {
                 >
                   {t("auth.newPasswordLabel")}
                 </label>
-                <div className="relative">
+                <div className="relative" dir="ltr">
                   <input
                     id="new-password"
                     name="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     required
-                    dir="ltr"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder={t("auth.passwordPlaceholder")}
-                    className="w-full h-11 px-3.5 pe-10 rounded-xl border border-brass/20 bg-background/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm"
+                    className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-brass/20 bg-background/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm"
                     data-testid="new-password-input"
                     disabled={isPending}
                   />
@@ -365,17 +363,20 @@ export function ChangePasswordView() {
                 >
                   {t("auth.confirmNewPasswordLabel")}
                 </label>
-                <div className="relative">
+                <div className="relative" dir="ltr">
                   <input
                     id="confirm-new-password"
                     name="confirmNewPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     required
-                    dir="ltr"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     placeholder={t("auth.confirmPasswordPlaceholder")}
-                    className="w-full h-11 px-3.5 pe-10 rounded-xl border border-brass/20 bg-background/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm"
+                    className={`w-full h-11 ps-3.5 pe-11 text-start rounded-xl border bg-background/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:border-primary transition-all text-sm ${
+                      confirmNewPassword && !passwordsMatch
+                        ? "border-destructive focus:ring-destructive/30"
+                        : "border-brass/20 focus:ring-primary/40"
+                    }`}
                     data-testid="confirm-new-password-input"
                     disabled={isPending}
                   />

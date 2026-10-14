@@ -19,6 +19,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
 import { validatePasswordStrength } from "@/lib/password";
 import { signUpWithCredentials } from "@/app/actions/auth";
+import { AuthAmbientBackdrop } from "./auth-ambient-backdrop";
 
 export function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -131,12 +132,11 @@ export function SignUpView() {
 
   return (
     <div className="relative min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8">
-      {/* Background decorations */}
-      <div className="absolute inset-0 bg-radial-[at_top_right] from-primary/10 via-background to-background pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#107527_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+      {/* Ambient background with depth and glow */}
+      <AuthAmbientBackdrop />
 
       {/* Container with max width */}
-      <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden">
         {/* Visual / Branding Panel (Desktop Only) */}
         <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-white overflow-hidden bg-primary/95">
           <Image
@@ -167,7 +167,7 @@ export function SignUpView() {
                   {isAr ? "برنامج إحياء" : "Ihyaa Program"}
                 </span>
                 <span className="text-xs text-brass-muted font-medium block">
-                  {isAr ? "مجتمع ومبادرات شبابية" : "Youth Community & Gatherings"}
+                  {isAr ? "مبادرات ولقاءات شبابية" : "Youth Programs & Gatherings"}
                 </span>
               </div>
             </Link>
@@ -177,7 +177,7 @@ export function SignUpView() {
           <div className="relative z-10 my-auto py-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brass/15 border border-brass/30 text-xs font-semibold text-brass mb-4">
               <Sparkles className="size-3.5" />
-              <span>{isAr ? "انضم إلى مجتمعنا" : "Join Our Community"}</span>
+              <span>{isAr ? "انضم إلى برنامج إحياء" : "Join Ihyaa Program"}</span>
             </div>
             <h2 className="font-heading text-2xl font-bold leading-snug mb-3">
               {isAr
@@ -290,17 +290,16 @@ export function SignUpView() {
               >
                 {t("auth.password")} <span className="text-destructive">*</span>
               </label>
-              <div className="relative">
+              <div className="relative" dir="ltr">
                 <input
                   id="signup-password"
                   data-testid="signup-password"
                   type={showPassword ? "text" : "password"}
                   required
-                  dir="ltr"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t("auth.passwordPlaceholder")}
-                  className="w-full h-11 px-3.5 pe-10 rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                  className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
                   disabled={isPending}
                 />
                 <button
@@ -361,17 +360,16 @@ export function SignUpView() {
               >
                 {t("auth.confirmPassword")} <span className="text-destructive">*</span>
               </label>
-              <div className="relative">
+              <div className="relative" dir="ltr">
                 <input
                   id="signup-confirm-password"
                   data-testid="signup-confirm-password"
                   type={showConfirmPassword ? "text" : "password"}
                   required
-                  dir="ltr"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder={t("auth.confirmPasswordPlaceholder")}
-                  className={`w-full h-11 px-3.5 pe-10 rounded-xl border bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:border-primary transition-all ${
+                  className={`w-full h-11 ps-3.5 pe-11 text-start rounded-xl border bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:border-primary transition-all ${
                     confirmPassword && !passwordsMatch
                       ? "border-destructive focus:ring-destructive/30"
                       : "border-border/70 focus:ring-primary/40"
@@ -461,7 +459,7 @@ export function SignUpView() {
                 <div className="w-full border-t border-border/70" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground font-medium">
+                <span className="relative px-3 bg-card text-xs text-muted-foreground font-sans font-medium">
                   {t("auth.orContinueWith")}
                 </span>
               </div>

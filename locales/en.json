@@ -334,12 +334,12 @@
     "secContactBody": "For any questions or requests regarding your personal privacy, reach out via phone or our official channels:"
   },
   "auth": {
-    "signupTitle": "Create an Account",
+    "signupTitle": "Join Ihyaa Program",
     "signupSubtitle": "Join Ihyaa Program to discover events and manage your bookings easily",
     "loginTitle": "Sign In",
     "loginSubtitle": "Welcome back to Ihyaa Program",
     "fullName": "Full Name",
-    "fullNamePlaceholder": "Enter your full name",
+    "fullNamePlaceholder": "e.g. Youssef El Idrissi",
     "email": "Email Address",
     "emailPlaceholder": "example@domain.com",
     "password": "Password",
@@ -468,7 +468,7 @@
     "tabBookings": "My Bookings",
     "tabSecurity": "Security & Password",
     "fullName": "Full Name",
-    "fullNamePlaceholder": "Your full name",
+    "fullNamePlaceholder": "e.g. Youssef El Idrissi",
     "email": "Email Address",
     "emailVerifiedBadge": "Verified",
     "city": "City",

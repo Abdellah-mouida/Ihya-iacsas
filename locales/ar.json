@@ -334,12 +334,12 @@
     "secContactBody": "لأي سؤال أو طلب يتعلق بحماية بياناتك الشخصية، يمكنكم التواصل معنا عبر الهاتف أو حساباتنا الرسمية:"
   },
   "auth": {
-    "signupTitle": "إنشاء حساب جديد",
+    "signupTitle": "انضم إلى برنامج إحياء",
     "signupSubtitle": "انضم إلى برنامج إحياء لمتابعة الفعاليات والتسجيل فيها بسهولة",
     "loginTitle": "تسجيل الدخول",
     "loginSubtitle": "أهلاً بك مجدداً في برنامج إحياء",
     "fullName": "الاسم الكامل",
-    "fullNamePlaceholder": "أدخل اسمك الكامل",
+    "fullNamePlaceholder": "مثال: يوسف الإدريسي",
     "email": "البريد الإلكتروني",
     "emailPlaceholder": "example@domain.com",
     "password": "كلمة المرور",
@@ -468,7 +468,7 @@
     "tabBookings": "حجوزاتي",
     "tabSecurity": "الأمان وكلمة المرور",
     "fullName": "الاسم الكامل",
-    "fullNamePlaceholder": "اسمك الكامل",
+    "fullNamePlaceholder": "مثال: يوسف الإدريسي",
     "email": "البريد الإلكتروني",
     "emailVerifiedBadge": "تم التحقق",
     "city": "المدينة",

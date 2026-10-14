@@ -66,7 +66,7 @@ export function ForgotPasswordView() {
         <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/95 text-white border-e border-brass/20">
           <Image
             src="/images/gathering.jpg"
-            alt="Ihyaa Program Community"
+            alt="Ihyaa Program"
             fill
             className="object-cover opacity-20 mix-blend-overlay"
             priority

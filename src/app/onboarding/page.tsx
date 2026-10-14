@@ -8,6 +8,7 @@ import { Footer } from "@/components/sections/footer";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OnboardingView } from "@/components/auth/onboarding-view";
+import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
 
 export const metadata: Metadata = {
   title: "إعداد الملف الشخصي — برنامج إحياء | Profile Setup — Ihyaa Program",
@@ -21,7 +22,7 @@ export default async function OnboardingPage({
 }) {
   const session = await auth();
   const params = await searchParams;
-  const callbackUrl = params?.callbackUrl || "/events";
+  const callbackUrl = params?.callbackUrl || "/";
 
   if (!session?.user?.id) {
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
@@ -62,6 +63,7 @@ export default async function OnboardingPage({
     <>
       <GlassNavbar />
       <main className="min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center relative">
+        <AuthAmbientBackdrop />
         <Suspense
           fallback={
             <div className="flex items-center justify-center p-12">

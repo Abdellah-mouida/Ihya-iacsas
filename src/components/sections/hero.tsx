@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENTS_HREF, IMAGES } from "@/lib/content";
 import { fadeUp, staggerContainer } from "@/lib/motion";
-import { cn } from "@/lib/utils";
 
 const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
   ssr: false,
@@ -20,16 +19,10 @@ const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
 export function Hero() {
   const { t } = useLocale();
 
-  const stats = [
-    { value: t("hero.statBranchesValue"), label: t("hero.statBranchesLabel") },
-    { value: t("hero.statMembersValue"), label: t("hero.statMembersLabel") },
-    { value: t("hero.statEventsValue"), label: t("hero.statEventsLabel") },
-  ];
-
   return (
 <section
       id="home"
-      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-white"
+      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground dark:text-white"
     >
       {/* Photo layer */}
       <div className="absolute inset-0 -z-30">
@@ -72,7 +65,7 @@ export function Hero() {
       >
         <motion.span
           variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-md dark:border-white/20 dark:bg-white/10"
+          className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/85 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground shadow-xs backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white"
         >
           <span className="size-1.5 animate-pulse rounded-full bg-gold" />
           {t("hero.kicker")}
@@ -116,28 +109,6 @@ export function Hero() {
             </a>
           </Button>
         </motion.div>
-
-        <motion.dl
-          variants={fadeUp}
-          className="mt-14 grid w-full max-w-2xl grid-cols-3 gap-4"
-        >
-          {stats.map((s, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex flex-col items-center gap-1 px-2",
-                i !== 0 && "border-s border-foreground/15 dark:border-white/15",
-              )}
-            >
-              <dt className="text-shine font-heading text-3xl font-bold sm:text-4xl">
-                {s.value}
-              </dt>
-              <dd className="text-xs text-muted-foreground dark:text-white/70 sm:text-sm">
-                {s.label}
-              </dd>
-            </div>
-          ))}
-        </motion.dl>
       </motion.div>
 
       {/* Bottom fade into the subsequent section */}

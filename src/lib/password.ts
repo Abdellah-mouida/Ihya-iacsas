@@ -27,37 +27,32 @@ export function validatePasswordStrength(password: string): PasswordStrength {
 }
 
 export function generateTempPassword(): string {
-  // Generate 12 characters guaranteed to have uppercase, lowercase, numbers, and specials
-  const uppercaseChars = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // exclude I, O
-  const lowercaseChars = "abcdefghijkmnpqrstuvwxyz"; // exclude l, o
-  const numberChars = "23456789"; // exclude 0, 1
-  const specialChars = "!@#$%^&*";
-  const allChars = uppercaseChars + lowercaseChars + numberChars + specialChars;
+  // Clean, readable alphanumeric format (10 characters, uppercase letters and digits)
+  // Excludes ambiguous characters: 0, O, 1, I, l
+  const uppercaseChars = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // 24 chars
+  const numberChars = "23456789"; // 8 chars
+  const allChars = uppercaseChars + numberChars;
 
   const pickRandom = (chars: string) => chars[crypto.randomInt(0, chars.length)];
 
-  // Guarantee at least 2 of each class
-  const required = [
+  // Guarantee at least 2 letters and 2 digits
+  const chars = [
     pickRandom(uppercaseChars),
     pickRandom(uppercaseChars),
-    pickRandom(lowercaseChars),
-    pickRandom(lowercaseChars),
     pickRandom(numberChars),
     pickRandom(numberChars),
-    pickRandom(specialChars),
-    pickRandom(specialChars),
   ];
 
-  // Fill remaining 4 chars from allChars to reach 12 characters
-  for (let i = 0; i < 4; i++) {
-    required.push(pickRandom(allChars));
+  // Fill remaining 6 characters
+  for (let i = 0; i < 6; i++) {
+    chars.push(pickRandom(allChars));
   }
 
-  // Shuffle array using Fisher-Yates
-  for (let i = required.length - 1; i > 0; i--) {
+  // Shuffle using Fisher-Yates
+  for (let i = chars.length - 1; i > 0; i--) {
     const j = crypto.randomInt(0, i + 1);
-    [required[i], required[j]] = [required[j], required[i]];
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
 
-  return required.join("");
+  return chars.join("");
 }

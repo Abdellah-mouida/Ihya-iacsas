@@ -47,7 +47,7 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
   const [isPending, startTransition] = useTransition();
 
   const isAr = locale === "ar";
-  const callbackUrl = searchParams.get("callbackUrl") || "/events";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   // Multi-step state
   const [step, setStep] = useState<1 | 2 | 3>(1);

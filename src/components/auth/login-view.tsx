@@ -184,7 +184,7 @@ export function LoginView() {
       <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/95 text-white">
         <Image
           src="/images/gathering.jpg"
-          alt="Ihyaa Program Community"
+          alt="Ihyaa Program"
           fill
           priority
           className="object-cover opacity-20 mix-blend-overlay"
@@ -218,8 +218,8 @@ export function LoginView() {
           </div>
           <h3 className="font-heading text-2xl font-bold text-white leading-relaxed mb-3">
             {isAr
-              ? "متابعة الفعاليات، إدارة الحجوزات، والتواصل مع المجتمع"
-              : "Track events, manage bookings, and stay connected with the community"}
+              ? "متابعة الفعاليات، إدارة الحجوزات، والتواصل مع أعضاء البرنامج"
+              : "Track events, manage bookings, and stay connected with program members"}
           </h3>
           <p className="text-xs text-white/75 leading-relaxed">
             {isAr
@@ -347,7 +347,7 @@ export function LoginView() {
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border/60" />
           </div>
-          <span className="relative px-3 bg-card text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
+          <span className="relative px-3 bg-card text-xs text-muted-foreground font-sans font-medium">
             {t("auth.orContinueWith")}
           </span>
         </div>
@@ -393,7 +393,7 @@ export function LoginView() {
                 {t("auth.forgotPassword")}
               </Link>
             </div>
-            <div className="relative">
+            <div className="relative" dir="ltr">
               <input
                 id="password"
                 name="password"
@@ -404,7 +404,7 @@ export function LoginView() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t("auth.passwordPlaceholder")}
-                className="w-full h-11 px-3.5 pe-11 rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 shadow-sm"
+                className="w-full h-11 ps-3.5 pe-11 text-start rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 shadow-sm"
               />
               <button
                 type="button"

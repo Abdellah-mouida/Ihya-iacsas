@@ -4,6 +4,7 @@ import { Footer } from "@/components/sections/footer";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { LoginView } from "@/components/auth/login-view";
+import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
 
 export const metadata: Metadata = {
   title: "تسجيل الدخول — برنامج إحياء | Sign In — Ihyaa Program",
@@ -15,6 +16,7 @@ export default function LoginPage() {
     <>
       <GlassNavbar />
       <main className="min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center relative">
+        <AuthAmbientBackdrop />
         <Suspense
           fallback={
             <div className="flex items-center justify-center p-12">
