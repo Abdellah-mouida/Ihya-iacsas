@@ -27,6 +27,7 @@ import { notify } from "@/lib/toast";
 import { completeOnboarding, getOnboardingProfile } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
+import { UserAvatar } from "@/components/common/user-avatar";
 
 interface OnboardingViewProps {
   initialProfile?: {
@@ -525,19 +526,14 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
                 </h3>
 
                 <div className="flex items-center gap-4">
-                  <div className="relative size-14 rounded-full overflow-hidden border border-brass/30 bg-primary/10 shrink-0 flex items-center justify-center">
-                    {imagePreview ? (
-                      <Image
-                        src={imagePreview}
-                        alt="Avatar"
-                        fill
-                        className="object-cover"
-                        unoptimized={imagePreview.startsWith("data:")}
-                      />
-                    ) : (
-                      <Camera className="size-6 text-muted-foreground" />
-                    )}
-                  </div>
+                  <UserAvatar
+                    src={imagePreview}
+                    name={name || session?.user?.name}
+                    email={session?.user?.email}
+                    size="lg"
+                    shape="circle"
+                    className="size-14 shrink-0 border border-brass/30 ring-1 ring-primary/20"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="font-heading font-bold text-sm text-foreground truncate">
                       {name || session?.user?.name || "Member"}

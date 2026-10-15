@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -274,19 +275,12 @@ export function GlassNavbar({
                         : "bg-muted/70 text-foreground border border-border/60",
                     )}
                   >
-                    {session.user.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt={session.user.name || "User"}
-                        width={32}
-                        height={32}
-                        className="size-8 rounded-full object-cover border border-brass/25 ring-1 ring-primary/20"
-                      />
-                    ) : (
-                      <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-primary font-heading text-xs font-bold text-white shadow-xs">
-                        {(session.user.name || session.user.email || "U").charAt(0).toUpperCase()}
-                      </span>
-                    )}
+                    <UserAvatar
+                      user={session.user}
+                      size="sm"
+                      shape="circle"
+                      className="border-brass/25 ring-1 ring-primary/20"
+                    />
                     <ChevronDown className="size-3.5 opacity-60 me-1" />
                   </button>
                 </DropdownMenuTrigger>
@@ -439,19 +433,12 @@ export function GlassNavbar({
                       className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 p-3 transition-colors hover:bg-muted/70"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {session.user.image ? (
-                          <Image
-                            src={session.user.image}
-                            alt={session.user.name || "User"}
-                            width={40}
-                            height={40}
-                            className="size-10 shrink-0 rounded-full object-cover border border-brass/25 ring-1 ring-primary/20"
-                          />
-                        ) : (
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-primary font-heading text-sm font-bold text-white shadow-xs">
-                            {(session.user.name || session.user.email || "U").charAt(0).toUpperCase()}
-                          </span>
-                        )}
+                        <UserAvatar
+                          user={session.user}
+                          size="md"
+                          shape="circle"
+                          className="border-brass/25 ring-1 ring-primary/20 shrink-0"
+                        />
                         <div className="min-w-0">
                           <p className="font-heading text-sm font-bold text-foreground truncate">
                             {session.user.name || t("nav.brand")}

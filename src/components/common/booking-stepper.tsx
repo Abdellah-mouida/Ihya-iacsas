@@ -29,6 +29,7 @@ import {
 import { getEventById } from "@/app/actions/events";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -360,18 +361,14 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                   >
                     <div className="flex items-center justify-between border-b border-border/50 pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="relative size-12 shrink-0 rounded-full border border-brass/30 bg-primary/10 overflow-hidden grid place-items-center">
-                          {userSnapshot?.image ? (
-                            <Image
-                              src={userSnapshot.image}
-                              alt={userSnapshot.name}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <User className="size-6 text-primary" />
-                          )}
-                        </div>
+                        <UserAvatar
+                          src={userSnapshot?.image}
+                          name={userSnapshot?.name}
+                          email={userSnapshot?.email}
+                          size="lg"
+                          shape="circle"
+                          className="size-12 shrink-0 border-brass/30 ring-1 ring-primary/20"
+                        />
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-heading font-bold text-foreground">

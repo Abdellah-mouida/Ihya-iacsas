@@ -30,6 +30,7 @@ import {
 import { changePassword } from "@/app/actions/auth";
 import { CityCombobox } from "@/components/common/city-combobox";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -322,19 +323,14 @@ export function AccountView({ initialData }: AccountViewProps) {
                 {t("account.profilePhoto")}
               </Label>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                <div className="relative size-24 sm:size-28 rounded-2xl overflow-hidden border-2 border-primary/20 bg-muted/60 flex items-center justify-center shrink-0 shadow-inner">
-                  {profileImage ? (
-                    <Image
-                      src={profileImage}
-                      alt={name || "User Avatar"}
-                      fill
-                      unoptimized={profileImage.startsWith("blob:")}
-                      className="object-cover"
-                    />
-                  ) : (
-                    <User className="size-12 text-muted-foreground/60" />
-                  )}
-                </div>
+                <UserAvatar
+                  src={profileImage}
+                  name={name}
+                  email={userData.email}
+                  size="3xl"
+                  shape="rounded"
+                  className="size-24 sm:size-28 border-2 border-primary/20 shrink-0 shadow-inner"
+                />
 
                 <div className="flex flex-wrap items-center gap-3">
                   <input

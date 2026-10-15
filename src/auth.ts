@@ -131,7 +131,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         if (!user.email) return false;
         const cleanEmail = user.email.trim().toLowerCase();
@@ -145,13 +145,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // If an attacker registered this email with an unverified credentials account,
           // the legitimate owner signing in via Google proves ownership.
           // Wipe the unverified credentials passwordHash and mark the account verified.
+          const updates: Record<string, unknown> = {};
+
           if (!existingUser.emailVerified && existingUser.passwordHash) {
+            updates.passwordHash = null;
+            updates.emailVerified = new Date();
+          } else if (!existingUser.emailVerified) {
+            updates.emailVerified = new Date();
+          }
+
+          // If the user has no image yet, save the Google profile picture
+          const googleImage = user.image || (profile as { picture?: string })?.picture;
+          if (!existingUser.image && googleImage) {
+            updates.image = googleImage;
+            user.image = googleImage;
+          }
+
+          // If the user has no name yet, save the Google profile name
+          if (!existingUser.name && user.name) {
+            updates.name = user.name;
+          }
+
+          if (Object.keys(updates).length > 0) {
             await prisma.user.update({
               where: { id: existingUser.id },
-              data: {
-                passwordHash: null,
-                emailVerified: new Date(),
-              },
+              data: updates,
             });
           }
         }
