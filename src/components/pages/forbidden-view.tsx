@@ -112,7 +112,10 @@ export function ForbiddenView() {
                   <Lock className="size-8 text-amber-500" />
                 </div>
                 {/* 403 Kicker Tag */}
-                <span className="absolute -bottom-2 px-2.5 py-0.5 rounded-full text-[11px] font-heading font-black tracking-widest bg-amber-500 text-night shadow-xs">
+                <span
+                  data-testid="error-code"
+                  className="absolute -bottom-2 px-2.5 py-0.5 rounded-full text-[11px] font-heading font-black tracking-widest bg-amber-500 text-night shadow-xs"
+                >
                   {t("errors.forbiddenCode")}
                 </span>
               </div>

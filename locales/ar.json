@@ -22,7 +22,8 @@
     "account": "حسابي",
     "myBookings": "حجوزاتي",
     "signOut": "تسجيل الخروج",
-    "userMenu": "قائمة المستخدم"
+    "userMenu": "قائمة المستخدم",
+    "adminPortal": "لوحة التحكم"
   },
   "lang": {
     "toggle": "تغيير اللغة",

@@ -98,7 +98,6 @@ cp .env.example .env.local
 | `AUTH_GOOGLE_ID` | Optional | Google OAuth 2.0 Client ID for Google sign-in. |
 | `AUTH_GOOGLE_SECRET` | Optional | Google OAuth 2.0 Client Secret for Google sign-in. |
 | `NEXT_PUBLIC_APP_URL` | **Yes** | Base application URL (e.g. `http://localhost:3000` or production domain) for absolute callback URLs. |
-| `ADMIN_PASSWORD` | **Yes** | Password for the access gate protecting `/admin` routes. |
 | `DATABASE_URL` | **Yes** | PostgreSQL connection URL (Neon pooled connection string with `?sslmode=require`). |
 | `DIRECT_URL` | **Yes** | Direct, unpooled PostgreSQL connection URL used by Prisma for schema migrations. |
 | `CLOUDINARY_URL` | Optional | Combined Cloudinary connection string (`cloudinary://API_KEY:API_SECRET@CLOUD_NAME`). |

@@ -1,20 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
-
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026";
-
-async function loginAdmin(page: any) {
-  await prisma.rateLimit.deleteMany({
-    where: { key: { contains: "admin_login" } },
-  });
-  await page.goto("/admin/login");
-  const pwdInput = page.locator('input[type="password"]');
-  await expect(pwdInput).toBeVisible({ timeout: 15000 });
-  await pwdInput.fill(ADMIN_PASS);
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
-  await expect(page.locator("aside")).toBeVisible({ timeout: 30000 });
-}
+import { loginAdmin } from "./helpers/admin-auth";
 
 test.describe("Task 2: Custom Date and Time Picker", () => {
   const testTitle = `فعالية اختبار التقويم ${Date.now()}`;

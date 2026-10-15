@@ -2,21 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
 import fs from "fs";
 import { execSync } from "child_process";
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026";
-
-async function loginAdmin(page: Page) {
-  await prisma.rateLimit.deleteMany({
-    where: { key: { contains: "admin_login" } },
-  });
-  await page.goto("/admin/login");
-  const pwdInput = page.locator('input[type="password"]');
-  await expect(pwdInput).toBeVisible({ timeout: 15000 });
-  await pwdInput.fill(ADMIN_PASSWORD);
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 30000 });
-  await expect(page.locator("aside")).toBeVisible({ timeout: 30000 });
-}
+import { loginAdmin } from "./helpers/admin-auth";
 
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   const testContactEmail = "contact.tester@example.com";
@@ -137,13 +123,13 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/page-that-does-not-exist-404");
 
-    await expect(page.locator("h1")).toContainText("الصفحة غير موجودة");
-    await expect(page.locator("a", { hasText: "العودة للرئيسية" })).toBeVisible();
+    await expect(page.locator('[data-testid="page-not-found"]')).toBeVisible();
+    await expect(page.locator('[data-testid="error-home-btn"]')).toBeVisible();
 
     // Dark mode
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/page-that-does-not-exist-404");
-    await expect(page.locator("h1")).toContainText("الصفحة غير موجودة");
+    await expect(page.locator('[data-testid="page-not-found"]')).toBeVisible();
   });
 
   test("6. Bilingual fields render with required validation and translate suggestion chips", async ({ page }) => {

@@ -1,8 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import crypto from "crypto";
 import { prisma } from "../src/lib/prisma";
+import { loginAdmin } from "./helpers/admin-auth";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ihyaa-admin-dev-pass-2026";
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 
 function computeHash(otp: string, email: string): string {
@@ -10,14 +10,6 @@ function computeHash(otp: string, email: string): string {
     .createHmac("sha256", OTP_SECRET)
     .update(`${email.trim().toLowerCase()}:${otp.trim()}`)
     .digest("hex");
-}
-
-async function loginAdmin(page: Page) {
-  await page.goto("/admin/login");
-  await page.fill('input[type="password"]', ADMIN_PASSWORD);
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 15000 });
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 }
 
 test.describe.serial("Event Capacity System & Waitlist Flow", () => {

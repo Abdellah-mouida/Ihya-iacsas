@@ -3,6 +3,8 @@
 import { safeRevalidatePath } from "@/lib/cache";
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit";
 
 export async function getCarouselPosts(onlyActive = false) {
   try {
@@ -23,6 +25,7 @@ export async function getCarouselPosts(onlyActive = false) {
 
 export async function createCarouselPost(formData: FormData) {
   try {
+    const user = await requirePermission("carousel:manage");
     const file = formData.get("image") as File | null;
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
@@ -69,6 +72,14 @@ export async function createCarouselPost(formData: FormData) {
       },
     });
 
+    await createAuditLog({
+      actorId: user.id,
+      action: "CAROUSEL_CREATE",
+      targetType: "CarouselPost",
+      targetId: post.id,
+      details: { imageUrl, order, active },
+    });
+
     safeRevalidatePath("/");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/carousel");
@@ -85,6 +96,7 @@ export async function createCarouselPost(formData: FormData) {
 
 export async function updateCarouselPost(id: string, formData: FormData) {
   try {
+    const user = await requirePermission("carousel:manage");
     const existing = await prisma.carouselPost.findUnique({
       where: { id },
       select: { imageUrl: true },
@@ -156,6 +168,14 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       });
     }
 
+    await createAuditLog({
+      actorId: user.id,
+      action: "CAROUSEL_UPDATE",
+      targetType: "CarouselPost",
+      targetId: id,
+      details: dataToUpdate,
+    });
+
     safeRevalidatePath("/");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/carousel");
@@ -172,9 +192,18 @@ export async function updateCarouselPost(id: string, formData: FormData) {
 
 export async function toggleCarouselActive(id: string, active: boolean) {
   try {
+    const user = await requirePermission("carousel:manage");
     const post = await prisma.carouselPost.update({
       where: { id },
       data: { active },
+    });
+
+    await createAuditLog({
+      actorId: user.id,
+      action: "CAROUSEL_TOGGLE",
+      targetType: "CarouselPost",
+      targetId: id,
+      details: { active },
     });
 
     safeRevalidatePath("/");
@@ -193,6 +222,7 @@ export async function toggleCarouselActive(id: string, active: boolean) {
 
 export async function deleteCarouselPost(id: string) {
   try {
+    const user = await requirePermission("carousel:manage");
     const existing = await prisma.carouselPost.findUnique({
       where: { id },
       select: { imageUrl: true },
@@ -204,6 +234,13 @@ export async function deleteCarouselPost(id: string) {
 
     await prisma.carouselPost.delete({
       where: { id },
+    });
+
+    await createAuditLog({
+      actorId: user.id,
+      action: "CAROUSEL_DELETE",
+      targetType: "CarouselPost",
+      targetId: id,
     });
 
     safeRevalidatePath("/");

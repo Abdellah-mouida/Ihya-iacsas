@@ -10,6 +10,8 @@ import { safeRevalidatePath } from "@/lib/cache";
 import { sendOTPEmail, sendWaitlistPromotionEmail } from "@/lib/email";
 import { isEventEnded } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 const MAX_VERIFICATION_ATTEMPTS = 5;
@@ -1026,6 +1028,7 @@ export async function isEventBookedByVisitor(eventId: string): Promise<boolean> 
 
 export async function getBookings(eventId?: string, status?: string) {
   try {
+    await requirePermission("bookings:view");
     const bookings = await prisma.booking.findMany({
       where: {
         ...(eventId && eventId !== "all" ? { eventId } : {}),
@@ -1066,6 +1069,7 @@ export async function getBookings(eventId?: string, status?: string) {
 
 export async function approveBooking(id: string) {
   try {
+    const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { event: true },
@@ -1081,6 +1085,18 @@ export async function approveBooking(id: string) {
         status: "CONFIRMED",
         confirmed: true,
         waitlistOrder: null,
+      },
+    });
+
+    await createAuditLog({
+      actorId: user.id,
+      action: "BOOKING_APPROVE",
+      targetType: "Booking",
+      targetId: id,
+      details: {
+        fullName: booking.fullName,
+        email: booking.email,
+        eventTitle: booking.event?.titleEn || booking.event?.titleAr,
       },
     });
 
@@ -1102,6 +1118,7 @@ export async function approveBooking(id: string) {
 
 export async function rejectBooking(id: string) {
   try {
+    const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { event: true },
@@ -1164,6 +1181,18 @@ export async function rejectBooking(id: string) {
       }
     }
 
+    await createAuditLog({
+      actorId: user.id,
+      action: "BOOKING_REJECT",
+      targetType: "Booking",
+      targetId: id,
+      details: {
+        fullName: booking.fullName,
+        email: booking.email,
+        autoPromotedName,
+      },
+    });
+
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
     revalidatePath(`/events/${booking.eventId}`);
@@ -1182,6 +1211,7 @@ export async function rejectBooking(id: string) {
 
 export async function promoteWaitlistBooking(id: string) {
   try {
+    const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { event: true },
@@ -1213,6 +1243,17 @@ export async function promoteWaitlistBooking(id: string) {
       console.error("Error sending promotion email:", emailErr);
     }
 
+    await createAuditLog({
+      actorId: user.id,
+      action: "BOOKING_PROMOTE_WAITLIST",
+      targetType: "Booking",
+      targetId: id,
+      details: {
+        fullName: booking.fullName,
+        email: booking.email,
+      },
+    });
+
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
     revalidatePath(`/events/${booking.eventId}`);
@@ -1231,6 +1272,7 @@ export async function promoteWaitlistBooking(id: string) {
 
 export async function deleteBooking(id: string) {
   try {
+    const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { event: true },
@@ -1279,6 +1321,17 @@ export async function deleteBooking(id: string) {
           }
         }
       }
+
+      await createAuditLog({
+        actorId: user.id,
+        action: "BOOKING_DELETE",
+        targetType: "Booking",
+        targetId: id,
+        details: {
+          fullName: booking.fullName,
+          email: booking.email,
+        },
+      });
     }
 
     revalidatePath("/admin");

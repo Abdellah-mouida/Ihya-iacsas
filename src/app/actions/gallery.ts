@@ -3,6 +3,8 @@
 import { safeRevalidatePath } from "@/lib/cache";
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit";
 
 export async function getGalleryPhotos() {
   try {
@@ -22,6 +24,7 @@ export async function getGalleryPhotos() {
 
 export async function createGalleryPhoto(formData: FormData) {
   try {
+    const user = await requirePermission("gallery:manage");
     const file = formData.get("image") as File | null;
     let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
     const captionAr = (formData.get("captionAr") as string)?.trim() || null;
@@ -71,6 +74,14 @@ export async function createGalleryPhoto(formData: FormData) {
       },
     });
 
+    await createAuditLog({
+      actorId: user.id,
+      action: "GALLERY_CREATE",
+      targetType: "GalleryPhoto",
+      targetId: photo.id,
+      details: { captionEn, captionAr, imageUrl },
+    });
+
     safeRevalidatePath("/");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/gallery");
@@ -87,6 +98,7 @@ export async function createGalleryPhoto(formData: FormData) {
 
 export async function updateGalleryPhoto(id: string, formData: FormData) {
   try {
+    const user = await requirePermission("gallery:manage");
     const captionAr = (formData.get("captionAr") as string)?.trim() || null;
     const captionEn = (formData.get("captionEn") as string)?.trim() || null;
 
@@ -161,6 +173,14 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
       });
     }
 
+    await createAuditLog({
+      actorId: user.id,
+      action: "GALLERY_UPDATE",
+      targetType: "GalleryPhoto",
+      targetId: id,
+      details: { captionEn, captionAr, imageUrl: dataToUpdate.imageUrl },
+    });
+
     safeRevalidatePath("/");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/gallery");
@@ -177,6 +197,7 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
 
 export async function deleteGalleryPhoto(id: string) {
   try {
+    const user = await requirePermission("gallery:manage");
     const existing = await prisma.galleryPhoto.findUnique({
       where: { id },
       select: { imageUrl: true },
@@ -188,6 +209,13 @@ export async function deleteGalleryPhoto(id: string) {
 
     await prisma.galleryPhoto.delete({
       where: { id },
+    });
+
+    await createAuditLog({
+      actorId: user.id,
+      action: "GALLERY_DELETE",
+      targetType: "GalleryPhoto",
+      targetId: id,
     });
 
     safeRevalidatePath("/");

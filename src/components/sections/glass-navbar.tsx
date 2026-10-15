@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronLeft,
   LogOut,
+  Shield,
   User as UserIcon,
 } from "lucide-react";
 import type { Session } from "next-auth";
@@ -317,6 +318,18 @@ export function GlassNavbar({
                       {t("nav.myBookings")}
                     </Link>
                   </DropdownMenuItem>
+                  {session.user.role === "ADMIN" || session.user.role === "MODERATOR" ? (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/admin"
+                        data-testid="navbar-admin-link"
+                        className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-amber-600 dark:text-amber-400 transition-colors hover:bg-amber-500/10"
+                      >
+                        <Shield className="size-4" />
+                        {t("nav.adminPortal")}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     variant="destructive"
@@ -500,19 +513,34 @@ export function GlassNavbar({
 
                 {/* Mobile Auth Actions */}
                 {session?.user ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    data-testid="navbar-mobile-logout-btn"
-                    onClick={() => {
-                      setOpen(false);
-                      signOut({ callbackUrl: "/login" });
-                    }}
-                    className="h-11 w-full rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10"
-                  >
-                    <LogOut className="size-4 me-2" />
-                    {t("nav.signOut")}
-                  </Button>
+                  <>
+                    {session.user.role === "ADMIN" || session.user.role === "MODERATOR" ? (
+                      <Button
+                        asChild
+                        variant="outline"
+                        data-testid="navbar-mobile-admin-btn"
+                        className="h-11 w-full rounded-2xl border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                      >
+                        <Link href="/admin" onClick={() => setOpen(false)}>
+                          <Shield className="size-4 me-2" />
+                          {t("nav.adminPortal")}
+                        </Link>
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      data-testid="navbar-mobile-logout-btn"
+                      onClick={() => {
+                        setOpen(false);
+                        signOut({ callbackUrl: "/login" });
+                      }}
+                      className="h-11 w-full rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10"
+                    >
+                      <LogOut className="size-4 me-2" />
+                      {t("nav.signOut")}
+                    </Button>
+                  </>
                 ) : isAuthKnown ? (
                   <div className="flex w-full items-center gap-2">
                     <Button

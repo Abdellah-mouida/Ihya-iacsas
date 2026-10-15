@@ -5,8 +5,11 @@ import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudi
 import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
+import { requirePermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit";
 
 export async function getEvents() {
+  await requirePermission("events:view");
   try {
     const events = await prisma.event.findMany({
       orderBy: { date: "desc" },
@@ -211,6 +214,7 @@ export async function getEventById(id: string) {
 }
 
 export async function createEvent(formData: FormData) {
+  const session = await requirePermission("events:create");
   try {
     const titleAr = (formData.get("titleAr") as string)?.trim();
     const titleEn = (formData.get("titleEn") as string)?.trim();
@@ -290,6 +294,14 @@ export async function createEvent(formData: FormData) {
       },
     });
 
+    await createAuditLog({
+      actorId: session.id,
+      action: "event.create",
+      targetType: "event",
+      targetId: event.id,
+      details: { titleAr: event.titleAr, titleEn: event.titleEn },
+    });
+
     safeRevalidatePath("/");
     safeRevalidatePath("/events");
     safeRevalidatePath("/admin");
@@ -306,6 +318,7 @@ export async function createEvent(formData: FormData) {
 }
 
 export async function updateEvent(id: string, formData: FormData) {
+  const session = await requirePermission("events:update");
   try {
     const titleAr = (formData.get("titleAr") as string)?.trim();
     const titleEn = (formData.get("titleEn") as string)?.trim();
@@ -392,6 +405,14 @@ export async function updateEvent(id: string, formData: FormData) {
       data: dataToUpdate,
     });
 
+    await createAuditLog({
+      actorId: session.id,
+      action: "event.update",
+      targetType: "event",
+      targetId: event.id,
+      details: { titleAr: event.titleAr, titleEn: event.titleEn },
+    });
+
     // Clean up replaced image in Cloudinary if poster was replaced
     if (
       existing.posterUrl &&
@@ -419,10 +440,19 @@ export async function updateEvent(id: string, formData: FormData) {
 }
 
 export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpen", value: boolean) {
+  const session = await requirePermission("events:update");
   try {
     const event = await prisma.event.update({
       where: { id },
       data: { [field]: value },
+    });
+
+    await createAuditLog({
+      actorId: session.id,
+      action: "event.toggle",
+      targetType: "event",
+      targetId: event.id,
+      details: { field, value },
     });
 
     safeRevalidatePath("/");
@@ -441,6 +471,7 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
 }
 
 export async function deleteEvent(id: string) {
+  const session = await requirePermission("events:delete");
   try {
     // Retrieve posterUrl before deleting DB record to clean up Cloudinary asset
     const existing = await prisma.event.findUnique({
@@ -454,6 +485,13 @@ export async function deleteEvent(id: string) {
 
     await prisma.event.delete({
       where: { id },
+    });
+
+    await createAuditLog({
+      actorId: session.id,
+      action: "event.delete",
+      targetType: "event",
+      targetId: id,
     });
 
     safeRevalidatePath("/");

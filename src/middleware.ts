@@ -1,69 +1,63 @@
 /**
- * Next.js Edge Middleware for Admin Access Gate
- *
- * NOTE: STOPGAP SECURITY MEASURE
- * This middleware enforces single-password access control on all /admin routes
- * and automatically clears the session cookie when navigating away to the public site.
- * This should be replaced with a robust authentication solution (e.g. NextAuth)
- * prior to a full public release.
+ * Next.js Edge Middleware for Role-Based Access Control
+ * Enforces NextAuth role-based access on /admin and redirects /admin/login to /login.
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-
-import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/admin-token";
+import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionCookie = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
 
-  // Case 1: Route under /admin
+  // Legacy admin login URL redirect -> /login
+  if (pathname === "/admin/login") {
+    const nextParam =
+      request.nextUrl.searchParams.get("next") ||
+      request.nextUrl.searchParams.get("callbackUrl") ||
+      "/admin";
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", nextParam);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Protected /admin routes
   if (pathname.startsWith("/admin")) {
-    const isLoginPage = pathname === "/admin/login";
-    const isAuthenticated = await verifyAdminSessionToken(sessionCookie);
+    const token = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+    });
 
-    if (isLoginPage) {
-      // If already logged in, redirect away from /admin/login to /admin dashboard
-      if (isAuthenticated) {
-        return NextResponse.redirect(new URL("/admin", request.url));
-      }
-      return NextResponse.next();
+    if (!token) {
+      const loginUrl = new URL("/login", request.url);
+      const callbackUrl = pathname + (request.nextUrl.search || "");
+      loginUrl.searchParams.set("callbackUrl", callbackUrl);
+      return NextResponse.redirect(loginUrl);
     }
 
-    // Protected /admin sub-routes
-    if (!isAuthenticated) {
-      const loginUrl = new URL("/admin/login", request.url);
-      if (pathname !== "/admin") {
-        loginUrl.searchParams.set("next", pathname);
+    const role = token.role as string | undefined;
+
+    // Regular users or unauthenticated roles cannot access admin
+    if (role !== "ADMIN" && role !== "MODERATOR") {
+      return NextResponse.redirect(new URL("/403", request.url));
+    }
+
+    // MODERATOR role has restricted access:
+    // Disallowed: /admin/users, /admin/audit, /admin/settings
+    if (role === "MODERATOR") {
+      const restrictedForModerator = [
+        "/admin/users",
+        "/admin/audit",
+        "/admin/settings",
+      ];
+      const isRestricted = restrictedForModerator.some(
+        (r) => pathname === r || pathname.startsWith(r + "/"),
+      );
+      if (isRestricted) {
+        return NextResponse.redirect(new URL("/403", request.url));
       }
-      const response = NextResponse.redirect(loginUrl);
-      if (sessionCookie) {
-        response.cookies.delete(ADMIN_COOKIE_NAME);
-      }
-      return response;
     }
 
     return NextResponse.next();
-  }
-
-  // Case 2: Public route outside /admin
-  // If the admin navigates away to the public site, explicitly clear the session cookie
-  // so leaving the dashboard immediately ends the session per security requirements.
-  // Note: Only clear on actual document navigations, NOT on background prefetches or asset loads.
-  if (sessionCookie) {
-    const isPrefetch =
-      request.headers.get("next-router-prefetch") === "1" ||
-      request.headers.get("purpose") === "prefetch" ||
-      request.headers.get("sec-purpose") === "prefetch";
-
-    const isDocumentNavigation =
-      request.headers.get("sec-fetch-dest") === "document" ||
-      request.headers.get("accept")?.includes("text/html");
-
-    if (!isPrefetch && isDocumentNavigation) {
-      const response = NextResponse.next();
-      response.cookies.delete(ADMIN_COOKIE_NAME);
-      return response;
-    }
   }
 
   return NextResponse.next();

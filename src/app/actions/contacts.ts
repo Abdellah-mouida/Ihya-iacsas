@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit";
 
 export async function submitContactMessage(data: {
   name: string;
@@ -38,6 +40,7 @@ export async function submitContactMessage(data: {
 
 export async function getContactMessages() {
   try {
+    await requirePermission("contacts:view");
     const messages = await prisma.contactMessage.findMany({
       orderBy: { createdAt: "desc" },
     });
@@ -54,9 +57,27 @@ export async function getContactMessages() {
 
 export async function deleteContactMessage(id: string) {
   try {
+    const user = await requirePermission("contacts:manage");
+    const existing = await prisma.contactMessage.findUnique({
+      where: { id },
+      select: { name: true, email: true },
+    });
+
     await prisma.contactMessage.delete({
       where: { id },
     });
+
+    await createAuditLog({
+      actorId: user.id,
+      action: "CONTACT_DELETE",
+      targetType: "ContactMessage",
+      targetId: id,
+      details: {
+        name: existing?.name,
+        email: existing?.email,
+      },
+    });
+
     revalidatePath("/admin/contacts");
     return { success: true };
   } catch (error) {

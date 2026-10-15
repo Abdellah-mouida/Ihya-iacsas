@@ -22,7 +22,8 @@
     "account": "My Account",
     "myBookings": "My Bookings",
     "signOut": "Sign Out",
-    "userMenu": "User Menu"
+    "userMenu": "User Menu",
+    "adminPortal": "Admin Portal"
   },
   "lang": {
     "toggle": "Change language",

@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 
 export async function getDashboardStats(locale = "ar") {
   try {
+    await requirePermission("events:view");
     const [
       carouselCount,
       activeCarouselCount,
