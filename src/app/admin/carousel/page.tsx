@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/carousel";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
+import { AspectPreset, ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -50,6 +51,13 @@ function isValidImageUrl(url: string | null | undefined): boolean {
   }
 }
 
+const CAROUSEL_ASPECT_PRESETS: AspectPreset[] = [
+  { id: "4-5", labelAr: "4:5 (عمودي)", labelEn: "4:5 (Portrait)", aspect: 4 / 5 },
+  { id: "16-9", labelAr: "16:9 (عريض)", labelEn: "16:9 (Wide)", aspect: 16 / 9 },
+  { id: "1-1", labelAr: "1:1 (مربع)", labelEn: "1:1 (Square)", aspect: 1 },
+  { id: "free", labelAr: "حر", labelEn: "Free", aspect: undefined },
+];
+
 export default function AdminCarouselPage() {
   const { locale } = useLocale();
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
@@ -59,6 +67,9 @@ export default function AdminCarouselPage() {
   const [editingPost, setEditingPost] = useState<CarouselItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [rawCropImage, setRawCropImage] = useState<string | null>(null);
+  const [croppedFile, setCroppedFile] = useState<File | null>(null);
 
   // Clean up blob object URL on unmount or when preview changes
   useEffect(() => {
@@ -131,11 +142,14 @@ export default function AdminCarouselPage() {
     }
   };
 
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    if (croppedFile) {
+      formData.set("image", croppedFile);
+    }
     const file = formData.get("image") as File | null;
     const imageUrl = formData.get("imageUrl") as string | null;
 
@@ -167,6 +181,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       setModalOpen(false);
       setEditingPost(null);
       setSafePreviewUrl(null);
+      setCroppedFile(null);
+      setRawCropImage(null);
       fetchPosts();
     } else {
       toast.error(res.error || "Failed to save poster");
@@ -176,12 +192,16 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   const openAddModal = () => {
     setEditingPost(null);
     setSafePreviewUrl(null);
+    setCroppedFile(null);
+    setRawCropImage(null);
     setModalOpen(true);
   };
 
   const openEditModal = (post: CarouselItem) => {
     setEditingPost(post);
     setSafePreviewUrl(post.imageUrl);
+    setCroppedFile(null);
+    setRawCropImage(null);
     setModalOpen(true);
   };
 
@@ -408,11 +428,24 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     type="file"
                     name="image"
                     accept="image/*"
+                    data-testid="carousel-image-file-input"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        if (file.size > 8 * 1024 * 1024) {
+                          toast.error(
+                            locale === "ar"
+                              ? "حجم ملف الصورة يتجاوز الحد الأقصى المسموح به (8 ميجابايت)"
+                              : "Image file size exceeds the 8MB limit",
+                          );
+                          e.target.value = "";
+                          setSafePreviewUrl(editingPost?.imageUrl || null);
+                          return;
+                        }
                         const blobUrl = URL.createObjectURL(file);
-                        setSafePreviewUrl(blobUrl);
+                        setRawCropImage(blobUrl);
+                        setCropperOpen(true);
+                        e.target.value = "";
                       }
                     }}
                     className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brass/20 file:text-brass hover:file:bg-brass/30 cursor-pointer"
@@ -504,6 +537,26 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         </div>
       )}
       {ConfirmDialogComponent}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={rawCropImage}
+        aspect={4 / 5}
+        presets={CAROUSEL_ASPECT_PRESETS}
+        maxDimensions={{ width: 1600, height: 2000 }}
+        titleAr="اقتصاص ملصق الواجهة"
+        titleEn="Crop Carousel Poster"
+        onCropComplete={({ file, blobUrl }) => {
+          setCroppedFile(file);
+          setSafePreviewUrl(blobUrl);
+          setCropperOpen(false);
+          setRawCropImage(null);
+        }}
+        onCancel={() => {
+          setCropperOpen(false);
+          setRawCropImage(null);
+        }}
+      />
     </div>
   );
 }

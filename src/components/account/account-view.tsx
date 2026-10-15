@@ -37,6 +37,7 @@ import { IMAGES } from "@/lib/content";
 import { useLocale } from "@/i18n/locale-provider";
 import { validatePasswordStrength } from "@/lib/password";
 import { notify } from "@/lib/toast";
+import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 
 interface AccountViewProps {
   initialData: UserAccountData;
@@ -68,6 +69,8 @@ export function AccountView({ initialData }: AccountViewProps) {
   const [profileImage, setProfileImage] = useState<string | null>(userData.image);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [rawCropImage, setRawCropImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Security Form state
@@ -91,13 +94,20 @@ export function AccountView({ initialData }: AccountViewProps) {
 
     if (file.size > 5 * 1024 * 1024) {
       notify.error(t("account.errPhotoTooLarge"));
+      e.target.value = "";
       return;
     }
 
-    setImageFile(file);
-    setRemoveImage(false);
     const objectUrl = URL.createObjectURL(file);
-    setProfileImage(objectUrl);
+    setRawCropImage(objectUrl);
+    setCropperOpen(true);
+    e.target.value = "";
+  };
+
+  const handleCropComplete = (result: { file: File; blobUrl: string }) => {
+    setImageFile(result.file);
+    setRemoveImage(false);
+    setProfileImage(result.blobUrl);
   };
 
   const handleRemovePhoto = () => {
@@ -769,6 +779,19 @@ export function AccountView({ initialData }: AccountViewProps) {
           </div>
         </div>
       )}
+
+      {/* Profile Avatar Cropper Dialog */}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={rawCropImage}
+        cropShape="round"
+        aspect={1}
+        maxDimensions={{ width: 1024, height: 1024 }}
+        titleAr="اقتصاص الصورة الشخصية"
+        titleEn="Crop Profile Photo"
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 }

@@ -685,6 +685,16 @@ export async function completeOnboarding(
       };
     }
 
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!allowedTypes.includes(imageFile.type)) {
+      return {
+        success: false,
+        error: isAr
+          ? "صيغة الصورة غير مدعومة. يرجى اختيار JPG أو PNG أو WebP"
+          : "Unsupported image format. Please select JPG, PNG, or WebP",
+      };
+    }
+
     try {
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);

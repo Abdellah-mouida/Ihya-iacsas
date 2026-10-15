@@ -26,6 +26,7 @@ import { CityCombobox } from "@/components/common/city-combobox";
 import { notify } from "@/lib/toast";
 import { completeOnboarding, getOnboardingProfile } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
+import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 
 interface OnboardingViewProps {
   initialProfile?: {
@@ -69,6 +70,8 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
     initialProfile?.image || session?.user?.image || null,
   );
   const [clearImage, setClearImage] = useState<boolean>(false);
+  const [cropperOpen, setCropperOpen] = useState<boolean>(false);
+  const [rawCropImage, setRawCropImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Terms state (required if user signed in with Google and hasn't accepted yet)
@@ -110,17 +113,20 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
 
     if (file.size > 5 * 1024 * 1024) {
       notify.error(t("onboarding.errPhotoTooLarge"));
+      e.target.value = "";
       return;
     }
 
-    setImageFile(file);
-    setClearImage(false);
+    const blobUrl = URL.createObjectURL(file);
+    setRawCropImage(blobUrl);
+    setCropperOpen(true);
+    e.target.value = "";
+  };
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+  const handleCropComplete = (result: { file: File; blobUrl: string }) => {
+    setImageFile(result.file);
+    setImagePreview(result.blobUrl);
+    setClearImage(false);
   };
 
   const handleRemovePhoto = () => {
@@ -644,6 +650,19 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
           )}
         </div>
       </div>
+
+      {/* Avatar Image Cropper Dialog */}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={rawCropImage}
+        cropShape="round"
+        aspect={1}
+        maxDimensions={{ width: 1024, height: 1024 }}
+        titleAr="اقتصاص الصورة الشخصية"
+        titleEn="Crop Profile Photo"
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 }

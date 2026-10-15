@@ -29,6 +29,15 @@ export async function createCarouselPost(formData: FormData) {
 
     let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
 
+    if (file && file.size > 8 * 1024 * 1024) {
+      return { success: false, error: "Image file size exceeds the 8MB limit." };
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (file && file.size > 0 && !allowedTypes.includes(file.type)) {
+      return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+    }
+
     if (file && file.size > 0) {
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -88,6 +97,15 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
     const imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
+
+    if (file && file.size > 8 * 1024 * 1024) {
+      return { success: false, error: "Image file size exceeds the 8MB limit." };
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (file && file.size > 0 && !allowedTypes.includes(file.type)) {
+      return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+    }
 
     const dataToUpdate: {
       order?: number;

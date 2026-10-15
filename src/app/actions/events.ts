@@ -240,6 +240,11 @@ export async function createEvent(formData: FormData) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
     }
 
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (file && file.size > 0 && !allowedTypes.includes(file.type)) {
+      return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+    }
+
     if (file && file.size > 0) {
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -328,6 +333,11 @@ export async function updateEvent(id: string, formData: FormData) {
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (file && file.size > 0 && !allowedTypes.includes(file.type)) {
+      return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
     }
 
     const dataToUpdate: Record<string, unknown> = {

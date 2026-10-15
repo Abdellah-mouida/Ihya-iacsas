@@ -27,8 +27,16 @@ import {
 import { BilingualFields } from "@/components/common/bilingual-fields";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { DateTimePicker } from "@/components/common/date-time-picker";
+import { ImageCropperDialog, AspectPreset } from "@/components/common/image-cropper-dialog";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
+
+const POSTER_ASPECT_PRESETS: AspectPreset[] = [
+  { id: "4-5", labelAr: "4:5 (ملصق عمودي)", labelEn: "4:5 (Poster)", aspect: 4 / 5 },
+  { id: "1-1", labelAr: "1:1 (مربع)", labelEn: "1:1 (Square)", aspect: 1 },
+  { id: "16-9", labelAr: "16:9 (عريض)", labelEn: "16:9 (Wide)", aspect: 16 / 9 },
+  { id: "free", labelAr: "حر", labelEn: "Free", aspect: undefined },
+];
 
 type EventItem = {
   id: string;
@@ -82,6 +90,9 @@ export default function AdminEventsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [formCapacityType, setFormCapacityType] = useState<string>("OPEN");
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [rawCropImage, setRawCropImage] = useState<string | null>(null);
+  const [croppedImageFile, setCroppedImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     return () => {
@@ -98,6 +109,11 @@ export default function AdminEventsPage() {
       }
       return newUrl;
     });
+  };
+
+  const handleCropComplete = (result: { file: File; blobUrl: string }) => {
+    setCroppedImageFile(result.file);
+    setSafePosterPreview(result.blobUrl);
   };
 
   const fetchEvents = async () => {
@@ -172,6 +188,9 @@ export default function AdminEventsPage() {
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    if (croppedImageFile) {
+      formData.set("image", croppedImageFile);
+    }
     const file = formData.get("image") as File | null;
     const posterUrl = formData.get("posterUrl") as string | null;
 
@@ -213,6 +232,7 @@ export default function AdminEventsPage() {
       setModalOpen(false);
       setEditingEvent(null);
       setSafePosterPreview(null);
+      setCroppedImageFile(null);
       fetchEvents();
     } else {
       toast.error(res.error || "Failed to save event");
@@ -222,6 +242,7 @@ export default function AdminEventsPage() {
   const openAddModal = () => {
     setEditingEvent(null);
     setSafePosterPreview(null);
+    setCroppedImageFile(null);
     setFormCapacityType("OPEN");
     setModalOpen(true);
   };
@@ -229,6 +250,7 @@ export default function AdminEventsPage() {
   const openEditModal = (evt: EventItem) => {
     setEditingEvent(evt);
     setSafePosterPreview(evt.posterUrl);
+    setCroppedImageFile(null);
     setFormCapacityType(evt.capacityType || "OPEN");
     setModalOpen(true);
   };
@@ -566,6 +588,7 @@ export default function AdminEventsPage() {
                       src={posterPreview!}
                       alt="Preview"
                       fill
+                      data-testid="poster-preview-img"
                       unoptimized={posterPreview!.startsWith("blob:")}
                       className="object-contain"
                     />
@@ -576,6 +599,7 @@ export default function AdminEventsPage() {
                   type="file"
                   name="image"
                   accept="image/*"
+                  data-testid="event-image-file-input"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
@@ -590,7 +614,9 @@ export default function AdminEventsPage() {
                         return;
                       }
                       const blobUrl = URL.createObjectURL(file);
-                      setSafePosterPreview(blobUrl);
+                      setRawCropImage(blobUrl);
+                      setCropperOpen(true);
+                      e.target.value = "";
                     }
                   }}
                   className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brass/20 file:text-brass cursor-pointer"
@@ -745,6 +771,19 @@ export default function AdminEventsPage() {
         </div>
       )}
       {ConfirmDialogComponent}
+
+      {/* Poster Image Cropper Dialog */}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={rawCropImage}
+        aspect={4 / 5}
+        presets={POSTER_ASPECT_PRESETS}
+        maxDimensions={{ width: 1280, height: 1600 }}
+        titleAr="اقتصاص ملصق الفعالية"
+        titleEn="Crop Event Poster"
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 }
