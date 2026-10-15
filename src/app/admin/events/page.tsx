@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/events";
 import { BilingualFields } from "@/components/common/bilingual-fields";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
+import { DateTimePicker } from "@/components/common/date-time-picker";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 
@@ -265,6 +266,7 @@ export default function AdminEventsPage() {
 
           <Button
             onClick={openAddModal}
+            data-testid="create-event-btn"
             className="bg-brass-gradient text-night rounded-xl px-5 h-10 font-semibold shadow-layered hover:opacity-95 text-sm"
           >
             <Plus className="size-4 me-1.5 shrink-0" />
@@ -450,7 +452,7 @@ export default function AdminEventsPage() {
 
       {/* Add/Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-night/60 backdrop-blur-md flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" data-testid="event-modal" className="fixed inset-0 z-50 bg-night/60 backdrop-blur-md flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -518,38 +520,19 @@ export default function AdminEventsPage() {
                 </div>
               </div>
 
-              {/* Date, Time, Location */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                    {locale === "ar" ? "التاريخ" : "Date"}
-                  </label>
-                  <input
-                    type="date"
-                    name="date"
-                    required
-                    defaultValue={
-                      editingEvent
-                        ? new Date(editingEvent.date).toISOString().split("T")[0]
-                        : new Date().toISOString().split("T")[0]
-                    }
-                    className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                    {locale === "ar" ? "الوقت" : "Time"}
-                  </label>
-                  <input
-                    type="text"
-                    name="time"
-                    required
-                    defaultValue={editingEvent?.time || "18:00"}
-                    placeholder="18:00 - 21:00"
-                    className="w-full rounded-xl border border-border bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brass"
-                  />
-                </div>
+              {/* Date & Time (Custom DateTimePicker) */}
+              <div className="space-y-4">
+                <DateTimePicker
+                  key={editingEvent ? editingEvent.id : "new-event-dt"}
+                  initialDate={
+                    editingEvent
+                      ? new Date(editingEvent.date).toISOString().split("T")[0]
+                      : new Date().toISOString().split("T")[0]
+                  }
+                  initialTime={editingEvent?.time || "18:00"}
+                  locale={locale}
+                  required
+                />
 
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
@@ -740,6 +723,7 @@ export default function AdminEventsPage() {
                 <Button
                   type="submit"
                   disabled={submitting}
+                  data-testid="event-form-submit-btn"
                   className="bg-brass-gradient text-night font-semibold rounded-xl px-6 text-sm h-10 shrink-0"
                 >
                   {submitting ? (

@@ -494,9 +494,9 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   }) => {
     test.setTimeout(90000);
 
-    const testEventId = "majlis-ihyaa-2026";
-    const initialEvent = await prisma.event.findUnique({ where: { id: testEventId } });
+    const initialEvent = await prisma.event.findFirst();
     expect(initialEvent).not.toBeNull();
+    const testEventId = initialEvent!.id;
     const originalSlug = initialEvent!.slug;
     const originalTitleAr = initialEvent!.titleAr;
     const originalTitleEn = initialEvent!.titleEn;
