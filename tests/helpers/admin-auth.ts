@@ -28,6 +28,8 @@ export async function ensureTestUser(user: {
   password: string;
   fullName: string;
   role: "USER" | "MODERATOR" | "ADMIN";
+  city?: string;
+  age?: number;
 }) {
   const passwordHash = await bcrypt.hash(user.password, 10);
   return await prisma.user.upsert({
@@ -36,6 +38,8 @@ export async function ensureTestUser(user: {
       name: user.fullName,
       passwordHash,
       role: user.role,
+      city: user.city ?? null,
+      age: user.age ?? null,
       emailVerified: new Date(),
       onboardingCompletedAt: new Date(),
       termsAcceptedAt: new Date(),
@@ -46,6 +50,8 @@ export async function ensureTestUser(user: {
       name: user.fullName,
       passwordHash,
       role: user.role,
+      city: user.city ?? null,
+      age: user.age ?? null,
       emailVerified: new Date(),
       onboardingCompletedAt: new Date(),
       termsAcceptedAt: new Date(),
