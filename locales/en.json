@@ -516,5 +516,21 @@
     "errCityRequired": "Please select your city",
     "errAgeRequired": "Please enter a valid age (10 years or older)",
     "errPhotoTooLarge": "Photo must be less than 5MB"
+  },
+  "errors": {
+    "notFoundCode": "404",
+    "notFoundTitle": "Off the Map!",
+    "notFoundSubtitle": "Page Not Found",
+    "notFoundHumor": "Looks like you took an unmarked trail on our mountain hike, or kicked the ball out of bounds! Don't worry, even the best explorers take a detour now and then.",
+    "notFoundHome": "Return Home",
+    "notFoundEvents": "Explore Events",
+    "notFoundContact": "Contact Us",
+    "forbiddenCode": "403",
+    "forbiddenTitle": "Organizers Tent Only!",
+    "forbiddenSubtitle": "Access Forbidden",
+    "forbiddenHumor": "Looks like you wandered into the organizers' tent without a backstage pass! This area is reserved for logistics and operations staff only.",
+    "forbiddenHome": "Return Home",
+    "forbiddenAccount": "My Account",
+    "forbiddenSwitch": "Switch Account"
   }
 }

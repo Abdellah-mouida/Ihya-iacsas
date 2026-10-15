@@ -17,6 +17,7 @@ export function LanguageSwitcher({
   return (
     <button
       type="button"
+      data-testid="language-switcher-btn"
       onClick={toggleLocale}
       aria-label={t("lang.toggle")}
       className={cn(

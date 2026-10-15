@@ -516,5 +516,21 @@
     "errCityRequired": "يرجى اختيار مدينتك",
     "errAgeRequired": "يرجى إدخال سن صالح (10 سنوات فأكثر)",
     "errPhotoTooLarge": "يجب ألا يتجاوز حجم الصورة 5 ميغابايت"
+  },
+  "errors": {
+    "notFoundCode": "404",
+    "notFoundTitle": "مسار خارج الخريطة!",
+    "notFoundSubtitle": "الصفحة غير موجودة",
+    "notFoundHumor": "يبدو أنك سلكت مساراً غير محدد في خريطتنا الجبلية، أو أن الكرة خرجت عن حدود الملعب! لا تقلق، حتى أمهر الرحالة يضلون الطريق أحياناً.",
+    "notFoundHome": "العودة للرئيسية",
+    "notFoundEvents": "استكشف الفعاليات",
+    "notFoundContact": "تواصل معنا",
+    "forbiddenCode": "403",
+    "forbiddenTitle": "منطقة خاصة بفريق التنظيم!",
+    "forbiddenSubtitle": "الدخول غير مصرح به",
+    "forbiddenHumor": "يبدو أنك حاولت دخول خيمة اللجنة المنظمة قبل إذن الدخول! هذه المنطقة مخصصة لإدارة العمليات واللوجستيات فقط.",
+    "forbiddenHome": "العودة للرئيسية",
+    "forbiddenAccount": "حسابي الشخصي",
+    "forbiddenSwitch": "تسجيل الدخول بحساب آخر"
   }
 }
