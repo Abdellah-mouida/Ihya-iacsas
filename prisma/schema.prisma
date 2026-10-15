@@ -8,6 +8,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
 model CarouselPost {
   id        String   @id @default(cuid())
   imageUrl  String
@@ -113,6 +119,9 @@ model User {
   age                   Int?
   imagePublicId         String?
   locale                String?   @default("ar")
+  role                  Role      @default(USER)
+  lastLoginAt           DateTime?
+  lastActiveAt          DateTime?
   onboardingCompletedAt DateTime?
   termsAcceptedAt       DateTime?
   termsVersion          String?
@@ -123,11 +132,13 @@ model User {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  bookings Booking[]
+  accounts  Account[]
+  sessions  Session[]
+  bookings  Booking[]
+  auditLogs AuditLog[]
 
   @@index([email])
+  @@index([role])
 }
 
 model Account {
@@ -189,4 +200,29 @@ model ContactMessage {
   updatedAt DateTime @updatedAt
 
   @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

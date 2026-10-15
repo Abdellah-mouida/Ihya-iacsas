@@ -83,6 +83,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               city: user.city,
               age: user.age,
               locale: user.locale,
+              role: user.role,
+              lastLoginAt: user.lastLoginAt,
+              lastActiveAt: user.lastActiveAt,
               sessionVersion: user.sessionVersion,
             };
           }
@@ -120,6 +123,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               city: user.city,
               age: user.age,
               locale: user.locale,
+              role: user.role,
+              lastLoginAt: user.lastLoginAt,
+              lastActiveAt: user.lastActiveAt,
               sessionVersion: user.sessionVersion,
             };
           }
@@ -175,6 +181,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      // Record login timestamp & activity for user
+      if (user?.id) {
+        try {
+          const now = new Date();
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              lastLoginAt: now,
+              lastActiveAt: now,
+            },
+          });
+        } catch (loginErr) {
+          console.warn("[auth] Failed to record lastLoginAt:", loginErr);
+        }
+      }
+
       return true;
     },
     async jwt({ token, user, trigger, session }) {
@@ -190,6 +212,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.city = user.city;
         token.age = user.age;
         token.locale = user.locale;
+        token.role = user.role || "USER";
+        token.lastLoginAt = user.lastLoginAt;
+        token.lastActiveAt = user.lastActiveAt;
         token.sessionVersion = user.sessionVersion || 1;
         return token;
       }
@@ -225,6 +250,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             city: true,
             age: true,
             locale: true,
+            role: true,
+            lastLoginAt: true,
+            lastActiveAt: true,
           },
         });
 
@@ -241,6 +269,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.city = dbUser.city;
         token.age = dbUser.age;
         token.locale = dbUser.locale;
+        token.role = dbUser.role;
+        token.lastLoginAt = dbUser.lastLoginAt;
+        token.lastActiveAt = dbUser.lastActiveAt;
         token.sessionVersion = dbUser.sessionVersion;
       }
 
@@ -258,6 +289,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.city = token.city as string | null | undefined;
         session.user.age = token.age as number | null | undefined;
         session.user.locale = token.locale as string | null | undefined;
+        session.user.role = token.role || "USER";
+        session.user.lastLoginAt = (token.lastLoginAt as Date | null) ?? null;
+        session.user.lastActiveAt = (token.lastActiveAt as Date | null) ?? null;
       }
       return session;
     },
