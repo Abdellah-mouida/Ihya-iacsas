@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "bio" TEXT,
+ADD COLUMN "studyLevel" TEXT,
+ADD COLUMN "institution" TEXT,
+ADD COLUMN "interests" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "skills" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "languages" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "volunteerAreas" TEXT[] DEFAULT ARRAY[]::TEXT[];

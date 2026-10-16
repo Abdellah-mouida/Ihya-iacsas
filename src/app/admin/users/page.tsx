@@ -75,6 +75,13 @@ type UserItem = {
   city: string | null;
   age: number | null;
   locale: string | null;
+  bio?: string | null;
+  studyLevel?: string | null;
+  institution?: string | null;
+  interests?: string[];
+  skills?: string[];
+  languages?: string[];
+  volunteerAreas?: string[];
   lastLoginAt: Date | null;
   lastActiveAt: Date | null;
   createdAt: Date;
@@ -1087,6 +1094,135 @@ export default function AdminUsersPage() {
                     {formatDate(selectedUser.createdAt)}
                   </span>
                 </div>
+              </div>
+
+              {/* Optional Profile Details (Task 9) */}
+              <div data-testid="admin-user-optional-details">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Sparkles className="size-3.5 text-primary" />
+                  {t("adminUsers.detailsOptionalHeading")}
+                </h4>
+                {selectedUser.bio ||
+                selectedUser.studyLevel ||
+                selectedUser.institution ||
+                (selectedUser.interests && selectedUser.interests.length > 0) ||
+                (selectedUser.skills && selectedUser.skills.length > 0) ||
+                (selectedUser.languages && selectedUser.languages.length > 0) ||
+                (selectedUser.volunteerAreas && selectedUser.volunteerAreas.length > 0) ? (
+                  <div className="space-y-3 p-3.5 rounded-xl bg-card border border-border/60 text-xs">
+                    {selectedUser.bio && (
+                      <div>
+                        <span className="text-[11px] text-muted-foreground block font-medium">
+                          {t("adminUsers.detailsBio")}
+                        </span>
+                        <p className="mt-1 text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 p-2.5 rounded-lg border border-border/40">
+                          {selectedUser.bio}
+                        </p>
+                      </div>
+                    )}
+
+                    {(selectedUser.studyLevel || selectedUser.institution) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-border/40">
+                        {selectedUser.studyLevel && (
+                          <div>
+                            <span className="text-[11px] text-muted-foreground block font-medium">
+                              {t("adminUsers.detailsStudy")}
+                            </span>
+                            <span className="font-semibold text-foreground block mt-0.5">
+                              {selectedUser.studyLevel}
+                            </span>
+                          </div>
+                        )}
+                        {selectedUser.institution && (
+                          <div>
+                            <span className="text-[11px] text-muted-foreground block font-medium">
+                              {t("adminUsers.detailsInstitution")}
+                            </span>
+                            <span className="font-semibold text-foreground block mt-0.5">
+                              {selectedUser.institution}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedUser.interests && selectedUser.interests.length > 0 && (
+                      <div className="pt-1 border-t border-border/40">
+                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
+                          {t("adminUsers.detailsInterests")}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedUser.interests.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px]"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedUser.skills && selectedUser.skills.length > 0 && (
+                      <div className="pt-1 border-t border-border/40">
+                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
+                          {t("adminUsers.detailsSkills")}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedUser.skills.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 text-[11px]"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedUser.languages && selectedUser.languages.length > 0 && (
+                      <div className="pt-1 border-t border-border/40">
+                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
+                          {t("adminUsers.detailsLanguages")}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedUser.languages.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[11px]"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedUser.volunteerAreas && selectedUser.volunteerAreas.length > 0 && (
+                      <div className="pt-1 border-t border-border/40">
+                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
+                          {t("adminUsers.detailsVolunteer")}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedUser.volunteerAreas.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 text-[11px]"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
+                    {t("adminUsers.detailsNoOptional")}
+                  </div>
+                )}
               </div>
 
               {/* Audit Trail */}

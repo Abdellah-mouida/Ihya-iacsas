@@ -19,6 +19,13 @@ import {
   LogOut,
   ExternalLink,
   CalendarX2,
+  Sparkles,
+  GraduationCap,
+  Building2,
+  Heart,
+  Wrench,
+  Globe2,
+  HandHeart,
 } from "lucide-react";
 
 import {
@@ -34,11 +41,33 @@ import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ProfileTagEditor } from "@/components/account/profile-tag-editor";
 import { IMAGES } from "@/lib/content";
 import { useLocale } from "@/i18n/locale-provider";
 import { validatePasswordStrength } from "@/lib/password";
 import { notify } from "@/lib/toast";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
+
+const INTEREST_PRESETS = {
+  en: ["Camping", "Hiking", "Photography", "Reading", "Technology", "Sports", "Nature"],
+  ar: ["التخييم", "المشي الجبلي", "التصوير", "القراءة", "التكنولوجيا", "الرياضة", "الطبيعة"],
+};
+
+const SKILL_PRESETS = {
+  en: ["First Aid", "Leadership", "Cooking", "Graphic Design", "Video Editing", "Public Speaking", "Teaching"],
+  ar: ["الإسعافات الأولية", "القيادة", "الطبخ", "التصميم", "المونتاج", "الخطابة", "التعليم"],
+};
+
+const LANGUAGE_PRESETS = {
+  en: ["Arabic", "French", "English", "Amazigh", "Spanish", "German"],
+  ar: ["العربية", "الفرنسية", "الإنجليزية", "الأمازيغية", "الإسبانية", "الألمانية"],
+};
+
+const VOLUNTEER_PRESETS = {
+  en: ["Logistics", "Media & Press", "First Aid", "Youth Coaching", "Camp Organization", "Kitchen & Catering"],
+  ar: ["اللوجستيك والتنظيم", "الإعلام والتوثيق", "الإسعافات", "تأطير الشباب", "المطبخ والتموين", "الاستقبال والضيافة"],
+};
 
 interface AccountViewProps {
   initialData: UserAccountData;
@@ -73,6 +102,15 @@ export function AccountView({ initialData }: AccountViewProps) {
   const [cropperOpen, setCropperOpen] = useState(false);
   const [rawCropImage, setRawCropImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Optional Profile Details state (Task 9)
+  const [bio, setBio] = useState(userData.bio || "");
+  const [studyLevel, setStudyLevel] = useState(userData.studyLevel || "");
+  const [institution, setInstitution] = useState(userData.institution || "");
+  const [interests, setInterests] = useState<string[]>(userData.interests || []);
+  const [skills, setSkills] = useState<string[]>(userData.skills || []);
+  const [languages, setLanguages] = useState<string[]>(userData.languages || []);
+  const [volunteerAreas, setVolunteerAreas] = useState<string[]>(userData.volunteerAreas || []);
 
   // Security Form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -147,6 +185,15 @@ export function AccountView({ initialData }: AccountViewProps) {
         formData.set("image", imageFile);
       }
 
+      // Optional Profile Details
+      formData.set("bio", bio);
+      formData.set("studyLevel", studyLevel);
+      formData.set("institution", institution);
+      formData.set("interests", JSON.stringify(interests));
+      formData.set("skills", JSON.stringify(skills));
+      formData.set("languages", JSON.stringify(languages));
+      formData.set("volunteerAreas", JSON.stringify(volunteerAreas));
+
       const res = await updateUserProfile(formData, locale);
       if (res.success && res.user) {
         setUserData((prev) => ({
@@ -155,6 +202,13 @@ export function AccountView({ initialData }: AccountViewProps) {
           city: res.user!.city,
           age: res.user!.age,
           image: res.user!.image,
+          bio: res.user!.bio,
+          studyLevel: res.user!.studyLevel,
+          institution: res.user!.institution,
+          interests: res.user!.interests,
+          skills: res.user!.skills,
+          languages: res.user!.languages,
+          volunteerAreas: res.user!.volunteerAreas,
         }));
         setProfileImage(res.user.image);
         setImageFile(null);
@@ -436,6 +490,180 @@ export function AccountView({ initialData }: AccountViewProps) {
                   placeholder={t("account.agePlaceholder")}
                   className="rounded-xl h-11"
                 />
+              </div>
+            </div>
+
+            {/* Optional Profile Details Section (Task 9) */}
+            <div
+              data-testid="account-optional-details-section"
+              className="mt-8 pt-8 border-t border-border/60 space-y-6"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-5 text-primary" />
+                  <h3 className="text-lg font-heading font-bold text-foreground">
+                    {t("account.optionalDetailsTitle")}
+                  </h3>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("account.optionalDetailsDesc")}
+                </p>
+              </div>
+
+              {/* Bio */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="account-bio"
+                    className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+                  >
+                    {t("account.bioLabel")}
+                  </Label>
+                  <span
+                    className="text-xs text-muted-foreground font-mono"
+                    data-testid="account-bio-count"
+                  >
+                    {bio.length} / 280
+                  </span>
+                </div>
+                <Textarea
+                  id="account-bio"
+                  data-testid="account-bio-input"
+                  value={bio}
+                  maxLength={280}
+                  rows={3}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder={t("account.bioPlaceholder")}
+                  className="rounded-xl resize-none text-sm"
+                />
+              </div>
+
+              {/* Study Level & Institution */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label
+                      htmlFor="account-studylevel"
+                      className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+                    >
+                      <GraduationCap className="size-4 text-muted-foreground" />
+                      {t("account.studyLevelLabel")}
+                    </Label>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {studyLevel.length} / 100
+                    </span>
+                  </div>
+                  <Input
+                    id="account-studylevel"
+                    data-testid="account-studylevel-input"
+                    value={studyLevel}
+                    maxLength={100}
+                    onChange={(e) => setStudyLevel(e.target.value)}
+                    placeholder={t("account.studyLevelPlaceholder")}
+                    className="rounded-xl h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label
+                      htmlFor="account-institution"
+                      className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+                    >
+                      <Building2 className="size-4 text-muted-foreground" />
+                      {t("account.institutionLabel")}
+                    </Label>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {institution.length} / 120
+                    </span>
+                  </div>
+                  <Input
+                    id="account-institution"
+                    data-testid="account-institution-input"
+                    value={institution}
+                    maxLength={120}
+                    onChange={(e) => setInstitution(e.target.value)}
+                    placeholder={t("account.institutionPlaceholder")}
+                    className="rounded-xl h-11"
+                  />
+                </div>
+              </div>
+
+              {/* Tag editors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                {/* Interests */}
+                <ProfileTagEditor
+                  label={t("account.interestsLabel")}
+                  helperText={t("account.interestsPlaceholder")}
+                  tags={interests}
+                  onChange={setInterests}
+                  maxTags={8}
+                  maxTagLength={30}
+                  presets={locale === "ar" ? INTEREST_PRESETS.ar : INTEREST_PRESETS.en}
+                  placeholder={t("account.interestsPlaceholder")}
+                  testIdPrefix="account-interests"
+                  disabled={isPending}
+                />
+
+                {/* Skills */}
+                <ProfileTagEditor
+                  label={t("account.skillsLabel")}
+                  helperText={t("account.skillsPlaceholder")}
+                  tags={skills}
+                  onChange={setSkills}
+                  maxTags={8}
+                  maxTagLength={30}
+                  presets={locale === "ar" ? SKILL_PRESETS.ar : SKILL_PRESETS.en}
+                  placeholder={t("account.skillsPlaceholder")}
+                  testIdPrefix="account-skills"
+                  disabled={isPending}
+                />
+
+                {/* Languages */}
+                <ProfileTagEditor
+                  label={t("account.languagesLabel")}
+                  helperText={t("account.languagesPlaceholder")}
+                  tags={languages}
+                  onChange={setLanguages}
+                  maxTags={6}
+                  maxTagLength={30}
+                  presets={locale === "ar" ? LANGUAGE_PRESETS.ar : LANGUAGE_PRESETS.en}
+                  placeholder={t("account.languagesPlaceholder")}
+                  testIdPrefix="account-languages"
+                  disabled={isPending}
+                />
+
+                {/* Volunteer Areas */}
+                <ProfileTagEditor
+                  label={t("account.volunteerAreasLabel")}
+                  helperText={t("account.volunteerAreasPlaceholder")}
+                  tags={volunteerAreas}
+                  onChange={setVolunteerAreas}
+                  maxTags={6}
+                  maxTagLength={30}
+                  presets={locale === "ar" ? VOLUNTEER_PRESETS.ar : VOLUNTEER_PRESETS.en}
+                  placeholder={t("account.volunteerAreasPlaceholder")}
+                  testIdPrefix="account-volunteer"
+                  disabled={isPending}
+                />
+              </div>
+
+              {/* Privacy Notice Card */}
+              <div
+                data-testid="account-privacy-notice"
+                className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-3 text-xs text-muted-foreground"
+              >
+                <Shield className="size-4 text-primary shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <p>{t("account.privacyNoticeText")}</p>
+                  <Link
+                    href="/privacy"
+                    className="inline-flex items-center gap-1 text-primary hover:underline font-semibold mt-1"
+                  >
+                    <span>{t("account.privacyNoticeLink")}</span>
+                    <ExternalLink className="size-3" />
+                  </Link>
+                </div>
               </div>
             </div>
 

@@ -117,6 +117,13 @@ model User {
   passwordHash          String?
   city                  String?
   age                   Int?
+  bio                   String?
+  studyLevel            String?
+  institution           String?
+  interests             String[]  @default([])
+  skills                String[]  @default([])
+  languages             String[]  @default([])
+  volunteerAreas        String[]  @default([])
   imagePublicId         String?
   locale                String?   @default("ar")
   role                  Role      @default(USER)

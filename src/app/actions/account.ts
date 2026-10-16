@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { touchUserActive } from "@/lib/activity";
 import {
   deleteImageFromCloudinary,
   uploadImageToCloudinaryDetailed,
@@ -44,8 +45,84 @@ export interface UserAccountData {
     hasPassword: boolean;
     termsAcceptedAt: string | null;
     createdAt: string;
+    bio: string | null;
+    studyLevel: string | null;
+    institution: string | null;
+    interests: string[];
+    skills: string[];
+    languages: string[];
+    volunteerAreas: string[];
   };
   bookings: AccountBookingItem[];
+}
+
+function sanitizePlainText(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+    .trim();
+}
+
+function parseAndValidateTags(
+  raw: FormDataEntryValue | null,
+  maxTags: number,
+  maxCharPerTag: number,
+  fieldLabelEn: string,
+  fieldLabelAr: string,
+  isAr: boolean,
+): string[] {
+  if (!raw || typeof raw !== "string" || !raw.trim()) {
+    return [];
+  }
+
+  let items: string[] = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      items = parsed.map((x) => String(x));
+    } else {
+      items = raw.split(",");
+    }
+  } catch {
+    items = raw.split(",");
+  }
+
+  const cleaned = items
+    .map((tag) => sanitizePlainText(tag))
+    .filter((tag) => tag.length > 0);
+
+  const seen = new Set<string>();
+  const uniqueTags: string[] = [];
+  for (const tag of cleaned) {
+    const lower = tag.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      uniqueTags.push(tag);
+    }
+  }
+
+  if (uniqueTags.length > maxTags) {
+    throw new Error(
+      isAr
+        ? `تجاوز عدد وسوم ${fieldLabelAr} الحد المسموح به (بحد أقصى ${maxTags} وسوم)`
+        : `Too many ${fieldLabelEn} tags (max ${maxTags} allowed)`,
+    );
+  }
+
+  for (const tag of uniqueTags) {
+    if (tag.length > maxCharPerTag) {
+      throw new Error(
+        isAr
+          ? `لا يمكن أن يتجاوز طول وسم "${tag.slice(0, 15)}..." في ${fieldLabelAr} ${maxCharPerTag} حرفاً`
+          : `Tag "${tag.slice(0, 15)}..." in ${fieldLabelEn} cannot exceed ${maxCharPerTag} characters`,
+      );
+    }
+  }
+
+  return uniqueTags;
 }
 
 /**
@@ -76,12 +153,22 @@ export async function getUserAccountData(): Promise<{
         passwordHash: true,
         termsAcceptedAt: true,
         createdAt: true,
+        bio: true,
+        studyLevel: true,
+        institution: true,
+        interests: true,
+        skills: true,
+        languages: true,
+        volunteerAreas: true,
       },
     });
 
     if (!user) {
       return { success: false, error: "User not found" };
     }
+
+    // Touch user activity timestamp asynchronously
+    touchUserActive(user.id).catch(() => {});
 
     // Link any orphan bookings for this user's email if not already linked
     if (user.email) {
@@ -147,6 +234,13 @@ export async function getUserAccountData(): Promise<{
           hasPassword: Boolean(user.passwordHash),
           termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
           createdAt: user.createdAt.toISOString(),
+          bio: user.bio,
+          studyLevel: user.studyLevel,
+          institution: user.institution,
+          interests: user.interests || [],
+          skills: user.skills || [],
+          languages: user.languages || [],
+          volunteerAreas: user.volunteerAreas || [],
         },
         bookings: formattedBookings,
       },
@@ -174,6 +268,13 @@ export async function updateUserProfile(
     city: string | null;
     age: number | null;
     image: string | null;
+    bio: string | null;
+    studyLevel: string | null;
+    institution: string | null;
+    interests: string[];
+    skills: string[];
+    languages: string[];
+    volunteerAreas: string[];
   };
 }> {
   const isAr = locale === "ar";
@@ -220,6 +321,85 @@ export async function updateUserProfile(
       error: isAr
         ? "يرجى إدخال سن صحيح (بين 10 و 120 سنة)"
         : "Please enter a valid age (between 10 and 120 years)",
+    };
+  }
+
+  // Parse & sanitize optional fields (strip HTML tags, control chars)
+  const rawBio = formData.get("bio");
+  const bio = rawBio !== null ? sanitizePlainText(rawBio) : null;
+  if (bio && bio.length > 280) {
+    return {
+      success: false,
+      error: isAr
+        ? "لا يمكن أن تتجاوز النبذة 280 حرفاً"
+        : "Short bio cannot exceed 280 characters",
+    };
+  }
+
+  const rawStudy = formData.get("studyLevel");
+  const studyLevel = rawStudy !== null ? sanitizePlainText(rawStudy) : null;
+  if (studyLevel && studyLevel.length > 100) {
+    return {
+      success: false,
+      error: isAr
+        ? "لا يمكن أن يتجاوز المستوى الدراسي 100 حرف"
+        : "Study level cannot exceed 100 characters",
+    };
+  }
+
+  const rawInst = formData.get("institution");
+  const institution = rawInst !== null ? sanitizePlainText(rawInst) : null;
+  if (institution && institution.length > 120) {
+    return {
+      success: false,
+      error: isAr
+        ? "لا يمكن أن يتجاوز اسم المؤسسة 120 حرفاً"
+        : "Institution name cannot exceed 120 characters",
+    };
+  }
+
+  let interests: string[] = [];
+  let skills: string[] = [];
+  let languages: string[] = [];
+  let volunteerAreas: string[] = [];
+
+  try {
+    interests = parseAndValidateTags(
+      formData.get("interests"),
+      8,
+      30,
+      "interests",
+      "الاهتمامات",
+      isAr,
+    );
+    skills = parseAndValidateTags(
+      formData.get("skills"),
+      8,
+      30,
+      "skills",
+      "المهارات",
+      isAr,
+    );
+    languages = parseAndValidateTags(
+      formData.get("languages"),
+      6,
+      30,
+      "languages",
+      "اللغات",
+      isAr,
+    );
+    volunteerAreas = parseAndValidateTags(
+      formData.get("volunteerAreas"),
+      6,
+      30,
+      "volunteer preferences",
+      "مجالات التطوع",
+      isAr,
+    );
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Invalid tags",
     };
   }
 
@@ -292,8 +472,18 @@ export async function updateUserProfile(
         age: ageNum,
         image: finalImageUrl,
         imagePublicId: finalImagePublicId,
+        bio: bio || null,
+        studyLevel: studyLevel || null,
+        institution: institution || null,
+        interests,
+        skills,
+        languages,
+        volunteerAreas,
       },
     });
+
+    // Asynchronously record user activity
+    touchUserActive(session.user.id).catch(() => {});
 
     safeRevalidatePath("/account");
     safeRevalidatePath("/onboarding");
@@ -305,6 +495,13 @@ export async function updateUserProfile(
         city: updatedUser.city,
         age: updatedUser.age,
         image: updatedUser.image,
+        bio: updatedUser.bio,
+        studyLevel: updatedUser.studyLevel,
+        institution: updatedUser.institution,
+        interests: updatedUser.interests,
+        skills: updatedUser.skills,
+        languages: updatedUser.languages,
+        volunteerAreas: updatedUser.volunteerAreas,
       },
     };
   } catch (err) {
