@@ -144,6 +144,12 @@ test.describe("Optional Profile Details (Task 9)", () => {
   test("4. Community Administrator can view optional details in User Details Dialog", async ({
     page,
   }) => {
+    // Get target profile user id
+    const target = await prisma.user.findUnique({
+      where: { email: TEST_PROFILE_USER.email },
+    });
+    expect(target).not.toBeNull();
+
     // Login as Admin
     await loginAs(page, TEST_ADMIN, "/admin/users");
     await page.goto("/admin/users");
@@ -153,14 +159,17 @@ test.describe("Optional Profile Details (Task 9)", () => {
     await expect(searchInput).toBeVisible({ timeout: 15000 });
     await searchInput.fill(TEST_PROFILE_USER.email);
     await searchInput.press("Enter");
-    await page.waitForTimeout(1000);
 
-    // Open action menu and click View Details
-    const actionBtn = page.locator('[data-testid^="user-actions-btn-"]').first();
+    // Wait for target user row to appear
+    const targetRow = page.locator(`[data-testid="user-row-${target!.id}"]`);
+    await expect(targetRow).toBeVisible({ timeout: 15000 });
+
+    // Open action menu for this user and click View Details
+    const actionBtn = page.locator(`[data-testid="user-actions-btn-${target!.id}"]`);
     await expect(actionBtn).toBeVisible({ timeout: 10000 });
     await actionBtn.click();
 
-    const viewDetailsItem = page.locator('[data-testid^="view-user-"]').first();
+    const viewDetailsItem = page.locator(`[data-testid="view-user-${target!.id}"]`);
     await expect(viewDetailsItem).toBeVisible({ timeout: 5000 });
     await viewDetailsItem.click();
 

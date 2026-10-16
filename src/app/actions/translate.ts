@@ -1,5 +1,7 @@
 "use server";
 
+import { requirePermission } from "@/lib/permissions";
+
 export async function translateText({
   text,
   from,
@@ -10,6 +12,8 @@ export async function translateText({
   to: "ar" | "en";
 }): Promise<{ success: boolean; translation?: string; error?: string }> {
   try {
+    await requirePermission("gallery:manage");
+
     const trimmed = text.trim();
     if (!trimmed || trimmed.length < 2) {
       return { success: false, error: "Text too short" };

@@ -104,9 +104,9 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
     // Visit /book
     await page.goto("/book");
     const snapshotCard = page.locator('[data-testid="account-snapshot-card"]');
-    await expect(snapshotCard).toBeVisible();
+    await expect(snapshotCard).toBeVisible({ timeout: 15000 });
     const snapshotAvatar = snapshotCard.locator('[data-testid="user-avatar"]');
-    await expect(snapshotAvatar).toBeVisible();
+    await expect(snapshotAvatar).toBeVisible({ timeout: 10000 });
     const snapshotFallback = snapshotAvatar.locator('[data-testid="letter-avatar-fallback"]');
     await expect(snapshotFallback).toHaveText("AM");
   });

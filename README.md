@@ -20,7 +20,7 @@ This web platform serves as the central digital hub for the community:
 - Multi-step onboarding for Moroccan youth with Moroccan city selection, age validation, and profile avatar storage via Cloudinary.
 - Authenticated event booking with automatic capacity management (Open vs. Limited), waitlist queuing, admin approval, and automated promotion emails via **Brevo API**.
 - Comprehensive legal compliance with bilingual **Terms of Service** (`/terms`) and **Privacy Policy** (`/privacy`) governed under the laws of the Kingdom of Morocco.
-- An internal administrative portal (`/admin`) for gathering scheduling, attendee approval/rejection, gallery curation, and banner carousel management.
+- An internal administrative portal (`/admin`) with fine-grained **Role-Based Access Control (RBAC)** (`ADMIN`, `MODERATOR`, `USER`), full attendee management, event scheduling, user directory administration, and immutable audit logging.
 
 ---
 
@@ -38,15 +38,19 @@ This web platform serves as the central digital hub for the community:
   - Sign in (`/login`) with credentials or Google OAuth, timing-safe validation, and database-backed rate-limiting lockout.
   - Password recovery (`/forgot-password`) with temporary passwords and forced password changes (`/change-password`).
   - Session revocation across devices via integer `sessionVersion` comparisons.
-  - Youth Onboarding (`/onboarding`): Multi-step profile setup (city, age >= 10, Cloudinary avatar upload, and terms acceptance).
-  - Account Dashboard (`/account`): Edit personal details, change password, and inspect "My Bookings" with status badges and cancellation.
+  - Youth Onboarding (`/onboarding`): Multi-step profile setup (Moroccan city, age >= 10, interactive image crop dialog, Cloudinary avatar upload, and terms acceptance).
+  - Account Dashboard (`/account`): Edit personal details, manage optional youth profile details (bio, study level, institution, interests, skills, languages, volunteer areas) with strict plain-text sanitization, change password, and inspect "My Bookings" with status badges and cancellation.
+  - **UserAvatar & Google Sync**: Unified avatar component with high-resolution images, Google profile photo sync, and graceful fallback to initials with deterministic Islamic Moroccan color palettes.
 - **Authenticated Event Booking**:
   - Instant one-click booking for logged-in and onboarded members.
   - User details (name, email, city, age) snapshotted directly into the booking record.
   - Capacity system: Open events auto-confirm; Limited events require admin approval or place attendees on a numbered waitlist.
   - Rejection or cancellation of an approved attendee automatically promotes the next waitlisted applicant with a branded Brevo email notification.
+- **Creative Error Pages**:
+  - Custom bilingual 404 Not Found (`/not-found`) featuring a youth camping compass and lost-trail humorous storyline.
+  - Custom bilingual 403 Forbidden (`/403` & `/forbidden`) featuring camp sentry / scout leader campfire guard illustrations.
 - **Legal & Compliance**:
-  - Bilingual Terms of Service (`/terms`) and Privacy Policy (`/privacy`) with sticky Table of Contents sidebar, light/dark mode, and official Moroccan contact details (`0615789337`, Facebook, Instagram).
+  - Bilingual Terms of Service (`/terms`) and Privacy Policy (`/privacy`) updated for optional profile data, RBAC, and audit logs with sticky Table of Contents sidebar, light/dark mode, and official Moroccan contact details (`0615789337`, Facebook, Instagram).
 - **Activity Gallery**: Responsive media showcase with category filtering, bilingual descriptions, and modal zoom preview.
 - **Themed UI & Notifications**:
   - Custom sonner toast system with Rub el Hizb (8-pointed Islamic star) iconography, brass accents, and glassmorphism.
@@ -54,9 +58,25 @@ This web platform serves as the central digital hub for the community:
   - Dark & Light mode theme switching powered by `next-themes`.
 
 ### Administration Dashboard (`/admin`)
-- **Dashboard Overview**: Key metrics covering total bookings, active events, gallery photos, and pending inquiries.
+- **Role-Based Access Control (RBAC)**:
+  - Authenticated via NextAuth v5 session tokens (no legacy shared password gates).
+  - Three distinct roles:
+    - **`USER`**: Access to public site, event booking, and personal account only. Admin routes blocked with 403 Forbidden.
+    - **`MODERATOR`**: Access to Gatherings, Bookings, Gallery, Carousel, and Inquiry messages. Restricted from user administration and system audit logs.
+    - **`ADMIN`**: Full permissions including user directory management, role promotion/demotion, account deletion/anonymization, and immutable audit logs.
+- **Users Management (`/admin/users`)**:
+  - User directory with case-insensitive search by name, email, or city.
+  - Role filtering (All, Admin, Moderator, User) and customizable pagination.
+  - Role modification dialog with reason tracking and safety guards (prevents self-demotion or removal of the last admin).
+  - Privacy-safe anonymization or permanent deletion with confirmation dialog.
+  - Detailed User Profile inspection modal showing personal metrics, optional youth details, and live user audit trail.
+- **Audit Logging System (`/admin/audit`)**:
+  - Centralized, tamper-evident audit trail (`AuditLog` table) recording actor, action, target entity, IP address, user agent, metadata JSON, and justification reason.
 - **Bookings Management**: Filter attendees by event and status (`CONFIRMED`, `PENDING`, `WAITLISTED`, `REJECTED`), approve or reject bookings with waitlist auto-promotion, and manage attendee records.
-- **Events Management**: Create and schedule gatherings with configurable capacity (Open vs. Limited), upload posters up to 8MB directly to Cloudinary, and manage attendance availability.
+- **Events Management**:
+  - Create and schedule gatherings with configurable capacity (Open vs. Limited).
+  - Custom bilingual Date & Time picker with visual calendar, time sliders, and quick presets.
+  - Interactive Image Cropper dialog for posters and banners with aspect-ratio presets (16:9, 4:3, 1:1, Free) and zoom sliders.
 - **Gallery Manager**: Upload high-resolution event photography directly to Cloudinary with bilingual captions and automated translation helper chips.
 - **Carousel Manager**: Reorder and toggle homepage banner slides with live previews.
 - **Inquiry Inbox**: Review messages submitted through the public contact form.
@@ -147,7 +167,22 @@ If you prefer to inspect the database schema visually:
 npx prisma studio
 ```
 
-### 4. Run the Development Server
+### 4. Admin Role Bootstrap & CLI Management
+When the initial migration runs, the oldest verified user in the database is automatically assigned the `ADMIN` role.
+
+To promote or change user roles at any time from the terminal:
+```bash
+# Assign the ADMIN role
+npx tsx scripts/set-role.ts your-email@example.com ADMIN --reason "Platform administrator setup"
+
+# Assign the MODERATOR role
+npx tsx scripts/set-role.ts leader@example.com MODERATOR --reason "Gatherings supervisor"
+
+# Demote back to regular USER
+npx tsx scripts/set-role.ts youth@example.com USER --reason "Role reset"
+```
+
+### 5. Run the Development Server
 Start the Next.js development server:
 
 ```bash
@@ -156,7 +191,7 @@ npm run dev
 
 The application will be accessible at [http://localhost:3000](http://localhost:3000).
 
-### 5. Running Tests
+### 6. Running Tests
 To run the automated end-to-end Playwright test suite:
 
 ```bash
@@ -168,7 +203,7 @@ To run translation dictionary parity verification:
 npm run check:i18n
 ```
 
-### 6. Production Build
+### 7. Production Build
 To create an optimized production build:
 
 ```bash
