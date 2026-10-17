@@ -19,7 +19,7 @@ export function LanguageSwitcher({
       type="button"
       data-testid="language-switcher-btn"
       onClick={toggleLocale}
-      aria-label={t("lang.toggle")}
+      aria-label={`${t("lang.toggle")}: ${t("lang.switchTo")}`}
       className={cn(
         "inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:text-brass focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         onDark

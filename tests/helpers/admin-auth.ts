@@ -1,6 +1,9 @@
 import { Page, expect } from "@playwright/test";
 import { prisma } from "../../src/lib/prisma";
 import bcrypt from "bcryptjs";
+import { assertDevBranchDatabase } from "./dev-guard";
+
+export { assertDevBranchDatabase };
 
 export const TEST_ADMIN = {
   email: "admin.suite.test@ihyaa.test",
@@ -31,6 +34,7 @@ export async function ensureTestUser(user: {
   city?: string;
   age?: number;
 }) {
+  assertDevBranchDatabase("Test User Setup");
   const passwordHash = await bcrypt.hash(user.password, 10);
   return await prisma.user.upsert({
     where: { email: user.email },

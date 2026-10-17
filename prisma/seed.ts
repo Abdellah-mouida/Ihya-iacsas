@@ -1,5 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 
+function assertDevBranchDatabase(contextName = "Database Seeding") {
+  const url = process.env.DATABASE_URL || process.env.DIRECT_URL || "";
+  // Check if target database is the authorized Neon dev branch (ep-bold-queen-b2qojux5)
+  const isDevBranch = url.includes("ep-bold-queen-b2qojux5");
+  if (!isDevBranch) {
+    throw new Error(
+      `[DEV GUARD] ${contextName} refused: Target database is NOT the Neon dev branch (ep-bold-queen-b2qojux5). ` +
+      `Seeding, test data mutations, and automated test cleanups are strictly prohibited against production!`
+    );
+  }
+}
+
+assertDevBranchDatabase();
+
 const prisma = new PrismaClient();
 
 async function main() {

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import crypto from "crypto";
 import { prisma } from "../src/lib/prisma";
-import { loginAdmin } from "./helpers/admin-auth";
+import { loginAdmin, assertDevBranchDatabase } from "./helpers/admin-auth";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 
@@ -25,6 +25,7 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
   let booking3Id: string;
 
   async function cleanupTestData() {
+    assertDevBranchDatabase("Capacity Test Cleanup");
     await prisma.booking.deleteMany({
       where: {
         email: { in: [user1Email, user2Email, user3Email] },

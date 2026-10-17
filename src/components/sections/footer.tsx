@@ -37,7 +37,7 @@ export function Footer() {
 
           {/* Quick links */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-brass">
+            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
               {t("footer.quickLinks")}
             </h3>
             <ul className="flex flex-col gap-2">
@@ -56,7 +56,7 @@ export function Footer() {
 
           {/* Branches */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-brass">
+            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
               {t("footer.branchesTitle")}
             </h3>
             <ul className="flex flex-col gap-2">
@@ -73,7 +73,7 @@ export function Footer() {
 
           {/* Contact */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-brass">
+            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
               {t("footer.contactTitle")}
             </h3>
             <a
@@ -88,7 +88,7 @@ export function Footer() {
             </span>
             <Link
               href={EVENT.bookHref}
-              className="w-max text-sm font-medium text-brass hover:underline"
+              className="w-max text-sm font-semibold text-primary hover:underline dark:text-brass"
             >
               {t("nav.book")}
             </Link>

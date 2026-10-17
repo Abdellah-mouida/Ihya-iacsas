@@ -7,3 +7,85 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# MCP Server Instructions & Operational Rules
+
+This project integrates Model Context Protocol (MCP) servers to accelerate development, ensure accessibility, protect databases, and maintain clean asset states. Agents and developers must adhere strictly to the usage rules below.
+
+## Server Directory & Guidelines
+
+### 1. Neon MCP (`https://mcp.neon.tech/mcp`)
+- **Purpose**: Serverless PostgreSQL branch, schema, compute, and query management on Neon.
+- **When to Use**:
+  - Inspecting schema, running migrations, analyzing slow queries on dev branches.
+  - Creating isolated temporary branches for previewing schema migrations.
+- **When NOT to Use**:
+  - Direct execution of raw DDL/DML without specifying a dev or preview branch ID.
+  - NEVER touch or execute destructive statements (`DROP`, `TRUNCATE`, bulk `DELETE`) against the production branch (`production` / `br-curly-snow-b2rlthfo`).
+- **Core Rules**:
+  - **ALWAYS use the development branch**: `dev` (`br-hidden-wind-b20jiqxp`, compute `ep-bold-queen-b2qojux5`).
+  - Production database credentials (`ep-square-shape-b24sp3s3`) must NEVER be used for automated tests, development seeding, or testing scripts.
+  - All test files and seed scripts MUST invoke `assertDevBranchDatabase()` from `tests/helpers/dev-guard.ts`.
+  - Any destructive schema or data change must be explicitly confirmed by the user.
+
+### 2. Context7 MCP (`https://mcp.context7.com/mcp`)
+- **Purpose**: Fetch version-accurate, up-to-date documentation and code examples for external packages and frameworks.
+- **When to Use**:
+  - BEFORE writing or refactoring code involving external libraries (e.g. Next.js 16+, Prisma 6+, React 19, Tailwind v4, Motion, Lucide, Radix UI, NextAuth v5).
+  - Verifying API contracts, deprecation notices, and migration paths.
+- **When NOT to Use**:
+  - Internal project architecture, internal utility functions, or debugging business logic.
+
+### 3. Next.js DevTools MCP (`next-devtools-mcp`)
+- **Purpose**: Runtime diagnostics, compilation error tracking, route discovery, and cache inspection directly from the running Next.js development server.
+- **When to Use**:
+  - Inspecting active route definitions, cache status, and compilation/hydration errors while `next dev` is active.
+- **When NOT to Use**:
+  - When the Next.js development server is not running or during static production builds.
+
+### 4. Chrome DevTools MCP (`chrome-devtools-mcp`)
+- **Purpose**: Real browser inspection, performance tracing, accessibility audits (Lighthouse), CSS inspection, and visual debugging.
+- **When to Use**:
+  - Running Lighthouse audits (accessibility, performance, SEO, best practices).
+  - Profiling Core Web Vitals (LCP, CLS, INP) or inspecting computed styles and live DOM trees.
+- **When NOT to Use**:
+  - Automated continuous-integration end-to-end tests (use Playwright instead).
+- **Core Rules**:
+  - Must always run in `--isolated` mode with clean throwaway profiles to protect user credentials, cookies, and personal sessions.
+
+### 5. Playwright MCP (`@playwright/mcp`) & Test Suite
+- **Purpose**: Browser automation, form filling, user flows, accessibility scans (`@axe-core/playwright`), and regression testing across viewports and locales.
+- **When to Use**:
+  - Executing automated E2E test suites, verifying UI state, checking language toggling, responsive layouts, and WCAG AA accessibility compliance.
+- **When NOT to Use**:
+  - Static code inspection or tasks that do not require an active browser runtime.
+
+### 6. Shadcn MCP (`shadcn@latest mcp`)
+- **Purpose**: Component discovery, viewing implementation code, and registry inspection across configured UI registries.
+- **When to Use**:
+  - Searching for accessible UI primitives and design components across `@shadcn`, `@aceternity`, `@magicui`, and `@react-bits` configured in `components.json`.
+- **When NOT to Use**:
+  - Arbitrary package installation or editing files that already follow custom project designs.
+
+### 7. Vercel MCP (`https://mcp.vercel.com`)
+- **Purpose**: Inspecting deployments, preview URLs, domain configuration, and build logs on Vercel.
+- **When to Use**:
+  - Checking deployment status and production build logs.
+- **When NOT to Use**:
+  - Local dev actions or editing local source code.
+
+### 8. Cloudinary MCP (`@cloudinary/asset-management-mcp`)
+- **Purpose**: Cloudinary digital asset management, uploads, transformations, and tag management.
+- **Policy**: **DISABLED BY DEFAULT** (`"enabled": false` in `opencode.json`).
+- **Core Rules**:
+  - Least privilege: scoped to `librarian` (read-only exploration).
+  - Enable ONLY for specific, intentional asset management tasks, and disable immediately afterwards.
+  - NEVER execute automated asset deletions. All cleanup audits must run in read-only report mode (`scripts/report-cloudinary-orphans.ts`).
+
+### 9. Brevo MCP (`https://mcp.brevo.com/v1/brevo/mcp`)
+- **Purpose**: Transactional email management, templates, campaign inspection, and delivery analytics.
+- **Policy**: **DISABLED BY DEFAULT** (`"enabled": false` in `opencode.json`).
+- **Core Rules**:
+  - Enable ONLY when explicitly requested to work with email templates or campaigns, and disable immediately afterwards.
+  - Never send unsolicited or unconfirmed bulk emails during automated tasks.
+
