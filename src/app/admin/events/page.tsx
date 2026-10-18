@@ -336,7 +336,7 @@ export default function AdminEventsPage() {
               <div className="flex items-start md:items-center gap-4 min-w-0">
                 <div className="relative size-20 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
                   <Image
-                    src={evt.posterUrl || "/images/event-poster.jpg"}
+                    src={evt.posterUrl || "/images/gathering.jpg"}
                     alt={evt.titleAr}
                     fill
                     className="object-cover"

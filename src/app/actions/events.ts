@@ -270,7 +270,7 @@ export async function createEvent(formData: FormData) {
     }
 
     if (!posterUrl) {
-      posterUrl = "/images/event-poster.jpg"; // Default fallback poster
+      posterUrl = "/images/gathering.jpg"; // Default fallback poster
     }
 
     const slugRaw = (formData.get("slug") as string)?.trim() || titleEn || titleAr;

@@ -8,19 +8,14 @@ import {
 } from "lucide-react";
 
 export const IMAGES = {
-  eventPoster: "/images/event-poster.jpg",
-  // Poster "cards" live under /images/cards/ and are surfaced in the card
-  // carousel (not the gallery masonry).
-  nightCard: "/images/cards/night-card.jpg",
-  quoteCard: "/images/cards/quote-card.jpg",
-  journeyCard: "/images/cards/journey-card.jpg",
   football: "/images/football.jpg",
   prayer: "/images/prayer.jpg",
   gathering: "/images/gathering.jpg",
   groupPortrait: "/images/group-portrait.jpg",
   logoBanner: "/images/logo-banner.jpg",
-  logoSquare: "/images/logo-square.jpg",
   logoCircle: "/images/logo-circle.png",
+  defaultPoster: "/images/gathering.jpg",
+  eventPoster: "/images/gathering.jpg",
 } as const;
 
 export const EVENT = {
@@ -149,8 +144,7 @@ export const BRANCHES: Branch[] = [
 ];
 
 export type GalleryItem = { src: string; altKey: string; w: number; h: number };
-// Gallery masonry — real "moments" only. Poster cards are intentionally
-// excluded here and shown in the CardCarousel section instead.
+// Gallery masonry — real "moments" only.
 export const GALLERY: GalleryItem[] = [
   { src: IMAGES.gathering, altKey: "gallery.altGathering", w: 590, h: 332 },
   { src: IMAGES.prayer, altKey: "gallery.altPrayer", w: 1280, h: 960 },
@@ -158,10 +152,5 @@ export const GALLERY: GalleryItem[] = [
   { src: IMAGES.football, altKey: "gallery.altFootball", w: 1280, h: 960 },
 ];
 
-// Poster "cards" for the looping card carousel (all live in /images/cards/).
 export type CardPoster = { src: string; altKey: string; w: number; h: number };
-export const CARD_POSTERS: CardPoster[] = [
-  { src: IMAGES.nightCard, altKey: "cards.altNight", w: 512, h: 640 },
-  { src: IMAGES.journeyCard, altKey: "cards.altJourney", w: 526, h: 526 },
-  { src: IMAGES.quoteCard, altKey: "cards.altQuote", w: 526, h: 526 },
-];
+export const CARD_POSTERS: CardPoster[] = [];

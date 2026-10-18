@@ -15,7 +15,6 @@ import {
 import { getCarouselPosts } from "@/app/actions/carousel";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
-import { CARD_POSTERS } from "@/lib/content";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +57,7 @@ export function CardCarousel() {
     });
   }, []);
 
-  const items = dbItems.length > 0 ? dbItems : CARD_POSTERS;
+  const items = dbItems;
   const n = items.length;
 
   // Clone-padded track: [last-1, last, ...reals, first, first+1]. Access via a
@@ -80,6 +79,11 @@ export function CardCarousel() {
   const [dragging, setDragging] = useState(false);
 
   const paused = hovering || dragging;
+
+  // If there are no items in DB, gracefully hide carousel section
+  if (n === 0) {
+    return null;
+  }
 
   // Responsive sizing: posters are narrower than the viewport so neighbours peek.
   useEffect(() => {

@@ -71,10 +71,10 @@ export function About() {
           <div className="relative">
             <div className="arch-top relative overflow-hidden shadow-layered ring-1 ring-brass/30">
               <Image
-                src={IMAGES.journeyCard}
+                src={IMAGES.gathering}
                 alt=""
-                width={526}
-                height={526}
+                width={1280}
+                height={720}
                 sizes="(max-width: 1024px) 100vw, 45vw"
                 className="h-64 w-full object-cover sm:h-72"
               />
