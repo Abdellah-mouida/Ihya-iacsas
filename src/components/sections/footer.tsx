@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { ActiveLink } from "@/components/common/active-link";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { useLocale } from "@/i18n/locale-provider";
 import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
@@ -44,14 +43,12 @@ export function Footer() {
             <ul className="flex flex-col gap-2">
               {FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
-                  <ActiveLink
+                  <Link
                     href={link.href}
-                    exact={link.href === "/"}
-                    activeClassName="text-sm font-semibold text-green"
-                    inactiveClassName="text-sm text-muted-foreground transition-colors hover:text-green"
+                    className="text-sm text-muted-foreground transition-colors hover:text-green"
                   >
                     {t(link.key)}
-                  </ActiveLink>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -105,23 +102,19 @@ export function Footer() {
             © {year} {t("nav.brand")}. {t("footer.rights")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
-            <ActiveLink
+            <Link
               href="/terms"
-              exact
-              activeClassName="text-brass font-semibold"
-              inactiveClassName="transition-colors hover:text-brass"
+              className="transition-colors hover:text-brass"
             >
               {t("terms.title")}
-            </ActiveLink>
+            </Link>
             <span className="text-border">•</span>
-            <ActiveLink
+            <Link
               href="/privacy"
-              exact
-              activeClassName="text-brass font-semibold"
-              inactiveClassName="transition-colors hover:text-brass"
+              className="transition-colors hover:text-brass"
             >
               {t("privacy.title")}
-            </ActiveLink>
+            </Link>
           </div>
           <p>{t("footer.made")}</p>
         </div>

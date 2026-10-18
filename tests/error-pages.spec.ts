@@ -48,7 +48,7 @@ test.describe("Task 5: Creative 404 & 403 Error Pages", () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
   });
 
-  test("3. 403 Forbidden page renders organizers tent illustration, humor, and switch account button", async ({
+  test("3. 403 Forbidden page renders organizers tent illustration, humor, back button, and return home button", async ({
     page,
   }) => {
     await page.goto("/403");
@@ -63,15 +63,16 @@ test.describe("Task 5: Creative 404 & 403 Error Pages", () => {
     const humor = page.locator('[data-testid="error-humor"]');
     await expect(humor).toContainText("خيمة اللجنة المنظمة");
 
-    // Verify action buttons
+    // Verify action buttons: Go Back and Home
+    const backBtn = page.locator('[data-testid="error-back-btn"]');
+    await expect(backBtn).toBeVisible();
+
     const homeBtn = page.locator('[data-testid="error-home-btn"]');
     await expect(homeBtn).toBeVisible();
 
-    const accountBtn = page.locator('[data-testid="error-account-btn"]');
-    await expect(accountBtn).toBeVisible();
-
+    // Switch account button was removed per requirements
     const switchBtn = page.locator('[data-testid="error-switch-btn"]');
-    await expect(switchBtn).toBeVisible();
+    await expect(switchBtn).toHaveCount(0);
 
     // Switch to English (toggle button)
     const langBtn = page.locator('[data-testid="language-switcher-btn"]');

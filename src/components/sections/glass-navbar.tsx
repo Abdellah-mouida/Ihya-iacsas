@@ -19,7 +19,6 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { ActiveLink } from "@/components/common/active-link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -200,42 +199,24 @@ export function GlassNavbar({
           </span>
         </Link>
 
-        {/* Desktop links with moving active pill (brand green) */}
+        {/* Desktop links */}
         <ul className="hidden items-center gap-0.5 lg:flex">
           {NAV_LINKS.map((link) => {
-            const active = isActive(link.href);
             const showDot = Boolean(link.indicator) && hasNewEvent;
             return (
               <li key={link.href} className="relative">
-                <ActiveLink
+                <Link
                   href={link.href}
-                  exact={link.href === "/"}
-                  activeClassName={cn(
-                    "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
-                    transparentTop ? "text-green dark:text-white" : "text-green",
-                  )}
-                  inactiveClassName={cn(
+                  className={cn(
                     "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
                     transparentTop
                       ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
                       : "text-foreground/85 hover:text-green",
                   )}
                 >
-                  {active ? (
-                    <motion.span
-                      layoutId="navActive"
-                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                      className={cn(
-                        "absolute inset-0 -z-10 rounded-full ring-1",
-                        transparentTop
-                          ? "bg-foreground/10 ring-foreground/20 dark:bg-white/15 dark:ring-white/35"
-                          : "bg-green/12 ring-green/25",
-                      )}
-                    />
-                  ) : null}
                   {t(link.key)}
                   {showDot ? <NewEventDot label={t("nav.newEvent")} /> : null}
-                </ActiveLink>
+                </Link>
               </li>
             );
           })}
@@ -300,42 +281,35 @@ export function GlassNavbar({
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <ActiveLink
+                    <Link
                       href="/account"
-                      exact
                       data-testid="navbar-account-link"
-                      activeClassName="bg-primary/15 text-primary font-semibold"
-                      inactiveClassName="text-foreground hover:bg-primary/10 hover:text-primary"
-                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
                     >
                       <UserIcon className="size-4" />
                       {t("nav.account")}
-                    </ActiveLink>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <ActiveLink
+                    <Link
                       href="/account?tab=bookings"
                       data-testid="navbar-bookings-link"
-                      activeClassName="bg-primary/15 text-primary font-semibold"
-                      inactiveClassName="text-foreground hover:bg-primary/10 hover:text-primary"
-                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
                     >
                       <Calendar className="size-4" />
                       {t("nav.myBookings")}
-                    </ActiveLink>
+                    </Link>
                   </DropdownMenuItem>
                   {session.user.role === "ADMIN" || session.user.role === "MODERATOR" ? (
                     <DropdownMenuItem asChild>
-                      <ActiveLink
+                      <Link
                         href="/admin"
                         data-testid="navbar-admin-link"
-                        activeClassName="bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold"
-                        inactiveClassName="text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-                        className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
+                        className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
                       >
                         <Shield className="size-4" />
                         {t("nav.adminPortal")}
-                      </ActiveLink>
+                      </Link>
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuSeparator />
@@ -447,13 +421,11 @@ export function GlassNavbar({
                 {/* Mobile User Profile Header if logged in */}
                 {session?.user ? (
                   <motion.li variants={fadeUp} className="mb-2">
-                    <ActiveLink
+                    <Link
                       href="/account"
                       onClick={() => setOpen(false)}
                       data-testid="navbar-mobile-account-link"
-                      activeClassName="border-primary/50 bg-primary/10 shadow-sm"
-                      inactiveClassName="border-border/60 bg-muted/40 hover:bg-muted/70"
-                      className="flex items-center justify-between rounded-2xl border p-3 transition-colors"
+                      className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 p-3 transition-colors hover:bg-muted/70"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <UserAvatar
@@ -472,7 +444,7 @@ export function GlassNavbar({
                         </div>
                       </div>
                       <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
-                    </ActiveLink>
+                    </Link>
                   </motion.li>
                 ) : null}
 
@@ -480,13 +452,10 @@ export function GlassNavbar({
                   const showDot = Boolean(link.indicator) && hasNewEvent;
                   return (
                     <motion.li key={link.href} variants={fadeUp}>
-                      <ActiveLink
+                      <Link
                         href={link.href}
-                        exact={link.href === "/"}
                         onClick={() => setOpen(false)}
-                        activeClassName="bg-green/15 text-green"
-                        inactiveClassName="text-foreground/85 hover:bg-muted hover:text-green"
-                        className="flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors"
+                        className="flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors text-foreground/85 hover:bg-muted hover:text-green"
                       >
                         <span className="flex items-center">
                           {t(link.key)}
@@ -495,7 +464,7 @@ export function GlassNavbar({
                           ) : null}
                         </span>
                         <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
-                      </ActiveLink>
+                      </Link>
                     </motion.li>
                   );
                 })}

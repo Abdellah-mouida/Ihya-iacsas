@@ -574,8 +574,7 @@
     "forbiddenSubtitle": "Access Forbidden",
     "forbiddenHumor": "Looks like you wandered into the organizers' tent without a backstage pass! This area is reserved for logistics and operations staff only.",
     "forbiddenHome": "Return Home",
-    "forbiddenAccount": "My Account",
-    "forbiddenSwitch": "Switch Account"
+    "forbiddenBack": "Go Back"
   },
   "adminUsers": {
     "title": "Users Management",

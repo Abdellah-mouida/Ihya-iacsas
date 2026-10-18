@@ -2,16 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ShieldAlert,
   Home,
-  User,
-  LogOut,
+  ArrowLeft,
+  ArrowRight,
   Tent,
   Lock,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
 
 import { useLocale } from "@/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,8 @@ import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
 
 export function ForbiddenView() {
   const { t, locale } = useLocale();
+  const router = useRouter();
   const isAr = locale === "ar";
-
-  const handleSignOutAndSwitch = async () => {
-    await signOut({ callbackUrl: "/login" });
-  };
 
   return (
     <div
@@ -146,6 +143,21 @@ export function ForbiddenView() {
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
+              type="button"
+              variant="outline"
+              data-testid="error-back-btn"
+              onClick={() => router.back()}
+              className="h-11 w-full sm:w-auto rounded-xl border-border/80 px-5 font-heading font-semibold hover:border-amber-500/50 transition-colors"
+            >
+              {isAr ? (
+                <ArrowRight className="size-4 me-2 text-amber-500 shrink-0" />
+              ) : (
+                <ArrowLeft className="size-4 me-2 text-amber-500 shrink-0" />
+              )}
+              <span>{t("errors.forbiddenBack")}</span>
+            </Button>
+
+            <Button
               asChild
               data-testid="error-home-btn"
               className="h-11 w-full sm:w-auto rounded-xl px-5 font-heading font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-transform hover:-translate-y-0.5"
@@ -154,29 +166,6 @@ export function ForbiddenView() {
                 <Home className="size-4 me-2 shrink-0" />
                 <span>{t("errors.forbiddenHome")}</span>
               </Link>
-            </Button>
-
-            <Button
-              asChild
-              variant="outline"
-              data-testid="error-account-btn"
-              className="h-11 w-full sm:w-auto rounded-xl border-border/80 px-5 font-heading font-semibold hover:border-amber-500/50 transition-colors"
-            >
-              <Link href="/account">
-                <User className="size-4 me-2 text-amber-500 shrink-0" />
-                <span>{t("errors.forbiddenAccount")}</span>
-              </Link>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="error-switch-btn"
-              onClick={handleSignOutAndSwitch}
-              className="h-11 w-full sm:w-auto rounded-xl px-4 text-xs font-heading text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="size-3.5 me-1.5 shrink-0 opacity-70" />
-              <span>{t("errors.forbiddenSwitch")}</span>
             </Button>
           </div>
         </motion.div>

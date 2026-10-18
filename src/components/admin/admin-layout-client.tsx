@@ -23,7 +23,6 @@ import { useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { ActiveLink } from "@/components/common/active-link";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
@@ -132,18 +131,21 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
             <nav className="flex flex-col gap-1.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
+                const active = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
                 return (
-                  <ActiveLink
+                  <Link
                     key={item.href}
                     href={item.href}
-                    exact={item.href === "/admin"}
-                    activeClassName="bg-brass/15 text-brass dark:bg-brass/20 dark:text-amber-300 shadow-sm font-semibold"
-                    inactiveClassName="text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200"
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200",
+                      active
+                        ? "bg-brass/15 text-brass dark:bg-brass/20 dark:text-amber-300 shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    )}
                   >
                     <Icon className="size-4 shrink-0" />
                     <span>{item.label}</span>
-                  </ActiveLink>
+                  </Link>
                 );
               })}
             </nav>
@@ -241,19 +243,22 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
 
             {navItems.map((item) => {
               const Icon = item.icon;
+              const active = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
               return (
-                <ActiveLink
+                <Link
                   key={item.href}
                   href={item.href}
-                  exact={item.href === "/admin"}
                   onClick={() => setMobileOpen(false)}
-                  activeClassName="bg-brass/15 text-brass font-semibold"
-                  inactiveClassName="text-muted-foreground hover:bg-muted/50"
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold transition-all"
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold transition-all",
+                    active
+                      ? "bg-brass/15 text-brass"
+                      : "text-muted-foreground hover:bg-muted/50",
+                  )}
                 >
                   <Icon className="size-5" />
                   <span>{item.label}</span>
-                </ActiveLink>
+                </Link>
               );
             })}
             <div className="pt-3 mt-2 border-t border-border flex items-center justify-between gap-2">
