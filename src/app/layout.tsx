@@ -43,6 +43,13 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${montserrat.variable} ${notoKufi.variable} antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var l=localStorage.getItem('ihyaa-locale');if(l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-dvh bg-background text-foreground overflow-x-hidden">
         <Providers>{children}</Providers>
       </body>

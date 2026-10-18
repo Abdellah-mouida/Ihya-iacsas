@@ -89,3 +89,27 @@ This project integrates Model Context Protocol (MCP) servers to accelerate devel
   - Enable ONLY when explicitly requested to work with email templates or campaigns, and disable immediately afterwards.
   - Never send unsolicited or unconfirmed bulk emails during automated tasks.
 
+## Standing Rules for Ihyaa Web Platform
+
+1. **No Flat Page Backgrounds**:
+   - Every page and section must feature rich, layered visuals: radial/mesh gradients, subtle Islamic geometric textures/patterns, delicate glows, soft elevation shadows, and smooth fading edge masks. Never render a bare, flat, single-color background.
+2. **Strict Semantic Theme Tokens**:
+   - Colors must exclusively use semantic theme variables/classes (`bg-background`, `text-foreground`, `bg-card`, `text-muted-foreground`, `border-border`, `bg-primary`, etc.).
+   - NEVER hardcode arbitrary hex values, arbitrary RGBs, or hardcoded `text-white`/`text-black`/`bg-white`/`bg-black` that break custom themes or AMOLED dark mode.
+3. **Glassmorphism + Islamic Elegance**:
+   - Modern frosted glass surfaces (`backdrop-blur`, semi-transparent borders, subtle inner highlights) fused with refined Moroccan / Islamic architectural motifs.
+   - Flawless bilingual support: full RTL (`dir="rtl"`) for Arabic and LTR (`dir="ltr"`) for English.
+   - Ultra-responsive down to 320px mobile viewports without horizontal scrollbar leaks.
+   - Full support for `prefers-reduced-motion` across all animations and transitions.
+4. **ActiveLink Highlighting**:
+   - All navigation links (desktop navbar, mobile menu, user dropdown, footer links, settings subnav, admin sidebar) must clearly highlight the active route using the shared `ActiveLink` component.
+5. **Zero Committed Plain-Text Credentials**:
+   - Never commit secrets, passwords, or session tokens to git. Automated tests must exclusively use synthetic accounts (`@example.test`) with cryptographically secure random passwords generated at runtime. Auth state files must remain strictly gitignored.
+6. **Bilingual Parity & Standard Components**:
+   - Strict 100% key parity across `locales/ar.json` and `locales/en.json` (enforced via `npm run check:i18n`).
+   - Official branding terminology: "Ihyaa Program" / "برنامج إحياء" across all copy.
+   - Use standardized interactive elements: toast notification system, themed loader, accessible confirmation dialog, custom select dropdowns, and interactive image cropper.
+7. **Design Tooling & Rigorous Multi-Viewport Verification**:
+   - Leverage design registries (`@shadcn`, `@aceternity`, `@magicui`, `@react-bits`), Context7 documentation, and Playwright verification.
+   - Capture and verify visual regressions at 360px, 768px, and 1440px viewports in both light/dark themes and Arabic/English locales.
+

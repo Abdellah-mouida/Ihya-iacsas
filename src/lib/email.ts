@@ -7,6 +7,35 @@
 import fs from "fs";
 import path from "path";
 
+// High quality inline SVG data URI fallback for the circular Ihyaa branding logo
+const SVG_LOGO_FALLBACK =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+      <defs>
+        <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#15803d"/>
+          <stop offset="70%" stop-color="#166534"/>
+          <stop offset="100%" stop-color="#0f391b"/>
+        </radialGradient>
+        <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fef08a"/>
+          <stop offset="50%" stop-color="#d4af37"/>
+          <stop offset="100%" stop-color="#996515"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="url(#bg)" stroke="url(#gold)" stroke-width="2.5"/>
+      <circle cx="50" cy="50" r="42" fill="none" stroke="url(#gold)" stroke-width="0.75" stroke-dasharray="2,2" opacity="0.6"/>
+      <!-- Eight-pointed star / Rub el Hizb ornament -->
+      <g transform="translate(50, 50) scale(0.38)" fill="none" stroke="url(#gold)" stroke-width="2.5">
+        <rect x="-35" y="-35" width="70" height="70" rx="4"/>
+        <rect x="-35" y="-35" width="70" height="70" rx="4" transform="rotate(45)"/>
+        <circle cx="0" cy="0" r="14" fill="url(#gold)"/>
+      </g>
+      <text x="50" y="78" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" letter-spacing="1">IHYAA</text>
+    </svg>`
+  );
+
 function getCircularLogoBase64(): string | null {
   try {
     const logoPath = path.join(
@@ -24,6 +53,17 @@ function getCircularLogoBase64(): string | null {
     }
   }
   return null;
+}
+
+function getEmailLogoSrc(appUrl?: string): string {
+  if (appUrl) {
+    return `${appUrl}/images/logo-circle.png`;
+  }
+  const logoB64 = getCircularLogoBase64();
+  if (logoB64) {
+    return `data:image/png;base64,${logoB64}`;
+  }
+  return SVG_LOGO_FALLBACK;
 }
 
 const SENDER_NAME = "Ihyaa Program";
@@ -139,12 +179,7 @@ export async function sendOTPEmail(
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-  const logoB64 = getCircularLogoBase64();
-  const logoSrc = appUrl
-    ? `${appUrl}/images/logo-circle.png`
-    : logoB64
-      ? `data:image/png;base64,${logoB64}`
-      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+  const logoSrc = getEmailLogoSrc(appUrl);
 
   const html = isArabic
     ? `
@@ -361,12 +396,7 @@ export async function sendWaitlistPromotionEmail(
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-  const logoB64 = getCircularLogoBase64();
-  const logoSrc = appUrl
-    ? `${appUrl}/images/logo-circle.png`
-    : logoB64
-      ? `data:image/png;base64,${logoB64}`
-      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+  const logoSrc = getEmailLogoSrc(appUrl);
 
   const html = isArabic
     ? `
@@ -565,12 +595,7 @@ export async function sendAccountVerificationEmail(
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-  const logoB64 = getCircularLogoBase64();
-  const logoSrc = appUrl
-    ? `${appUrl}/images/logo-circle.png`
-    : logoB64
-      ? `data:image/png;base64,${logoB64}`
-      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+  const logoSrc = getEmailLogoSrc(appUrl);
 
   const html = isArabic
     ? `
@@ -763,12 +788,7 @@ export async function sendTempPasswordEmail(
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-  const logoB64 = getCircularLogoBase64();
-  const logoSrc = appUrl
-    ? `${appUrl}/images/logo-circle.png`
-    : logoB64
-      ? `data:image/png;base64,${logoB64}`
-      : "https://res.cloudinary.com/dp5cuxwyi/image/upload/v1747800000/ihyaa/logo-square.jpg";
+  const logoSrc = getEmailLogoSrc(appUrl);
 
   const html = isArabic
     ? `

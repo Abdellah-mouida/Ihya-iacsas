@@ -51,7 +51,7 @@ export function Gallery() {
           <Button
             asChild
             variant="outline"
-            className="glass group h-12 rounded-full border-foreground/20 px-8 text-base font-semibold text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-brass/40 hover:bg-foreground/5 hover:shadow-layered dark:border-white/20 dark:text-white dark:hover:bg-white/10"
+            className="glass group h-12 rounded-full border-foreground/20 px-8 text-base font-semibold text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-brass/40 hover:bg-foreground/5 hover:shadow-layered dark:border-border/60 dark:hover:bg-accent/40"
           >
             <Link href="/gallery" className="inline-flex items-center gap-2.5">
               <Images className="size-4 text-brass" />

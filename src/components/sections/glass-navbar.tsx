@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { ActiveLink } from "@/components/common/active-link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -206,18 +207,18 @@ export function GlassNavbar({
             const showDot = Boolean(link.indicator) && hasNewEvent;
             return (
               <li key={link.href} className="relative">
-                <Link
+                <ActiveLink
                   href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
+                  exact={link.href === "/"}
+                  activeClassName={cn(
                     "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
-                    active
-                      ? transparentTop
-                        ? "text-green dark:text-white"
-                        : "text-green"
-                      : transparentTop
-                        ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
-                        : "text-foreground/85 hover:text-green",
+                    transparentTop ? "text-green dark:text-white" : "text-green",
+                  )}
+                  inactiveClassName={cn(
+                    "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
+                    transparentTop
+                      ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
+                      : "text-foreground/85 hover:text-green",
                   )}
                 >
                   {active ? (
@@ -234,7 +235,7 @@ export function GlassNavbar({
                   ) : null}
                   {t(link.key)}
                   {showDot ? <NewEventDot label={t("nav.newEvent")} /> : null}
-                </Link>
+                </ActiveLink>
               </li>
             );
           })}
@@ -299,35 +300,42 @@ export function GlassNavbar({
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link
+                    <ActiveLink
                       href="/account"
+                      exact
                       data-testid="navbar-account-link"
-                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors hover:bg-primary/10 hover:text-primary"
+                      activeClassName="bg-primary/15 text-primary font-semibold"
+                      inactiveClassName="text-foreground hover:bg-primary/10 hover:text-primary"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                     >
                       <UserIcon className="size-4" />
                       {t("nav.account")}
-                    </Link>
+                    </ActiveLink>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link
-                      href="/account#bookings"
+                    <ActiveLink
+                      href="/account?tab=bookings"
                       data-testid="navbar-bookings-link"
-                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors hover:bg-primary/10 hover:text-primary"
+                      activeClassName="bg-primary/15 text-primary font-semibold"
+                      inactiveClassName="text-foreground hover:bg-primary/10 hover:text-primary"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                     >
                       <Calendar className="size-4" />
                       {t("nav.myBookings")}
-                    </Link>
+                    </ActiveLink>
                   </DropdownMenuItem>
                   {session.user.role === "ADMIN" || session.user.role === "MODERATOR" ? (
                     <DropdownMenuItem asChild>
-                      <Link
+                      <ActiveLink
                         href="/admin"
                         data-testid="navbar-admin-link"
-                        className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-amber-600 dark:text-amber-400 transition-colors hover:bg-amber-500/10"
+                        activeClassName="bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold"
+                        inactiveClassName="text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                        className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                       >
                         <Shield className="size-4" />
                         {t("nav.adminPortal")}
-                      </Link>
+                      </ActiveLink>
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuSeparator />
@@ -439,11 +447,13 @@ export function GlassNavbar({
                 {/* Mobile User Profile Header if logged in */}
                 {session?.user ? (
                   <motion.li variants={fadeUp} className="mb-2">
-                    <Link
+                    <ActiveLink
                       href="/account"
                       onClick={() => setOpen(false)}
                       data-testid="navbar-mobile-account-link"
-                      className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 p-3 transition-colors hover:bg-muted/70"
+                      activeClassName="border-primary/50 bg-primary/10 shadow-sm"
+                      inactiveClassName="border-border/60 bg-muted/40 hover:bg-muted/70"
+                      className="flex items-center justify-between rounded-2xl border p-3 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <UserAvatar
@@ -462,25 +472,21 @@ export function GlassNavbar({
                         </div>
                       </div>
                       <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
-                    </Link>
+                    </ActiveLink>
                   </motion.li>
                 ) : null}
 
                 {NAV_LINKS.map((link) => {
-                  const active = isActive(link.href);
                   const showDot = Boolean(link.indicator) && hasNewEvent;
                   return (
                     <motion.li key={link.href} variants={fadeUp}>
-                      <Link
+                      <ActiveLink
                         href={link.href}
+                        exact={link.href === "/"}
                         onClick={() => setOpen(false)}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
-                          active
-                            ? "bg-green/15 text-green"
-                            : "text-foreground/85 hover:bg-muted hover:text-green",
-                        )}
+                        activeClassName="bg-green/15 text-green"
+                        inactiveClassName="text-foreground/85 hover:bg-muted hover:text-green"
+                        className="flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors"
                       >
                         <span className="flex items-center">
                           {t(link.key)}
@@ -489,7 +495,7 @@ export function GlassNavbar({
                           ) : null}
                         </span>
                         <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
-                      </Link>
+                      </ActiveLink>
                     </motion.li>
                   );
                 })}

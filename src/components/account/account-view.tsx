@@ -294,23 +294,92 @@ export function AccountView({ initialData }: AccountViewProps) {
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       {ConfirmDialogComponent}
 
-      {/* Header */}
-      <div className="mb-8 sm:mb-12">
-        <h1
-          data-testid="account-page-title"
-          className="text-3xl sm:text-4xl font-heading font-bold text-foreground mb-2"
-        >
-          {t("account.title")}
-        </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          {t("account.subtitle")}
-        </p>
+      {/* Header & Profile Stats Banner */}
+      <div className="mb-8 sm:mb-10 space-y-6">
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/70 backdrop-blur-xl p-6 sm:p-8 shadow-lg shadow-black/5">
+          <div className="pointer-events-none absolute -end-16 -top-16 size-64 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -start-16 -bottom-16 size-64 rounded-full bg-brass/10 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
+              <UserAvatar
+                src={profileImage}
+                name={name}
+                email={userData.email}
+                size="2xl"
+                shape="rounded"
+                className="size-16 sm:size-20 border-2 border-primary/20 shrink-0 shadow-inner"
+              />
+              <div>
+                <h1
+                  data-testid="account-page-title"
+                  className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-1"
+                >
+                  {name || t("account.title")}
+                </h1>
+                <p className="text-muted-foreground text-xs sm:text-sm">
+                  {userData.email}
+                </p>
+                {userData.city && (
+                  <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
+                    <MapPin className="size-3 text-primary" />
+                    <span>{userData.city}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-border/60">
+              <div className="bg-background/60 dark:bg-card/40 border border-border/60 rounded-2xl p-3 text-center">
+                <span className="block text-xl font-heading font-bold text-foreground">
+                  {bookings.length}
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {t("account.statTotalBookings")}
+                </span>
+              </div>
+              <div className="bg-background/60 dark:bg-card/40 border border-border/60 rounded-2xl p-3 text-center">
+                <span className="block text-xl font-heading font-bold text-primary">
+                  {bookings.filter((b) => b.status === "CONFIRMED" || b.confirmed).length}
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {t("account.statConfirmedBookings")}
+                </span>
+              </div>
+              <div className="col-span-2 sm:col-span-1 bg-background/60 dark:bg-card/40 border border-border/60 rounded-2xl p-3 text-center">
+                <span className="block text-xl font-heading font-bold text-emerald-600 dark:text-emerald-400">
+                  {Math.round(
+                    ((Boolean(name) ? 1 : 0) +
+                      (Boolean(city) ? 1 : 0) +
+                      (Boolean(age) ? 1 : 0) +
+                      (Boolean(profileImage) ? 1 : 0) +
+                      (Boolean(bio) ? 1 : 0) +
+                      (interests.length > 0 ? 1 : 0)) *
+                      (100 / 6)
+                  )}
+                  %
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {t("account.statProfileCompletion")}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-border/60 pb-3 mb-8 overflow-x-auto no-scrollbar">
+      <div
+        role="tablist"
+        aria-label={t("account.title")}
+        className="flex items-center gap-2 border-b border-border/60 pb-3 mb-8 overflow-x-auto no-scrollbar"
+      >
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "profile"}
+          aria-controls="account-profile-section"
           data-testid="tab-profile-btn"
           onClick={() => handleTabChange("profile")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-heading text-sm font-semibold transition-all shrink-0 ${
@@ -325,6 +394,9 @@ export function AccountView({ initialData }: AccountViewProps) {
 
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "bookings"}
+          aria-controls="account-bookings-section"
           data-testid="tab-bookings-btn"
           onClick={() => handleTabChange("bookings")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-heading text-sm font-semibold transition-all shrink-0 ${
@@ -351,6 +423,9 @@ export function AccountView({ initialData }: AccountViewProps) {
 
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "security"}
+          aria-controls="account-security-section"
           data-testid="tab-security-btn"
           onClick={() => handleTabChange("security")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-heading text-sm font-semibold transition-all shrink-0 ${
@@ -367,6 +442,9 @@ export function AccountView({ initialData }: AccountViewProps) {
       {/* Tab 1: Profile */}
       {activeTab === "profile" && (
         <div
+          id="account-profile-section"
+          role="tabpanel"
+          aria-labelledby="tab-profile-btn"
           data-testid="account-profile-section"
           className="bg-card/70 backdrop-blur-xl border border-border/80 rounded-3xl p-6 sm:p-10 shadow-lg shadow-black/5"
         >
@@ -683,7 +761,13 @@ export function AccountView({ initialData }: AccountViewProps) {
 
       {/* Tab 2: My Bookings */}
       {activeTab === "bookings" && (
-        <div data-testid="account-bookings-section" className="space-y-6">
+        <div
+          id="account-bookings-section"
+          role="tabpanel"
+          aria-labelledby="tab-bookings-btn"
+          data-testid="account-bookings-section"
+          className="space-y-6"
+        >
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-xl sm:text-2xl font-heading font-bold text-foreground">
@@ -851,6 +935,9 @@ export function AccountView({ initialData }: AccountViewProps) {
       {/* Tab 3: Security */}
       {activeTab === "security" && (
         <div
+          id="account-security-section"
+          role="tabpanel"
+          aria-labelledby="tab-security-btn"
           data-testid="account-security-section"
           className="bg-card/70 backdrop-blur-xl border border-border/80 rounded-3xl p-6 sm:p-10 shadow-lg shadow-black/5 space-y-10"
         >

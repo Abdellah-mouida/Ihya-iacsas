@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   Eye,
   EyeOff,
@@ -47,6 +47,7 @@ export function GoogleIcon({ className }: { className?: string }) {
 export function SignUpView() {
   const { t, locale, dir } = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isAr = locale === "ar";
 
   const [name, setName] = useState("");
@@ -58,6 +59,30 @@ export function SignUpView() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isGooglePending, setIsGooglePending] = useState(false);
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (!errorParam) return;
+
+    if (errorParam === "access_denied" || errorParam === "OAuthCallbackError_access_denied") {
+      toast.error(t("auth.oauthCancelled"));
+    } else {
+      toast.error(t("auth.oauthError"));
+    }
+    setIsGooglePending(false);
+  }, [searchParams, t]);
+
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setIsGooglePending(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
 
   const passwordRules = validatePasswordStrength(password);
   const passwordsMatch = password.length > 0 && password === confirmPassword;

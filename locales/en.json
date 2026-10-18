@@ -3,6 +3,10 @@
     "title": "Ihyaa — A Youth Islamic Program",
     "description": "The Ihyaa youth program: gatherings, activities, and meaningful content bringing young people together across Morocco."
   },
+  "common": {
+    "loading": "Loading...",
+    "accountLoading": "Loading account..."
+  },
   "nav": {
     "home": "Home",
     "about": "About",
@@ -110,7 +114,12 @@
     "nonePastTitle": "No past events recorded yet",
     "nonePastDesc": "Past events will appear here once concluded.",
     "emptyAllTitle": "No events found at this time",
-    "emptyAllDesc": "Stay tuned for upcoming event announcements on our website and social channels."
+    "emptyAllDesc": "Stay tuned for upcoming event announcements on our website and social channels.",
+    "allFilter": "All Events",
+    "openFilter": "Open for Booking",
+    "pastFilter": "Past Events",
+    "viewFlyer": "View Full Flyer",
+    "downloadFlyer": "Download Flyer"
   },
   "branches": {
     "kicker": "Where to find us",
@@ -416,7 +425,9 @@
     "errCurrentPasswordWrong": "Current or temporary password is incorrect",
     "errNewPasswordSame": "New password must be different from previous or temporary password",
     "mustChangePasswordNotice": "You signed in with a temporary password. You must set a new password before continuing.",
-    "errFailed": "An unexpected error occurred. Please try again."
+    "errFailed": "An unexpected error occurred. Please try again.",
+    "oauthCancelled": "Sign in with Google was cancelled.",
+    "oauthError": "Failed to sign in with Google. Please try again or use your password."
   },
   "onboarding": {
     "title": "Welcome to Ihyaa Program",
@@ -542,7 +553,13 @@
     "errTagsLimit": "Tag count exceeds maximum allowed limit",
     "errTagLength": "Tag length cannot exceed 30 characters",
     "privacyNoticeText": "Optional profile details are never made public. They are visible only to you and verified community administrators for activity organization and mentoring.",
-    "privacyNoticeLink": "Read our Privacy Policy"
+    "privacyNoticeLink": "Read our Privacy Policy",
+    "statTotalBookings": "Total Bookings",
+    "statConfirmedBookings": "Confirmed Bookings",
+    "statProfileCompletion": "Profile Completion",
+    "statMemberSince": "Member Since",
+    "profileSettingsSubnav": "Account Settings",
+    "securitySubnav": "Security & Protection"
   },
   "errors": {
     "notFoundCode": "404",

@@ -30,14 +30,14 @@ export function Activities() {
           {ACTIVITIES.map((item) => (
             <motion.div key={item.num} variants={fadeUp} className="group h-full">
               <MotionCard intensity={11} className="h-full">
-                <div className="glass preserve-3d relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl p-8 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1.5 group-hover:ring-1 group-hover:ring-brass/40 group-hover:shadow-layered dark:text-white dark:group-hover:shadow-[0_28px_70px_rgba(0,0,0,0.45)]">
+                <div className="glass preserve-3d relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl p-8 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1.5 group-hover:ring-1 group-hover:ring-brass/40 group-hover:shadow-layered dark:group-hover:shadow-[0_28px_70px_rgba(0,0,0,0.45)]">
                   {/* subtle girih texture inside the card */}
                   <div
                     aria-hidden
                     className="pattern-islamic pointer-events-none absolute inset-0 opacity-50"
                   />
                   {/* number watermark */}
-                  <span className="pointer-events-none absolute -top-4 end-3 font-heading text-8xl font-bold text-foreground/[0.05] dark:text-white/5">
+                  <span className="pointer-events-none absolute -top-4 end-3 font-heading text-8xl font-bold text-foreground/[0.05]">
                     {item.num}
                   </span>
                   <div
@@ -61,7 +61,7 @@ export function Activities() {
                     <h3 className="font-heading text-2xl font-semibold">
                       {t(item.titleKey)}
                     </h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground dark:text-white/70">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
                       {t(item.descKey)}
                     </p>
                   </div>

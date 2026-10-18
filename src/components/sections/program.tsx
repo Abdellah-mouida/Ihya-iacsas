@@ -13,16 +13,16 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[70vh] items-center overflow-x-clip py-28 text-foreground dark:bg-night dark:text-white sm:py-36"
+      className="relative isolate flex min-h-[70vh] items-center overflow-x-clip py-28 text-foreground dark:bg-card/40 sm:py-36"
     >
       {/* Smooth top and bottom transitions */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-36 bg-gradient-to-b from-background via-background/40 to-transparent dark:from-background dark:via-night/60 dark:to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-36 bg-gradient-to-b from-background via-background/40 to-transparent"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-36 bg-gradient-to-t from-background via-background/40 to-transparent dark:from-background dark:via-night/60 dark:to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-36 bg-gradient-to-t from-background via-background/40 to-transparent"
       />
 
       {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here).
@@ -44,7 +44,7 @@ export function Program() {
       >
         <motion.span
           variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-brass/25 bg-card/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white"
+          className="inline-flex items-center gap-2 rounded-full border border-brass/25 bg-card/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground backdrop-blur-md"
         >
           <span className="size-1.5 rounded-full bg-green" />
           {t("program.kicker")}
@@ -70,7 +70,7 @@ export function Program() {
 
         <motion.p
           variants={fadeUp}
-          className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground dark:text-white/80"
+          className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground"
         >
           {t("program.desc")}
         </motion.p>

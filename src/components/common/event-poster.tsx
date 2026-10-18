@@ -7,9 +7,11 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
+import { Maximize2 } from "lucide-react";
 import Image from "next/image";
-import { useRef, type PointerEvent } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 
+import { EventFlyerDialog } from "@/components/common/event-flyer-dialog";
 import { cn } from "@/lib/utils";
 
 export function EventPoster({
@@ -17,12 +19,19 @@ export function EventPoster({
   alt,
   badge,
   className,
+  title,
+  dateStr,
+  locationStr,
 }: {
   src: string;
   alt: string;
   badge?: string;
   className?: string;
+  title?: string;
+  dateStr?: string;
+  locationStr?: string;
 }) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const px = useMotionValue(0);
   const py = useMotionValue(0);
@@ -67,7 +76,17 @@ export function EventPoster({
 
         {/* Poster frame */}
         <div
-          className="relative overflow-hidden rounded-[1.75rem] shadow-layered ring-1 ring-brass/40"
+          data-testid="event-poster-frame"
+          onClick={() => setIsDialogOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsDialogOpen(true);
+            }
+          }}
+          className="relative cursor-pointer overflow-hidden rounded-[1.75rem] shadow-layered ring-1 ring-brass/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
           style={{ transform: "translateZ(0)" }}
         >
           <Image
@@ -81,6 +100,15 @@ export function EventPoster({
           {/* Warm overlay + gold inner frame */}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-night/40 via-transparent to-transparent" />
           <div className="pointer-events-none absolute inset-2.5 rounded-[1.4rem] ring-1 ring-inset ring-gold/40" />
+
+          {/* Quick view button hint on hover */}
+          <div className="absolute inset-x-0 bottom-3 flex justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="glass-strong inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-brass shadow-lg backdrop-blur-md">
+              <Maximize2 className="size-3.5" />
+              <span>{title ? "عرض الملصق" : "View Flyer"}</span>
+            </span>
+          </div>
+
           <motion.div
             aria-hidden
             style={{ background: glare }}
@@ -99,6 +127,16 @@ export function EventPoster({
           </div>
         ) : null}
       </motion.div>
+
+      {/* Full-res Flyer Dialog */}
+      <EventFlyerDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        posterUrl={src}
+        title={title || alt}
+        dateStr={dateStr}
+        locationStr={locationStr}
+      />
     </div>
   );
 }

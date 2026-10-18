@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import {
   Eye,
   EyeOff,
@@ -48,6 +48,32 @@ export function LoginView() {
   const [isResendPending, setIsResendPending] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (!errorParam) return;
+
+    if (errorParam === "access_denied" || errorParam === "OAuthCallbackError_access_denied") {
+      setErrorMessage(t("auth.oauthCancelled"));
+      toast.error(t("auth.oauthCancelled"));
+    } else {
+      setErrorMessage(t("auth.oauthError"));
+      toast.error(t("auth.oauthError"));
+    }
+    setIsGooglePending(false);
+  }, [searchParams, t]);
+
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setIsGooglePending(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

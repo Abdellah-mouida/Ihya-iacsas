@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-provider";
 
 type IslamicLoaderProps = {
   size?: "sm" | "md" | "lg" | "fullscreen";
@@ -15,6 +16,17 @@ export function IslamicLoader({
   message,
   className,
 }: IslamicLoaderProps) {
+  let locale = "ar";
+  let defaultLoadingMsg = "جارٍ التحميل...";
+  try {
+    const localeCtx = useLocale();
+    locale = localeCtx.locale;
+    defaultLoadingMsg = localeCtx.t("common.loading");
+  } catch {
+    // Fallback if rendered outside LocaleProvider
+  }
+
+  const displayMessage = message ?? defaultLoadingMsg;
   const isFullscreen = size === "fullscreen";
 
   const sizeDimensions = {
@@ -101,13 +113,16 @@ export function IslamicLoader({
         <div className="absolute inset-0 -z-10 rounded-full bg-brass/10 dark:bg-brass/15 blur-xl pointer-events-none" />
       </div>
 
-      {message ? (
+      {displayMessage ? (
         <motion.p
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-sm sm:text-base font-heading font-medium tracking-wide text-foreground/85 text-center select-none"
+          className={cn(
+            "text-sm sm:text-base font-heading font-medium text-foreground/85 text-center select-none",
+            locale === "ar" ? "tracking-normal" : "tracking-wide",
+          )}
         >
-          {message}
+          {displayMessage}
         </motion.p>
       ) : null}
     </div>

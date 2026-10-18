@@ -90,12 +90,8 @@ export function VerifyEmailView() {
   const BackIcon = isAr ? ArrowRight : ArrowLeft;
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8">
-      {/* Background decorations */}
-      <div className="absolute inset-0 bg-radial-[at_top_right] from-primary/10 via-background to-background pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#107527_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
-
-      <div className="relative z-10 w-full max-w-lg p-6 sm:p-10 rounded-3xl border border-brass/15 bg-card/70 backdrop-blur-2xl shadow-2xl overflow-hidden text-center">
+    <div className="relative w-full max-w-lg mx-auto flex flex-col justify-center items-center py-6 px-4">
+      <div className="relative z-10 w-full p-6 sm:p-10 rounded-3xl border border-brass/20 bg-card/75 backdrop-blur-2xl shadow-2xl overflow-hidden text-center">
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative size-16 rounded-full overflow-hidden border-2 border-brass/40 shadow-lg mb-4">

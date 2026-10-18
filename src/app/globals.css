@@ -323,12 +323,27 @@
     font-family: var(--font-arabic) !important;
   }
   html[lang="ar"] .font-heading,
+  html[lang="ar"] .font-sans,
+  html[lang="ar"] h1,
+  html[lang="ar"] h2,
+  html[lang="ar"] h3,
+  html[lang="ar"] h4,
+  html[lang="ar"] h5,
+  html[lang="ar"] h6,
+  html[lang="ar"] p,
+  html[lang="ar"] span,
+  html[lang="ar"] button,
+  html[lang="ar"] input,
+  html[lang="ar"] select,
+  html[lang="ar"] textarea {
+    letter-spacing: 0 !important;
+  }
+  html[lang="ar"] .font-heading,
   html[lang="ar"] h1,
   html[lang="ar"] h2,
   html[lang="ar"] h3,
   html[lang="ar"] h4 {
     font-family: var(--font-arabic) !important;
-    letter-spacing: 0;
   }
   html[lang="en"] {
     font-family: var(--font-sans) !important;

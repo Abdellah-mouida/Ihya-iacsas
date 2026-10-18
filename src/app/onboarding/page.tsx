@@ -67,7 +67,7 @@ export default async function OnboardingPage({
         <Suspense
           fallback={
             <div className="flex items-center justify-center p-12">
-              <IslamicLoader size="lg" message="جاري التحميل..." />
+              <IslamicLoader size="lg" />
             </div>
           }
         >

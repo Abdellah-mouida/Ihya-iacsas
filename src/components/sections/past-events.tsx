@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, Maximize2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { getPublicEvents } from "@/app/actions/events";
+import { EventFlyerDialog } from "@/components/common/event-flyer-dialog";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
@@ -22,6 +23,7 @@ type DisplayPastEvent = {
 export function PastEvents() {
   const { t, locale } = useLocale();
   const [pastEvents, setPastEvents] = useState<DisplayPastEvent[] | null>(null);
+  const [activeFlyer, setActiveFlyer] = useState<DisplayPastEvent | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -79,21 +81,41 @@ export function PastEvents() {
             <motion.article
               key={ev.id}
               variants={fadeUp}
+              data-testid={`past-event-card-${ev.id}`}
               className="group glass relative flex flex-col overflow-hidden rounded-3xl shadow-layered ring-1 ring-border/60 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-brass/30"
             >
-              <div className="relative aspect-[16/10] overflow-hidden">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setActiveFlyer(ev)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setActiveFlyer(ev);
+                  }
+                }}
+                className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+              >
                 <Image
                   src={ev.poster}
                   alt={ev.title}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="object-contain transition-transform duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-night/70 via-night/10 to-transparent" />
-                <span className="glass-strong absolute end-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground">
+                <div className="absolute inset-0 bg-gradient-to-t from-night/60 via-transparent to-transparent pointer-events-none" />
+                <span className="glass-strong absolute end-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground pointer-events-none">
                   <span className="size-1.5 rounded-full bg-muted-foreground/60" />
                   {t("events.endedBadge")}
                 </span>
+
+                {/* View flyer overlay hint */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-night/20 backdrop-blur-[2px]">
+                  <span className="glass-strong inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-brass shadow-lg">
+                    <Maximize2 className="size-3.5" />
+                    <span>{locale === "ar" ? "عرض الملصق" : "View Poster"}</span>
+                  </span>
+                </div>
               </div>
 
               <div className="flex flex-1 flex-col gap-3 p-6">
@@ -115,6 +137,21 @@ export function PastEvents() {
           ))}
         </motion.div>
       </div>
+
+      {/* Full-res Flyer Dialog */}
+      {activeFlyer && (
+        <EventFlyerDialog
+          isOpen={!!activeFlyer}
+          onOpenChange={(open) => {
+            if (!open) setActiveFlyer(null);
+          }}
+          posterUrl={activeFlyer.poster}
+          title={activeFlyer.title}
+          dateStr={activeFlyer.dateStr}
+          locationStr={activeFlyer.locationStr}
+        />
+      )}
+
       {/* Bottom transition into footer */}
       <div
         aria-hidden

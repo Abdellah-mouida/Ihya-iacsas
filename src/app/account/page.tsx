@@ -39,7 +39,7 @@ export default async function AccountPage() {
               data-testid="account-loading"
               className="w-full flex items-center justify-center py-20"
             >
-              <IslamicLoader size="lg" message="جاري تحميل الحساب..." />
+              <IslamicLoader size="lg" />
             </div>
           }
         >

@@ -22,7 +22,7 @@ export function Hero() {
   return (
 <section
       id="home"
-      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground dark:text-white"
+      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground"
     >
       {/* Photo layer */}
       <div className="absolute inset-0 -z-30">
@@ -65,7 +65,7 @@ export function Hero() {
       >
         <motion.span
           variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/85 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground shadow-xs backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-white"
+          className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/85 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground shadow-xs backdrop-blur-md"
         >
           <span className="size-1.5 animate-pulse rounded-full bg-gold" />
           {t("hero.kicker")}
@@ -80,7 +80,7 @@ export function Hero() {
 
         <motion.p
           variants={fadeUp}
-          className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80 dark:text-white/85 sm:text-xl"
+          className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80 sm:text-xl"
         >
           {t("hero.subtitle")}
         </motion.p>
@@ -101,7 +101,7 @@ export function Hero() {
           <Button
             asChild
             variant="outline"
-            className="glass h-12 rounded-full border-foreground/20 px-7 text-base font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:bg-foreground/5 dark:border-white/25 dark:text-white dark:hover:bg-white/15 dark:hover:text-white"
+            className="glass h-12 rounded-full border-foreground/20 px-7 text-base font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:bg-foreground/5 dark:border-border/60 dark:hover:bg-accent/40"
           >
             <a href="#about">
               <Info className="size-5" />
@@ -124,7 +124,7 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1, duration: 0.8 }}
-        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-muted-foreground dark:text-white/70"
+        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-muted-foreground"
       >
         <span className="text-[0.7rem] uppercase tracking-[0.2em]">
           {t("hero.scroll")}

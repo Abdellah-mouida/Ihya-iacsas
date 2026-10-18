@@ -103,6 +103,9 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
             src={poster}
             alt={t("event.posterAlt")}
             badge={t("event.badge")}
+            title={title}
+            dateStr={dateStr}
+            locationStr={locationStr}
           />
         </motion.div>
 
