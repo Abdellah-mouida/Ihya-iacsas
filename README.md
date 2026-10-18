@@ -167,20 +167,9 @@ If you prefer to inspect the database schema visually:
 npx prisma studio
 ```
 
-### 4. Admin Role Bootstrap & CLI Management
-When the initial migration runs, the oldest verified user in the database is automatically assigned the `ADMIN` role.
-
-To promote or change user roles at any time from the terminal:
-```bash
-# Assign the ADMIN role
-npx tsx scripts/set-role.ts your-email@example.com ADMIN --reason "Platform administrator setup"
-
-# Assign the MODERATOR role
-npx tsx scripts/set-role.ts leader@example.com MODERATOR --reason "Gatherings supervisor"
-
-# Demote back to regular USER
-npx tsx scripts/set-role.ts youth@example.com USER --reason "Role reset"
-```
+### 4. Roles and Access Control
+All newly registered users (via email/credentials or Google OAuth) receive the default `USER` role.
+Elevated roles (`ADMIN`, `MODERATOR`) can only be granted by an existing administrator through the Admin Panel (`/admin/users`) or by modifying the database directly. There are no automatic admin paths, claim flags, or environment-credential admin shortcuts.
 
 ### 5. Run the Development Server
 Start the Next.js development server:

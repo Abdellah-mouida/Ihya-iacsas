@@ -101,8 +101,12 @@ This project integrates Model Context Protocol (MCP) servers to accelerate devel
    - Flawless bilingual support: full RTL (`dir="rtl"`) for Arabic and LTR (`dir="ltr"`) for English.
    - Ultra-responsive down to 320px mobile viewports without horizontal scrollbar leaks.
    - Full support for `prefers-reduced-motion` across all animations and transitions.
-4. **ActiveLink Highlighting**:
-   - All navigation links (desktop navbar, mobile menu, user dropdown, footer links, settings subnav, admin sidebar) must clearly highlight the active route using the shared `ActiveLink` component.
+4. **Strict Role Authority**:
+   - Every user who registers or authenticates (via credentials, email OTP, or Google OAuth) is granted the default `USER` role.
+   - There are NO automatic admin paths, claim codes, first-user promotions, or environment-credential overrides.
+   - Elevated roles (`ADMIN`, `MODERATOR`) can only be assigned by an authenticated administrator through the Admin Panel (`/admin/users`) or directly in the database.
+   - Non-administrators cannot modify their own or any other user's role.
+   - Critical protections remain strictly enforced: no self-demotion, the last remaining administrator cannot be demoted or deleted, and the database is the single authority for user roles.
 5. **Zero Committed Plain-Text Credentials**:
    - Never commit secrets, passwords, or session tokens to git. Automated tests must exclusively use synthetic accounts (`@example.test`) with cryptographically secure random passwords generated at runtime. Auth state files must remain strictly gitignored.
 6. **Bilingual Parity & Standard Components**:
