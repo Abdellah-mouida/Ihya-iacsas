@@ -36,6 +36,7 @@ export interface AccountBookingItem {
 export interface UserAccountData {
   user: {
     id: string;
+    role: "ADMIN" | "MODERATOR" | "USER";
     name: string | null;
     email: string | null;
     city: string | null;
@@ -152,6 +153,7 @@ export async function getUserAccountData(): Promise<{
         emailVerified: true,
         passwordHash: true,
         termsAcceptedAt: true,
+        role: true,
         createdAt: true,
         bio: true,
         studyLevel: true,
@@ -225,6 +227,7 @@ export async function getUserAccountData(): Promise<{
       data: {
         user: {
           id: user.id,
+          role: user.role,
           name: user.name,
           email: user.email,
           city: user.city,

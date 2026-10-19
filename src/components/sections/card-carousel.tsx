@@ -80,13 +80,9 @@ export function CardCarousel() {
 
   const paused = hovering || dragging;
 
-  // If there are no items in DB, gracefully hide carousel section
-  if (n === 0) {
-    return null;
-  }
-
   // Responsive sizing: posters are narrower than the viewport so neighbours peek.
   useEffect(() => {
+    if (n === 0) return;
     const el = viewportRef.current;
     if (!el) return;
     const measure = () => {
@@ -99,7 +95,7 @@ export function CardCarousel() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [n]);
 
   const step = dims.slideW + GAP;
   const x = dims.vpW / 2 - dims.slideW / 2 - pos * step;
@@ -111,10 +107,10 @@ export function CardCarousel() {
 
   // Re-enable animation on the frame after an un-animated snap.
   useEffect(() => {
-    if (animate) return;
+    if (n === 0 || animate) return;
     const id = requestAnimationFrame(() => setAnimate(true));
     return () => cancelAnimationFrame(id);
-  }, [animate]);
+  }, [n, animate]);
 
   // After a transition into a clone, jump (un-animated) to the matching real.
   const handleComplete = useCallback(() => {
@@ -129,10 +125,10 @@ export function CardCarousel() {
 
   // Autoplay (respects reduced-motion + pause states).
   useEffect(() => {
-    if (paused || reduceMotion || dims.vpW === 0) return;
+    if (n === 0 || paused || reduceMotion || dims.vpW === 0) return;
     const id = window.setInterval(() => go(1), AUTOPLAY_MS);
     return () => window.clearInterval(id);
-  }, [paused, reduceMotion, dims.vpW, go]);
+  }, [n, paused, reduceMotion, dims.vpW, go]);
 
   // ---- Swipe / drag (pointer + touch) ----
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -159,6 +155,11 @@ export function CardCarousel() {
     }
     start.current = null;
     setDragging(false);
+  }
+
+  // If there are no items in DB, gracefully hide carousel section
+  if (n === 0) {
+    return null;
   }
 
   const realIndex = ((pos - REAL_START) % n + n) % n;

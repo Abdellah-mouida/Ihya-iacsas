@@ -25,17 +25,17 @@ async function main() {
     await prisma.carouselPost.createMany({
       data: [
         {
-          imageUrl: "/images/cards/night-card.jpg",
+          imageUrl: "/images/football.jpg",
           order: 0,
           active: true,
         },
         {
-          imageUrl: "/images/cards/journey-card.jpg",
+          imageUrl: "/images/gathering.jpg",
           order: 1,
           active: true,
         },
         {
-          imageUrl: "/images/cards/quote-card.jpg",
+          imageUrl: "/images/group-portrait.jpg",
           order: 2,
           active: true,
         },

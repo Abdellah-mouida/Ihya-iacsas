@@ -55,15 +55,19 @@ function getCircularLogoBase64(): string | null {
   return null;
 }
 
+// Public Cloudinary hosted logo URL for robust email rendering across all desktop & mobile mail clients (Gmail, Apple Mail, Outlook).
+const CLOUDINARY_EMAIL_LOGO_URL =
+  process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL ||
+  "https://res.cloudinary.com/ihyaa/image/upload/v1/branding/logo-circle.png";
+
 function getEmailLogoSrc(appUrl?: string): string {
-  if (appUrl) {
+  if (process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL) {
+    return process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL;
+  }
+  if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
     return `${appUrl}/images/logo-circle.png`;
   }
-  const logoB64 = getCircularLogoBase64();
-  if (logoB64) {
-    return `data:image/png;base64,${logoB64}`;
-  }
-  return SVG_LOGO_FALLBACK;
+  return CLOUDINARY_EMAIL_LOGO_URL;
 }
 
 const SENDER_NAME = "Ihyaa Program";

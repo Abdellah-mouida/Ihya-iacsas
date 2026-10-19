@@ -97,7 +97,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await page.goto("/");
 
     // Top state - test theme toggle
-    const themeBtn = page.locator('header nav button[aria-label*="السمة"], header nav button[aria-label*="theme"]').first();
+    const themeBtn = page.locator('header nav:first-of-type button[aria-label*="السمة"], header nav:first-of-type button[aria-label*="theme"]').first();
     await expect(themeBtn).toBeVisible();
 
     // Click to toggle
@@ -109,11 +109,12 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await page.waitForTimeout(500);
 
     // Scrolled navbar is visible
-    const nav = page.locator("header nav");
+    const nav = page.locator("header nav").first();
     await expect(nav).toBeVisible();
 
     // Toggle theme again while scrolled
-    await themeBtn.click();
+    const themeBtnScrolled = page.locator('header nav:first-of-type button[aria-label*="السمة"], header nav:first-of-type button[aria-label*="theme"]').first();
+    await themeBtnScrolled.click();
     await page.waitForTimeout(400);
     await expect(nav).toBeVisible();
   });

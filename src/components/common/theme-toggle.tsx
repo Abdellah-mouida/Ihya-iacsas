@@ -32,11 +32,7 @@ export function ThemeToggle({
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    if (doc.startViewTransition && !reduce) {
-      doc.startViewTransition(() => setTheme(next));
-    } else {
-      setTheme(next);
-    }
+    setTheme(next);
   };
 
   return (

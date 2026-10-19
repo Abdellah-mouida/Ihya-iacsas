@@ -26,7 +26,11 @@ import {
   Wrench,
   Globe2,
   HandHeart,
+  Palette,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 import {
   AccountBookingItem,
@@ -48,6 +52,9 @@ import { useLocale } from "@/i18n/locale-provider";
 import { validatePasswordStrength } from "@/lib/password";
 import { notify } from "@/lib/toast";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
+import { IslamicLoader } from "@/components/common/islamic-loader";
+import { RoleBadge } from "@/components/common/role-badge";
+import { cn } from "@/lib/utils";
 
 const INTEREST_PRESETS = {
   en: ["Camping", "Hiking", "Photography", "Reading", "Technology", "Sports", "Nature"],
@@ -73,10 +80,11 @@ interface AccountViewProps {
   initialData: UserAccountData;
 }
 
-type TabType = "profile" | "bookings" | "security";
+type TabType = "profile" | "bookings" | "preferences" | "security";
 
 export function AccountView({ initialData }: AccountViewProps) {
-  const { t, locale } = useLocale();
+  const { t, locale, setLocale } = useLocale();
+  const { theme, setTheme } = useTheme();
   const isRTL = locale === "ar";
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,7 +93,7 @@ export function AccountView({ initialData }: AccountViewProps) {
 
   const initialTab = (searchParams.get("tab") as TabType) || "profile";
   const [activeTab, setActiveTab] = useState<TabType>(
-    ["profile", "bookings", "security"].includes(initialTab) ? initialTab : "profile",
+    ["profile", "bookings", "preferences", "security"].includes(initialTab) ? initialTab : "profile",
   );
 
   // User state
@@ -296,73 +304,68 @@ export function AccountView({ initialData }: AccountViewProps) {
 
       {/* Header & Profile Stats Banner */}
       <div className="mb-8 sm:mb-10 space-y-6">
-        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/70 backdrop-blur-xl p-6 sm:p-8 shadow-lg shadow-black/5">
-          <div className="pointer-events-none absolute -end-16 -top-16 size-64 rounded-full bg-primary/10 blur-3xl" />
-          <div className="pointer-events-none absolute -start-16 -bottom-16 size-64 rounded-full bg-brass/10 blur-3xl" />
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-lg shadow-black/5">
+          {/* Header Cover Banner */}
+          <div className="relative h-32 sm:h-44 w-full overflow-hidden bg-gradient-to-r from-primary/20 via-primary/10 to-brass/20">
+            <div className="pattern-islamic absolute inset-0 opacity-25" />
+            <div className="pointer-events-none absolute -end-16 -top-16 size-64 rounded-full bg-primary/20 blur-3xl" />
+            <div className="pointer-events-none absolute -start-16 -bottom-16 size-64 rounded-full bg-brass/20 blur-3xl" />
+          </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4 sm:gap-6">
-              <UserAvatar
-                src={profileImage}
-                name={name}
-                email={userData.email}
-                size="2xl"
-                shape="rounded"
-                className="size-16 sm:size-20 border-2 border-primary/20 shrink-0 shadow-inner"
-              />
-              <div>
-                <h1
-                  data-testid="account-page-title"
-                  className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-1"
-                >
-                  {name || t("account.title")}
-                </h1>
-                <p className="text-muted-foreground text-xs sm:text-sm">
-                  {userData.email}
-                </p>
-                {userData.city && (
-                  <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
-                    <MapPin className="size-3 text-primary" />
-                    <span>{userData.city}</span>
+          <div className="relative px-6 sm:px-8 pb-6 sm:pb-8">
+            {/* Centered Avatar overlapping the cover */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-12 sm:-mt-16 mb-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-start">
+                <div className="p-1 rounded-2xl bg-card border-2 border-border shadow-md">
+                  <UserAvatar
+                    src={profileImage}
+                    name={name}
+                    email={userData.email}
+                    size="2xl"
+                    shape="rounded"
+                    className="size-20 sm:size-24 border border-border/60 shrink-0"
+                  />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                    <h1
+                      data-testid="account-page-title"
+                      className="text-2xl sm:text-3xl font-heading font-bold text-foreground"
+                    >
+                      {name || t("account.title")}
+                    </h1>
+                    <RoleBadge role={userData.role || "USER"} size="sm" />
+                  </div>
+                  <p className="text-muted-foreground text-xs sm:text-sm">
+                    {userData.email}
                   </p>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-border/60">
-              <div className="bg-background/60 dark:bg-card/40 border border-border/60 rounded-2xl p-3 text-center">
-                <span className="block text-xl font-heading font-bold text-foreground">
-                  {bookings.length}
-                </span>
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  {t("account.statTotalBookings")}
-                </span>
-              </div>
-              <div className="bg-background/60 dark:bg-card/40 border border-border/60 rounded-2xl p-3 text-center">
-                <span className="block text-xl font-heading font-bold text-primary">
-                  {bookings.filter((b) => b.status === "CONFIRMED" || b.confirmed).length}
-                </span>
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  {t("account.statConfirmedBookings")}
-                </span>
-              </div>
-              <div className="col-span-2 sm:col-span-1 bg-background/60 dark:bg-card/40 border border-border/60 rounded-2xl p-3 text-center">
-                <span className="block text-xl font-heading font-bold text-emerald-600 dark:text-emerald-400">
-                  {Math.round(
-                    ((Boolean(name) ? 1 : 0) +
-                      (Boolean(city) ? 1 : 0) +
-                      (Boolean(age) ? 1 : 0) +
-                      (Boolean(profileImage) ? 1 : 0) +
-                      (Boolean(bio) ? 1 : 0) +
-                      (interests.length > 0 ? 1 : 0)) *
-                      (100 / 6)
+                  {userData.city && (
+                    <p className="text-muted-foreground text-xs mt-1 flex items-center justify-center sm:justify-start gap-1">
+                      <MapPin className="size-3 text-primary" />
+                      <span>{userData.city}</span>
+                    </p>
                   )}
-                  %
-                </span>
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  {t("account.statProfileCompletion")}
-                </span>
+                </div>
+              </div>
+
+              {/* Member Since Badge & Quick Stats */}
+              <div className="flex items-center gap-2">
+                <div className="bg-background/60 dark:bg-card/40 border border-border/60 rounded-xl px-3.5 py-2 text-center">
+                  <span className="block text-lg font-heading font-bold text-foreground">
+                    {bookings.length}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {t("account.statTotalBookings")}
+                  </span>
+                </div>
+                <div className="bg-background/60 dark:bg-card/40 border border-border/60 rounded-xl px-3.5 py-2 text-center">
+                  <span className="block text-lg font-heading font-bold text-primary">
+                    {bookings.filter((b) => b.status === "CONFIRMED" || b.confirmed).length}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {t("account.statConfirmedBookings")}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -424,6 +427,23 @@ export function AccountView({ initialData }: AccountViewProps) {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === "preferences"}
+          aria-controls="account-preferences-section"
+          data-testid="tab-preferences-btn"
+          onClick={() => handleTabChange("preferences")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-heading text-sm font-semibold transition-all shrink-0 ${
+            activeTab === "preferences"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Palette className="size-4" />
+          <span>{t("account.tabPreferences")}</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === "security"}
           aria-controls="account-security-section"
           data-testid="tab-security-btn"
@@ -455,14 +475,27 @@ export function AccountView({ initialData }: AccountViewProps) {
                 {t("account.profilePhoto")}
               </Label>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                <UserAvatar
-                  src={profileImage}
-                  name={name}
-                  email={userData.email}
-                  size="3xl"
-                  shape="rounded"
-                  className="size-24 sm:size-28 border-2 border-primary/20 shrink-0 shadow-inner"
-                />
+                <div className="relative">
+                  <UserAvatar
+                    src={profileImage}
+                    name={name}
+                    email={userData.email}
+                    size="3xl"
+                    shape="rounded"
+                    className={cn(
+                      "size-24 sm:size-28 border-2 border-primary/20 shrink-0 shadow-inner transition-opacity duration-300",
+                      isPending && imageFile && "opacity-40 blur-[1px]",
+                    )}
+                  />
+                  {isPending && imageFile && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[2px] rounded-2xl">
+                      <IslamicLoader size="sm" />
+                      <span className="text-[10px] font-medium text-foreground mt-1 animate-pulse">
+                        {t("common.loading") || "جاري الرفع..."}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                   <input
@@ -932,7 +965,182 @@ export function AccountView({ initialData }: AccountViewProps) {
         </div>
       )}
 
-      {/* Tab 3: Security */}
+      {/* Tab 3: Preferences / Appearance */}
+      {activeTab === "preferences" && (
+        <div
+          id="account-preferences-section"
+          role="tabpanel"
+          aria-labelledby="tab-preferences-btn"
+          data-testid="account-preferences-section"
+          className="bg-card/70 backdrop-blur-xl border border-border/80 rounded-3xl p-6 sm:p-10 shadow-lg shadow-black/5 space-y-10"
+        >
+          <div>
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-foreground mb-1">
+              {t("account.preferencesTitle")}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {t("account.preferencesSubtitle")}
+            </p>
+          </div>
+
+          {/* Theme Selection Grid */}
+          <div className="space-y-4">
+            <Label className="block text-sm font-semibold text-foreground">
+              {t("account.tabPreferences")}
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  id: "light",
+                  name: t("account.themeLightEditorial"),
+                  desc: t("account.themeLightEditorialDesc"),
+                  bg: "bg-[#fbf9f4] text-[#332a24]",
+                  primary: "bg-[#0a5417]",
+                  accent: "bg-[#b8860b]",
+                  isDark: false,
+                },
+                {
+                  id: "dark",
+                  name: t("account.themeDarkNight"),
+                  desc: t("account.themeDarkNightDesc"),
+                  bg: "bg-[#181a24] text-[#f2ede6]",
+                  primary: "bg-[#c59b27]",
+                  accent: "bg-[#2563eb]",
+                  isDark: true,
+                },
+                {
+                  id: "amoled",
+                  name: t("account.themeAmoled"),
+                  desc: t("account.themeAmoledDesc"),
+                  bg: "bg-[#000000] text-[#ffffff] border-white/20",
+                  primary: "bg-[#d4af37]",
+                  accent: "bg-[#10b981]",
+                  isDark: true,
+                },
+                {
+                  id: "emerald",
+                  name: t("account.themeEmerald"),
+                  desc: t("account.themeEmeraldDesc"),
+                  bg: "bg-[#0c2419] text-[#e8f5e9]",
+                  primary: "bg-[#10b981]",
+                  accent: "bg-[#f59e0b]",
+                  isDark: true,
+                },
+                {
+                  id: "ochre",
+                  name: t("account.themeMoroccanOchre"),
+                  desc: t("account.themeMoroccanOchreDesc"),
+                  bg: "bg-[#fbf4eb] text-[#3e2723]",
+                  primary: "bg-[#c85a17]",
+                  accent: "bg-[#d97706]",
+                  isDark: false,
+                },
+                {
+                  id: "indigo",
+                  name: t("account.themeMidnightIndigo"),
+                  desc: t("account.themeMidnightIndigoDesc"),
+                  bg: "bg-[#0f172a] text-[#f8fafc]",
+                  primary: "bg-[#6366f1]",
+                  accent: "bg-[#eab308]",
+                  isDark: true,
+                },
+              ].map((th) => {
+                const isSelected =
+                  (th.id === "light" && (!theme || theme === "light")) ||
+                  (th.id === "dark" && theme === "dark") ||
+                  (typeof document !== "undefined" &&
+                    document.documentElement.getAttribute("data-theme") === th.id);
+
+                return (
+                  <button
+                    key={th.id}
+                    type="button"
+                    onClick={() => {
+                      if (th.id === "light") {
+                        setTheme("light");
+                        document.documentElement.removeAttribute("data-theme");
+                        try {
+                          localStorage.removeItem("ihyaa-theme");
+                        } catch {}
+                      } else if (th.id === "dark") {
+                        setTheme("dark");
+                        document.documentElement.removeAttribute("data-theme");
+                        try {
+                          localStorage.removeItem("ihyaa-theme");
+                        } catch {}
+                      } else {
+                        setTheme(th.isDark ? "dark" : "light");
+                        document.documentElement.setAttribute("data-theme", th.id);
+                        try {
+                          localStorage.setItem("ihyaa-theme", th.id);
+                        } catch {}
+                      }
+                      notify.success(th.name);
+                    }}
+                    className={`relative text-start p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between h-40 ${
+                      isSelected
+                        ? "border-primary ring-2 ring-primary/40 shadow-md shadow-primary/10"
+                        : "border-border/70 hover:border-border hover:bg-muted/30"
+                    } ${th.bg}`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="font-heading font-bold text-sm tracking-tight">
+                          {th.name}
+                        </span>
+                        {isSelected && (
+                          <CheckCircle2 className="size-4 text-primary shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs opacity-75 line-clamp-2 leading-relaxed">
+                        {th.desc}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-black/10 dark:border-white/10">
+                      <span className={`size-3.5 rounded-full ${th.primary}`} />
+                      <span className={`size-3.5 rounded-full ${th.accent}`} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Language Switcher */}
+          <div className="pt-8 border-t border-border/60 space-y-4">
+            <div>
+              <h3 className="font-heading font-bold text-foreground">
+                {t("account.languageSectionTitle")}
+              </h3>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                {t("account.languageSectionSubtitle")}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant={locale === "ar" ? "default" : "outline"}
+                onClick={() => setLocale("ar")}
+                className="rounded-xl px-5 h-10 font-heading font-semibold"
+              >
+                العربية (RTL)
+              </Button>
+              <Button
+                type="button"
+                variant={locale === "en" ? "default" : "outline"}
+                onClick={() => setLocale("en")}
+                className="rounded-xl px-5 h-10 font-heading font-semibold"
+              >
+                English (LTR)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Security */}
       {activeTab === "security" && (
         <div
           id="account-security-section"

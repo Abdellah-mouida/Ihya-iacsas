@@ -38,6 +38,7 @@ import {
   updateUserRole,
 } from "@/app/actions/users";
 import { IslamicLoader } from "@/components/common/islamic-loader";
+import { RoleBadge } from "@/components/common/role-badge";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -261,37 +262,7 @@ export default function AdminUsersPage() {
   };
 
   const renderRoleBadge = (role: "ADMIN" | "MODERATOR" | "USER") => {
-    if (role === "ADMIN") {
-      return (
-        <span
-          data-testid="role-badge-admin"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/25 shadow-xs"
-        >
-          <ShieldCheck className="size-3.5" />
-          {t("adminUsers.roleAdmin")}
-        </span>
-      );
-    }
-    if (role === "MODERATOR") {
-      return (
-        <span
-          data-testid="role-badge-moderator"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shadow-xs"
-        >
-          <Shield className="size-3.5" />
-          {t("adminUsers.roleModerator")}
-        </span>
-      );
-    }
-    return (
-      <span
-        data-testid="role-badge-user"
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border/50"
-      >
-        <User className="size-3.5" />
-        {t("adminUsers.roleUser")}
-      </span>
-    );
+    return <RoleBadge role={role} />;
   };
 
   return (

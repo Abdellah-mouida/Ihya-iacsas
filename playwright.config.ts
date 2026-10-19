@@ -11,12 +11,12 @@ export default defineConfig({
   timeout: 30_000,
   workers: 1,
   use: {
-    baseURL: "http://localhost:3005",
+    baseURL: "http://localhost:3000",
     headless: true,
   },
   webServer: {
-    command: "PORT=3005 npm run start",
-    port: 3005,
+    command: "npm run start",
+    port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

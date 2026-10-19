@@ -111,15 +111,10 @@ export function GlassNavbar({
   // so text/icons remain legible on light backgrounds.
   const transparentTop = pathname === "/" && !scrolled;
 
-  // Close the mobile menu on route change WITHOUT a dedicated effect: compare
-  // the current pathname against the last one seen during render. Setting
-  // state of the current component during render is the supported pattern and
-  // avoids the extra commit + effect pass a `useEffect([pathname])` would add.
-  const [seenPath, setSeenPath] = useState(pathname);
-  if (seenPath !== pathname) {
-    setSeenPath(pathname);
-    if (open) setOpen(false);
-  }
+  // Close the mobile menu on route change
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
