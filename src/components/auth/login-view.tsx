@@ -21,12 +21,15 @@ import { resendAccountVerificationOtp } from "@/app/actions/auth";
 import { GoogleIcon } from "./signup-view";
 
 function sanitizeCallbackUrl(url: string | null): string {
-  if (!url) return "/account";
+  if (!url) return "/profile";
   // Disallow external URLs and protocol-relative URLs like //evil.com
   if (url.startsWith("/") && !url.startsWith("//")) {
+    if (url === "/account" || url.startsWith("/account?")) {
+      return url.replace("/account", "/profile");
+    }
     return url;
   }
-  return "/account";
+  return "/profile";
 }
 
 export function LoginView() {
@@ -479,7 +482,7 @@ export function LoginView() {
           <span>{t("auth.dontHaveAccount")} </span>
           <Link
             href={
-              callbackUrl !== "/account"
+              callbackUrl !== "/profile"
                 ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`
                 : "/signup"
             }

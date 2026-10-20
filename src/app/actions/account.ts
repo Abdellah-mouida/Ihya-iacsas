@@ -496,7 +496,8 @@ export async function updateUserProfile(
     // Asynchronously record user activity
     touchUserActive(session.user.id).catch(() => {});
 
-    safeRevalidatePath("/account");
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
     safeRevalidatePath("/profile");
     safeRevalidatePath("/settings");
     safeRevalidatePath("/onboarding");
@@ -636,7 +637,8 @@ export async function cancelUserBooking(
       }
     }
 
-    safeRevalidatePath("/account");
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
     safeRevalidatePath("/events");
     safeRevalidatePath("/admin/bookings");
 

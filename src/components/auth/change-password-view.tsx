@@ -101,7 +101,7 @@ export function ChangePasswordView() {
       if (!session?.user?.onboardingComplete) {
         router.push("/onboarding");
       } else {
-        router.push("/account");
+        router.push("/profile");
       }
       router.refresh();
     });

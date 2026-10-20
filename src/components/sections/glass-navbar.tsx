@@ -282,8 +282,8 @@ export function GlassNavbar({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link
-                      href="/account"
-                      data-testid="navbar-account-link"
+                      href="/profile"
+                      data-testid="navbar-profile-link"
                       className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
                     >
                       <UserIcon className="size-4" />
@@ -292,7 +292,7 @@ export function GlassNavbar({
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
-                      href="/account?tab=bookings"
+                      href="/profile#bookings"
                       data-testid="navbar-bookings-link"
                       className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
                     >
@@ -432,9 +432,9 @@ export function GlassNavbar({
                 {session?.user ? (
                   <motion.li variants={fadeUp} className="mb-2">
                     <Link
-                      href="/account"
+                      href="/profile"
                       onClick={() => setOpen(false)}
-                      data-testid="navbar-mobile-account-link"
+                      data-testid="navbar-mobile-profile-link"
                       className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/40 p-3 transition-colors hover:bg-muted/70"
                     >
                       <div className="flex items-center gap-3 min-w-0">

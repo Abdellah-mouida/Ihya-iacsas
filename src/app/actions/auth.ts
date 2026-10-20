@@ -737,7 +737,8 @@ export async function completeOnboarding(
   });
 
   safeRevalidatePath("/onboarding");
-  safeRevalidatePath("/account");
+  safeRevalidatePath("/profile");
+  safeRevalidatePath("/settings");
   safeRevalidatePath("/book");
 
   return {

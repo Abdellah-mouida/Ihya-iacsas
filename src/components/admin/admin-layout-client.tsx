@@ -8,6 +8,7 @@ import {
   LogOut,
   Mail,
   Menu,
+  Palette,
   Shield,
   Sparkles,
   Ticket,
@@ -55,7 +56,10 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     { href: "/admin/bookings", label: isAr ? "الحجوزات" : "Bookings", icon: Ticket },
     { href: "/admin/contacts", label: isAr ? "الرسائل" : "Messages", icon: Mail },
     ...(user.role === "ADMIN"
-      ? [{ href: "/admin/users", label: isAr ? "المستخدمون" : "Users", icon: Users }]
+      ? [
+          { href: "/admin/users", label: isAr ? "المستخدمون" : "Users", icon: Users },
+          { href: "/admin/themes", label: isAr ? "إدارة السمات" : "Themes", icon: Palette },
+        ]
       : []),
   ];
 

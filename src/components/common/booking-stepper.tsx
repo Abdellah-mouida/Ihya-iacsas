@@ -391,7 +391,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         size="sm"
                         className="text-xs text-brass hover:text-brass/80 gap-1.5 h-8 px-2.5 rounded-full"
                       >
-                        <Link href="/account" target="_blank">
+                        <Link href="/settings?tab=profile" target="_blank">
                           <Pencil className="size-3" />
                           {t("booking.editAccountProfile")}
                         </Link>
@@ -591,7 +591,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                       data-testid="view-my-bookings-btn"
                       className="bg-brass-gradient h-12 rounded-full text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95 sm:flex-1"
                     >
-                      <Link href="/account#bookings">
+                      <Link href="/profile#bookings">
                         {t("booking.viewMyBookings")}
                       </Link>
                     </Button>

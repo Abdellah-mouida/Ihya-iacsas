@@ -71,6 +71,16 @@ function isSafeRelativeUrl(url: string | null): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Legacy /account redirect -> /profile
+  if (pathname === "/account" || pathname.startsWith("/account/")) {
+    const profileUrl = new URL(
+      pathname.replace(/^\/account/, "/profile"),
+      request.url,
+    );
+    profileUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(profileUrl, 308);
+  }
+
   // Legacy admin login URL redirect -> /login
   if (pathname === "/admin/login") {
     const nextParam =

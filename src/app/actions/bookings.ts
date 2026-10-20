@@ -392,7 +392,8 @@ export async function createAuthenticatedBooking(data: {
 
     safeRevalidatePath("/events");
     safeRevalidatePath("/book");
-    safeRevalidatePath("/account");
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/bookings");
 
