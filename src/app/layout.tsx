@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { RouteHistoryTracker } from "@/components/common/route-history-tracker";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -56,7 +57,10 @@ if(t){document.documentElement.setAttribute('data-theme',t);if(t==='dark'||t==='
         />
       </head>
       <body className="min-h-dvh bg-background text-foreground overflow-x-hidden">
-        <Providers>{children}</Providers>
+        <Providers>
+          <RouteHistoryTracker />
+          {children}
+        </Providers>
       </body>
     </html>
   );

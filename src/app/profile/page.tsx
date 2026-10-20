@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { getUserAccountData } from "@/app/actions/account";
 import { ProfileView } from "@/components/profile/profile-view";
+import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -23,10 +24,13 @@ export default async function ProfilePage() {
   const initialData = res.data;
 
   return (
-    <main className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <ProfileView initialData={initialData} />
-      </div>
-    </main>
+    <>
+      <GlassNavbar initialSession={session} />
+      <main className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <ProfileView initialData={initialData} />
+        </div>
+      </main>
+    </>
   );
 }

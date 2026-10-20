@@ -221,11 +221,17 @@ export function GlassNavbar({
 
         {/* Controls */}
         <div className="flex items-center gap-2">
-          <LanguageSwitcher
-            className="hidden sm:inline-flex"
-            onDark={transparentTop}
-          />
-          <ThemeToggle onDark={transparentTop} />
+          {/* Theme & Language Switchers: ONLY rendered when signed out */}
+          {!session?.user ? (
+            <>
+              <LanguageSwitcher
+                className="hidden sm:inline-flex"
+                onDark={transparentTop}
+              />
+              <ThemeToggle onDark={transparentTop} />
+            </>
+          ) : null}
+
           {hasBookableEvents === true ? (
             <Button
               asChild
@@ -480,21 +486,34 @@ export function GlassNavbar({
                 })}
               </motion.ul>
               <div className="mt-3 flex flex-col gap-2.5 border-t border-border/60 pt-3">
-                <div className="flex items-center gap-2">
-                  <LanguageSwitcher className="flex-1 justify-center" />
-                  <ThemeToggle />
-                  {hasBookableEvents === true ? (
-                    <Button
-                      asChild
-                      data-testid="navbar-book-btn-mobile"
-                      className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
-                    >
-                      <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
-                        {t("nav.book")}
-                      </Link>
-                    </Button>
-                  ) : null}
-                </div>
+                {/* Theme & Language Switchers: ONLY rendered when signed out */}
+                {!session?.user ? (
+                  <div className="flex items-center gap-2">
+                    <LanguageSwitcher className="flex-1 justify-center" />
+                    <ThemeToggle />
+                    {hasBookableEvents === true ? (
+                      <Button
+                        asChild
+                        data-testid="navbar-book-btn-mobile"
+                        className="bg-brass-gradient h-11 flex-1 rounded-full font-semibold text-night"
+                      >
+                        <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
+                          {t("nav.book")}
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : hasBookableEvents === true ? (
+                  <Button
+                    asChild
+                    data-testid="navbar-book-btn-mobile"
+                    className="bg-brass-gradient h-11 w-full rounded-full font-semibold text-night"
+                  >
+                    <Link href={EVENT.bookHref} onClick={() => setOpen(false)}>
+                      {t("nav.book")}
+                    </Link>
+                  </Button>
+                ) : null}
 
                 {/* Mobile Auth Actions */}
                 {session?.user ? (

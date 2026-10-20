@@ -42,8 +42,8 @@ export function MoroccoMap({
             >
               <stop
                 offset="0"
-                stopColor="var(--emerald)"
-                stopOpacity="0.42"
+                stopColor="var(--primary)"
+                stopOpacity="0.45"
               />
               <stop
                 offset="0.55"
@@ -53,7 +53,7 @@ export function MoroccoMap({
               <stop
                 offset="1"
                 stopColor="var(--night-deep)"
-                stopOpacity="0.55"
+                stopOpacity="0.65"
               />
             </linearGradient>
             <linearGradient
@@ -65,7 +65,7 @@ export function MoroccoMap({
               y2="1065"
             >
               <stop offset="0" stopColor="var(--gold)" />
-              <stop offset="1" stopColor="var(--brass)" />
+              <stop offset="1" stopColor="var(--primary)" />
             </linearGradient>
             {/* Halos built from the UNION alpha of the group, so the internal
                 Morocco / Southern-Provinces border never shows. */}

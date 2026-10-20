@@ -337,7 +337,7 @@
     "secSecurityTitle": "6. Data Security & Access Control",
     "secSecurityBody": "We apply strict security measures including bcrypt password hashing, encrypted HTTPS across all connections, protected JWT sessions, and rate-limiting against automated abuse. Administrative operations follow a strict Role-Based Access Control model (USER, MODERATOR, ADMIN) with least privilege principles. Furthermore, critical administrative actions (such as role modifications, event updates, and account anonymizations) are permanently captured in an immutable audit log trail to ensure transparency and accountability.",
     "secRightsTitle": "7. User Rights",
-    "secRightsBody": "You have the right at any time to access your personal data, update it directly via your account page, or request deletion of your account and records by contacting us.",
+    "secRightsBody": "You have the right at any time to access your personal data, update it directly via your settings page, or request a copy, correction, or deletion of your records by contacting program administration through our official channels.",
     "secChildrenTitle": "8. Children's Privacy",
     "secChildrenBody": "We care deeply about youth and strive to maintain a safe, constructive digital and physical environment conforming to educational and moral values.",
     "secChangesTitle": "9. Changes to Policy",

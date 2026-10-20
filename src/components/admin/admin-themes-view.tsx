@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { ThemeDto } from "@/lib/theme-constants";
 import { toggleThemeEnabled, saveTheme } from "@/app/actions/themes";
 import { useLocale } from "@/i18n/locale-provider";
@@ -18,6 +19,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { notify } from "@/lib/toast";
+
+// Dynamic import for react-colorful HexColorPicker
+const HexColorPicker = dynamic(
+  () => import("react-colorful").then((mod) => mod.HexColorPicker),
+  { ssr: false, loading: () => <div className="h-36 w-full animate-pulse rounded-xl bg-muted/40" /> }
+);
 
 interface Props {
   initialThemes: ThemeDto[];
@@ -365,46 +372,95 @@ export function AdminThemesView({ initialThemes }: Props) {
               <h3 className="text-sm font-heading font-bold text-foreground mb-4">
                 {isAr ? "رموز الألوان الأساسية (CSS Variables)" : "Core CSS Color Tokens"}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                <div>
-                  <Label className="text-xs">--background</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
+                <div className="space-y-2 rounded-xl border border-border/40 p-3 bg-card/40">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">--background</Label>
+                    <span className="size-4 rounded-full border border-border shadow-xs" style={{ backgroundColor: bgToken }} />
+                  </div>
                   <Input
                     value={bgToken}
                     onChange={(e) => setBgToken(e.target.value)}
-                    className="mt-1 font-mono text-xs"
+                    className="font-mono text-xs"
                   />
+                  <div className="pt-2 flex justify-center">
+                    <HexColorPicker
+                      color={bgToken.startsWith("#") ? bgToken : "#ffffff"}
+                      onChange={setBgToken}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs">--foreground</Label>
+
+                <div className="space-y-2 rounded-xl border border-border/40 p-3 bg-card/40">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">--foreground</Label>
+                    <span className="size-4 rounded-full border border-border shadow-xs" style={{ backgroundColor: fgToken }} />
+                  </div>
                   <Input
                     value={fgToken}
                     onChange={(e) => setFgToken(e.target.value)}
-                    className="mt-1 font-mono text-xs"
+                    className="font-mono text-xs"
                   />
+                  <div className="pt-2 flex justify-center">
+                    <HexColorPicker
+                      color={fgToken.startsWith("#") ? fgToken : "#111111"}
+                      onChange={setFgToken}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs">--primary</Label>
+
+                <div className="space-y-2 rounded-xl border border-border/40 p-3 bg-card/40">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">--primary</Label>
+                    <span className="size-4 rounded-full border border-border shadow-xs" style={{ backgroundColor: primaryToken }} />
+                  </div>
                   <Input
                     value={primaryToken}
                     onChange={(e) => setPrimaryToken(e.target.value)}
-                    className="mt-1 font-mono text-xs"
+                    className="font-mono text-xs"
                   />
+                  <div className="pt-2 flex justify-center">
+                    <HexColorPicker
+                      color={primaryToken.startsWith("#") ? primaryToken : "#166534"}
+                      onChange={setPrimaryToken}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs">--heading (لون العناوين الرئيسية)</Label>
+
+                <div className="space-y-2 rounded-xl border border-border/40 p-3 bg-card/40">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">--heading (العناوين الرئيسية)</Label>
+                    <span className="size-4 rounded-full border border-border shadow-xs" style={{ backgroundColor: headingToken }} />
+                  </div>
                   <Input
                     value={headingToken}
                     onChange={(e) => setHeadingToken(e.target.value)}
-                    className="mt-1 font-mono text-xs"
+                    className="font-mono text-xs"
                   />
+                  <div className="pt-2 flex justify-center">
+                    <HexColorPicker
+                      color={headingToken.startsWith("#") ? headingToken : "#15803d"}
+                      onChange={setHeadingToken}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs">--title-secondary (لون العناوين الفرعية)</Label>
+
+                <div className="space-y-2 rounded-xl border border-border/40 p-3 bg-card/40">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">--title-secondary (العناوين الفرعية)</Label>
+                    <span className="size-4 rounded-full border border-border shadow-xs" style={{ backgroundColor: secondaryTitleToken }} />
+                  </div>
                   <Input
                     value={secondaryTitleToken}
                     onChange={(e) => setSecondaryTitleToken(e.target.value)}
-                    className="mt-1 font-mono text-xs"
+                    className="font-mono text-xs"
                   />
+                  <div className="pt-2 flex justify-center">
+                    <HexColorPicker
+                      color={secondaryTitleToken.startsWith("#") ? secondaryTitleToken : "#d97706"}
+                      onChange={setSecondaryTitleToken}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

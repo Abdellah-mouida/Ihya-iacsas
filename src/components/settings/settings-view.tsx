@@ -13,6 +13,8 @@ import { notify } from "@/lib/toast";
 import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
 import { ProfileTagEditor } from "@/components/settings/profile-tag-editor";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
+import { PatternCover } from "@/components/common/pattern-cover";
+import { getLastNonSettingsPath } from "@/components/common/route-history-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,10 +29,11 @@ import {
   KeyRound,
   Trash2,
   LogOut,
-  Download,
   AlertTriangle,
   ExternalLink,
   ChevronRight,
+  ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 
 interface SettingsViewProps {
@@ -228,19 +231,32 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
     });
   };
 
-  const handleDownloadData = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(initialData, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `ihyaa-account-data-${userData.id}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    notify.success(isAr ? "تم تنزيل نسخة من بياناتك" : "Data export downloaded");
-  };
+  const [backPath, setBackPath] = useState("/");
+
+  useEffect(() => {
+    // shortcut: In-memory tracker resets to "/" on full page reload.
+    // Upgrade path: Store and validate a `?from=` query parameter.
+    setBackPath(getLastNonSettingsPath());
+  }, []);
 
   return (
     <div className="space-y-8" data-testid="settings-view-container">
+      {/* Back Link to Last Non-Settings Page */}
+      <div>
+        <Link
+          href={backPath}
+          data-testid="settings-back-link"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-heading font-medium text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          {isAr ? (
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          ) : (
+            <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
+          )}
+          <span>{isAr ? "الرجوع للصفحة السابقة" : "Back"}</span>
+        </Link>
+      </div>
+
       {/* Settings Header */}
       <div className="border-b border-border/60 pb-6">
         <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">
@@ -316,7 +332,7 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
                   {isAr ? "غلاف الملف الشخصي" : "Profile Cover"}
                 </Label>
                 <div className="relative h-44 rounded-2xl overflow-hidden border border-border/70 bg-muted/40">
-                  <Image src={coverUrl} alt="Cover" fill className="object-cover" />
+                  <PatternCover coverUrl={coverUrl} alt="Cover" />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center gap-3 opacity-90 hover:opacity-100 transition-opacity">
                     <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card/90 backdrop-blur text-foreground text-xs font-semibold hover:bg-card">
                       <Upload className="size-3.5 text-primary" />
@@ -351,8 +367,8 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
                               : "border-border/70 hover:border-border"
                           }`}
                         >
-                          <Image src={preset.path} alt={preset.nameEn} fill className="object-cover opacity-60" />
-                          <span className="relative z-10 text-[11px] font-heading font-bold text-foreground px-1.5 py-0.5 rounded bg-card/80 backdrop-blur">
+                          <PatternCover coverUrl={preset.path} thumbnail className="opacity-80" />
+                          <span className="relative z-10 text-[11px] font-heading font-bold text-foreground px-1.5 py-0.5 rounded bg-card/85 backdrop-blur shadow-sm">
                             {isAr ? preset.nameAr : preset.nameEn}
                           </span>
                         </button>
@@ -756,27 +772,16 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
                 </Button>
               </form>
 
-              {/* Export Data */}
-              <div className="pt-6 border-t border-border/60 space-y-3">
-                <h3 className="text-sm font-heading font-bold text-foreground flex items-center gap-2">
-                  <Download className="size-4 text-primary" />
-                  <span>{isAr ? "تصدير البيانات الشخصية (JSON)" : "Export Account Data (JSON)"}</span>
+              {/* Data Inquiries Notice */}
+              <div className="pt-6 border-t border-border/60 space-y-2">
+                <h3 className="text-sm font-heading font-bold text-foreground">
+                  {isAr ? "البيانات الشخصية والخصوصية" : "Personal Data & Privacy"}
                 </h3>
                 <p className="text-xs text-muted-foreground max-w-xl">
                   {isAr
-                    ? "يمكنك تحميل نسخة كاملة من بيانات ملفك الشخصي وحجوزاتك بصيغة JSON وفق معايير حماية المعطيات."
-                    : "Download a machine-readable JSON copy of your personal details and bookings history."}
+                    ? "وفقاً لسياسة الخصوصية، يمكنك في أي وقت طلب نسخة من بياناتك أو طلب تصحيحها أو حذفها بالتواصل المباشر مع إدارة البرنامج عبر وسائل الاتصال المعتمدة."
+                    : "In accordance with our Privacy Policy, you may request a copy of your personal data, corrections, or deletion at any time by contacting the program administrators directly."}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDownloadData}
-                  data-testid="settings-download-data-btn"
-                  className="rounded-xl font-heading text-xs gap-2"
-                >
-                  <Download className="size-3.5" />
-                  <span>{isAr ? "تحميل بياناتي" : "Download My Data"}</span>
-                </Button>
               </div>
 
               {/* Legal Links */}
