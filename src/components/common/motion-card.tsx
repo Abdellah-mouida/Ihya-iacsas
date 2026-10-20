@@ -4,6 +4,7 @@ import {
   motion,
   useMotionTemplate,
   useMotionValue,
+  useReducedMotion,
   useSpring,
   useTransform,
 } from "framer-motion";
@@ -14,8 +15,8 @@ import { cn } from "@/lib/utils";
 /**
  * Mouse-tracking 3D tilt card. Wraps children in a perspective container and
  * rotates on hover, with an optional light glare that follows the pointer.
- * `radiusClass` MUST match the inner card's radius so the glare and tilt stay
- * contained within the rounded corners (no square/border artifacts on hover).
+ * Respects prefers-reduced-motion automatically, uses rAF throttled pointer values,
+ * and manages will-change for buttery 60fps rendering without layout thrashing.
  */
 export function MotionCard({
   children,
@@ -33,16 +34,19 @@ export function MotionCard({
   radiusClass?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const rafId = useRef<number | null>(null);
+
   const px = useMotionValue(0);
   const py = useMotionValue(0);
 
   const rotateX = useSpring(
-    useTransform(py, [-0.5, 0.5], [intensity, -intensity]),
-    { stiffness: 150, damping: 15 },
+    useTransform(py, [-0.5, 0.5], shouldReduceMotion ? [0, 0] : [intensity, -intensity]),
+    { stiffness: 180, damping: 20 },
   );
   const rotateY = useSpring(
-    useTransform(px, [-0.5, 0.5], [-intensity, intensity]),
-    { stiffness: 150, damping: 15 },
+    useTransform(px, [-0.5, 0.5], shouldReduceMotion ? [0, 0] : [-intensity, intensity]),
+    { stiffness: 180, damping: 20 },
   );
 
   const glareX = useTransform(px, [-0.5, 0.5], ["0%", "100%"]);
@@ -50,14 +54,28 @@ export function MotionCard({
   const glareBg = useMotionTemplate`radial-gradient(circle at ${glareX} ${glareY}, color-mix(in oklch, var(--gold) 45%, transparent), transparent 55%)`;
 
   function handleMove(e: PointerEvent<HTMLDivElement>) {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    px.set((e.clientX - rect.left) / rect.width - 0.5);
-    py.set((e.clientY - rect.top) / rect.height - 0.5);
+    if (shouldReduceMotion) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+    }
+
+    rafId.current = requestAnimationFrame(() => {
+      const el = ref.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      px.set((clientX - rect.left) / rect.width - 0.5);
+      py.set((clientY - rect.top) / rect.height - 0.5);
+    });
   }
 
   function handleLeave() {
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
     px.set(0);
     py.set(0);
   }
@@ -68,11 +86,16 @@ export function MotionCard({
         ref={ref}
         onPointerMove={handleMove}
         onPointerLeave={handleLeave}
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        className={cn("relative h-full", radiusClass, className)}
+        style={{
+          rotateX,
+          rotateY,
+          transformStyle: "preserve-3d",
+          willChange: shouldReduceMotion ? "auto" : "transform",
+        }}
+        className={cn("relative h-full transition-[box-shadow,border-color] duration-200", radiusClass, className)}
       >
         {children}
-        {glare ? (
+        {glare && !shouldReduceMotion ? (
           <motion.div
             aria-hidden
             style={{ background: glareBg }}

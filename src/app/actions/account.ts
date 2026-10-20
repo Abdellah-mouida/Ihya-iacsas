@@ -42,6 +42,10 @@ export interface UserAccountData {
     city: string | null;
     age: number | null;
     image: string | null;
+    coverImage: string | null;
+    theme: string | null;
+    reduceMotion: boolean;
+    locale: string | null;
     emailVerified: string | null;
     hasPassword: boolean;
     termsAcceptedAt: string | null;
@@ -237,6 +241,10 @@ export async function getUserAccountData(): Promise<{
           hasPassword: Boolean(user.passwordHash),
           termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
           createdAt: user.createdAt.toISOString(),
+          coverImage: (user as any).coverImage || null,
+          theme: (user as any).theme || "oasis",
+          reduceMotion: Boolean((user as any).reduceMotion),
+          locale: (user as any).locale || "ar",
           bio: user.bio,
           studyLevel: user.studyLevel,
           institution: user.institution,
@@ -489,6 +497,8 @@ export async function updateUserProfile(
     touchUserActive(session.user.id).catch(() => {});
 
     safeRevalidatePath("/account");
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
     safeRevalidatePath("/onboarding");
 
     return {

@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronLeft,
   LogOut,
+  Settings,
   Shield,
   User as UserIcon,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/common/language-switcher";
+import { RoleBadge } from "@/components/common/role-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -264,12 +266,15 @@ export function GlassNavbar({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 rounded-2xl border border-border/60 bg-popover/95 p-1.5 shadow-layered backdrop-blur-xl"
+                  className="w-64 rounded-2xl border border-border/60 bg-popover/95 p-2 shadow-layered backdrop-blur-xl"
                 >
-                  <DropdownMenuLabel className="px-3 py-2">
-                    <p className="font-heading text-sm font-bold text-foreground truncate">
-                      {session.user.name || t("nav.brand")}
-                    </p>
+                  <DropdownMenuLabel className="px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="font-heading text-sm font-bold text-foreground truncate">
+                        {session.user.name || t("nav.brand")}
+                      </p>
+                      <RoleBadge role={session.user.role || "USER"} size="sm" />
+                    </div>
                     <p className="text-xs text-muted-foreground truncate font-sans">
                       {session.user.email}
                     </p>
@@ -293,6 +298,16 @@ export function GlassNavbar({
                     >
                       <Calendar className="size-4" />
                       {t("nav.myBookings")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/settings"
+                      data-testid="navbar-settings-link"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Settings className="size-4" />
+                      {t("nav.settings")}
                     </Link>
                   </DropdownMenuItem>
                   {session.user.role === "ADMIN" || session.user.role === "MODERATOR" ? (

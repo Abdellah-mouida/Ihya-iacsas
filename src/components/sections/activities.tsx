@@ -27,38 +27,46 @@ export function Activities() {
           viewport={viewportOnce}
           className="mt-14 grid gap-6 md:grid-cols-3"
         >
-          {ACTIVITIES.map((item) => (
+          {ACTIVITIES.map((item, idx) => (
             <motion.div key={item.num} variants={fadeUp} className="group h-full">
-              <MotionCard intensity={11} className="h-full">
-                <div className="glass preserve-3d relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl p-8 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1.5 group-hover:ring-1 group-hover:ring-brass/40 group-hover:shadow-layered dark:group-hover:shadow-[0_28px_70px_rgba(0,0,0,0.45)]">
-                  {/* subtle girih texture inside the card */}
+              <MotionCard intensity={10} className="h-full">
+                <div className="glass preserve-3d relative flex h-full flex-col gap-5 overflow-hidden rounded-3xl p-8 sm:p-9 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 group-hover:shadow-2xl">
+                  {/* Subtle corner ornament watermark */}
                   <div
                     aria-hidden
-                    className="pattern-islamic pointer-events-none absolute inset-0 opacity-50"
-                  />
-                  {/* number watermark */}
-                  <span className="pointer-events-none absolute -top-4 end-3 font-heading text-8xl font-bold text-foreground/[0.05]">
-                    {item.num}
-                  </span>
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_25%,transparent),transparent_70%)] opacity-20 blur-xl transition-opacity duration-500 group-hover:opacity-50"
+                    className="pointer-events-none absolute -top-8 -end-8 size-32 opacity-[0.07] dark:opacity-[0.14] transition-transform duration-500 group-hover:scale-110"
+                    style={{
+                      backgroundImage: `url('/patterns/corner-ornament.svg')`,
+                      backgroundSize: "contain",
+                      backgroundRepeat: "no-repeat",
+                    }}
                   />
 
-                  <span
-                    style={{ transform: "translateZ(40px)" }}
-                    className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25 dark:text-gold"
-                  >
-                    <item.icon className="size-7" />
-                  </span>
-                  <div
-                    style={{ transform: "translateZ(24px)" }}
-                    className="mt-auto flex flex-col gap-2"
-                  >
-                    <span className="text-sm font-semibold text-brass dark:text-gold">
+                  {/* Top Header Row with Icon and Numeral */}
+                  <div className="flex items-center justify-between">
+                    <span
+                      style={{ transform: "translateZ(30px)" }}
+                      className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-sm transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground"
+                    >
+                      <item.icon className="size-7" />
+                    </span>
+                    <span className="font-heading text-4xl sm:text-5xl font-extrabold text-foreground/15 dark:text-foreground/20 font-mono">
                       {item.num}
                     </span>
-                    <h3 className="font-heading text-2xl font-semibold">
+                  </div>
+
+                  {/* Body Content */}
+                  <div
+                    style={{ transform: "translateZ(20px)" }}
+                    className="mt-auto flex flex-col gap-2.5 pt-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-1.5 w-6 rounded-full bg-primary/60" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        {idx === 0 ? "01 / FIELD" : idx === 1 ? "02 / MIND" : "03 / IMPACT"}
+                      </span>
+                    </div>
+                    <h3 className="font-heading text-2xl font-bold tracking-tight">
                       {t(item.titleKey)}
                     </h3>
                     <p className="text-sm leading-relaxed text-muted-foreground">

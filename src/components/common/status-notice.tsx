@@ -15,11 +15,14 @@ export type StatusNoticeVariant =
 
 interface StatusNoticeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: StatusNoticeVariant;
+  size?: "sm" | "md" | "lg";
   title?: string;
   description?: string;
+  message?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
   children?: React.ReactNode;
+  testId?: string;
 }
 
 const variantStyles: Record<
@@ -77,19 +80,46 @@ const variantStyles: Record<
 
 export function StatusNotice({
   variant = "info",
+  size = "md",
   title,
   description,
+  message,
   icon,
   action,
   children,
   className,
+  testId,
   ...props
 }: StatusNoticeProps) {
   const config = variantStyles[variant];
+  const textContent = message || description;
+
+  if (size === "sm") {
+    return (
+      <span
+        role="status"
+        data-testid={testId}
+        className={cn(
+          "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border backdrop-blur-sm",
+          config.container,
+          className,
+        )}
+        {...props}
+      >
+        <span className={cn("shrink-0", config.iconColor)}>
+          {icon ?? config.defaultIcon}
+        </span>
+        {title && <span className={config.titleColor}>{title}</span>}
+        {textContent && <span>{textContent}</span>}
+        {children}
+      </span>
+    );
+  }
 
   return (
     <div
       role="status"
+      data-testid={testId}
       className={cn(
         "relative flex w-full gap-3.5 rounded-2xl border p-4 backdrop-blur-sm transition-all duration-200",
         config.container,
@@ -100,18 +130,14 @@ export function StatusNotice({
       <div className={cn("mt-0.5", config.iconColor)}>
         {icon ?? config.defaultIcon}
       </div>
-
       <div className="flex-1 space-y-1">
-        {title && <h5 className={cn("text-sm", config.titleColor)}>{title}</h5>}
-        {description && (
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {description}
-          </p>
+        {title && <h4 className={config.titleColor}>{title}</h4>}
+        {textContent && (
+          <p className="text-sm leading-relaxed opacity-90">{textContent}</p>
         )}
         {children}
       </div>
-
-      {action && <div className="shrink-0 self-center">{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

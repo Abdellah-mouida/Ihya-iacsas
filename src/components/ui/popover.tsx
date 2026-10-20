@@ -26,6 +26,7 @@ function PopoverContent({
   className,
   align = "start",
   sideOffset = 6,
+  children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
@@ -35,11 +36,18 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "bg-card/95 backdrop-blur-xl text-card-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 rounded-2xl border border-border/70 p-4 shadow-2xl outline-hidden",
+          "bg-card/95 backdrop-blur-xl text-card-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 rounded-2xl border border-border/70 p-4 shadow-2xl outline-hidden relative overflow-hidden",
           className
         )}
         {...props}
-      />
+      >
+        {/* Subtle Popover Islamic Texture */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.05] dark:opacity-[0.08] [mask-image:url(/patterns/girih.svg)] [mask-size:44px_44px] [mask-repeat:repeat] bg-gradient-to-b from-brass via-primary to-transparent"
+        />
+        {children}
+      </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
   )
 }

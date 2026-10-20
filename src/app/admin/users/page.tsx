@@ -967,20 +967,20 @@ export default function AdminUsersPage() {
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
         <DialogContent
           data-testid="user-details-dialog"
-          className="sm:max-w-lg rounded-2xl max-h-[85vh] overflow-y-auto"
+          className="w-[95vw] sm:max-w-2xl rounded-2xl max-h-[min(90dvh,850px)] flex flex-col p-0 overflow-hidden shadow-2xl"
         >
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+          <DialogHeader className="p-5 sm:p-6 pb-4 border-b border-border/60 shrink-0 bg-card/80 backdrop-blur-md sticky top-0 z-10">
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
               <Eye className="size-5 text-primary" />
               {t("adminUsers.detailsModalTitle")}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {t("adminUsers.detailsModalSub")}
             </DialogDescription>
           </DialogHeader>
 
           {selectedUser && (
-            <div className="space-y-6 py-2">
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-6 scrollbar-thin">
               {/* Profile Card */}
               <div className="p-4 rounded-xl bg-muted/40 border border-border/60 flex items-center gap-4">
                 <UserAvatar
@@ -1080,36 +1080,36 @@ export default function AdminUsersPage() {
                 (selectedUser.skills && selectedUser.skills.length > 0) ||
                 (selectedUser.languages && selectedUser.languages.length > 0) ||
                 (selectedUser.volunteerAreas && selectedUser.volunteerAreas.length > 0) ? (
-                  <div className="space-y-3 p-3.5 rounded-xl bg-card border border-border/60 text-xs">
+                  <div className="space-y-3 p-3.5 rounded-xl bg-muted/20 border border-border/40 text-xs">
                     {selectedUser.bio && (
-                      <div>
-                        <span className="text-[11px] text-muted-foreground block font-medium">
-                          {t("adminUsers.detailsBio")}
+                      <div data-testid="admin-details-bio">
+                        <span className="text-muted-foreground block text-[11px]">
+                          {t("account.bioLabel")}
                         </span>
-                        <p className="mt-1 text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 p-2.5 rounded-lg border border-border/40">
+                        <p className="mt-0.5 text-foreground leading-relaxed whitespace-pre-wrap">
                           {selectedUser.bio}
                         </p>
                       </div>
                     )}
 
                     {(selectedUser.studyLevel || selectedUser.institution) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-border/40">
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
                         {selectedUser.studyLevel && (
-                          <div>
-                            <span className="text-[11px] text-muted-foreground block font-medium">
-                              {t("adminUsers.detailsStudy")}
+                          <div data-testid="admin-details-studylevel">
+                            <span className="text-muted-foreground block text-[11px]">
+                              {t("account.studyLevelLabel")}
                             </span>
-                            <span className="font-semibold text-foreground block mt-0.5">
+                            <span className="font-medium text-foreground mt-0.5 block">
                               {selectedUser.studyLevel}
                             </span>
                           </div>
                         )}
                         {selectedUser.institution && (
-                          <div>
-                            <span className="text-[11px] text-muted-foreground block font-medium">
-                              {t("adminUsers.detailsInstitution")}
+                          <div data-testid="admin-details-institution">
+                            <span className="text-muted-foreground block text-[11px]">
+                              {t("account.institutionLabel")}
                             </span>
-                            <span className="font-semibold text-foreground block mt-0.5">
+                            <span className="font-medium text-foreground mt-0.5 block">
                               {selectedUser.institution}
                             </span>
                           </div>
@@ -1118,15 +1118,15 @@ export default function AdminUsersPage() {
                     )}
 
                     {selectedUser.interests && selectedUser.interests.length > 0 && (
-                      <div className="pt-1 border-t border-border/40">
-                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
-                          {t("adminUsers.detailsInterests")}
+                      <div data-testid="admin-details-interests" className="pt-1 border-t border-border/30">
+                        <span className="text-muted-foreground block text-[11px] mb-1">
+                          {t("account.interestsLabel")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedUser.interests.map((item, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px]"
+                              className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-medium"
                             >
                               {item}
                             </span>
@@ -1136,15 +1136,15 @@ export default function AdminUsersPage() {
                     )}
 
                     {selectedUser.skills && selectedUser.skills.length > 0 && (
-                      <div className="pt-1 border-t border-border/40">
-                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
-                          {t("adminUsers.detailsSkills")}
+                      <div data-testid="admin-details-skills" className="pt-1 border-t border-border/30">
+                        <span className="text-muted-foreground block text-[11px] mb-1">
+                          {t("account.skillsLabel")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedUser.skills.map((item, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 text-[11px]"
+                              className="px-2 py-0.5 rounded-md bg-secondary/20 text-secondary-foreground text-[11px] font-medium"
                             >
                               {item}
                             </span>
@@ -1154,15 +1154,15 @@ export default function AdminUsersPage() {
                     )}
 
                     {selectedUser.languages && selectedUser.languages.length > 0 && (
-                      <div className="pt-1 border-t border-border/40">
-                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
-                          {t("adminUsers.detailsLanguages")}
+                      <div data-testid="admin-details-languages" className="pt-1 border-t border-border/30">
+                        <span className="text-muted-foreground block text-[11px] mb-1">
+                          {t("account.languagesLabel")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedUser.languages.map((item, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[11px]"
+                              className="px-2 py-0.5 rounded-md bg-muted text-foreground text-[11px] font-medium border border-border/40"
                             >
                               {item}
                             </span>
@@ -1172,15 +1172,15 @@ export default function AdminUsersPage() {
                     )}
 
                     {selectedUser.volunteerAreas && selectedUser.volunteerAreas.length > 0 && (
-                      <div className="pt-1 border-t border-border/40">
-                        <span className="text-[11px] text-muted-foreground block font-medium mb-1">
-                          {t("adminUsers.detailsVolunteer")}
+                      <div data-testid="admin-details-volunteer" className="pt-1 border-t border-border/30">
+                        <span className="text-muted-foreground block text-[11px] mb-1">
+                          {t("account.volunteerAreasLabel")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedUser.volunteerAreas.map((item, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 text-[11px]"
+                              className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium"
                             >
                               {item}
                             </span>
@@ -1190,13 +1190,13 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
+                  <p className="text-xs text-muted-foreground italic p-3 rounded-xl bg-muted/20 border border-border/40">
                     {t("adminUsers.detailsNoOptional")}
-                  </div>
+                  </p>
                 )}
               </div>
 
-              {/* Audit Trail */}
+              {/* Audit Trail Section */}
               <div>
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                   <Activity className="size-3.5 text-primary" />
@@ -1245,7 +1245,7 @@ export default function AdminUsersPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="p-4 sm:p-5 border-t border-border/60 shrink-0 bg-card/80 backdrop-blur-md sticky bottom-0 z-10">
             <Button
               variant="outline"
               onClick={() => setDetailsDialogOpen(false)}

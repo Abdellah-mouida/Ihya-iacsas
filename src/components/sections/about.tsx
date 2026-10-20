@@ -91,21 +91,26 @@ export function About() {
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            {ABOUT_CARDS.map((card) => (
+            {ABOUT_CARDS.map((card, idx) => (
               <MotionCard
                 key={card.titleKey}
-                intensity={10}
+                intensity={8}
                 radiusClass="rounded-2xl"
-                wrapperClassName="group"
+                wrapperClassName="group h-full"
               >
-                <div className="glass flex h-full flex-col gap-3 rounded-2xl p-5 transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-1 hover:ring-brass/30">
-                  <span className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25">
-                    <card.icon className="size-5" />
-                  </span>
-                  <h3 className="font-heading text-lg font-semibold">
+                <div className="glass relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                      <card.icon className="size-5" />
+                    </span>
+                    <span className="text-xs font-mono font-bold text-muted-foreground/40">
+                      0{idx + 1}
+                    </span>
+                  </div>
+                  <h3 className="font-heading text-lg font-bold text-foreground">
                     {t(card.titleKey)}
                   </h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
+                  <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground">
                     {t(card.descKey)}
                   </p>
                 </div>

@@ -125,6 +125,10 @@ model User {
   languages             String[]  @default([])
   volunteerAreas        String[]  @default([])
   imagePublicId         String?
+  coverImage            String?
+  coverImagePublicId    String?
+  theme                 String?   @default("oasis")
+  reduceMotion          Boolean   @default(false)
   locale                String?   @default("ar")
   role                  Role      @default(USER)
   lastLoginAt           DateTime?

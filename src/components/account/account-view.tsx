@@ -54,6 +54,7 @@ import { notify } from "@/lib/toast";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { RoleBadge } from "@/components/common/role-badge";
+import { StatusNotice } from "@/components/common/status-notice";
 import { cn } from "@/lib/utils";
 
 const INTEREST_PRESETS = {
@@ -80,7 +81,7 @@ interface AccountViewProps {
   initialData: UserAccountData;
 }
 
-type TabType = "profile" | "bookings" | "preferences" | "security";
+type TabType = "profile" | "bookings" | "preferences" | "security" | "privacy";
 
 export function AccountView({ initialData }: AccountViewProps) {
   const { t, locale, setLocale } = useLocale();
@@ -93,7 +94,7 @@ export function AccountView({ initialData }: AccountViewProps) {
 
   const initialTab = (searchParams.get("tab") as TabType) || "profile";
   const [activeTab, setActiveTab] = useState<TabType>(
-    ["profile", "bookings", "preferences", "security"].includes(initialTab) ? initialTab : "profile",
+    ["profile", "bookings", "preferences", "security", "privacy"].includes(initialTab) ? initialTab : "profile",
   );
 
   // User state
@@ -105,11 +106,16 @@ export function AccountView({ initialData }: AccountViewProps) {
   const [city, setCity] = useState(userData.city || "");
   const [age, setAge] = useState(userData.age ? String(userData.age) : "");
   const [profileImage, setProfileImage] = useState<string | null>(userData.image);
+  const [coverImage, setCoverImage] = useState<string | null>(userData.coverImage || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
+  const [coverCropperOpen, setCoverCropperOpen] = useState(false);
   const [rawCropImage, setRawCropImage] = useState<string | null>(null);
+  const [rawCoverCropImage, setRawCoverCropImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
 
   // Optional Profile Details state (Task 9)
   const [bio, setBio] = useState(userData.bio || "");
@@ -151,10 +157,31 @@ export function AccountView({ initialData }: AccountViewProps) {
     e.target.value = "";
   };
 
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      notify.error(t("account.errPhotoTooLarge"));
+      e.target.value = "";
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setRawCoverCropImage(objectUrl);
+    setCoverCropperOpen(true);
+    e.target.value = "";
+  };
+
   const handleCropComplete = (result: { file: File; blobUrl: string }) => {
     setImageFile(result.file);
     setRemoveImage(false);
     setProfileImage(result.blobUrl);
+  };
+
+  const handleCoverCropComplete = (result: { file: File; blobUrl: string }) => {
+    setCoverFile(result.file);
+    setCoverImage(result.blobUrl);
   };
 
   const handleRemovePhoto = () => {
@@ -164,6 +191,19 @@ export function AccountView({ initialData }: AccountViewProps) {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handleSelectDefaultCover = async (patternUrl: string) => {
+    setCoverFile(null);
+    setCoverImage(patternUrl);
+    try {
+      await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverImage: patternUrl }),
+      });
+      notify.success(t("account.profileUpdated"));
+    } catch {}
   };
 
   const handleProfileSubmit = (e: React.FormEvent) => {
@@ -204,6 +244,31 @@ export function AccountView({ initialData }: AccountViewProps) {
 
       const res = await updateUserProfile(formData, locale);
       if (res.success && res.user) {
+        if (coverFile) {
+          try {
+            const coverData = new FormData();
+            coverData.append("file", coverFile);
+            coverData.append("folder", "covers");
+            const uploadRes = await fetch("/api/upload", {
+              method: "POST",
+              body: coverData,
+            });
+            const uploadJson = await uploadRes.json();
+            if (uploadJson.url) {
+              setCoverImage(uploadJson.url);
+              await fetch("/api/user/preferences", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  coverImage: uploadJson.url,
+                  coverImagePublicId: uploadJson.publicId,
+                }),
+              });
+            }
+          } catch (uploadErr) {
+            console.error("Cover upload error:", uploadErr);
+          }
+        }
         setUserData((prev) => ({
           ...prev,
           name: res.user!.name,
@@ -306,8 +371,26 @@ export function AccountView({ initialData }: AccountViewProps) {
       <div className="mb-8 sm:mb-10 space-y-6">
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-lg shadow-black/5">
           {/* Header Cover Banner */}
-          <div className="relative h-32 sm:h-44 w-full overflow-hidden bg-gradient-to-r from-primary/20 via-primary/10 to-brass/20">
-            <div className="pattern-islamic absolute inset-0 opacity-25" />
+          <div className="relative h-36 sm:h-52 w-full overflow-hidden bg-gradient-to-r from-primary/20 via-primary/10 to-brass/20">
+            {coverImage ? (
+              coverImage.startsWith("/patterns/") ? (
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-30"
+                  style={{ backgroundImage: `url(${coverImage})` }}
+                />
+              ) : (
+                <Image
+                  src={coverImage}
+                  alt="Profile Cover"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              )
+            ) : (
+              <div className="pattern-islamic absolute inset-0 opacity-25" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
             <div className="pointer-events-none absolute -end-16 -top-16 size-64 rounded-full bg-primary/20 blur-3xl" />
             <div className="pointer-events-none absolute -start-16 -bottom-16 size-64 rounded-full bg-brass/20 blur-3xl" />
           </div>
@@ -457,6 +540,23 @@ export function AccountView({ initialData }: AccountViewProps) {
           <Shield className="size-4" />
           <span>{t("account.tabSecurity")}</span>
         </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "privacy"}
+          aria-controls="account-privacy-section"
+          data-testid="tab-privacy-btn"
+          onClick={() => handleTabChange("privacy")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-heading text-sm font-semibold transition-all shrink-0 ${
+            activeTab === "privacy"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Sparkles className="size-4" />
+          <span>{t("account.tabPrivacy")}</span>
+        </button>
       </div>
 
       {/* Tab 1: Profile */}
@@ -469,6 +569,77 @@ export function AccountView({ initialData }: AccountViewProps) {
           className="bg-card/70 backdrop-blur-xl border border-border/80 rounded-3xl p-6 sm:p-10 shadow-lg shadow-black/5"
         >
           <form onSubmit={handleProfileSubmit} className="space-y-8">
+            {/* Cover Banner Section */}
+            <div>
+              <Label className="block text-sm font-semibold text-foreground mb-4">
+                {t("account.profileCover")}
+              </Label>
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    ref={coverFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleCoverSelect}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    data-testid="account-upload-cover-btn"
+                    onClick={() => coverFileInputRef.current?.click()}
+                    className="rounded-xl border-border/80 flex items-center gap-2 text-sm"
+                  >
+                    <Camera className="size-4" />
+                    <span>{coverImage ? t("account.changeCover") : t("account.uploadCover")}</span>
+                  </Button>
+
+                  {coverImage && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      data-testid="account-remove-cover-btn"
+                      onClick={() => handleSelectDefaultCover("")}
+                      className="rounded-xl text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm"
+                    >
+                      <Trash2 className="size-4" />
+                      <span>{t("account.removeCover")}</span>
+                    </Button>
+                  )}
+                </div>
+
+                {/* Default Preset Covers */}
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {t("account.defaultCovers")}
+                  </span>
+                  <div className="flex flex-wrap gap-2.5">
+                    {[
+                      { id: "girih", url: "/patterns/girih.svg", label: "Girih" },
+                      { id: "octagon", url: "/patterns/octagon-tile.svg", label: "Octagon" },
+                      { id: "mandala", url: "/patterns/mandala.svg", label: "Mandala" },
+                      { id: "star-rosette", url: "/patterns/star-rosette.svg", label: "Rosette" },
+                      { id: "geometric", url: "/patterns/interlocking-geometric.svg", label: "Geometric" },
+                    ].map((pat) => (
+                      <button
+                        key={pat.id}
+                        type="button"
+                        onClick={() => handleSelectDefaultCover(pat.url)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all",
+                          coverImage === pat.url
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border/70 hover:border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {pat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Avatar Section */}
             <div>
               <Label className="block text-sm font-semibold text-foreground mb-4">
@@ -860,50 +1031,50 @@ export function AccountView({ initialData }: AccountViewProps) {
                       </div>
 
                       <div className="space-y-2">
-                        {/* Status Badge */}
+                        {/* Status Badge using StatusNotice */}
                         <div>
                           {isConfirmed && (
-                            <span
-                              data-testid={`booking-status-${booking.id}`}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                            >
-                              <CheckCircle2 className="size-3.5" />
-                              <span>{t("account.statusConfirmed")}</span>
-                            </span>
+                            <StatusNotice
+                              variant="success"
+                              size="sm"
+                              icon={<CheckCircle2 className="size-3.5" />}
+                              message={t("account.statusConfirmed")}
+                              testId={`booking-status-${booking.id}`}
+                            />
                           )}
                           {isPendingStatus && (
-                            <span
-                              data-testid={`booking-status-${booking.id}`}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                            >
-                              <Clock className="size-3.5" />
-                              <span>{t("account.statusPending")}</span>
-                            </span>
+                            <StatusNotice
+                              variant="warning"
+                              size="sm"
+                              icon={<Clock className="size-3.5" />}
+                              message={t("account.statusPending")}
+                              testId={`booking-status-${booking.id}`}
+                            />
                           )}
                           {isWaitlisted && (
-                            <span
-                              data-testid={`booking-status-${booking.id}`}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
-                            >
-                              <ListOrdered className="size-3.5" />
-                              <span>
-                                {booking.waitlistOrder
+                            <StatusNotice
+                              variant="info"
+                              size="sm"
+                              icon={<ListOrdered className="size-3.5" />}
+                              message={
+                                booking.waitlistOrder
                                   ? t("account.statusWaitlisted").replace(
                                       "#{order}",
                                       String(booking.waitlistOrder),
                                     )
-                                  : t("account.statusWaitlistedGeneral")}
-                              </span>
-                            </span>
+                                  : t("account.statusWaitlistedGeneral")
+                              }
+                              testId={`booking-status-${booking.id}`}
+                            />
                           )}
                           {isRejected && (
-                            <span
-                              data-testid={`booking-status-${booking.id}`}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                            >
-                              <XCircle className="size-3.5" />
-                              <span>{t("account.statusRejected")}</span>
-                            </span>
+                            <StatusNotice
+                              variant="error"
+                              size="sm"
+                              icon={<XCircle className="size-3.5" />}
+                              message={t("account.statusRejected")}
+                              testId={`booking-status-${booking.id}`}
+                            />
                           )}
                         </div>
 
@@ -991,54 +1162,54 @@ export function AccountView({ initialData }: AccountViewProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 {
-                  id: "light",
-                  name: t("account.themeLightEditorial"),
-                  desc: t("account.themeLightEditorialDesc"),
+                  id: "oasis",
+                  name: t("account.themeOasis"),
+                  desc: t("account.themeOasisDesc"),
                   bg: "bg-[#fbf9f4] text-[#332a24]",
                   primary: "bg-[#0a5417]",
                   accent: "bg-[#b8860b]",
                   isDark: false,
                 },
                 {
-                  id: "dark",
-                  name: t("account.themeDarkNight"),
-                  desc: t("account.themeDarkNightDesc"),
-                  bg: "bg-[#181a24] text-[#f2ede6]",
-                  primary: "bg-[#c59b27]",
-                  accent: "bg-[#2563eb]",
-                  isDark: true,
-                },
-                {
-                  id: "amoled",
-                  name: t("account.themeAmoled"),
-                  desc: t("account.themeAmoledDesc"),
-                  bg: "bg-[#000000] text-[#ffffff] border-white/20",
-                  primary: "bg-[#d4af37]",
-                  accent: "bg-[#10b981]",
-                  isDark: true,
-                },
-                {
-                  id: "emerald",
-                  name: t("account.themeEmerald"),
-                  desc: t("account.themeEmeraldDesc"),
-                  bg: "bg-[#0c2419] text-[#e8f5e9]",
-                  primary: "bg-[#10b981]",
-                  accent: "bg-[#f59e0b]",
-                  isDark: true,
-                },
-                {
-                  id: "ochre",
-                  name: t("account.themeMoroccanOchre"),
-                  desc: t("account.themeMoroccanOchreDesc"),
+                  id: "sunset",
+                  name: t("account.themeSunset"),
+                  desc: t("account.themeSunsetDesc"),
                   bg: "bg-[#fbf4eb] text-[#3e2723]",
                   primary: "bg-[#c85a17]",
                   accent: "bg-[#d97706]",
                   isDark: false,
                 },
                 {
-                  id: "indigo",
-                  name: t("account.themeMidnightIndigo"),
-                  desc: t("account.themeMidnightIndigoDesc"),
+                  id: "majorelle",
+                  name: t("account.themeMajorelle"),
+                  desc: t("account.themeMajorelleDesc"),
+                  bg: "bg-[#0a192f] text-[#f1f5f9] border-[#0038a8]/40",
+                  primary: "bg-[#0038a8]",
+                  accent: "bg-[#f59e0b]",
+                  isDark: true,
+                },
+                {
+                  id: "obsidian",
+                  name: t("account.themeObsidian"),
+                  desc: t("account.themeObsidianDesc"),
+                  bg: "bg-[#000000] text-[#ffffff] border-white/20",
+                  primary: "bg-[#d4af37]",
+                  accent: "bg-[#10b981]",
+                  isDark: true,
+                },
+                {
+                  id: "ember",
+                  name: t("account.themeEmber"),
+                  desc: t("account.themeEmberDesc"),
+                  bg: "bg-[#141212] text-[#fce7d2] border-[#ea580c]/30",
+                  primary: "bg-[#ea580c]",
+                  accent: "bg-[#eab308]",
+                  isDark: true,
+                },
+                {
+                  id: "midnight",
+                  name: t("account.themeMidnight"),
+                  desc: t("account.themeMidnightDesc"),
                   bg: "bg-[#0f172a] text-[#f8fafc]",
                   primary: "bg-[#6366f1]",
                   accent: "bg-[#eab308]",
@@ -1046,35 +1217,29 @@ export function AccountView({ initialData }: AccountViewProps) {
                 },
               ].map((th) => {
                 const isSelected =
-                  (th.id === "light" && (!theme || theme === "light")) ||
-                  (th.id === "dark" && theme === "dark") ||
+                  (th.id === "oasis" && (!theme || theme === "light" || (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "oasis"))) ||
                   (typeof document !== "undefined" &&
-                    document.documentElement.getAttribute("data-theme") === th.id);
+                    document.documentElement.getAttribute("data-theme") === th.id) ||
+                  (th.id === "obsidian" && (typeof document !== "undefined" && (document.documentElement.getAttribute("data-theme") === "obsidian" || document.documentElement.getAttribute("data-theme") === "amoled"))) ||
+                  (th.id === "midnight" && theme === "dark" && typeof document !== "undefined" && !document.documentElement.getAttribute("data-theme"));
 
                 return (
                   <button
                     key={th.id}
                     type="button"
-                    onClick={() => {
-                      if (th.id === "light") {
-                        setTheme("light");
-                        document.documentElement.removeAttribute("data-theme");
-                        try {
-                          localStorage.removeItem("ihyaa-theme");
-                        } catch {}
-                      } else if (th.id === "dark") {
-                        setTheme("dark");
-                        document.documentElement.removeAttribute("data-theme");
-                        try {
-                          localStorage.removeItem("ihyaa-theme");
-                        } catch {}
-                      } else {
-                        setTheme(th.isDark ? "dark" : "light");
-                        document.documentElement.setAttribute("data-theme", th.id);
-                        try {
-                          localStorage.setItem("ihyaa-theme", th.id);
-                        } catch {}
-                      }
+                    data-testid={`theme-card-${th.id}`}
+                    onClick={async () => {
+                      setTheme(th.isDark ? "dark" : "light");
+                      document.documentElement.setAttribute("data-theme", th.id);
+                      try {
+                        localStorage.setItem("ihyaa-theme", th.id);
+                        document.cookie = `ihyaa-theme=${th.id}; path=/; max-age=31536000; SameSite=Lax`;
+                        await fetch("/api/user/preferences", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ theme: th.id }),
+                        });
+                      } catch {}
                       notify.success(th.name);
                     }}
                     className={`relative text-start p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between h-40 ${
@@ -1107,6 +1272,47 @@ export function AccountView({ initialData }: AccountViewProps) {
             </div>
           </div>
 
+          {/* Reduce Motion Accessibility Setting */}
+          <div className="pt-8 border-t border-border/60 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="font-heading font-bold text-foreground">
+                  {t("account.reduceMotionTitle")}
+                </h3>
+                <p className="text-muted-foreground text-xs sm:text-sm">
+                  {t("account.reduceMotionDesc")}
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant={userData.reduceMotion ? "default" : "outline"}
+                data-testid="toggle-reduce-motion-btn"
+                onClick={async () => {
+                  const nextVal = !userData.reduceMotion;
+                  setUserData((prev) => ({ ...prev, reduceMotion: nextVal }));
+                  try {
+                    document.cookie = `ihyaa-reduce-motion=${String(nextVal)}; path=/; max-age=31536000; SameSite=Lax`;
+                    if (nextVal) {
+                      document.documentElement.classList.add("reduce-motion");
+                    } else {
+                      document.documentElement.classList.remove("reduce-motion");
+                    }
+                    await fetch("/api/user/preferences", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ reduceMotion: nextVal }),
+                    });
+                    notify.success(t("account.profileUpdated"));
+                  } catch {}
+                }}
+                className="rounded-xl px-5 h-10 font-heading font-semibold shrink-0"
+              >
+                {userData.reduceMotion ? "On" : "Off"}
+              </Button>
+            </div>
+          </div>
+
           {/* Language Switcher */}
           <div className="pt-8 border-t border-border/60 space-y-4">
             <div>
@@ -1122,7 +1328,16 @@ export function AccountView({ initialData }: AccountViewProps) {
               <Button
                 type="button"
                 variant={locale === "ar" ? "default" : "outline"}
-                onClick={() => setLocale("ar")}
+                onClick={async () => {
+                  setLocale("ar");
+                  try {
+                    await fetch("/api/user/preferences", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ locale: "ar" }),
+                    });
+                  } catch {}
+                }}
                 className="rounded-xl px-5 h-10 font-heading font-semibold"
               >
                 العربية (RTL)
@@ -1130,7 +1345,16 @@ export function AccountView({ initialData }: AccountViewProps) {
               <Button
                 type="button"
                 variant={locale === "en" ? "default" : "outline"}
-                onClick={() => setLocale("en")}
+                onClick={async () => {
+                  setLocale("en");
+                  try {
+                    await fetch("/api/user/preferences", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ locale: "en" }),
+                    });
+                  } catch {}
+                }}
                 className="rounded-xl px-5 h-10 font-heading font-semibold"
               >
                 English (LTR)
@@ -1299,6 +1523,55 @@ export function AccountView({ initialData }: AccountViewProps) {
         </div>
       )}
 
+      {/* Tab 5: Privacy & Data */}
+      {activeTab === "privacy" && (
+        <div
+          id="account-privacy-section"
+          role="tabpanel"
+          aria-labelledby="tab-privacy-btn"
+          data-testid="account-privacy-section"
+          className="bg-card/70 backdrop-blur-xl border border-border/80 rounded-3xl p-6 sm:p-10 shadow-lg shadow-black/5 space-y-8"
+        >
+          <div>
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-foreground mb-1">
+              {t("account.tabPrivacy")}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {t("account.privacyNoticeText")}
+            </p>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-muted/40 border border-border/80 space-y-4">
+            <div className="flex items-start gap-3">
+              <Shield className="size-5 text-primary shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="font-heading font-bold text-foreground text-sm">
+                  {t("terms.title")} &amp; {t("account.privacyNoticeLink")}
+                </h4>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {t("terms.secAcceptableUseBody")}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/60 flex flex-wrap gap-3">
+              <Link href="/privacy" className="inline-flex">
+                <Button type="button" variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs">
+                  <ExternalLink className="size-3.5" />
+                  <span>{t("privacy.title")}</span>
+                </Button>
+              </Link>
+              <Link href="/terms" className="inline-flex">
+                <Button type="button" variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs">
+                  <ExternalLink className="size-3.5" />
+                  <span>{t("terms.title")}</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Profile Avatar Cropper Dialog */}
       <ImageCropperDialog
         open={cropperOpen}
@@ -1310,6 +1583,19 @@ export function AccountView({ initialData }: AccountViewProps) {
         titleAr="اقتصاص الصورة الشخصية"
         titleEn="Crop Profile Photo"
         onCropComplete={handleCropComplete}
+      />
+
+      {/* Cover Cropper Dialog */}
+      <ImageCropperDialog
+        open={coverCropperOpen}
+        onOpenChange={setCoverCropperOpen}
+        imageSrc={rawCoverCropImage}
+        cropShape="rect"
+        aspect={16 / 9}
+        maxDimensions={{ width: 1920, height: 1080 }}
+        titleAr="اقتصاص غلاف الحساب"
+        titleEn="Crop Profile Cover"
+        onCropComplete={handleCoverCropComplete}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { PageBackground } from "@/components/common/page-background";
 import { About } from "@/components/sections/about";
 import { Activities } from "@/components/sections/activities";
 import { Branches } from "@/components/sections/branches";
@@ -13,13 +14,12 @@ import { Program } from "@/components/sections/program";
 export default async function Home() {
   const session = await auth();
   return (
-    <>
+    <PageBackground variant="default">
       <GlassNavbar initialSession={session} />
       <main>
         <Hero />
-        {/* Ambient radial-gradient backdrop for the homepage — everything
-            below the hero (the hero keeps its own photo background). */}
-        <div className="relative bg-fixed bg-[radial-gradient(55%_45%_at_18%_12%,color-mix(in_oklch,var(--brass)_9%,transparent),transparent_60%),radial-gradient(50%_50%_at_85%_72%,color-mix(in_oklch,var(--emerald)_10%,transparent),transparent_65%)]">
+        {/* Content sections with subtle ambient depth */}
+        <div className="relative">
           <About />
           <Activities />
           <Branches />
@@ -30,6 +30,6 @@ export default async function Home() {
         </div>
       </main>
       <Footer />
-    </>
+    </PageBackground>
   );
 }

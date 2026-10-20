@@ -193,9 +193,23 @@
   --sidebar-ring: oklch(0.72 0.12 84);
 }
 
-/* 6 Distinct Semantic Themes */
+/* 6 Distinct Semantic Themes:
+   1. Oasis (Editorial light brass & sand)
+   2. Obsidian (AMOLED deep true black)
+   3. Sunset (Moroccan Ochre & terracotta warm tones)
+   4. Majorelle (Moroccan vibrant royal indigo/cobalt night)
+   5. Ember (Warm radiant dusk & gold deep terracotta)
+   6. Midnight (Deep mystical navy & celestial gold)
+*/
+
+/* 1. Oasis (Default Light root) & Dark Night fallback */
+
+/* 2. Obsidian: AMOLED true black */
+html[data-theme="obsidian"],
 html[data-theme="amoled"],
+.dark[data-theme="obsidian"],
 .dark[data-theme="amoled"],
+[data-theme="obsidian"],
 [data-theme="amoled"] {
   --background: oklch(0 0 0);
   --foreground: oklch(0.96 0.01 85);
@@ -235,47 +249,10 @@ html[data-theme="amoled"],
   --sidebar-ring: oklch(0.82 0.13 84);
 }
 
-html[data-theme="emerald"],
-[data-theme="emerald"] {
-  --background: oklch(0.16 0.045 155);
-  --foreground: oklch(0.96 0.015 145);
-  --card: oklch(0.21 0.055 155);
-  --card-foreground: oklch(0.96 0.015 145);
-  --popover: oklch(0.21 0.055 155);
-  --popover-foreground: oklch(0.96 0.015 145);
-  --primary: oklch(0.78 0.14 84);
-  --primary-foreground: oklch(0.14 0.04 155);
-  --secondary: oklch(0.26 0.06 155);
-  --secondary-foreground: oklch(0.96 0.015 145);
-  --muted: oklch(0.25 0.05 155);
-  --muted-foreground: oklch(0.75 0.03 145);
-  --accent: oklch(0.3 0.07 155);
-  --accent-foreground: oklch(0.98 0.01 145);
-  --destructive: oklch(0.68 0.2 25);
-  --border: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.78 0.14 84);
-  --brass: oklch(0.76 0.13 79);
-  --gold: oklch(0.84 0.14 85);
-  --gold-deep: oklch(0.66 0.11 74);
-  --emerald: oklch(0.68 0.16 150);
-  --emerald-deep: oklch(0.52 0.13 148);
-  --brand-green: oklch(0.66 0.17 147);
-  --brand-green-strong: oklch(0.5 0.14 147);
-  --night: oklch(0.18 0.04 155);
-  --night-deep: oklch(0.12 0.035 155);
-  --sand: oklch(0.28 0.04 150);
-  --sidebar: oklch(0.18 0.045 155);
-  --sidebar-foreground: oklch(0.96 0.015 145);
-  --sidebar-primary: oklch(0.78 0.14 84);
-  --sidebar-primary-foreground: oklch(0.14 0.04 155);
-  --sidebar-accent: oklch(0.26 0.06 155);
-  --sidebar-accent-foreground: oklch(0.98 0.01 145);
-  --sidebar-border: oklch(1 0 0 / 14%);
-  --sidebar-ring: oklch(0.78 0.14 84);
-}
-
+/* 3. Sunset (Warm Moroccan Ochre & terracotta) */
+html[data-theme="sunset"],
 html[data-theme="ochre"],
+[data-theme="sunset"],
 [data-theme="ochre"] {
   --background: oklch(0.975 0.02 55);
   --foreground: oklch(0.25 0.035 45);
@@ -315,7 +292,92 @@ html[data-theme="ochre"],
   --sidebar-ring: oklch(0.65 0.14 50);
 }
 
+/* 4. Majorelle (Moroccan vibrant royal indigo/cobalt) */
+html[data-theme="majorelle"],
+[data-theme="majorelle"] {
+  --background: oklch(0.16 0.06 250);
+  --foreground: oklch(0.96 0.015 250);
+  --card: oklch(0.22 0.07 250);
+  --card-foreground: oklch(0.96 0.015 250);
+  --popover: oklch(0.22 0.07 250);
+  --popover-foreground: oklch(0.96 0.015 250);
+  --primary: oklch(0.72 0.16 84);
+  --primary-foreground: oklch(0.14 0.06 250);
+  --secondary: oklch(0.28 0.08 250);
+  --secondary-foreground: oklch(0.96 0.015 250);
+  --muted: oklch(0.26 0.06 250);
+  --muted-foreground: oklch(0.76 0.03 250);
+  --accent: oklch(0.32 0.09 250);
+  --accent-foreground: oklch(0.98 0.01 250);
+  --destructive: oklch(0.68 0.2 25);
+  --border: oklch(1 0 0 / 15%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.72 0.16 84);
+  --brass: oklch(0.74 0.13 79);
+  --gold: oklch(0.82 0.14 85);
+  --gold-deep: oklch(0.64 0.11 74);
+  --emerald: oklch(0.66 0.14 150);
+  --emerald-deep: oklch(0.5 0.12 148);
+  --brand-green: oklch(0.64 0.15 147);
+  --brand-green-strong: oklch(0.5 0.13 147);
+  --night: oklch(0.19 0.05 250);
+  --night-deep: oklch(0.13 0.04 250);
+  --sand: oklch(0.3 0.05 250);
+  --sidebar: oklch(0.18 0.06 250);
+  --sidebar-foreground: oklch(0.96 0.015 250);
+  --sidebar-primary: oklch(0.72 0.16 84);
+  --sidebar-primary-foreground: oklch(0.14 0.06 250);
+  --sidebar-accent: oklch(0.28 0.08 250);
+  --sidebar-accent-foreground: oklch(0.98 0.01 250);
+  --sidebar-border: oklch(1 0 0 / 15%);
+  --sidebar-ring: oklch(0.72 0.16 84);
+}
+
+/* 5. Ember (Deep glowing dusk terracotta & gold) */
+html[data-theme="ember"],
+[data-theme="ember"] {
+  --background: oklch(0.18 0.04 40);
+  --foreground: oklch(0.96 0.015 55);
+  --card: oklch(0.24 0.05 40);
+  --card-foreground: oklch(0.96 0.015 55);
+  --popover: oklch(0.24 0.05 40);
+  --popover-foreground: oklch(0.96 0.015 55);
+  --primary: oklch(0.76 0.15 70);
+  --primary-foreground: oklch(0.15 0.04 40);
+  --secondary: oklch(0.3 0.06 40);
+  --secondary-foreground: oklch(0.96 0.015 55);
+  --muted: oklch(0.28 0.05 40);
+  --muted-foreground: oklch(0.76 0.03 55);
+  --accent: oklch(0.34 0.08 42);
+  --accent-foreground: oklch(0.98 0.01 55);
+  --destructive: oklch(0.68 0.22 25);
+  --border: oklch(1 0 0 / 15%);
+  --input: oklch(1 0 0 / 19%);
+  --ring: oklch(0.76 0.15 70);
+  --brass: oklch(0.75 0.13 75);
+  --gold: oklch(0.83 0.14 80);
+  --gold-deep: oklch(0.65 0.12 65);
+  --emerald: oklch(0.62 0.13 150);
+  --emerald-deep: oklch(0.48 0.11 148);
+  --brand-green: oklch(0.6 0.14 147);
+  --brand-green-strong: oklch(0.46 0.12 147);
+  --night: oklch(0.2 0.035 40);
+  --night-deep: oklch(0.14 0.03 40);
+  --sand: oklch(0.32 0.04 45);
+  --sidebar: oklch(0.2 0.04 40);
+  --sidebar-foreground: oklch(0.96 0.015 55);
+  --sidebar-primary: oklch(0.76 0.15 70);
+  --sidebar-primary-foreground: oklch(0.15 0.04 40);
+  --sidebar-accent: oklch(0.3 0.06 40);
+  --sidebar-accent-foreground: oklch(0.98 0.01 55);
+  --sidebar-border: oklch(1 0 0 / 15%);
+  --sidebar-ring: oklch(0.76 0.15 70);
+}
+
+/* 6. Midnight (Deep mystical navy & celestial gold) */
+html[data-theme="midnight"],
 html[data-theme="indigo"],
+[data-theme="midnight"],
 [data-theme="indigo"] {
   --background: oklch(0.15 0.04 275);
   --foreground: oklch(0.95 0.015 270);
@@ -441,6 +503,7 @@ html[data-theme="indigo"],
   /* Brand scrollbar — thin, rounded, theme-aware.
      Firefox uses brand vars (they differ per theme automatically). */
   html {
+    scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: var(--brass) color-mix(in oklch, var(--foreground) 8%, transparent);
   }
@@ -695,6 +758,96 @@ html[data-theme="indigo"],
       transparent 0%,
       var(--gold) 15%,
       var(--gold) 85%,
+      transparent 100%
+    );
+  }
+
+  /* Full Page Background Mask Textures */
+  .page-texture-default,
+  .page-texture-content {
+    /* Texture variables with fallback */
+    --texture: var(--brass);
+    background-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--texture) 8%,
+      var(--texture) 92%,
+      transparent 100%
+    );
+    opacity: 0.1;
+    -webkit-mask: url(/patterns/girih.svg) 0 0 / 56px 56px repeat;
+    mask: url(/patterns/girih.svg) 0 0 / 56px 56px repeat;
+  }
+  .dark .page-texture-default,
+  .dark .page-texture-content {
+    --texture: var(--gold);
+    opacity: 0.08;
+    background-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--texture) 8%,
+      var(--texture) 92%,
+      transparent 100%
+    );
+  }
+
+  .page-texture-auth {
+    background-image: radial-gradient(
+      circle at center,
+      var(--brass) 0%,
+      var(--primary) 70%,
+      transparent 100%
+    );
+    opacity: 0.12;
+    -webkit-mask: url(/patterns/star-rosette.svg) 0 0 / 64px 64px repeat;
+    mask: url(/patterns/star-rosette.svg) 0 0 / 64px 64px repeat;
+  }
+  .dark .page-texture-auth {
+    opacity: 0.1;
+    background-image: radial-gradient(
+      circle at center,
+      var(--gold) 0%,
+      var(--brass) 70%,
+      transparent 100%
+    );
+  }
+
+  .page-texture-profile {
+    background-image: linear-gradient(
+      135deg,
+      var(--primary) 0%,
+      var(--brass) 50%,
+      transparent 100%
+    );
+    opacity: 0.11;
+    -webkit-mask: url(/patterns/octagon-tile.svg) 0 0 / 52px 52px repeat;
+    mask: url(/patterns/octagon-tile.svg) 0 0 / 52px 52px repeat;
+  }
+  .dark .page-texture-profile {
+    opacity: 0.09;
+    background-image: linear-gradient(
+      135deg,
+      var(--gold) 0%,
+      var(--brass) 50%,
+      transparent 100%
+    );
+  }
+
+  .page-texture-admin {
+    background-image: linear-gradient(
+      180deg,
+      var(--brass) 0%,
+      transparent 100%
+    );
+    opacity: 0.06;
+    -webkit-mask: url(/patterns/interlocking-geometric.svg) 0 0 / 60px 60px repeat;
+    mask: url(/patterns/interlocking-geometric.svg) 0 0 / 60px 60px repeat;
+  }
+  .dark .page-texture-admin {
+    opacity: 0.05;
+    background-image: linear-gradient(
+      180deg,
+      var(--gold) 0%,
       transparent 100%
     );
   }
