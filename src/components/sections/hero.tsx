@@ -51,6 +51,9 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--background)_100%)] opacity-70 dark:bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--night)_100%)] dark:opacity-70"
       />
 
+      {/* Large sparse Mandala pattern texture */}
+      <div className="texture-surface texture-mandala -z-10 !opacity-10" />
+
       {/* Ambient drifting particles */}
       <div aria-hidden className="absolute inset-0 -z-10 opacity-80">
         <HeroScene />

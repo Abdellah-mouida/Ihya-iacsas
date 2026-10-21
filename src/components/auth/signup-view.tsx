@@ -158,7 +158,7 @@ export function SignUpView() {
   return (
     <div className="relative min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8">
       {/* Ambient background with depth and glow */}
-      <AuthAmbientBackdrop />
+      <AuthAmbientBackdrop pattern="interlocking" />
 
       {/* Container with max width */}
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden">

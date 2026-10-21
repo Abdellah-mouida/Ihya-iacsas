@@ -42,18 +42,18 @@ export function MoroccoMap({
             >
               <stop
                 offset="0"
-                stopColor="var(--primary)"
-                stopOpacity="0.45"
+                stopColor="var(--main)"
+                stopOpacity="0.5"
               />
               <stop
                 offset="0.55"
-                stopColor="var(--emerald-deep)"
+                stopColor="color-mix(in oklch, var(--main) 70%, var(--background))"
                 stopOpacity="0.5"
               />
               <stop
                 offset="1"
-                stopColor="var(--night-deep)"
-                stopOpacity="0.65"
+                stopColor="var(--background)"
+                stopOpacity="0.75"
               />
             </linearGradient>
             <linearGradient
@@ -64,8 +64,8 @@ export function MoroccoMap({
               x2="1000"
               y2="1065"
             >
-              <stop offset="0" stopColor="var(--gold)" />
-              <stop offset="1" stopColor="var(--primary)" />
+              <stop offset="0" stopColor="var(--main)" />
+              <stop offset="1" stopColor="color-mix(in oklch, var(--main) 60%, var(--gold))" />
             </linearGradient>
             {/* Halos built from the UNION alpha of the group, so the internal
                 Morocco / Southern-Provinces border never shows. */}
@@ -134,7 +134,7 @@ export function MoroccoMap({
               {/* idle pulse ring */}
               <span
                 aria-hidden
-                className="absolute left-1/2 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2 animate-pulse-ring rounded-full bg-gold/40"
+                className="absolute left-1/2 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2 animate-pulse-ring rounded-full bg-[var(--main)]/40"
                 style={{ animationDelay: `${i * 0.7}s` }}
               />
               {/* marker dot */}
@@ -143,9 +143,9 @@ export function MoroccoMap({
                 animate={{ scale: active ? 1.45 : 1 }}
                 transition={{ type: "spring", stiffness: 320, damping: 18 }}
                 className={cn(
-                  "bg-brass-gradient relative block size-3.5 rounded-full ring-2 ring-background",
+                  "relative block size-3.5 rounded-full ring-2 ring-background bg-[var(--main)]",
                   active
-                    ? "shadow-[0_0_0_4px_color-mix(in_oklch,var(--gold)_35%,transparent),0_6px_16px_color-mix(in_oklch,var(--gold)_45%,transparent)]"
+                    ? "shadow-[0_0_0_4px_color-mix(in_oklch,var(--main)_40%,transparent),0_6px_16px_color-mix(in_oklch,var(--main)_50%,transparent)]"
                     : "shadow-[0_2px_6px_rgba(0,0,0,0.35)]",
                 )}
               />

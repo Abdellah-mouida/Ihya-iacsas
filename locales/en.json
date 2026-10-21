@@ -77,7 +77,10 @@
     "sportsTitle": "Sports & leisure",
     "sportsDesc": "Football tournaments and trips that boost brotherhood and energy.",
     "learningTitle": "Learning & content",
-    "learningDesc": "Workshops and meaningful content that grow skills and knowledge."
+    "learningDesc": "Workshops and meaningful content that grow skills and knowledge.",
+    "categorySpiritual": "Spiritual",
+    "categorySocial": "Social",
+    "categoryIntellectual": "Intellectual"
   },
   "event": {
     "kicker": "Upcoming event",

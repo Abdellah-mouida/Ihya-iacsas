@@ -1,4 +1,4 @@
-export function AuthAmbientBackdrop() {
+export function AuthAmbientBackdrop({ pattern = "octagon-tile" }: { pattern?: "octagon-tile" | "interlocking" | "girih" }) {
   return (
     <div
       aria-hidden="true"
@@ -16,7 +16,13 @@ export function AuthAmbientBackdrop() {
 
       {/* High-fidelity CSS Mask-Image Geometric Pattern (Theme Reactive) */}
       <div
-        className="page-texture-auth absolute inset-0 pointer-events-none"
+        className={`texture-surface ${
+          pattern === "octagon-tile"
+            ? "texture-octagon-tile"
+            : pattern === "interlocking"
+              ? "texture-interlocking"
+              : "texture-girih"
+        } absolute inset-0 pointer-events-none`}
       />
 
       {/* Corner Ornaments */}

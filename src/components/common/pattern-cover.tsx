@@ -25,76 +25,38 @@ export function PatternCover({
 }: PatternCoverProps) {
   const url = coverUrl || "/patterns/girih.svg";
 
-  // Check if this is one of the three preset pattern covers
-  const isDefaultGirih = url === "/patterns/girih.svg" || url === "default";
-  const isMandala = url === "/patterns/mandala.svg" || url === "mandala";
-  const isOctagon = url === "/patterns/octagon-tile.svg" || url === "octagon";
+  // Check if this is the default tiled SVG pattern cover
+  const isDefaultGirih =
+    url === "/patterns/girih.svg" ||
+    url === "default" ||
+    url === "/patterns/mandala.svg" ||
+    url === "mandala" ||
+    url === "/patterns/octagon-tile.svg" ||
+    url === "octagon";
 
   if (isDefaultGirih) {
     return (
       <div
-        className={`relative w-full h-full overflow-hidden bg-gradient-to-br from-emerald/40 via-background to-brass/30 ${className}`}
+        className={`relative w-full h-full overflow-hidden bg-gradient-to-br from-background via-card to-background ${className}`}
       >
         <div
           className="absolute inset-0"
           style={{
-            backgroundColor: "var(--primary)",
-            maskImage: "url(/patterns/girih.svg)",
-            WebkitMaskImage: "url(/patterns/girih.svg)",
+            backgroundColor: "var(--main)",
+            maskImage:
+              "url(/patterns/girih.svg), linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)",
+            WebkitMaskImage:
+              "url(/patterns/girih.svg), linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
             maskRepeat: "repeat",
             WebkitMaskRepeat: "repeat",
-            maskSize: thumbnail ? "48px 48px" : "120px 120px",
-            WebkitMaskSize: thumbnail ? "48px 48px" : "120px 120px",
-            opacity: 0.22,
+            maskSize: thumbnail ? "48px 48px, 100% 100%" : "96px 96px, 100% 100%",
+            WebkitMaskSize: thumbnail ? "48px 48px, 100% 100%" : "96px 96px, 100% 100%",
+            opacity: 0.18,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-      </div>
-    );
-  }
-
-  if (isMandala) {
-    return (
-      <div
-        className={`relative w-full h-full overflow-hidden bg-gradient-to-br from-brass/35 via-background to-emerald/25 ${className}`}
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundColor: "var(--heading)",
-            maskImage: "url(/patterns/mandala.svg)",
-            WebkitMaskImage: "url(/patterns/mandala.svg)",
-            maskRepeat: "repeat",
-            WebkitMaskRepeat: "repeat",
-            maskSize: thumbnail ? "60px 60px" : "150px 150px",
-            WebkitMaskSize: thumbnail ? "60px 60px" : "150px 150px",
-            opacity: 0.28,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-      </div>
-    );
-  }
-
-  if (isOctagon) {
-    return (
-      <div
-        className={`relative w-full h-full overflow-hidden bg-gradient-to-br from-primary/30 via-background to-muted/40 ${className}`}
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundColor: "var(--foreground)",
-            maskImage: "url(/patterns/octagon-tile.svg)",
-            WebkitMaskImage: "url(/patterns/octagon-tile.svg)",
-            maskRepeat: "repeat",
-            WebkitMaskRepeat: "repeat",
-            maskSize: thumbnail ? "40px 40px" : "100px 100px",
-            WebkitMaskSize: thumbnail ? "40px 40px" : "100px 100px",
-            opacity: 0.2,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
       </div>
     );
   }

@@ -116,6 +116,7 @@
   --night: oklch(0.2 0.03 265);
   --night-deep: oklch(0.15 0.025 265);
   --sand: oklch(0.95 0.02 85);
+  --main: oklch(0.44 0.13 146); /* Light default brand green */
 
   --gradient-brass: linear-gradient(
     135deg,
@@ -188,6 +189,7 @@
   --night: oklch(0.12 0.005 260);
   --night-deep: oklch(0.08 0.005 260);
   --sand: oklch(0.3 0.02 260);
+  --main: oklch(0.86 0.14 85); /* Black default: warm gold */
 
   --sidebar: oklch(0.12 0.005 260);
   --sidebar-foreground: oklch(0.95 0.01 85);
@@ -241,6 +243,7 @@ html[data-theme="oasis"],
   --night: oklch(0.2 0.03 265);
   --night-deep: oklch(0.15 0.025 265);
   --sand: oklch(0.95 0.02 85);
+  --main: oklch(0.44 0.13 146); /* Light: brand green */
 }
 
 /* 2. Sunset */
@@ -286,6 +289,7 @@ html[data-theme="ochre"],
   --sidebar-accent-foreground: oklch(0.32 0.04 45);
   --sidebar-border: oklch(0.85 0.03 55);
   --sidebar-ring: oklch(0.65 0.14 50);
+  --main: oklch(0.55 0.15 48); /* Sunset: warm terracotta/orange */
 }
 
 /* 3. Amoled (Pure #000, Green main titles, Gold secondary) */
@@ -333,6 +337,7 @@ html[data-theme="obsidian"],
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(1 0 0 / 18%);
   --sidebar-ring: oklch(0.72 0.17 148);
+  --main: oklch(0.76 0.18 147); /* Amoled: vibrant green */
 }
 
 /* 4. Black (#111 background, Gold main titles, Green secondary) */
@@ -386,6 +391,7 @@ html[data-theme="ember"],
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: oklch(0.84 0.14 84);
+  --main: oklch(0.86 0.14 85); /* Black: gold */
 }
 
 @keyframes float {
@@ -747,125 +753,184 @@ html[data-theme="ember"],
     );
   }
 
+  /* Unified Textured Surface System (var(--main) + CSS mask-image)
+     Requirements:
+     - position: absolute, contain: paint, inset: 0
+     - background-color: var(--main)
+     - mask-image: url(...), linear-gradient(...)
+     - mask-composite: intersect / -webkit-mask-composite: source-in
+     - explicit mask-size
+     - opacity: 0.08 - 0.16
+     - top/bottom edge fades (~10%) and softened sides
+  */
+  .texture-surface {
+    position: absolute;
+    inset: 0;
+    contain: paint;
+    pointer-events: none;
+    background-color: var(--main);
+    opacity: 0.12;
+    z-index: 0;
+  }
+  .dark .texture-surface {
+    opacity: 0.1;
+  }
+  [data-theme="amoled"] .texture-surface {
+    opacity: 0.15;
+  }
+
+  /* Shared edge-fade gradient mask for all textures */
+  .texture-mask-faded {
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+
+  /* Per-pattern mask utilities */
+  .texture-mandala {
+    -webkit-mask-image: url(/patterns/mandala.svg), linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%), linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    mask-image: url(/patterns/mandala.svg), linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%), linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    -webkit-mask-size: 240px 240px, 100% 100%, 100% 100%;
+    mask-size: 240px 240px, 100% 100%, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat, no-repeat;
+    mask-repeat: repeat, no-repeat, no-repeat;
+  }
+
+  .texture-octagon-tile {
+    -webkit-mask-image: url(/patterns/octagon-tile.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    mask-image: url(/patterns/octagon-tile.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-size: 56px 56px, 100% 100%, 100% 100%;
+    mask-size: 56px 56px, 100% 100%, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat, no-repeat;
+    mask-repeat: repeat, no-repeat, no-repeat;
+  }
+
+  .texture-star-rosette {
+    -webkit-mask-image: url(/patterns/star-rosette.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    mask-image: url(/patterns/star-rosette.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-size: 64px 64px, 100% 100%, 100% 100%;
+    mask-size: 64px 64px, 100% 100%, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat, no-repeat;
+    mask-repeat: repeat, no-repeat, no-repeat;
+  }
+
+  .texture-girih {
+    -webkit-mask-image: url(/patterns/girih.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    mask-image: url(/patterns/girih.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-size: 56px 56px, 100% 100%, 100% 100%;
+    mask-size: 56px 56px, 100% 100%, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat, no-repeat;
+    mask-repeat: repeat, no-repeat, no-repeat;
+  }
+
+  .texture-interlocking {
+    -webkit-mask-image: url(/patterns/interlocking-geometric.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    mask-image: url(/patterns/interlocking-geometric.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-size: 60px 60px, 100% 100%, 100% 100%;
+    mask-size: 60px 60px, 100% 100%, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat, no-repeat;
+    mask-repeat: repeat, no-repeat, no-repeat;
+  }
+
+  .texture-octagon-grid {
+    -webkit-mask-image: url(/patterns/islamic-octagon-grid.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    mask-image: url(/patterns/islamic-octagon-grid.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%), linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-size: 72px 72px, 100% 100%, 100% 100%;
+    mask-size: 72px 72px, 100% 100%, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat, no-repeat;
+    mask-repeat: repeat, no-repeat, no-repeat;
+  }
+
   /* Full Page Background Mask Textures */
   .page-texture-default,
   .page-texture-content {
-    /* Texture variables with fallback */
-    --texture: var(--brass);
-    background-image: linear-gradient(
-      180deg,
-      transparent 0%,
-      var(--texture) 8%,
-      var(--texture) 92%,
-      transparent 100%
-    );
-    opacity: 0.1;
-    -webkit-mask: url(/patterns/girih.svg) 0 0 / 56px 56px repeat;
-    mask: url(/patterns/girih.svg) 0 0 / 56px 56px repeat;
+    position: absolute;
+    inset: 0;
+    contain: paint;
+    pointer-events: none;
+    background-color: var(--main);
+    opacity: 0.12;
+    -webkit-mask-image: url(/patterns/girih.svg), linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+    mask-image: url(/patterns/girih.svg), linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+    -webkit-mask-size: 56px 56px, 100% 100%;
+    mask-size: 56px 56px, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
   }
   .dark .page-texture-default,
   .dark .page-texture-content {
-    --texture: var(--gold);
-    opacity: 0.08;
-    background-image: linear-gradient(
-      180deg,
-      transparent 0%,
-      var(--texture) 8%,
-      var(--texture) 92%,
-      transparent 100%
-    );
+    opacity: 0.1;
+  }
+  [data-theme="amoled"] .page-texture-default,
+  [data-theme="amoled"] .page-texture-content {
+    opacity: 0.16;
   }
 
   .page-texture-auth {
-    background-image: radial-gradient(
-      circle at center,
-      var(--brass) 0%,
-      var(--primary) 70%,
-      transparent 100%
-    );
-    opacity: 0.12;
-    -webkit-mask: url(/patterns/star-rosette.svg) 0 0 / 64px 64px repeat;
-    mask: url(/patterns/star-rosette.svg) 0 0 / 64px 64px repeat;
+    position: absolute;
+    inset: 0;
+    contain: paint;
+    pointer-events: none;
+    background-color: var(--main);
+    opacity: 0.13;
+    -webkit-mask-image: url(/patterns/star-rosette.svg), radial-gradient(circle at center, black 0%, black 60%, transparent 100%);
+    mask-image: url(/patterns/star-rosette.svg), radial-gradient(circle at center, black 0%, black 60%, transparent 100%);
+    -webkit-mask-size: 64px 64px, 100% 100%;
+    mask-size: 64px 64px, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
   }
   .dark .page-texture-auth {
-    opacity: 0.1;
-    background-image: radial-gradient(
-      circle at center,
-      var(--gold) 0%,
-      var(--brass) 70%,
-      transparent 100%
-    );
-  }
-
-  .page-texture-profile {
-    background-image: linear-gradient(
-      135deg,
-      var(--primary) 0%,
-      var(--brass) 50%,
-      transparent 100%
-    );
     opacity: 0.11;
-    -webkit-mask: url(/patterns/octagon-tile.svg) 0 0 / 52px 52px repeat;
-    mask: url(/patterns/octagon-tile.svg) 0 0 / 52px 52px repeat;
-  }
-  .dark .page-texture-profile {
-    opacity: 0.09;
-    background-image: linear-gradient(
-      135deg,
-      var(--gold) 0%,
-      var(--brass) 50%,
-      transparent 100%
-    );
-  }
-
-  .page-texture-admin {
-    background-image: linear-gradient(
-      180deg,
-      var(--brass) 0%,
-      transparent 100%
-    );
-    opacity: 0.06;
-    -webkit-mask: url(/patterns/interlocking-geometric.svg) 0 0 / 60px 60px repeat;
-    mask: url(/patterns/interlocking-geometric.svg) 0 0 / 60px 60px repeat;
-  }
-  /* Amoled adjustments for high visibility on pitch black */
-  [data-theme="amoled"] .page-texture-default,
-  [data-theme="amoled"] .page-texture-content {
-    --texture: var(--primary);
-    opacity: 0.16;
-    background-image: linear-gradient(
-      180deg,
-      transparent 0%,
-      var(--primary) 10%,
-      var(--gold) 90%,
-      transparent 100%
-    );
   }
   [data-theme="amoled"] .page-texture-auth {
     opacity: 0.18;
-    background-image: radial-gradient(
-      circle at center,
-      var(--primary) 0%,
-      var(--gold) 75%,
-      transparent 100%
-    );
+  }
+
+  .page-texture-profile {
+    position: absolute;
+    inset: 0;
+    contain: paint;
+    pointer-events: none;
+    background-color: var(--main);
+    opacity: 0.12;
+    -webkit-mask-image: url(/patterns/mandala.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-image: url(/patterns/mandala.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    -webkit-mask-size: 200px 200px, 100% 100%;
+    mask-size: 200px 200px, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+  .dark .page-texture-profile {
+    opacity: 0.1;
   }
   [data-theme="amoled"] .page-texture-profile {
     opacity: 0.16;
-    background-image: linear-gradient(
-      135deg,
-      var(--primary) 0%,
-      var(--gold) 50%,
-      transparent 100%
-    );
+  }
+
+  .page-texture-admin {
+    position: absolute;
+    inset: 0;
+    contain: paint;
+    pointer-events: none;
+    background-color: var(--main);
+    opacity: 0.08;
+    -webkit-mask-image: url(/patterns/girih.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-image: url(/patterns/girih.svg), linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    -webkit-mask-size: 56px 56px, 100% 100%;
+    mask-size: 56px 56px, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
   }
   [data-theme="amoled"] .page-texture-admin {
-    opacity: 0.14;
-    background-image: linear-gradient(
-      180deg,
-      var(--primary) 0%,
-      transparent 100%
-    );
+    opacity: 0.12;
   }
 }
 

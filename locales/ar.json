@@ -77,7 +77,10 @@
     "sportsTitle": "رياضة وترفيه",
     "sportsDesc": "دوريات كرة القدم والرحلات التي تعزّز الأخوّة والنشاط.",
     "learningTitle": "تعلّم ومحتوى",
-    "learningDesc": "ورشات ومحتوى هادف يطوّر المهارات والمعرفة."
+    "learningDesc": "ورشات ومحتوى هادف يطوّر المهارات والمعرفة.",
+    "categorySpiritual": "روحي",
+    "categorySocial": "اجتماعي",
+    "categoryIntellectual": "فكري"
   },
   "event": {
     "kicker": "الفعالية القادمة",

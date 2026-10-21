@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Four Themes & Real Settings / Profile Architecture", () => {
   test("1. Homepage respects 4 theme data-theme attributes and heading CSS tokens", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Evaluate root computed heading token
     const headingToken = await page.evaluate(() => {

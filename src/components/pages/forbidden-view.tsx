@@ -29,7 +29,7 @@ export function ForbiddenView() {
       data-testid="page-forbidden"
       className="relative min-h-dvh flex flex-col items-center justify-between p-4 sm:p-8 text-foreground overflow-hidden"
     >
-      <AuthAmbientBackdrop />
+      <div className="texture-surface texture-mandala -z-10 !opacity-10" />
 
       {/* Top Header Utilities */}
       <header className="w-full max-w-5xl flex items-center justify-between py-2 z-20">

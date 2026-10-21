@@ -29,7 +29,7 @@ export function Branches() {
 
   return (
     <section id="branches" className="relative overflow-x-clip py-24 sm:py-32">
-      <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
+      <div className="texture-surface texture-interlocking -z-10" />
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("branches.kicker")}

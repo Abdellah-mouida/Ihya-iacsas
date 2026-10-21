@@ -13,6 +13,7 @@ export function Activities() {
 
   return (
     <section id="activities" className="relative py-24 sm:py-32">
+      <div className="texture-surface texture-star-rosette -z-10" />
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("activities.kicker")}
@@ -46,7 +47,7 @@ export function Activities() {
                   <div className="flex items-center justify-between">
                     <span
                       style={{ transform: "translateZ(30px)" }}
-                      className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-sm transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground"
+                      className="grid size-14 place-items-center rounded-2xl bg-[var(--main)]/15 text-[var(--main)] border border-[var(--main)]/30 shadow-sm transition-colors duration-300 group-hover:bg-[var(--main)] group-hover:text-background"
                     >
                       <item.icon className="size-7" />
                     </span>
@@ -61,9 +62,13 @@ export function Activities() {
                     className="mt-auto flex flex-col gap-2.5 pt-4"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-6 rounded-full bg-primary/60" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                        {idx === 0 ? "01 / FIELD" : idx === 1 ? "02 / MIND" : "03 / IMPACT"}
+                      <span className="h-1.5 w-6 rounded-full bg-[var(--main)]/70" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--main)]">
+                        {idx === 0
+                          ? `01 / ${t("activities.categorySpiritual")}`
+                          : idx === 1
+                            ? `02 / ${t("activities.categorySocial")}`
+                            : `03 / ${t("activities.categoryIntellectual")}`}
                       </span>
                     </div>
                     <h3 className="font-heading text-2xl font-bold tracking-tight">

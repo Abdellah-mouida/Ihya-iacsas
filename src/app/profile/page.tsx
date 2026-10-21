@@ -26,7 +26,8 @@ export default async function ProfilePage() {
   return (
     <>
       <GlassNavbar initialSession={session} />
-      <main className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="relative min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="texture-surface texture-mandala -z-10" />
         <div className="max-w-5xl mx-auto">
           <ProfileView initialData={initialData} />
         </div>

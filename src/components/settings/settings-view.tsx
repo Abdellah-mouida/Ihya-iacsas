@@ -347,34 +347,26 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
                   </div>
                 </div>
 
-                {/* Default 3 Covers Presets */}
-                <div className="space-y-2 pt-2">
-                  <span className="text-xs text-muted-foreground block">
-                    {isAr ? "أو اختر أحد الأغلفة الافتراضية الثلاثة:" : "Or pick one of the 3 default covers:"}
-                  </span>
-                  <div className="grid grid-cols-3 gap-3">
-                    {DEFAULT_COVER_PRESETS.map((preset) => {
-                      const isCoverSelected = coverUrl === preset.path;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => handleSelectDefaultCover(preset.path)}
-                          data-testid={`default-cover-${preset.id}-btn`}
-                          className={`relative h-16 rounded-xl border overflow-hidden p-2 text-start flex items-end transition-all ${
-                            isCoverSelected
-                              ? "border-primary ring-2 ring-primary/40 shadow-sm"
-                              : "border-border/70 hover:border-border"
-                          }`}
-                        >
-                          <PatternCover coverUrl={preset.path} thumbnail className="opacity-80" />
-                          <span className="relative z-10 text-[11px] font-heading font-bold text-foreground px-1.5 py-0.5 rounded bg-card/85 backdrop-blur shadow-sm">
-                            {isAr ? preset.nameAr : preset.nameEn}
-                          </span>
-                        </button>
-                      );
-                    })}
+                {/* Default Cover Option */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-semibold text-foreground block">
+                      {isAr ? "الغلاف الافتراضي" : "Default Pattern Cover"}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      {isAr ? "نمط هندسي إسلامي يتغير لونه تلقائياً مع السمة" : "Islamic geometric pattern automatically matching active theme"}
+                    </span>
                   </div>
+                  <Button
+                    type="button"
+                    variant={coverUrl === "/patterns/girih.svg" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => handleSelectDefaultCover("/patterns/girih.svg")}
+                    data-testid="default-cover-btn"
+                    className="rounded-xl text-xs font-heading font-medium"
+                  >
+                    {isAr ? "استخدام النمط الافتراضي" : "Use Default Pattern"}
+                  </Button>
                 </div>
               </div>
 

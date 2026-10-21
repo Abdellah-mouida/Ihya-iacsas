@@ -71,11 +71,11 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased transition-colors duration-300">
-      {/* Background Girih Texture Fade */}
+    <div className="relative min-h-screen bg-background text-foreground antialiased transition-colors duration-300">
+      {/* Background Girih Texture Fade (Theme Reactive) */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-girih opacity-[0.03] dark:opacity-[0.05]"
+        className="texture-surface texture-girih fixed inset-0 -z-10 !opacity-[0.06] dark:!opacity-[0.08]"
       />
 
       <div className="flex w-full flex-col lg:flex-row min-h-screen">

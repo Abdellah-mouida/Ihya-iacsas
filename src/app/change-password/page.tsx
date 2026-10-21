@@ -16,7 +16,7 @@ export default function ChangePasswordPage() {
     <>
       <GlassNavbar />
       <main className="min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center relative">
-        <AuthAmbientBackdrop />
+        <AuthAmbientBackdrop pattern="girih" />
         <Suspense
           fallback={
             <div className="flex items-center justify-center p-12">

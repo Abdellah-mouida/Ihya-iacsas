@@ -28,7 +28,7 @@ export function Program() {
       {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here).
           Transparent in light mode so it blends with the page (texture fades
           at its own edges); a dark band only in dark mode. */}
-      <div className="pattern-islamic absolute inset-0 -z-10" />
+      <div className="texture-surface texture-girih -z-10" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
       <div
         aria-hidden

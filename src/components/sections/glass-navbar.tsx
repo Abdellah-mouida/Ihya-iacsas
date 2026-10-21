@@ -160,6 +160,14 @@ export function GlassNavbar({
             transparentTop ? "opacity-0" : "opacity-[0.07]",
           )}
         />
+        {/* Very faint Girih pattern texture when scrolled */}
+        <span
+          aria-hidden
+          className={cn(
+            "texture-surface texture-girih pointer-events-none absolute inset-0 -z-10 rounded-[inherit] transition-opacity duration-500",
+            transparentTop ? "opacity-0" : "opacity-[0.05]",
+          )}
+        />
         <span
           aria-hidden
           className={cn(

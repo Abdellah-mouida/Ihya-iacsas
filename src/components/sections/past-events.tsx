@@ -62,7 +62,7 @@ export function PastEvents() {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-28 bg-gradient-to-b from-background to-transparent"
       />
-      <div className="pattern-islamic absolute inset-0 -z-10 opacity-40" />
+      <div className="texture-surface texture-star-rosette -z-10" />
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("events.pastKicker")}

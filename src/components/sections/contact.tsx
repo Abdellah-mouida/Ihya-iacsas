@@ -108,6 +108,7 @@ export function Contact() {
 
   return (
     <section id="contact" className="relative overflow-x-clip py-24 sm:py-32">
+      <div className="texture-surface texture-girih -z-10" />
       <div className="bg-spirit-gradient absolute inset-x-0 bottom-0 -z-10 h-72 opacity-[0.06] blur-3xl" />
       <div className="mx-auto max-w-6xl px-5">
         <div className="grid gap-12 lg:grid-cols-2">

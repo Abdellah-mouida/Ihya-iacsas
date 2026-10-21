@@ -14,7 +14,7 @@ export function About() {
 
   return (
     <section id="about" className="relative overflow-x-clip py-24 sm:py-32">
-      <div className="pattern-islamic absolute inset-0 -z-10" />
+      <div className="texture-surface texture-octagon-tile -z-10" />
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
         <motion.div
@@ -98,9 +98,9 @@ export function About() {
                 radiusClass="rounded-2xl"
                 wrapperClassName="group h-full"
               >
-                <div className="glass relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+                <div className="glass relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-[var(--main)]/40 hover:shadow-lg">
                   <div className="flex items-center justify-between">
-                    <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                    <span className="grid size-11 place-items-center rounded-xl bg-[var(--main)]/15 text-[var(--main)] border border-[var(--main)]/30">
                       <card.icon className="size-5" />
                     </span>
                     <span className="text-xs font-mono font-bold text-muted-foreground/40">

@@ -33,7 +33,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   return (
     <>
       <GlassNavbar initialSession={session} />
-      <main className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="relative min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="texture-surface texture-octagon-tile -z-10" />
         <div className="max-w-6xl mx-auto">
           <SettingsView initialData={initialData} initialTab={initialTab} />
         </div>
