@@ -149,15 +149,15 @@ export function GlassNavbar({
           scrolled ? "py-1.5" : "py-2.5",
           transparentTop
             ? "border-transparent bg-transparent shadow-none backdrop-blur-0"
-            : "border-border/60 bg-[color-mix(in_oklch,var(--background)_80%,transparent)] shadow-layered backdrop-blur-xl backdrop-saturate-150",
+            : "border-border/60 bg-[var(--nav-bg,color-mix(in_oklch,var(--background)_80%,transparent))] [box-shadow:var(--nav-inner-shadow,none)] shadow-layered backdrop-blur-xl backdrop-saturate-150",
         )}
       >
-        {/* animated gradient sheen inside the glass — only once it's glass */}
+        {/* subtle theme sheen inside the glass — only once it's glass */}
         <span
           aria-hidden
           className={cn(
-            "bg-brass-gradient animate-gradient pointer-events-none absolute inset-0 -z-10 rounded-[inherit] [background-size:200%_200%] transition-opacity duration-500",
-            transparentTop ? "opacity-0" : "opacity-[0.07]",
+            "pointer-events-none absolute inset-0 -z-10 rounded-[inherit] transition-opacity duration-500",
+            transparentTop ? "opacity-0" : "opacity-[0.04] bg-[var(--main)]",
           )}
         />
         {/* Very faint Girih pattern texture when scrolled */}
@@ -165,7 +165,7 @@ export function GlassNavbar({
           aria-hidden
           className={cn(
             "texture-surface texture-girih pointer-events-none absolute inset-0 -z-10 rounded-[inherit] transition-opacity duration-500",
-            transparentTop ? "opacity-0" : "opacity-[0.05]",
+            transparentTop ? "opacity-0" : "opacity-[0.03]",
           )}
         />
         <span

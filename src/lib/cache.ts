@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 /**
  * Safely calls Next.js revalidatePath without throwing when invoked
@@ -7,6 +7,17 @@ import { revalidatePath } from "next/cache";
 export function safeRevalidatePath(path: string, type?: "layout" | "page") {
   try {
     revalidatePath(path, type);
+  } catch {
+    // Ignore invariant error when static generation store is not active
+  }
+}
+
+/**
+ * Safely calls Next.js revalidateTag without throwing.
+ */
+export function safeRevalidateTag(tag: string) {
+  try {
+    revalidateTag(tag, "max");
   } catch {
     // Ignore invariant error when static generation store is not active
   }

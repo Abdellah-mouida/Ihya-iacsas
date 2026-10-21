@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getCachedEnabledThemes } from "@/lib/theme-server";
 
 export async function GET() {
   const session = await auth();
@@ -39,9 +40,11 @@ export async function PATCH(req: Request) {
       coverImagePublicId?: string | null;
     } = {};
 
-    const validThemes = ["oasis", "sunset", "majorelle", "obsidian", "ember", "midnight"];
+    // Validate theme against enabled themes in DB
+    const enabledThemes = await getCachedEnabledThemes();
+    const validThemeSlugs = enabledThemes.map((t) => t.slug);
 
-    if (theme !== undefined && typeof theme === "string" && validThemes.includes(theme)) {
+    if (theme !== undefined && typeof theme === "string" && validThemeSlugs.includes(theme)) {
       data.theme = theme;
     }
 

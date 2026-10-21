@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { safeRevalidatePath } from "@/lib/cache";
+import { safeRevalidatePath, safeRevalidateTag } from "@/lib/cache";
 import { BUILT_IN_THEMES, ThemeDto } from "@/lib/theme-constants";
 import { Prisma } from "@prisma/client";
 
@@ -96,6 +96,7 @@ export async function toggleThemeEnabled(themeId: string, enabled: boolean) {
 
   safeRevalidatePath("/admin/themes");
   safeRevalidatePath("/settings");
+  safeRevalidateTag("themes");
   return { success: true, enabled: updated.enabled };
 }
 
@@ -130,6 +131,7 @@ export async function saveTheme(data: {
 
     safeRevalidatePath("/admin/themes");
     safeRevalidatePath("/settings");
+    safeRevalidateTag("themes");
     return { success: true, theme: updated };
   } else {
     const created = await prisma.theme.create({
@@ -146,6 +148,7 @@ export async function saveTheme(data: {
 
     safeRevalidatePath("/admin/themes");
     safeRevalidatePath("/settings");
+    safeRevalidateTag("themes");
     return { success: true, theme: created };
   }
 }

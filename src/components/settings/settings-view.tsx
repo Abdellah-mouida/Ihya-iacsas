@@ -36,9 +36,12 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
+import { ThemeDto } from "@/lib/theme-constants";
+
 interface SettingsViewProps {
   initialData: UserAccountData;
   initialTab?: string;
+  availableThemes?: ThemeDto[];
 }
 
 const DEFAULT_COVER_PRESETS = [
@@ -47,7 +50,11 @@ const DEFAULT_COVER_PRESETS = [
   { id: "octagon", nameAr: "مثمن", nameEn: "Octagon", path: "/patterns/octagon-tile.svg" },
 ];
 
-export function SettingsView({ initialData, initialTab = "profile" }: SettingsViewProps) {
+export function SettingsView({
+  initialData,
+  initialTab = "profile",
+  availableThemes = [],
+}: SettingsViewProps) {
   const { t, locale, setLocale, dir } = useLocale();
   const isAr = locale === "ar";
   const router = useRouter();
@@ -550,82 +557,119 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
                 </p>
               </div>
 
-              {/* 4 Themes Card Grid */}
+              {/* Themes Card Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {[
-                  {
-                    id: "light",
-                    name: isAr ? "فاتح" : "Light",
-                    bg: "bg-[#ffffff] text-[#1a1a1a] border-[#e5e5e5]",
-                    headingColor: "#1a1a1a",
-                    primary: "bg-[#0a5417]",
-                    secondary: "bg-[#b8860b]",
-                    isDark: false,
-                  },
-                  {
-                    id: "sunset",
-                    name: isAr ? "غروب" : "Sunset",
-                    bg: "bg-[#fbf4eb] text-[#3e2723] border-[#e7d8c9]",
-                    headingColor: "#3e2723",
-                    primary: "bg-[#c85a17]",
-                    secondary: "bg-[#d97706]",
-                    isDark: false,
-                  },
-                  {
-                    id: "amoled",
-                    name: "Amoled",
-                    bg: "bg-[#000000] text-[#f5f5f5] border-white/20",
-                    headingColor: "#22c55e",
-                    primary: "bg-[#22c55e]",
-                    secondary: "bg-[#eab308]",
-                    isDark: true,
-                  },
-                  {
-                    id: "black",
-                    name: isAr ? "أسود" : "Black",
-                    bg: "bg-[#111111] text-[#f5f5f5] border-white/15",
-                    headingColor: "#eab308",
-                    primary: "bg-[#eab308]",
-                    secondary: "bg-[#22c55e]",
-                    isDark: true,
-                  },
-                ].map((th) => {
+                {((availableThemes && availableThemes.length > 0)
+                  ? availableThemes
+                  : [
+                      {
+                        id: "light",
+                        slug: "light",
+                        nameAr: "فاتح",
+                        nameEn: "Light",
+                        mode: "light" as const,
+                        tokens: {
+                          "--background": "#ffffff",
+                          "--foreground": "#1a1a1a",
+                          "--heading": "#1a1a1a",
+                          "--primary": "#0a5417",
+                          "--title-secondary": "#b8860b",
+                        },
+                      },
+                      {
+                        id: "sunset",
+                        slug: "sunset",
+                        nameAr: "غروب",
+                        nameEn: "Sunset",
+                        mode: "light" as const,
+                        tokens: {
+                          "--background": "#fbf4eb",
+                          "--foreground": "#3e2723",
+                          "--heading": "#3e2723",
+                          "--primary": "#c85a17",
+                          "--title-secondary": "#d97706",
+                        },
+                      },
+                      {
+                        id: "amoled",
+                        slug: "amoled",
+                        nameAr: "Amoled",
+                        nameEn: "Amoled",
+                        mode: "dark" as const,
+                        tokens: {
+                          "--background": "#000000",
+                          "--foreground": "#f5f5f5",
+                          "--heading": "#22c55e",
+                          "--primary": "#22c55e",
+                          "--title-secondary": "#eab308",
+                        },
+                      },
+                      {
+                        id: "black",
+                        slug: "black",
+                        nameAr: "أسود",
+                        nameEn: "Black",
+                        mode: "dark" as const,
+                        tokens: {
+                          "--background": "#111111",
+                          "--foreground": "#f5f5f5",
+                          "--heading": "#eab308",
+                          "--primary": "#eab308",
+                          "--title-secondary": "#22c55e",
+                        },
+                      },
+                    ]
+                ).map((th) => {
+                  const slug = th.slug;
+                  const displayName = isAr ? th.nameAr : th.nameEn;
+                  const isDark = th.mode === "dark";
+                  const tokens = (th.tokens as Record<string, string>) || {};
+                  const bg = tokens["--background"] || (isDark ? "#111111" : "#ffffff");
+                  const headingColor = tokens["--heading"] || tokens["--foreground"] || (isDark ? "#f5f5f5" : "#1a1a1a");
+                  const primaryColor = tokens["--primary"] || (isDark ? "#eab308" : "#0a5417");
+                  const secondaryColor = tokens["--title-secondary"] || tokens["--gold"] || (isDark ? "#22c55e" : "#b8860b");
+
                   const isCurrentTheme =
-                    (th.id === "light" && (!theme || theme === "light" || (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light"))) ||
-                    (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === th.id) ||
-                    (th.id === "black" && theme === "dark" && typeof document !== "undefined" && (!document.documentElement.getAttribute("data-theme") || document.documentElement.getAttribute("data-theme") === "black"));
+                    (slug === "light" && (!theme || theme === "light" || (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light"))) ||
+                    (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === slug) ||
+                    (slug === "black" && theme === "dark" && typeof document !== "undefined" && (!document.documentElement.getAttribute("data-theme") || document.documentElement.getAttribute("data-theme") === "black"));
 
                   return (
                     <button
-                      key={th.id}
+                      key={slug}
                       type="button"
-                      data-testid={`theme-card-${th.id}`}
+                      data-testid={`theme-card-${slug}`}
                       onClick={async () => {
-                        setTheme(th.isDark ? "dark" : "light");
-                        document.documentElement.setAttribute("data-theme", th.id);
+                        setTheme(isDark ? "dark" : "light");
+                        document.documentElement.setAttribute("data-theme", slug);
                         try {
-                          localStorage.setItem("ihyaa-theme", th.id);
-                          document.cookie = `ihyaa-theme=${th.id}; path=/; max-age=31536000; SameSite=Lax`;
+                          localStorage.setItem("ihyaa-theme", slug);
+                          document.cookie = `ihyaa-theme=${slug}; path=/; max-age=31536000; SameSite=Lax`;
                           await fetch("/api/user/preferences", {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ theme: th.id }),
+                            body: JSON.stringify({ theme: slug }),
                           });
                         } catch {}
-                        notify.success(th.name);
+                        notify.success(displayName);
+                      }}
+                      style={{
+                        backgroundColor: bg,
                       }}
                       className={`theme-btn-hover relative text-start p-6 rounded-2xl border flex flex-col justify-between h-40 shadow-sm ${
                         isCurrentTheme
                           ? "border-primary ring-2 ring-primary/40 shadow-md shadow-primary/10"
-                          : "border-border/70"
-                      } ${th.bg}`}
+                          : isDark
+                            ? "border-white/15"
+                            : "border-black/10"
+                      }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span
                           className="font-heading font-bold text-lg"
-                          style={{ color: th.headingColor }}
+                          style={{ color: headingColor }}
                         >
-                          {th.name}
+                          {displayName}
                         </span>
                         {isCurrentTheme && (
                           <CheckCircle2 className="size-5 text-primary shrink-0" />
@@ -633,8 +677,14 @@ export function SettingsView({ initialData, initialTab = "profile" }: SettingsVi
                       </div>
 
                       <div className="flex items-center gap-2.5 pt-3 border-t border-black/10 dark:border-white/10 w-full">
-                        <span className={`size-4 rounded-full ${th.primary} shadow-sm`} />
-                        <span className={`size-4 rounded-full ${th.secondary} shadow-sm`} />
+                        <span
+                          className="size-4 rounded-full shadow-sm"
+                          style={{ backgroundColor: primaryColor }}
+                        />
+                        <span
+                          className="size-4 rounded-full shadow-sm"
+                          style={{ backgroundColor: secondaryColor }}
+                        />
                       </div>
                     </button>
                   );

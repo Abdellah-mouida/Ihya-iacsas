@@ -3,6 +3,7 @@ import { Montserrat, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { RouteHistoryTracker } from "@/components/common/route-history-tracker";
+import { DynamicThemeStyles } from "@/components/common/dynamic-theme-styles";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -51,10 +52,11 @@ export default function RootLayout({
 var l=localStorage.getItem('ihyaa-locale');
 if(l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';}
 var t=localStorage.getItem('ihyaa-theme');
-if(t){document.documentElement.setAttribute('data-theme',t);if(t==='dark'||t==='amoled'||t==='emerald'||t==='indigo'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}
+if(t){document.documentElement.setAttribute('data-theme',t);if(t==='dark'||t==='black'||t==='amoled'||t==='emerald'||t==='indigo'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}
 }catch(e){}})();`,
           }}
         />
+        <DynamicThemeStyles />
       </head>
       <body className="min-h-dvh bg-background text-foreground overflow-x-hidden">
         <Providers>

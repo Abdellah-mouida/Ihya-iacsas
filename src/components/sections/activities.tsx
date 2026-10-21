@@ -30,8 +30,8 @@ export function Activities() {
         >
           {ACTIVITIES.map((item, idx) => (
             <motion.div key={item.num} variants={fadeUp} className="group h-full">
-              <MotionCard intensity={10} className="h-full">
-                <div className="glass preserve-3d relative flex h-full flex-col gap-5 overflow-hidden rounded-3xl p-8 sm:p-9 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 group-hover:shadow-2xl">
+              <MotionCard intensity={8} radiusClass="rounded-3xl" className="h-full">
+                <div className="glass preserve-3d relative flex h-full flex-col gap-5 overflow-hidden rounded-3xl p-8 sm:p-9 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-1.5 group-hover:border-primary/40 group-hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] dark:group-hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.4)]">
                   {/* Subtle corner ornament watermark */}
                   <div
                     aria-hidden

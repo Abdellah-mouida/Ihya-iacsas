@@ -77,6 +77,9 @@
 :root {
   --radius: 0.75rem;
 
+  --nav-bg: color-mix(in oklch, var(--background) 82%, transparent);
+  --nav-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+
   /* Warm, premium editorial light theme */
   --background: oklch(0.985 0.01 85);
   --foreground: oklch(0.24 0.02 66);
@@ -300,6 +303,8 @@ html[data-theme="obsidian"],
 [data-theme="amoled"],
 [data-theme="obsidian"] {
   --background: oklch(0 0 0); /* #000000 */
+  --nav-bg: oklch(0.12 0.005 260 / 92%); /* Deep black #111 */
+  --nav-inner-shadow: inset 0 0 0 1px color-mix(in srgb, var(--main) 16%, transparent);
   --foreground: oklch(0.96 0.01 85);
   --card: oklch(0.08 0.005 260);
   --card-foreground: oklch(0.96 0.01 85);
@@ -354,6 +359,8 @@ html[data-theme="ember"],
 [data-theme="midnight"],
 [data-theme="ember"] {
   --background: oklch(0.12 0.005 260); /* ~#111 */
+  --nav-bg: linear-gradient(to bottom, oklch(0.16 0.008 260 / 94%), oklch(0.12 0.005 260 / 94%)); /* Subtle #222 to #111 */
+  --nav-inner-shadow: inset 0 0 0 1px color-mix(in srgb, var(--main) 16%, transparent);
   --foreground: oklch(0.95 0.01 85);
   --card: oklch(0.16 0.008 260);
   --card-foreground: oklch(0.95 0.01 85);

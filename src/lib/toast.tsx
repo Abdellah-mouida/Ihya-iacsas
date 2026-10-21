@@ -11,6 +11,35 @@ export interface NotifyOptions extends ExternalToast {
 }
 
 /**
+ * In-memory toast deduplication & counter tracker.
+ * Identical (variant + message) within DEDUPE_WINDOW_MS will increment count
+ * and refresh the sonner toast with a badge ("×N") instead of spamming duplicates.
+ */
+interface ActiveToastRecord {
+  id: string | number;
+  count: number;
+  timestamp: number;
+  timeoutId: ReturnType<typeof setTimeout>;
+}
+
+const DEDUPE_WINDOW_MS = 4000;
+const activeToasts = new Map<string, ActiveToastRecord>();
+
+// Global list of active sonner toast IDs to track and provide a "Clear all" capability
+const activeToastIds = new Set<string | number>();
+
+function getToastKey(type: string, message: React.ReactNode): string {
+  if (typeof message === "string" || typeof message === "number") {
+    return `${type}:${message}`;
+  }
+  try {
+    return `${type}:${JSON.stringify(message)}`;
+  } catch {
+    return `${type}:${String(message)}`;
+  }
+}
+
+/**
  * Detect current document locale (defaults to "ar")
  */
 function getCurrentLocale(): "ar" | "en" {
@@ -40,18 +69,42 @@ function getStatusTitle(type: "success" | "warning" | "error" | "info"): string 
 function formatToastPayload(
   type: "success" | "warning" | "error" | "info",
   message: React.ReactNode,
-  options?: NotifyOptions
+  options?: NotifyOptions,
+  count = 1
 ): { title: React.ReactNode; options: ExternalToast } {
   const statusTitle = options?.title ?? getStatusTitle(type);
   const restOptions = { ...options };
   delete restOptions.title;
 
-  let descriptionContent: React.ReactNode = message;
+  let descriptionContent: React.ReactNode = (
+    <div className="flex items-center gap-2">
+      <span className="flex-1">{message}</span>
+      {count > 1 && (
+        <span
+          data-testid="toast-dedupe-badge"
+          className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-full bg-primary/15 text-primary border border-primary/20 animate-in fade-in zoom-in-95 duration-200 select-none shrink-0"
+        >
+          ×{count}
+        </span>
+      )}
+    </div>
+  );
+
   if (restOptions.description) {
     const rawDesc = typeof restOptions.description === "function" ? restOptions.description() : restOptions.description;
     descriptionContent = (
       <div className="space-y-0.5">
-        <div>{message}</div>
+        <div className="flex items-center gap-2">
+          <span className="flex-1">{message}</span>
+          {count > 1 && (
+            <span
+              data-testid="toast-dedupe-badge"
+              className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-full bg-primary/15 text-primary border border-primary/20 animate-in fade-in zoom-in-95 duration-200 select-none shrink-0"
+            >
+              ×{count}
+            </span>
+          )}
+        </div>
         <div className="text-muted-foreground text-xs opacity-90">{rawDesc}</div>
       </div>
     );
@@ -64,6 +117,69 @@ function formatToastPayload(
       description: descriptionContent,
     },
   };
+}
+
+function emitDedupedToast(
+  type: "success" | "warning" | "error" | "info",
+  message: React.ReactNode,
+  options?: NotifyOptions
+): string | number {
+  const key = getToastKey(type, message);
+  const existing = activeToasts.get(key);
+
+  const duration = options?.duration ?? (type === "error" ? 6000 : type === "warning" ? 5000 : 4500);
+
+  if (existing) {
+    // Increment count & refresh toast
+    existing.count += 1;
+    clearTimeout(existing.timeoutId);
+    existing.timeoutId = setTimeout(() => {
+      activeToasts.delete(key);
+      activeToastIds.delete(existing.id);
+    }, DEDUPE_WINDOW_MS);
+
+    const { title, options: finalOptions } = formatToastPayload(type, message, options, existing.count);
+
+    sonnerToast[type](title, {
+      id: existing.id,
+      duration,
+      dismissible: true,
+      ...finalOptions,
+    });
+    return existing.id;
+  }
+
+  // Create new toast
+  const { title, options: finalOptions } = formatToastPayload(type, message, options, 1);
+  const toastId = sonnerToast[type](title, {
+    duration,
+    dismissible: true,
+    onDismiss: (t) => {
+      activeToastIds.delete(t.id);
+      options?.onDismiss?.(t);
+    },
+    onAutoClose: (t) => {
+      activeToastIds.delete(t.id);
+      options?.onAutoClose?.(t);
+    },
+    ...finalOptions,
+  });
+
+  activeToastIds.add(toastId);
+
+  const timeoutId = setTimeout(() => {
+    activeToasts.delete(key);
+    activeToastIds.delete(toastId);
+  }, DEDUPE_WINDOW_MS);
+
+  activeToasts.set(key, {
+    id: toastId,
+    count: 1,
+    timestamp: Date.now(),
+    timeoutId,
+  });
+
+  return toastId;
 }
 
 /**
@@ -86,43 +202,23 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000, timeoutMessage?:
  * Ihyaa Program Themed Notification System (notify)
  * Provides Islamic geometric styling, glassmorphism, soft floating shadow,
  * Montserrat & Arabic typography pairing, RTL/LTR awareness, localized status titles,
- * and built-in timeout safety nets across all forms.
+ * 4s message deduplication with ×N badge, max 3 stack limit, and built-in timeout safety nets.
  */
 export const notify = {
   success: (message: React.ReactNode, options?: NotifyOptions) => {
-    const { title, options: finalOptions } = formatToastPayload("success", message, options);
-    return sonnerToast.success(title, {
-      duration: options?.duration ?? 4500,
-      dismissible: true,
-      ...finalOptions,
-    });
+    return emitDedupedToast("success", message, options);
   },
 
   error: (message: React.ReactNode, options?: NotifyOptions) => {
-    const { title, options: finalOptions } = formatToastPayload("error", message, options);
-    return sonnerToast.error(title, {
-      duration: options?.duration ?? 5000,
-      dismissible: true,
-      ...finalOptions,
-    });
+    return emitDedupedToast("error", message, options);
   },
 
   warning: (message: React.ReactNode, options?: NotifyOptions) => {
-    const { title, options: finalOptions } = formatToastPayload("warning", message, options);
-    return sonnerToast.warning(title, {
-      duration: options?.duration ?? 5000,
-      dismissible: true,
-      ...finalOptions,
-    });
+    return emitDedupedToast("warning", message, options);
   },
 
   info: (message: React.ReactNode, options?: NotifyOptions) => {
-    const { title, options: finalOptions } = formatToastPayload("info", message, options);
-    return sonnerToast.info(title, {
-      duration: options?.duration ?? 4500,
-      dismissible: true,
-      ...finalOptions,
-    });
+    return emitDedupedToast("info", message, options);
   },
 
   /**
@@ -144,18 +240,40 @@ export const notify = {
     const timeoutMs = data.timeoutMs ?? 15000;
     const guardedPromise = withTimeout(promise, timeoutMs, data.timeoutMessage);
 
-    return sonnerToast.promise(guardedPromise, {
+    const toastResult = sonnerToast.promise(guardedPromise, {
       loading: data.loading,
       success: data.success,
       error: data.error,
       description: data.description,
       finally: data.finally,
     });
+    if (typeof toastResult === "string" || typeof toastResult === "number") {
+      activeToastIds.add(toastResult);
+    }
+    return toastResult;
   },
 
   dismiss: (id?: string | number) => {
-    sonnerToast.dismiss(id);
+    if (id !== undefined) {
+      activeToastIds.delete(id);
+      sonnerToast.dismiss(id);
+    } else {
+      activeToastIds.clear();
+      activeToasts.clear();
+      sonnerToast.dismiss();
+    }
   },
+
+  /**
+   * Clear all active toasts immediately
+   */
+  clearAll: () => {
+    activeToastIds.clear();
+    activeToasts.clear();
+    sonnerToast.dismiss();
+  },
+
+  getActiveCount: () => activeToastIds.size,
 };
 
 /**
@@ -168,4 +286,11 @@ export const toast = {
   info: notify.info,
   promise: notify.promise,
   dismiss: notify.dismiss,
+  clearAll: notify.clearAll,
+  getActiveCount: notify.getActiveCount,
 };
+
+// Expose toast on window in development/test environments for automated testing
+if (typeof window !== "undefined") {
+  (window as unknown as { __IHYAA_TOAST__?: typeof toast }).__IHYAA_TOAST__ = toast;
+}

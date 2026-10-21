@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { getUserAccountData } from "@/app/actions/account";
+import { getCachedEnabledThemes } from "@/lib/theme-server";
 import { SettingsView } from "@/components/settings/settings-view";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { redirect } from "next/navigation";
@@ -26,6 +27,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   }
 
   const initialData = res.data;
+  const availableThemes = await getCachedEnabledThemes();
 
   const params = await searchParams;
   const initialTab = params?.tab || "profile";
@@ -36,7 +38,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <main className="relative min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="texture-surface texture-octagon-tile -z-10" />
         <div className="max-w-6xl mx-auto">
-          <SettingsView initialData={initialData} initialTab={initialTab} />
+          <SettingsView
+            initialData={initialData}
+            initialTab={initialTab}
+            availableThemes={availableThemes}
+          />
         </div>
       </main>
     </>

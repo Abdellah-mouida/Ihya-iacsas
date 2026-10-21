@@ -98,7 +98,7 @@ export function About() {
                 radiusClass="rounded-2xl"
                 wrapperClassName="group h-full"
               >
-                <div className="glass relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-[var(--main)]/40 hover:shadow-lg">
+                <div className="glass overflow-hidden relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-[var(--main)]/40 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.35)]">
                   <div className="flex items-center justify-between">
                     <span className="grid size-11 place-items-center rounded-xl bg-[var(--main)]/15 text-[var(--main)] border border-[var(--main)]/30">
                       <card.icon className="size-5" />

@@ -34,25 +34,25 @@ export function Hero() {
           sizes="100vw"
           className="object-cover"
         />
-        {/* Scrim: a light warm wash in light mode, deep night in dark mode. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background/94 dark:from-night/85 dark:via-night/72 dark:to-night/92" />
+        {/* Soft theme-aware scrim allowing the photo to remain clearly visible at center */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background/75 dark:from-night/60 dark:via-night/45 dark:to-night/80" />
       </div>
 
-      {/* React Bits aurora — warm animated light over the photo */}
-      <AuroraBackground className="-z-20 opacity-50 mix-blend-screen dark:opacity-60" />
+      {/* React Bits aurora — warm animated light over the photo with gentle blend */}
+      <AuroraBackground className="-z-20 opacity-25 mix-blend-screen dark:opacity-35" />
 
-      {/* Inner vignette: strong at corners/edges, transparent at center (theme-aware) */}
+      {/* Corner vignette: soft perimeter darkening leaving center open and photo crisp */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_200px_80px_var(--background)] dark:[box-shadow:inset_0_0_200px_80px_var(--night)]"
+        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_140px_40px_var(--background)] dark:[box-shadow:inset_0_0_140px_40px_var(--night)] opacity-60"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--background)_100%)] opacity-70 dark:bg-[radial-gradient(ellipse_at_center,transparent_50%,var(--night)_100%)] dark:opacity-70"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_60%,var(--background)_100%)] opacity-40 dark:opacity-50"
       />
 
-      {/* Large sparse Mandala pattern texture */}
-      <div className="texture-surface texture-mandala -z-10 !opacity-10" />
+      {/* Faint Mandala pattern texture */}
+      <div className="texture-surface texture-mandala -z-10 !opacity-[0.06]" />
 
       {/* Ambient drifting particles */}
       <div aria-hidden className="absolute inset-0 -z-10 opacity-80">
@@ -104,7 +104,7 @@ export function Hero() {
           <Button
             asChild
             variant="outline"
-            className="glass h-12 rounded-full border-foreground/20 px-7 text-base font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:bg-foreground/5 dark:border-border/60 dark:hover:bg-accent/40"
+            className="glass h-12 rounded-full border-border/70 px-7 text-base font-semibold text-foreground/95 transition-all hover:-translate-y-0.5 hover:bg-muted/60 dark:border-border/60 dark:hover:bg-accent/40"
           >
             <a href="#about">
               <Info className="size-5" />
@@ -127,9 +127,9 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1, duration: 0.8 }}
-        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-muted-foreground"
+        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-foreground/80 dark:text-foreground/90 transition-colors hover:text-foreground"
       >
-        <span className="text-[0.7rem] uppercase tracking-[0.2em]">
+        <span className="text-[0.75rem] font-medium uppercase tracking-[0.2em]">
           {t("hero.scroll")}
         </span>
         <span className="grid size-9 place-items-center rounded-full border border-foreground/25 dark:border-white/25">

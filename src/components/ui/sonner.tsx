@@ -230,6 +230,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       dir={dir}
       duration={4500}
+      visibleToasts={3}
+      expand={false}
       closeButton
       className="toaster group"
       icons={{

@@ -36,12 +36,12 @@ test.describe("Task 1: Universal Texture and Pattern Verification", () => {
     expect(girihReq).toBe(true);
   });
 
-  test("auth pages render theme-reactive auth texture with star rosette mask", async ({
+  test("auth pages render theme-reactive auth texture with pattern mask", async ({
     page,
   }) => {
     let patternStatus = 0;
     page.on("response", (res) => {
-      if (res.url().includes("star-rosette.svg")) {
+      if (res.url().includes("octagon-tile.svg") || res.url().includes("star-rosette.svg")) {
         patternStatus = res.status();
       }
     });
@@ -51,7 +51,7 @@ test.describe("Task 1: Universal Texture and Pattern Verification", () => {
     const backdrop = page.locator('[data-testid="auth-ambient-backdrop"]');
     await expect(backdrop).toBeAttached();
 
-    const authTexture = page.locator(".page-texture-auth");
+    const authTexture = backdrop.locator(".texture-surface");
     await expect(authTexture).toBeAttached();
 
     const computedMask = await authTexture.evaluate((el) => {
@@ -59,7 +59,7 @@ test.describe("Task 1: Universal Texture and Pattern Verification", () => {
       return style.maskImage || style.webkitMaskImage || "";
     });
 
-    expect(computedMask).toContain("star-rosette.svg");
+    expect(computedMask).toContain("octagon-tile.svg");
     expect(patternStatus).toBe(200);
   });
 });
