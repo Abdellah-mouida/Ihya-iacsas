@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     <>
       <GlassNavbar initialSession={session} />
       <main className="relative isolate min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden z-0">
-        <Texture pattern="octagon-tile" size={60} fade="vertical" />
+        <Texture pattern="star-rosette" size={72} fade="vertical" />
         <div className="relative z-10 max-w-6xl mx-auto">
           <SettingsView
             initialData={initialData}

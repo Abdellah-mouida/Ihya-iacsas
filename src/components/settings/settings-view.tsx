@@ -48,7 +48,7 @@ interface SettingsViewProps {
 const DEFAULT_COVER_PRESETS = [
   { id: "default", nameAr: "افتراضي", nameEn: "Default", path: "/patterns/girih.svg" },
   { id: "mandala", nameAr: "ماندالا", nameEn: "Mandala", path: "/patterns/mandala.svg" },
-  { id: "octagon", nameAr: "مثمن", nameEn: "Octagon", path: "/patterns/octagon-tile.svg" },
+  { id: "star-rosette", nameAr: "نجمة", nameEn: "Star Rosette", path: "/patterns/star-rosette.svg" },
 ];
 
 export function SettingsView({

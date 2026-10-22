@@ -5,11 +5,10 @@ test.describe("Theme main color & pattern texture layer verification", () => {
     // Check pattern SVGs are 200 OK
     const patterns = [
       "/patterns/mandala.svg",
-      "/patterns/octagon-tile.svg",
       "/patterns/star-rosette.svg",
       "/patterns/girih.svg",
       "/patterns/interlocking-geometric.svg",
-      "/patterns/islamic-octagon-grid.svg",
+      "/patterns/corner-ornament.svg",
     ];
 
     for (const pat of patterns) {

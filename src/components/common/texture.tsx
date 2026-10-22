@@ -3,11 +3,9 @@ import { cn } from "@/lib/utils";
 
 export type TexturePattern =
   | "girih"
-  | "octagon-tile"
   | "star-rosette"
   | "mandala"
-  | "interlocking"
-  | "octagon-grid";
+  | "interlocking";
 
 export type TextureFade = "radial" | "vertical" | "none";
 
@@ -47,12 +45,8 @@ export function Texture({
       ? 180
       : pattern === "star-rosette"
       ? 72
-      : pattern === "octagon-grid"
-      ? 80
       : pattern === "interlocking"
       ? 64
-      : pattern === "octagon-tile"
-      ? 60
       : 52); // girih
 
   return (
@@ -86,8 +80,6 @@ export function Texture({
               href={`/patterns/${
                 pattern === "interlocking"
                   ? "interlocking-geometric"
-                  : pattern === "octagon-grid"
-                  ? "islamic-octagon-grid"
                   : pattern
               }.svg`}
               width={tileSize}

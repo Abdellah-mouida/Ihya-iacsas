@@ -15,7 +15,7 @@ export interface PatternCoverProps {
  * Presets:
  * 1. Default (/patterns/girih.svg): Rich emerald & brass geometric weave
  * 2. Mandala (/patterns/mandala.svg): Intricate floral Islamic mandala rosettes
- * 3. Octagon (/patterns/octagon-tile.svg): Elegant Moroccan octagonal tile lattice
+ * 3. Star Rosette (/patterns/star-rosette.svg): Elegant star rosette medallion
  */
 export function PatternCover({
   coverUrl,
@@ -31,7 +31,8 @@ export function PatternCover({
     url === "default" ||
     url === "/patterns/mandala.svg" ||
     url === "mandala" ||
-    url === "/patterns/octagon-tile.svg" ||
+    url === "/patterns/star-rosette.svg" ||
+    url === "star-rosette" ||
     url === "octagon";
 
   if (isDefaultGirih) {

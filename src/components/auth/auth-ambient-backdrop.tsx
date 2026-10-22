@@ -1,7 +1,7 @@
 import { Texture, type TexturePattern } from "@/components/common/texture";
 
 export function AuthAmbientBackdrop({
-  pattern = "octagon-tile",
+  pattern = "star-rosette",
 }: {
   pattern?: TexturePattern;
 }) {

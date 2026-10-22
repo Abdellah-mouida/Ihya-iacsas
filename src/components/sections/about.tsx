@@ -15,7 +15,7 @@ export function About() {
 
   return (
     <section id="about" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
-      <Texture pattern="octagon-tile" size={60} fade="vertical" />
+      <Texture pattern="star-rosette" size={72} fade="vertical" />
       <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
         <motion.div
@@ -101,7 +101,7 @@ export function About() {
               >
                 <div className="glass overflow-hidden relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-[var(--main)]/40 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.35)]">
                   {/* Subtle card texture */}
-                  <Texture pattern="octagon-tile" size={48} fade="radial" opacity={0.06} className="rounded-2xl" />
+                  <Texture pattern="star-rosette" size={48} fade="radial" opacity={0.06} className="rounded-2xl" />
                   <div className="relative z-10 flex items-center justify-between">
                     <span className="grid size-11 place-items-center rounded-xl bg-[var(--main)]/15 text-[var(--main)] border border-[var(--main)]/30">
                       <card.icon className="size-5" />
