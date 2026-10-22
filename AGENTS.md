@@ -125,4 +125,7 @@ This project integrates Model Context Protocol (MCP) servers to accelerate devel
      - Layer 2 (`z-[2]`): Texture layer (shared SVG `<Texture />` pattern with `pointer-events-none`).
      - Layer 3 (`z-[3]`): Vignette / gradient overlays (e.g. radial fades, top/bottom scrims with center transparency).
      - Layer 4 (`z-10`): Interactive content (typography, buttons, links, cards, forms).
+9. **Active Nav Link LayoutId Highlighting**:
+   - Navigation links in desktop navbar must utilize a single sliding layoutId pill indicator with Framer Motion (`layoutId="active-nav-pill"`).
+   - Must set `aria-current="page"` on the active link and respect `prefers-reduced-motion` and RTL orientation.
 

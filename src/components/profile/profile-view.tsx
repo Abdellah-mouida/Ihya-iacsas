@@ -8,6 +8,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { RoleBadge } from "@/components/common/role-badge";
 import { StatusNotice } from "@/components/common/status-notice";
 import { PatternCover } from "@/components/common/pattern-cover";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Calendar,
@@ -62,20 +63,18 @@ export function ProfileView({ initialData }: ProfileViewProps) {
         {/* Profile Card & Avatar */}
         <div className="relative px-6 sm:px-10 pb-8 pt-0 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 -mt-16 sm:-mt-20">
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-start">
-            {/* Centered Avatar */}
-            <div className="relative size-28 sm:size-32 rounded-full border-4 border-background bg-card shadow-xl overflow-hidden ring-2 ring-primary/30 shrink-0">
-              {user.image ? (
-                <Image
-                  src={user.image}
-                  alt={user.name || "User Avatar"}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="size-full flex items-center justify-center bg-primary/10 text-primary font-heading font-bold text-3xl">
-                  {user.name ? user.name.slice(0, 2).toUpperCase() : "IH"}
-                </div>
-              )}
+            {/* Centered Avatar with layout wrapper */}
+            <div className="relative rounded-full border-4 border-background bg-card shadow-xl overflow-hidden ring-2 ring-primary/30 shrink-0">
+              <UserAvatar
+                user={{
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  image: user.image,
+                }}
+                size="3xl"
+                shape="circle"
+              />
             </div>
 
             <div className="space-y-1.5 min-w-0">

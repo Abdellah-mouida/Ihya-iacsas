@@ -41,12 +41,12 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
   });
 
   test("1. Initials extraction handles English, Arabic, single words, and email fallbacks", async () => {
-    expect(getInitials("Abdellah Mouida")).toBe("AM");
-    expect(getInitials("عبد الله معيدة")).toBe("عم");
+    expect(getInitials("Abdellah Mouida")).toBe("A");
+    expect(getInitials("عبد الله معيدة")).toBe("ع");
     expect(getInitials("Youssef")).toBe("Y");
     expect(getInitials("فاطمة")).toBe("ف");
     expect(getInitials(null, "salim@example.com")).toBe("S");
-    expect(getInitials("", "")).toBe("I");
+    expect(getInitials("", "")).toBe("إ");
   });
 
   test("2. next.config.ts includes googleusercontent.com in images.remotePatterns", async () => {
@@ -79,10 +79,10 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
     const avatar = userMenuBtn.locator('[data-testid="user-avatar"]');
     await expect(avatar).toBeVisible();
 
-    // Verify letter fallback has AM
+    // Verify letter fallback has A
     const fallback = avatar.locator('[data-testid="letter-avatar-fallback"]');
     await expect(fallback).toBeVisible();
-    await expect(fallback).toHaveText("AM");
+    await expect(fallback).toHaveText("A");
   });
 
   test("4. Account page and booking snapshot card render UserAvatar seamlessly", async ({
@@ -95,11 +95,11 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
     await page.click('[data-testid="login-submit-btn"]');
     await page.waitForURL(/\/(account|events|$)/);
 
-    await page.goto("/account");
-    const accountAvatar = page.locator('[data-testid="account-profile-section"] [data-testid="user-avatar"]');
+    await page.goto("/profile");
+    const accountAvatar = page.locator('[data-testid="profile-view-container"] [data-testid="user-avatar"]');
     await expect(accountAvatar).toBeVisible();
     const accountFallback = accountAvatar.locator('[data-testid="letter-avatar-fallback"]');
-    await expect(accountFallback).toHaveText("AM");
+    await expect(accountFallback).toHaveText("A");
 
     // Visit /book
     await page.goto("/book");
@@ -108,6 +108,6 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
     const snapshotAvatar = snapshotCard.locator('[data-testid="user-avatar"]');
     await expect(snapshotAvatar).toBeVisible({ timeout: 10000 });
     const snapshotFallback = snapshotAvatar.locator('[data-testid="letter-avatar-fallback"]');
-    await expect(snapshotFallback).toHaveText("AM");
+    await expect(snapshotFallback).toHaveText("A");
   });
 });

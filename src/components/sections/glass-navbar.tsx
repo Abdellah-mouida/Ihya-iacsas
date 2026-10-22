@@ -109,21 +109,44 @@ export function GlassNavbar({
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // The navbar only goes fully transparent while floating over the dark hero
-  // (home page, at the very top). Elsewhere (or once scrolled) it stays glass
-  // so text/icons remain legible on light backgrounds.
-  const transparentTop = pathname === "/" && !scrolled;
+  // Transparent at the very top of every page; background after scrolling.
+  const transparentTop = !scrolled;
 
   // Close the mobile menu on route change
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
+  // Top sentinel IntersectionObserver: transparent at top (scrollY = 0), glass after scrolling past 200px threshold
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    let sentinel = document.getElementById("navbar-scroll-sentinel");
+    if (!sentinel) {
+      sentinel = document.createElement("div");
+      sentinel.id = "navbar-scroll-sentinel";
+      sentinel.style.position = "absolute";
+      sentinel.style.top = "0px";
+      sentinel.style.left = "0px";
+      sentinel.style.width = "1px";
+      sentinel.style.height = "200px";
+      sentinel.style.pointerEvents = "none";
+      sentinel.style.visibility = "hidden";
+      sentinel.style.zIndex = "-1";
+      document.body.prepend(sentinel);
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When the 200px sentinel is intersecting the top viewport, we are at the top (< 200px scroll)
+        setScrolled(!entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   // Lock scroll + Escape to close the mobile menu.
@@ -208,22 +231,41 @@ export function GlassNavbar({
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden items-center gap-0.5 lg:flex">
+        <ul className="hidden items-center gap-1 lg:flex" role="menubar">
           {NAV_LINKS.map((link) => {
+            const active = isActive(link.href);
             const showDot = Boolean(link.indicator) && hasNewEvent;
             return (
-              <li key={link.href} className="relative">
+              <li key={link.href} className="relative" role="none">
                 <Link
                   href={link.href}
+                  role="menuitem"
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200",
-                    transparentTop
+                    "relative flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200",
+                    active
+                      ? "text-primary-foreground dark:text-white"
+                      : transparentTop
                       ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
-                      : "text-foreground/85 hover:text-green",
+                      : "text-foreground/80 hover:text-foreground",
                   )}
                 >
-                  {t(link.key)}
-                  {showDot ? <NewEventDot label={t("nav.newEvent")} /> : null}
+                  {active && (
+                    <motion.span
+                      layoutId="active-nav-pill"
+                      className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                      transition={{
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 30,
+                      }}
+                      style={{ willChange: "transform" }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center">
+                    {t(link.key)}
+                    {showDot ? <NewEventDot label={t("nav.newEvent")} /> : null}
+                  </span>
                 </Link>
               </li>
             );
@@ -286,15 +328,24 @@ export function GlassNavbar({
                   className="w-64 rounded-2xl border border-border/60 bg-popover/95 p-2 shadow-layered backdrop-blur-xl"
                 >
                   <DropdownMenuLabel className="px-3 py-2.5">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="font-heading text-sm font-bold text-foreground truncate">
-                        {session.user.name || t("nav.brand")}
-                      </p>
-                      <RoleBadge role={session.user.role || "USER"} size="sm" />
+                    <div className="flex items-center gap-3 mb-2">
+                      <UserAvatar
+                        user={session.user}
+                        size="md"
+                        shape="circle"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="font-heading text-sm font-bold text-foreground truncate">
+                            {session.user.name || t("nav.brand")}
+                          </p>
+                          <RoleBadge role={session.user.role || "USER"} size="sm" />
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate font-sans">
+                          {session.user.email}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate font-sans">
-                      {session.user.email}
-                    </p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -386,6 +437,7 @@ export function GlassNavbar({
           {/* Animated hamburger */}
           <button
             type="button"
+            data-testid="navbar-mobile-menu-btn"
             onClick={() => setOpen((o) => !o)}
             aria-label={t("nav.menu")}
             aria-expanded={open}
@@ -433,6 +485,9 @@ export function GlassNavbar({
             />
             <motion.div
               key="panel"
+              role="dialog"
+              aria-label={t("nav.menu")}
+              data-testid="navbar-mobile-drawer"
               initial={{ opacity: 0, y: -16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -16, scale: 0.98 }}
@@ -476,13 +531,20 @@ export function GlassNavbar({
                 ) : null}
 
                 {NAV_LINKS.map((link) => {
+                  const active = isActive(link.href);
                   const showDot = Boolean(link.indicator) && hasNewEvent;
                   return (
                     <motion.li key={link.href} variants={fadeUp}>
                       <Link
                         href={link.href}
                         onClick={() => setOpen(false)}
-                        className="flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors text-foreground/85 hover:bg-muted hover:text-green"
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                          active
+                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                            : "text-foreground/85 hover:bg-muted hover:text-foreground"
+                        )}
                       >
                         <span className="flex items-center">
                           {t(link.key)}

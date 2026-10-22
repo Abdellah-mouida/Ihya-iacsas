@@ -14,6 +14,7 @@ import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
 import { ProfileTagEditor } from "@/components/settings/profile-tag-editor";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { PatternCover } from "@/components/common/pattern-cover";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { getLastNonSettingsPath } from "@/components/common/route-history-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -383,14 +384,15 @@ export function SettingsView({
                   {isAr ? "الصورة الشخصية" : "Profile Avatar"}
                 </Label>
                 <div className="flex items-center gap-5">
-                  <div className="relative size-20 rounded-full border-2 border-border overflow-hidden bg-muted/40 shrink-0">
-                    {avatarUrl ? (
-                      <Image src={avatarUrl} alt="Avatar" fill className="object-cover" />
-                    ) : (
-                      <div className="size-full flex items-center justify-center font-heading font-bold text-lg text-primary">
-                        IH
-                      </div>
-                    )}
+                  <div className="relative rounded-full border-2 border-border overflow-hidden bg-muted/40 shrink-0">
+                    <UserAvatar
+                      id={userData.id}
+                      src={avatarUrl}
+                      name={userData.name}
+                      email={userData.email}
+                      size="2xl"
+                      shape="circle"
+                    />
                   </div>
 
                   <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border/80 bg-card hover:bg-muted/50 text-xs font-semibold text-foreground transition-colors">

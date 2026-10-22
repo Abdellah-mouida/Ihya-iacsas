@@ -65,7 +65,11 @@ function getEmailLogoSrc(appUrl?: string): string {
     return process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL;
   }
   if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
-    return `${appUrl}/images/logo-circle.png`;
+    return `${appUrl}/images/logo-email-240.png`;
+  }
+  const base64 = getCircularLogoBase64();
+  if (base64) {
+    return `data:image/png;base64,${base64}`;
   }
   return CLOUDINARY_EMAIL_LOGO_URL;
 }

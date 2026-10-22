@@ -6,10 +6,12 @@ import { cn } from "@/lib/utils";
 
 export interface UserAvatarProps {
   user?: {
+    id?: string | null;
     name?: string | null;
     email?: string | null;
     image?: string | null;
   } | null;
+  id?: string | null;
   src?: string | null;
   name?: string | null;
   email?: string | null;
@@ -30,7 +32,7 @@ const SIZE_MAP = {
   "3xl": { box: "size-28 sm:size-32", text: "text-3xl sm:text-4xl", px: 128 },
 };
 
-// Moroccan & Islamic inspired rich gradient palettes
+// Moroccan & Islamic inspired rich gradient palettes (6 deterministic color pairs)
 const PALETTES = [
   {
     bg: "from-emerald-700 via-emerald-600 to-teal-500",
@@ -65,9 +67,9 @@ const PALETTES = [
 ];
 
 /**
- * Deterministically compute a palette index from user identifier
+ * Deterministically compute a palette index from stable seed (user.id, fallback email or name)
  */
-function getPalette(identifier: string) {
+export function getPalette(identifier: string) {
   let hash = 0;
   for (let i = 0; i < identifier.length; i++) {
     hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
@@ -77,35 +79,37 @@ function getPalette(identifier: string) {
 }
 
 /**
- * Extract 1-2 initials from name or email (Latin or Arabic)
+ * Extract the first letter of the name (Arabic or Latin), falling back to the email's first letter.
  */
-export function getInitials(name?: string | null, email?: string | null): string {
+export function getInitialLetter(name?: string | null, email?: string | null): string {
   const cleanName = name?.trim();
   if (cleanName) {
-    const parts = cleanName.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      const first = Array.from(parts[0])[0];
-      const last = Array.from(parts[parts.length - 1])[0];
-      return `${first}${last}`.toUpperCase();
-    }
-    if (parts.length === 1) {
-      return Array.from(parts[0])[0].toUpperCase();
+    const firstChar = Array.from(cleanName)[0];
+    if (firstChar) {
+      return firstChar.toUpperCase();
     }
   }
 
   const cleanEmail = email?.trim();
   if (cleanEmail) {
-    const handle = cleanEmail.split("@")[0];
+    const handle = cleanEmail.split("@")[0]?.trim();
     if (handle) {
-      return Array.from(handle)[0].toUpperCase();
+      const firstChar = Array.from(handle)[0];
+      if (firstChar) {
+        return firstChar.toUpperCase();
+      }
     }
   }
 
-  return "I";
+  return "إ"; // Arabic Alif default for Ihyaa
 }
+
+// Alias for backwards compatibility with legacy tests
+export const getInitials = getInitialLetter;
 
 export function UserAvatar({
   user,
+  id: propId,
   src: propSrc,
   name: propName,
   email: propEmail,
@@ -115,6 +119,7 @@ export function UserAvatar({
   alt,
   priority = false,
 }: UserAvatarProps) {
+  const userId = propId !== undefined ? propId : user?.id;
   const imageSrc = propSrc !== undefined ? propSrc : user?.image;
   const displayName = propName !== undefined ? propName : user?.name;
   const displayEmail = propEmail !== undefined ? propEmail : user?.email;
@@ -128,14 +133,23 @@ export function UserAvatar({
 
   const sizeConfig = SIZE_MAP[size] || SIZE_MAP.md;
   const shapeClass = shape === "circle" ? "rounded-full" : "rounded-2xl";
-  const initials = useMemo(() => getInitials(displayName, displayEmail), [displayName, displayEmail]);
-  const palette = useMemo(() => getPalette(displayName || displayEmail || "user"), [displayName, displayEmail]);
+
+  const initialLetter = useMemo(
+    () => getInitialLetter(displayName, displayEmail),
+    [displayName, displayEmail]
+  );
+
+  // Seed strictly from user.id if available, fallback to email then name
+  const seed = userId || displayEmail || displayName || "ihyaa-user";
+  const palette = useMemo(() => getPalette(seed), [seed]);
 
   const hasImage = Boolean(imageSrc) && !imageError;
 
   return (
     <div
       data-testid="user-avatar"
+      data-letter={!hasImage ? initialLetter : undefined}
+      data-palette={palette.bg}
       className={cn(
         "relative shrink-0 select-none overflow-hidden flex items-center justify-center border shadow-xs transition-transform",
         sizeConfig.box,
@@ -165,7 +179,7 @@ export function UserAvatar({
             shapeClass,
           )}
         >
-          {initials}
+          {initialLetter}
         </span>
       )}
     </div>
