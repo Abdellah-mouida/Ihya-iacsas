@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { AuroraBackground } from "@/components/react-bits/aurora-background";
 import { Button } from "@/components/ui/button";
+import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENTS_HREF, IMAGES } from "@/lib/content";
 import { fadeUp, staggerContainer } from "@/lib/motion";
@@ -20,51 +21,50 @@ export function Hero() {
   const { t } = useLocale();
 
   return (
-<section
+    <section
       id="home"
-      className="relative flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground"
+      className="relative isolate flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground z-0"
     >
-      {/* Photo layer */}
-      <div className="absolute inset-0 -z-30">
+      {/* Layer 1: Photo Layer (real next/image at z-[1]) */}
+      <div className="absolute inset-0 z-[1] overflow-hidden select-none">
         <Image
           src={IMAGES.groupPortrait}
-          alt=""
+          alt="Ihyaa Youth Gathering"
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-center"
         />
-        {/* Soft theme-aware scrim allowing the photo to remain clearly visible at center */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background/75 dark:from-night/60 dark:via-night/45 dark:to-night/80" />
+        {/* Soft edge-only scrim: 100% transparent in middle 60% of viewport */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80" />
       </div>
 
-      {/* React Bits aurora — warm animated light over the photo with gentle blend */}
-      <AuroraBackground className="-z-20 opacity-25 mix-blend-screen dark:opacity-35" />
+      {/* Layer 2: Texture Pattern Layer */}
+      <Texture pattern="mandala" size={240} fade="radial" opacity={0.06} />
 
-      {/* Corner vignette: soft perimeter darkening leaving center open and photo crisp */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 [box-shadow:inset_0_0_140px_40px_var(--background)] dark:[box-shadow:inset_0_0_140px_40px_var(--night)] opacity-60"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_60%,var(--background)_100%)] opacity-40 dark:opacity-50"
-      />
+      {/* Layer 3: Ambient Aurora + Particles + Corner Vignette */}
+      <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden select-none">
+        {/* React Bits aurora — warm animated light over photo */}
+        <AuroraBackground className="opacity-20 mix-blend-screen dark:opacity-30" />
 
-      {/* Faint Mandala pattern texture */}
-      <div className="texture-surface texture-mandala -z-10 !opacity-[0.06]" />
+        {/* Drifting ambient particles */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-70">
+          <HeroScene />
+        </div>
 
-      {/* Ambient drifting particles */}
-      <div aria-hidden className="absolute inset-0 -z-10 opacity-80">
-        <HeroScene />
+        {/* Soft corner perimeter vignette — strictly transparent at center */}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,var(--background)_100%)] opacity-70"
+        />
       </div>
 
-      {/* Content */}
+      {/* Layer 4: Interactive Typography & Actions */}
       <motion.div
         variants={staggerContainer(0.14, 0.1)}
         initial="hidden"
         animate="show"
-        className="mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center"
+        className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center"
       >
         <motion.span
           variants={fadeUp}

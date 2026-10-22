@@ -156,7 +156,7 @@ export function SignUpView() {
   const BackIcon = isAr ? ArrowRight : ArrowLeft;
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8">
+    <div className="relative isolate min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 bg-background z-0">
       {/* Ambient background with depth and glow */}
       <AuthAmbientBackdrop pattern="interlocking" />
 

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { Texture } from "@/components/common/texture";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { fadeUp, scaleIn, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -13,27 +14,25 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[70vh] items-center overflow-x-clip py-28 text-foreground dark:bg-card/40 sm:py-36"
+      className="relative isolate flex min-h-[70vh] items-center overflow-hidden py-28 text-foreground dark:bg-card/40 sm:py-36 z-0"
     >
-      {/* Smooth top and bottom transitions */}
+      {/* Layer 1: Ambient Glows */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-36 bg-gradient-to-b from-background via-background/40 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-36 bg-gradient-to-b from-background via-background/40 to-transparent"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-36 bg-gradient-to-t from-background via-background/40 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-36 bg-gradient-to-t from-background via-background/40 to-transparent"
+      />
+      <div className="absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
+      <div
+        aria-hidden
+        className="bg-brass-gradient animate-float-slow absolute left-1/2 top-1/2 z-[1] size-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.08] blur-3xl"
       />
 
-      {/* Calm, quiet backdrop — soft texture + gentle gold glow (no 3D here).
-          Transparent in light mode so it blends with the page (texture fades
-          at its own edges); a dark band only in dark mode. */}
-      <div className="texture-surface texture-girih -z-10" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
-      <div
-        aria-hidden
-        className="bg-brass-gradient animate-float-slow absolute left-1/2 top-1/2 -z-10 size-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.08] blur-3xl"
-      />
+      {/* Layer 2: Texture Pattern Layer */}
+      <Texture pattern="girih" size={56} fade="vertical" />
 
       <motion.div
         variants={staggerContainer(0.16)}

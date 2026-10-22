@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
 
@@ -12,9 +13,9 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-x-clip border-t border-border/60 bg-card/50 pt-16 pb-8">
-      <div className="texture-surface texture-girih -z-10" />
-      <div className="mx-auto max-w-6xl px-5">
+    <footer className="relative isolate overflow-hidden border-t border-border/60 bg-card/50 pt-16 pb-8 z-0">
+      <Texture pattern="girih" size={56} fade="vertical" opacity={0.08} />
+      <div className="relative z-10 mx-auto max-w-6xl px-5">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="flex flex-col gap-4 lg:col-span-1">

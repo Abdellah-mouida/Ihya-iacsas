@@ -24,6 +24,7 @@ import { useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { Texture } from "@/components/common/texture";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
@@ -71,14 +72,11 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground antialiased transition-colors duration-300">
+    <div className="relative isolate min-h-screen bg-background text-foreground antialiased transition-colors duration-300 z-0">
       {/* Background Girih Texture Fade (Theme Reactive) */}
-      <div
-        aria-hidden
-        className="texture-surface texture-girih fixed inset-0 -z-10 !opacity-[0.06] dark:!opacity-[0.08]"
-      />
+      <Texture pattern="girih" size={56} fade="vertical" opacity={0.06} className="fixed inset-0" />
 
-      <div className="flex w-full flex-col lg:flex-row min-h-screen">
+      <div className="relative z-10 flex w-full flex-col lg:flex-row min-h-screen">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 xl:p-6 shrink-0 justify-between sticky top-0 h-screen overflow-y-auto">
           <div>

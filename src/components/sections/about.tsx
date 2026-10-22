@@ -5,6 +5,7 @@ import Image from "next/image";
 
 import { MotionCard } from "@/components/common/motion-card";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { ABOUT_CARDS, IMAGES } from "@/lib/content";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -13,9 +14,9 @@ export function About() {
   const { t, dir } = useLocale();
 
   return (
-    <section id="about" className="relative overflow-x-clip py-24 sm:py-32">
-      <div className="texture-surface texture-octagon-tile -z-10" />
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
+    <section id="about" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
+      <Texture pattern="octagon-tile" size={60} fade="vertical" />
+      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
         <motion.div
           variants={staggerContainer(0.12)}
@@ -99,7 +100,9 @@ export function About() {
                 wrapperClassName="group h-full"
               >
                 <div className="glass overflow-hidden relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-[var(--main)]/40 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.35)]">
-                  <div className="flex items-center justify-between">
+                  {/* Subtle card texture */}
+                  <Texture pattern="octagon-tile" size={48} fade="radial" opacity={0.06} className="rounded-2xl" />
+                  <div className="relative z-10 flex items-center justify-between">
                     <span className="grid size-11 place-items-center rounded-xl bg-[var(--main)]/15 text-[var(--main)] border border-[var(--main)]/30">
                       <card.icon className="size-5" />
                     </span>
@@ -107,10 +110,10 @@ export function About() {
                       0{idx + 1}
                     </span>
                   </div>
-                  <h3 className="font-heading text-lg font-bold text-foreground">
+                  <h3 className="relative z-10 font-heading text-lg font-bold text-foreground">
                     {t(card.titleKey)}
                   </h3>
-                  <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground">
+                  <p className="relative z-10 text-xs sm:text-sm leading-relaxed text-muted-foreground">
                     {t(card.descKey)}
                   </p>
                 </div>

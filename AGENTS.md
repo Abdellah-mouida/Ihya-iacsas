@@ -116,4 +116,13 @@ This project integrates Model Context Protocol (MCP) servers to accelerate devel
 7. **Design Tooling & Rigorous Multi-Viewport Verification**:
    - Leverage design registries (`@shadcn`, `@aceternity`, `@magicui`, `@react-bits`), Context7 documentation, and Playwright verification.
    - Capture and verify visual regressions at 360px, 768px, and 1440px viewports in both light/dark themes and Arabic/English locales.
+8. **Mandatory 5-Layer Stacking Contract**:
+   - Every page and visual section MUST establish an explicit local stacking context (`relative isolate overflow-hidden`).
+   - Never use negative z-indexes (`-z-10`, `-z-20`, `-z-30`) inside elements with default stacking context because opaque parent backgrounds occlude them.
+   - Use the strict 5-layer stacking contract:
+     - Layer 0 (`z-0`): Base background fill / surface color (`bg-background`, `bg-card`).
+     - Layer 1 (`z-[1]`): Photo / image layer (e.g. `next/image` cover, hero image, gallery photo).
+     - Layer 2 (`z-[2]`): Texture layer (shared SVG `<Texture />` pattern with `pointer-events-none`).
+     - Layer 3 (`z-[3]`): Vignette / gradient overlays (e.g. radial fades, top/bottom scrims with center transparency).
+     - Layer 4 (`z-10`): Interactive content (typography, buttons, links, cards, forms).
 

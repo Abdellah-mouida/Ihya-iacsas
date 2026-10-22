@@ -15,17 +15,19 @@ export default function LoginPage() {
   return (
     <>
       <GlassNavbar />
-      <main className="min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center relative">
+      <main className="relative isolate min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center bg-background overflow-hidden z-0">
         <AuthAmbientBackdrop />
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center p-12">
-              <IslamicLoader size="lg" />
-            </div>
-          }
-        >
-          <LoginView />
-        </Suspense>
+        <div className="relative z-10 w-full max-w-lg">
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center p-12">
+                <IslamicLoader size="lg" />
+              </div>
+            }
+          >
+            <LoginView />
+          </Suspense>
+        </div>
       </main>
       <Footer />
     </>

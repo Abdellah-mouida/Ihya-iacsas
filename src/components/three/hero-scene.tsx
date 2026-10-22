@@ -208,7 +208,7 @@ export default function HeroScene() {
       camera={{ position: [0, 0, 6], fov: 45 }}
       dpr={[1, 2]}
       gl={{ alpha: true, antialias: true }}
-      style={{ position: "absolute", inset: 0 }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
       <ParticleField />
     </Canvas>

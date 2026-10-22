@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 
 import { SectionHeading } from "@/components/common/section-heading";
+import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { BRANCHES } from "@/lib/content";
 import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -28,9 +29,9 @@ export function Branches() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   return (
-    <section id="branches" className="relative overflow-x-clip py-24 sm:py-32">
-      <div className="texture-surface texture-interlocking -z-10" />
-      <div className="mx-auto max-w-6xl px-5">
+    <section id="branches" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
+      <Texture pattern="interlocking" size={64} fade="vertical" />
+      <div className="relative z-10 mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("branches.kicker")}
           title={t("branches.title")}

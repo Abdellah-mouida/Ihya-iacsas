@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { RoleBadge } from "@/components/common/role-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { Texture } from "@/components/common/texture";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -161,13 +162,15 @@ export function GlassNavbar({
           )}
         />
         {/* Very faint Girih pattern texture when scrolled */}
-        <span
-          aria-hidden
-          className={cn(
-            "texture-surface texture-girih pointer-events-none absolute inset-0 -z-10 rounded-[inherit] transition-opacity duration-500",
-            transparentTop ? "opacity-0" : "opacity-[0.03]",
-          )}
-        />
+        {!transparentTop && (
+          <Texture
+            pattern="girih"
+            size={52}
+            fade="none"
+            opacity={0.04}
+            className="rounded-[inherit]"
+          />
+        )}
         <span
           aria-hidden
           className={cn(

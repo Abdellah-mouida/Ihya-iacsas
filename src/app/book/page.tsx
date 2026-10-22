@@ -10,6 +10,7 @@ import { BookingFallback } from "@/components/common/booking-fallback";
 import { BookingStepper } from "@/components/common/booking-stepper";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { Texture } from "@/components/common/texture";
 import { IMAGES } from "@/lib/content";
 import { prisma } from "@/lib/prisma";
 
@@ -89,11 +90,11 @@ export default async function BookPage({
   }
 
   return (
-    <div className="relative min-h-dvh overflow-hidden">
-      <div className="texture-surface texture-girih -z-10" />
-      <div className="bg-brass-gradient absolute -top-24 start-1/2 -z-10 size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl" />
+    <div className="relative isolate min-h-dvh overflow-hidden bg-background z-0">
+      <Texture pattern="girih" size={56} fade="vertical" />
+      <div className="bg-brass-gradient absolute -top-24 start-1/2 z-[1] size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl pointer-events-none" />
 
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
+      <header className="relative z-10 mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
           <span className="relative shrink-0">
             <Image
