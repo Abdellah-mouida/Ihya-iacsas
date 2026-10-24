@@ -161,7 +161,10 @@ export function SignUpView() {
       <AuthAmbientBackdrop />
 
       {/* Container with max width */}
-      <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden">
+      <div
+        data-testid="signup-view"
+        className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden"
+      >
         {/* Visual / Branding Panel (Desktop Only) */}
         <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-white overflow-hidden bg-primary/95">
           <Image
