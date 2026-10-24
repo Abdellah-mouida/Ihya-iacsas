@@ -4,10 +4,14 @@ import { loginAs, TEST_REGULAR_USER, ensureTestUser } from "./helpers/admin-auth
 const THEMES = ["light", "sunset", "amoled", "black"] as const;
 
 test.describe("Task 4: Profile Page Soft Shadows & Hover Effects", () => {
+  test.beforeAll(async () => {
+    await ensureTestUser(TEST_REGULAR_USER);
+  });
+
   for (const theme of THEMES) {
     test(`profile cards apply soft shadows without clipping in ${theme} theme`, async ({ page }) => {
-      await ensureTestUser(TEST_REGULAR_USER);
       await loginAs(page, TEST_REGULAR_USER, "/profile");
+      await page.waitForLoadState("domcontentloaded");
 
       // Set theme attribute directly and in localStorage
       await page.evaluate((th) => {
@@ -19,11 +23,8 @@ test.describe("Task 4: Profile Page Soft Shadows & Hover Effects", () => {
         }
       }, theme);
 
-      await page.goto("/profile");
-      await page.waitForLoadState("networkidle");
-
       const profileContainer = page.locator('[data-testid="profile-view-container"]');
-      await expect(profileContainer).toBeVisible();
+      await expect(profileContainer).toBeVisible({ timeout: 15000 });
 
       // Check header card shadow
       const headerCard = profileContainer.locator("> div").first();
