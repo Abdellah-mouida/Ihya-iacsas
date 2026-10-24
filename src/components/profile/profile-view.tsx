@@ -54,9 +54,9 @@ export function ProfileView({ initialData }: ProfileViewProps) {
   return (
     <div className="space-y-8" data-testid="profile-view-container">
       {/* Profile Header & Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden border border-border/80 bg-card/60 backdrop-blur-xl shadow-xl">
+      <div className="relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover">
         {/* Cover Canvas */}
-        <div className="relative h-48 sm:h-64 w-full overflow-hidden bg-muted/40">
+        <div className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
           <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} />
         </div>
 
@@ -64,7 +64,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
         <div className="relative px-6 sm:px-10 pb-8 pt-0 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 -mt-16 sm:-mt-20">
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-start">
             {/* Centered Avatar with layout wrapper */}
-            <div className="relative rounded-full border-4 border-background bg-card shadow-xl overflow-hidden ring-2 ring-primary/30 shrink-0">
+            <div className="relative rounded-full border-4 border-background bg-card shadow-profile-card hover:shadow-profile-hover transition-all duration-300 ring-2 ring-primary/30 shrink-0">
               <UserAvatar
                 user={{
                   id: user.id,
@@ -131,7 +131,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
           {hasBio ? (
             <div
               data-testid="profile-bio-card"
-              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-sm space-y-3"
+              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover hover:-translate-y-0.5 space-y-3"
             >
               <h2 className="text-sm font-heading font-bold text-primary flex items-center gap-2">
                 <span>{isAr ? "نبذة عني" : "About Me"}</span>
@@ -146,7 +146,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
           {hasAcademic ? (
             <div
               data-testid="profile-academic-card"
-              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-sm space-y-4"
+              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover hover:-translate-y-0.5 space-y-4"
             >
               <h2 className="text-sm font-heading font-bold text-primary flex items-center gap-2">
                 <GraduationCap className="size-4" />
@@ -180,7 +180,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
           {hasSkillsOrLanguages ? (
             <div
               data-testid="profile-skills-languages-card"
-              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-sm space-y-4"
+              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover hover:-translate-y-0.5 space-y-4"
             >
               <h2 className="text-sm font-heading font-bold text-primary flex items-center gap-2">
                 <Wrench className="size-4" />
@@ -230,7 +230,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
           {hasPreferences ? (
             <div
               data-testid="profile-preferences-card"
-              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-sm space-y-4"
+              className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover hover:-translate-y-0.5 space-y-4"
             >
               <h2 className="text-sm font-heading font-bold text-primary flex items-center gap-2">
                 <Heart className="size-4" />
@@ -282,7 +282,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
       <div
         id="bookings"
         data-testid="profile-bookings-section"
-        className="p-6 sm:p-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-sm space-y-6"
+        className="p-6 sm:p-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card space-y-6"
       >
         <div className="flex items-center justify-between">
           <div>
@@ -341,7 +341,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                 <div
                   key={booking.id}
                   data-testid={`profile-booking-item-${booking.id}`}
-                  className="p-4 sm:p-5 rounded-2xl border border-border/70 bg-card/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all hover:border-primary/40"
+                  className="p-4 sm:p-5 rounded-2xl border border-border/70 bg-card/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 shadow-profile-card hover:shadow-profile-hover hover:-translate-y-0.5 hover:border-primary/40"
                 >
                   <div className="space-y-2 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

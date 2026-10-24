@@ -81,6 +81,14 @@
   --nav-bg: color-mix(in oklch, var(--background) 82%, transparent);
   --nav-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
 
+  /* Semantic Theme Shadows (Multi-layered, low-alpha, theme-aware) */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.04), 0 2px 4px oklch(0 0 0 / 0.03);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.04), 0 2px 4px -2px oklch(0 0 0 / 0.03), 0 10px 24px -4px oklch(0 0 0 / 0.05);
+  --shadow-lg: 0 8px 16px -2px oklch(0 0 0 / 0.05), 0 4px 8px -2px oklch(0 0 0 / 0.03), 0 20px 32px -4px oklch(0 0 0 / 0.06);
+  --shadow-xl: 0 12px 24px -4px oklch(0 0 0 / 0.06), 0 6px 12px -3px oklch(0 0 0 / 0.04), 0 28px 48px -6px oklch(0 0 0 / 0.07);
+  --shadow-card: var(--shadow-md);
+  --shadow-card-hover: 0 12px 28px -4px oklch(0 0 0 / 0.08), 0 4px 10px -2px oklch(0 0 0 / 0.04), 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent);
+
   /* Warm, premium editorial light theme */
   --background: oklch(0.985 0.01 85);
   --foreground: oklch(0.24 0.02 66);
@@ -157,6 +165,13 @@
 
 .dark {
   /* Default dark theme: Black (#111 as background, gold as main title, green secondary) */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.25), 0 2px 4px oklch(0 0 0 / 0.2);
+  --shadow-md: 0 4px 10px -1px oklch(0 0 0 / 0.35), 0 2px 6px -2px oklch(0 0 0 / 0.25), 0 12px 28px -4px oklch(0 0 0 / 0.4);
+  --shadow-lg: 0 8px 20px -2px oklch(0 0 0 / 0.45), 0 4px 10px -2px oklch(0 0 0 / 0.3), 0 24px 44px -4px oklch(0 0 0 / 0.55);
+  --shadow-xl: 0 16px 32px -4px oklch(0 0 0 / 0.55), 0 6px 16px -3px oklch(0 0 0 / 0.35), 0 32px 64px -6px oklch(0 0 0 / 0.65);
+  --shadow-card: var(--shadow-md);
+  --shadow-card-hover: 0 14px 34px -4px oklch(0 0 0 / 0.55), 0 6px 14px -2px oklch(0 0 0 / 0.35), 0 0 0 1px color-mix(in srgb, var(--primary) 28%, transparent);
+
   --background: oklch(0.12 0.005 260); /* ~#111 */
   --foreground: oklch(0.95 0.01 85);
   --card: oklch(0.16 0.008 260);
@@ -309,6 +324,13 @@ html[data-theme="obsidian"],
 .dark[data-theme="obsidian"],
 [data-theme="amoled"],
 [data-theme="obsidian"] {
+  --shadow-sm: 0 1px 3px oklch(0 0 0 / 0.45), 0 0 0 1px oklch(1 0 0 / 7%);
+  --shadow-md: 0 4px 14px -1px oklch(0 0 0 / 0.7), 0 0 0 1px oklch(1 0 0 / 10%), 0 12px 30px -4px oklch(0 0 0 / 0.8);
+  --shadow-lg: 0 8px 24px -2px oklch(0 0 0 / 0.8), 0 0 0 1px oklch(1 0 0 / 12%), 0 24px 48px -4px oklch(0 0 0 / 0.9);
+  --shadow-xl: 0 16px 36px -4px oklch(0 0 0 / 0.85), 0 0 0 1px oklch(1 0 0 / 15%), 0 32px 64px -6px oklch(0 0 0 / 0.95);
+  --shadow-card: var(--shadow-md);
+  --shadow-card-hover: 0 14px 34px -4px oklch(0 0 0 / 0.85), 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
+
   --background: oklch(0 0 0); /* #000000 */
   --nav-bg: oklch(0.12 0.005 260 / 92%); /* Deep black #111 */
   --nav-inner-shadow: inset 0 0 0 1px color-mix(in srgb, var(--main) 16%, transparent);
@@ -686,6 +708,14 @@ html[data-theme="ember"],
     box-shadow:
       0 2px 8px oklch(0 0 0 / 0.4),
       0 20px 48px oklch(0 0 0 / 0.55);
+  }
+
+  /* Semantic profile-card soft shadows */
+  .shadow-profile-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-profile-hover {
+    box-shadow: var(--shadow-card-hover);
   }
   .glow-gold {
     box-shadow: 0 0 0 1px color-mix(in oklch, var(--gold) 30%, transparent),
