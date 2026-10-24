@@ -14,7 +14,6 @@ export function Activities() {
 
   return (
     <section id="activities" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
-      <Texture pattern="star-rosette" size={72} fade="vertical" />
       <div className="relative z-10 mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("activities.kicker")}

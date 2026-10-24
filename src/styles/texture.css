@@ -1,0 +1,58 @@
+/* =========================================================================
+   Texture Tuning Knobs (Centralized Settings)
+   =========================================================================
+   Controlled via CSS custom properties per theme:
+   - --texture-opacity: Master opacity of the pattern overlay (0.14-0.18 light, 0.20-0.30 dark)
+   - --texture-size: Size of the pattern tile in pixels (sparse spacing)
+   - --texture-motif: Scale factor of the motif within the tile (0.25 - 0.35)
+   - --texture-rotate: Pattern rotation angle (deg)
+   - --texture-dim: Strength of the radial dim over the central content column
+   - --texture-edge: Strength of top/bottom fade
+   ========================================================================= */
+
+:root,
+html[data-theme="light"],
+[data-theme="light"] {
+  --texture-opacity: 0.16;
+  --texture-size: 140px;
+  --texture-motif: 0.28;
+  --texture-rotate: 0deg;
+  --texture-dim: 0.88;
+  --texture-edge: 0.95;
+}
+
+html[data-theme="sunset"],
+[data-theme="sunset"] {
+  --texture-opacity: 0.17;
+  --texture-size: 140px;
+  --texture-motif: 0.28;
+  --texture-rotate: 0deg;
+  --texture-dim: 0.88;
+  --texture-edge: 0.95;
+}
+
+html[data-theme="amoled"],
+.dark[data-theme="amoled"],
+[data-theme="amoled"] {
+  --texture-opacity: 0.24;
+  --texture-size: 140px;
+  --texture-motif: 0.28;
+  --texture-rotate: 0deg;
+  --texture-dim: 0.85;
+  --texture-edge: 0.92;
+}
+
+.dark,
+html[data-theme="black"],
+html[data-theme="dark"],
+.dark[data-theme="black"],
+.dark[data-theme="dark"],
+[data-theme="black"],
+[data-theme="dark"] {
+  --texture-opacity: 0.24;
+  --texture-size: 140px;
+  --texture-motif: 0.28;
+  --texture-rotate: 0deg;
+  --texture-dim: 0.85;
+  --texture-edge: 0.92;
+}

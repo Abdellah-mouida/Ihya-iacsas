@@ -15,7 +15,6 @@ export function About() {
 
   return (
     <section id="about" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
-      <Texture pattern="star-rosette" size={72} fade="vertical" />
       <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
         <motion.div

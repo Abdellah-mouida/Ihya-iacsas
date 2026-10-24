@@ -30,7 +30,6 @@ export function Branches() {
 
   return (
     <section id="branches" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
-      <Texture pattern="interlocking" size={64} fade="vertical" />
       <div className="relative z-10 mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("branches.kicker")}

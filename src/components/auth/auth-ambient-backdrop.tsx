@@ -1,10 +1,6 @@
-import { Texture, type TexturePattern } from "@/components/common/texture";
+import { PageTexture } from "@/components/common/page-texture";
 
-export function AuthAmbientBackdrop({
-  pattern = "star-rosette",
-}: {
-  pattern?: TexturePattern;
-}) {
+export function AuthAmbientBackdrop() {
   return (
     <div
       aria-hidden="true"
@@ -23,8 +19,8 @@ export function AuthAmbientBackdrop({
         <div className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 size-[650px] rounded-full bg-emerald/10 blur-[150px] dark:bg-emerald/15" />
       </div>
 
-      {/* Layer 2: Texture Pattern Layer */}
-      <Texture pattern={pattern} fade="radial" size={56} />
+      {/* Layer 2: Single continuous PageTexture */}
+      <PageTexture />
 
       {/* Layer 3: Corner Ornaments & Radial Vignette */}
       <div className="absolute inset-0 z-[3] pointer-events-none overflow-hidden select-none">

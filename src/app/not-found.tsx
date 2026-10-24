@@ -16,7 +16,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Texture } from "@/components/common/texture";
+import { PageTexture } from "@/components/common/page-texture";
 import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
 
 export default function NotFound() {
@@ -28,7 +28,7 @@ export default function NotFound() {
       data-testid="page-not-found"
       className="relative isolate min-h-dvh flex flex-col items-center justify-between p-4 sm:p-8 text-foreground bg-background overflow-hidden z-0"
     >
-      <Texture pattern="mandala" size={180} fade="radial" />
+      <PageTexture />
 
       {/* Top Header Utilities */}
       <header className="w-full max-w-5xl flex items-center justify-between py-2 z-20">

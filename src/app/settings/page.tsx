@@ -3,7 +3,7 @@ import { getUserAccountData } from "@/app/actions/account";
 import { getCachedEnabledThemes } from "@/lib/theme-server";
 import { SettingsView } from "@/components/settings/settings-view";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
-import { Texture } from "@/components/common/texture";
+import { PageTexture } from "@/components/common/page-texture";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     <>
       <GlassNavbar initialSession={session} />
       <main className="relative isolate min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden z-0">
-        <Texture pattern="star-rosette" size={72} fade="vertical" />
+        <PageTexture />
         <div className="relative z-10 max-w-6xl mx-auto">
           <SettingsView
             initialData={initialData}

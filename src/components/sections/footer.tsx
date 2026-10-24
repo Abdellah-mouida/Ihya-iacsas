@@ -13,8 +13,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative isolate overflow-hidden border-t border-border/60 bg-card/50 pt-16 pb-8 z-0">
-      <Texture pattern="girih" size={56} fade="vertical" opacity={0.08} />
+    <footer className="relative isolate overflow-hidden bg-gradient-to-b from-transparent to-black/20 dark:to-black/40 pt-16 pb-8 z-0">
       <div className="relative z-10 mx-auto max-w-6xl px-5">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}

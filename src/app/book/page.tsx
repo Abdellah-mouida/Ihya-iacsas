@@ -10,7 +10,7 @@ import { BookingFallback } from "@/components/common/booking-fallback";
 import { BookingStepper } from "@/components/common/booking-stepper";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Texture } from "@/components/common/texture";
+import { PageTexture } from "@/components/common/page-texture";
 import { IMAGES } from "@/lib/content";
 import { prisma } from "@/lib/prisma";
 
@@ -91,7 +91,7 @@ export default async function BookPage({
 
   return (
     <div className="relative isolate min-h-dvh overflow-hidden bg-background z-0">
-      <Texture pattern="girih" size={56} fade="vertical" />
+      <PageTexture />
       <div className="bg-brass-gradient absolute -top-24 start-1/2 z-[1] size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl pointer-events-none" />
 
       <header className="relative z-10 mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Texture, type TexturePattern, type TextureFade } from "./texture";
+import { PageTexture } from "./page-texture";
 
 interface PageBackgroundProps {
   variant?: "default" | "auth" | "profile" | "content" | "admin";
@@ -8,31 +8,9 @@ interface PageBackgroundProps {
   showOrnaments?: boolean;
 }
 
-const VARIANT_PATTERNS: Record<
-  NonNullable<PageBackgroundProps["variant"]>,
-  TexturePattern
-> = {
-  default: "girih",
-  content: "girih",
-  auth: "star-rosette",
-  profile: "mandala",
-  admin: "girih",
-};
-
-const VARIANT_FADES: Record<
-  NonNullable<PageBackgroundProps["variant"]>,
-  TextureFade
-> = {
-  default: "vertical",
-  content: "vertical",
-  auth: "radial",
-  profile: "vertical",
-  admin: "vertical",
-};
-
 /**
  * Shared PageBackground component providing a solid Layer 0 background,
- * Layer 1 glows, Layer 2 Islamic SVG Texture with `var(--main)` tinting,
+ * Layer 1 glows, Layer 2 single continuous PageTexture with `var(--main)` tinting,
  * and Layer 4 interactive children, strictly obeying the 5-layer stacking contract.
  */
 export function PageBackground({
@@ -41,9 +19,6 @@ export function PageBackground({
   children,
   showOrnaments = true,
 }: PageBackgroundProps) {
-  const pattern = VARIANT_PATTERNS[variant];
-  const fade = VARIANT_FADES[variant];
-
   return (
     <div
       data-testid="page-background"
@@ -95,8 +70,8 @@ export function PageBackground({
         />
       </div>
 
-      {/* Layer 2: Texture Pattern Layer */}
-      <Texture pattern={pattern} fade={fade} />
+      {/* Layer 2: Single continuous page-wide texture */}
+      <PageTexture />
 
       {/* Layer 3: Subtle Corner Ornaments */}
       {showOrnaments && (

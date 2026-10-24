@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { getPublicEvents } from "@/app/actions/events";
 import { EventFlyerDialog } from "@/components/common/event-flyer-dialog";
 import { SectionHeading } from "@/components/common/section-heading";
-import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
 import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -58,12 +57,6 @@ export function PastEvents() {
 
   return (
     <section id="past-events" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
-      {/* Top transition from open events */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-28 bg-gradient-to-b from-background to-transparent"
-      />
-      <Texture pattern="star-rosette" size={72} fade="vertical" />
       <div className="relative z-10 mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("events.pastKicker")}

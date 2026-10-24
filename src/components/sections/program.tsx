@@ -31,9 +31,6 @@ export function Program() {
         className="bg-brass-gradient animate-float-slow absolute left-1/2 top-1/2 z-[1] size-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.08] blur-3xl"
       />
 
-      {/* Layer 2: Texture Pattern Layer */}
-      <Texture pattern="girih" size={56} fade="vertical" />
-
       <motion.div
         variants={staggerContainer(0.16)}
         initial="hidden"

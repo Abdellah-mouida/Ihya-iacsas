@@ -39,9 +39,6 @@ export function Hero() {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80" />
       </div>
 
-      {/* Layer 2: Texture Pattern Layer */}
-      <Texture pattern="mandala" size={240} fade="radial" opacity={0.06} />
-
       {/* Layer 3: Ambient Aurora + Particles + Corner Vignette */}
       <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden select-none">
         {/* React Bits aurora — warm animated light over photo */}

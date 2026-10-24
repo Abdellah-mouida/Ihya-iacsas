@@ -37,7 +37,6 @@ export function Gallery() {
 
   return (
     <section id="gallery" className="relative overflow-x-clip py-24 sm:py-32">
-      <div className="texture-surface texture-octagon-grid -z-10" />
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker={t("gallery.kicker")}

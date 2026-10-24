@@ -16,7 +16,7 @@ export default function VerifyEmailPage() {
     <>
       <GlassNavbar />
       <main className="relative isolate min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center bg-background overflow-hidden z-0">
-        <AuthAmbientBackdrop pattern="girih" />
+        <AuthAmbientBackdrop />
         <div className="relative z-10 w-full max-w-lg">
           <Suspense
             fallback={
