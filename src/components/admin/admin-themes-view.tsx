@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import dynamic from "next/dynamic";
-import { ThemeDto } from "@/lib/theme-constants";
-import { toggleThemeEnabled, saveTheme } from "@/app/actions/themes";
+import { BUILT_IN_THEMES, ThemeDto } from "@/lib/theme-constants";
+import { toggleThemeEnabled, saveTheme, resetThemeToDefault } from "@/app/actions/themes";
 import { useLocale } from "@/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,9 @@ import {
   Palette,
   Check,
   X,
-  Plus,
   Edit2,
   Eye,
-  AlertTriangle,
+  RotateCcw,
   Sparkles,
 } from "lucide-react";
 import { notify } from "@/lib/toast";
@@ -35,11 +34,9 @@ export function AdminThemesView({ initialThemes }: Props) {
   const isAr = locale === "ar";
   const [themes, setThemes] = useState<ThemeDto[]>(initialThemes);
   const [editingTheme, setEditingTheme] = useState<ThemeDto | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Form states for creating/editing
-  const [slug, setSlug] = useState("");
+  // Form states for editing
   const [nameAr, setNameAr] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [mode, setMode] = useState<"light" | "dark">("light");
@@ -75,8 +72,6 @@ export function AdminThemesView({ initialThemes }: Props) {
 
   const openEditor = (theme: ThemeDto) => {
     setEditingTheme(theme);
-    setIsCreating(false);
-    setSlug(theme.slug);
     setNameAr(theme.nameAr);
     setNameEn(theme.nameEn);
     setMode(theme.mode);
@@ -87,34 +82,55 @@ export function AdminThemesView({ initialThemes }: Props) {
     setSecondaryTitleToken(theme.tokens["--title-secondary"] || "");
   };
 
-  const openCreator = () => {
-    setEditingTheme(null);
-    setIsCreating(true);
-    setSlug("");
-    setNameAr("");
-    setNameEn("");
-    setMode("light");
-    setBgToken("oklch(0.985 0.01 85)");
-    setFgToken("oklch(0.24 0.02 66)");
-    setPrimaryToken("oklch(0.48 0.1 168)");
-    setHeadingToken("oklch(0.24 0.02 66)");
-    setSecondaryTitleToken("oklch(0.44 0.13 146)");
+  const handleResetToDefault = (slug: string) => {
+    startTransition(async () => {
+      try {
+        const res = await resetThemeToDefault(slug);
+        if (res.success && res.theme) {
+          notify.success(isAr ? "تمت استعادة الإعدادات الافتراضية للسمة" : "Theme reset to default successfully");
+          const defaultTheme = BUILT_IN_THEMES.find((b) => b.slug === slug);
+          if (defaultTheme && editingTheme?.slug === slug) {
+            setNameAr(defaultTheme.nameAr);
+            setNameEn(defaultTheme.nameEn);
+            setMode(defaultTheme.mode as "light" | "dark");
+            setBgToken(defaultTheme.tokens["--background"] || "");
+            setFgToken(defaultTheme.tokens["--foreground"] || "");
+            setPrimaryToken(defaultTheme.tokens["--primary"] || "");
+            setHeadingToken(defaultTheme.tokens["--heading"] || "");
+            setSecondaryTitleToken(defaultTheme.tokens["--title-secondary"] || "");
+          }
+          setThemes((prev) =>
+            prev.map((t) =>
+              t.slug === slug
+                ? {
+                    ...t,
+                    nameAr: res.theme.nameAr,
+                    nameEn: res.theme.nameEn,
+                    mode: res.theme.mode as "light" | "dark",
+                    tokens: (res.theme.tokens as Record<string, string>) || {},
+                  }
+                : t
+            )
+          );
+        }
+      } catch (err: unknown) {
+        notify.error(err instanceof Error ? err.message : "Failed to reset theme");
+      }
+    });
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingTheme) return;
     if (!nameAr.trim() || !nameEn.trim()) {
       notify.error(isAr ? "يرجى إدخال اسم السمة بالعربية والإنجليزية" : "Please enter theme names");
-      return;
-    }
-    if (isCreating && !slug.trim()) {
-      notify.error(isAr ? "يرجى تحديد معرف السمة (slug)" : "Please enter theme slug");
       return;
     }
 
     startTransition(async () => {
       try {
         const tokens: Record<string, string> = {
+          ...editingTheme.tokens,
           "--background": bgToken,
           "--foreground": fgToken,
           "--primary": primaryToken,
@@ -123,8 +139,8 @@ export function AdminThemesView({ initialThemes }: Props) {
         };
 
         const res = await saveTheme({
-          id: editingTheme?.id,
-          slug: editingTheme ? editingTheme.slug : slug,
+          id: editingTheme.id,
+          slug: editingTheme.slug,
           nameAr,
           nameEn,
           mode,
@@ -134,27 +150,21 @@ export function AdminThemesView({ initialThemes }: Props) {
         if (res.success && res.theme) {
           notify.success(isAr ? "تم حفظ السمة بنجاح" : "Theme saved successfully");
           setEditingTheme(null);
-          setIsCreating(false);
           // Refresh list locally
-          setThemes((prev) => {
-            const exists = prev.some((t) => t.id === res.theme.id);
-            const formatted: ThemeDto = {
-              id: res.theme.id,
-              slug: res.theme.slug,
-              nameAr: res.theme.nameAr,
-              nameEn: res.theme.nameEn,
-              mode: res.theme.mode as "light" | "dark",
-              tokens: (res.theme.tokens as Record<string, string>) || {},
-              enabled: res.theme.enabled,
-              builtIn: res.theme.builtIn,
-              createdAt: res.theme.createdAt.toISOString(),
-              updatedAt: res.theme.updatedAt.toISOString(),
-            };
-            if (exists) {
-              return prev.map((t) => (t.id === formatted.id ? formatted : t));
-            }
-            return [...prev, formatted];
-          });
+          setThemes((prev) =>
+            prev.map((t) =>
+              t.slug === editingTheme.slug
+                ? {
+                    ...t,
+                    nameAr: res.theme.nameAr,
+                    nameEn: res.theme.nameEn,
+                    mode: res.theme.mode as "light" | "dark",
+                    tokens: (res.theme.tokens as Record<string, string>) || {},
+                    updatedAt: res.theme.updatedAt.toISOString(),
+                  }
+                : t
+            )
+          );
         }
       } catch (err: unknown) {
         notify.error(err instanceof Error ? err.message : "Error saving theme");
@@ -176,19 +186,10 @@ export function AdminThemesView({ initialThemes }: Props) {
           </h1>
           <p className="text-muted-foreground text-sm mt-1 max-w-xl">
             {isAr
-              ? "تحكم في السمات الأربع الرسمية للمنصة، تفعيلها أو تخصيص رموز الألوان بنظام التباين الصارم."
-              : "Control the four official platform themes, toggle availability, and configure tokens with strict AA contrast."}
+              ? "تحكم في السمات الأربع الرسمية للمنصة (فاتح، غروب، أموليد، أسود)، وتخصيص رموز الألوان بنظام التباين الصارم."
+              : "Control the four official platform themes (Light, Sunset, Amoled, Black), and configure color tokens with strict AA contrast."}
           </p>
         </div>
-
-        <Button
-          onClick={openCreator}
-          data-testid="admin-add-theme-btn"
-          className="rounded-xl gap-2 font-heading font-semibold shrink-0"
-        >
-          <Plus className="size-4" />
-          <span>{isAr ? "إضافة سمة جديدة" : "Add Custom Theme"}</span>
-        </Button>
       </div>
 
       {/* Themes Table / Grid */}
@@ -210,11 +211,9 @@ export function AdminThemesView({ initialThemes }: Props) {
                     <span className="font-heading font-bold text-base text-foreground">
                       {isAr ? theme.nameAr : theme.nameEn}
                     </span>
-                    {theme.builtIn && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground border border-border/50">
-                        {isAr ? "أساسية" : "Built-in"}
-                      </span>
-                    )}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground border border-border/50">
+                      {isAr ? "أساسية" : "Built-in"}
+                    </span>
                   </div>
                   <span
                     className={`size-2.5 rounded-full ${
@@ -257,58 +256,76 @@ export function AdminThemesView({ initialThemes }: Props) {
                   <span>{isAr ? "تعديل" : "Edit"}</span>
                 </Button>
 
-                <Button
-                  variant={theme.enabled ? "outline" : "default"}
-                  size="sm"
-                  disabled={isPending || (theme.builtIn && ["light", "black"].includes(theme.slug))}
-                  onClick={() => handleToggle(theme)}
-                  className="rounded-lg h-8 px-2.5 text-xs gap-1"
-                >
-                  {theme.enabled ? (
-                    <>
-                      <X className="size-3 text-destructive" />
-                      <span>{isAr ? "تعطيل" : "Disable"}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="size-3 text-emerald-500" />
-                      <span>{isAr ? "تفعيل" : "Enable"}</span>
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => handleResetToDefault(theme.slug)}
+                    title={isAr ? "استعادة الإعدادات الأصلية" : "Reset to default"}
+                    className="rounded-lg h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RotateCcw className="size-3" />
+                  </Button>
+
+                  <Button
+                    variant={theme.enabled ? "outline" : "default"}
+                    size="sm"
+                    disabled={isPending || (theme.builtIn && ["light", "black"].includes(theme.slug))}
+                    onClick={() => handleToggle(theme)}
+                    className="rounded-lg h-8 px-2.5 text-xs gap-1"
+                  >
+                    {theme.enabled ? (
+                      <>
+                        <X className="size-3 text-destructive" />
+                        <span>{isAr ? "تعطيل" : "Disable"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="size-3 text-emerald-500" />
+                        <span>{isAr ? "تفعيل" : "Enable"}</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Editor / Creator Modal or Panel */}
-      {(editingTheme || isCreating) && (
+      {/* Editor Modal or Panel */}
+      {editingTheme && (
         <div className="p-6 sm:p-8 rounded-3xl border border-primary/30 bg-card/90 backdrop-blur-2xl shadow-2xl space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
               <Palette className="size-5 text-primary" />
               <span>
-                {isCreating
-                  ? isAr
-                    ? "إضافة سمة بصرية جديدة"
-                    : "Create Custom Theme"
-                  : isAr
-                  ? `تعديل سمة: ${editingTheme?.nameAr}`
-                  : `Edit Theme: ${editingTheme?.nameEn}`}
+                {isAr
+                  ? `تعديل سمة: ${editingTheme.nameAr}`
+                  : `Edit Theme: ${editingTheme.nameEn}`}
               </span>
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEditingTheme(null);
-                setIsCreating(false);
-              }}
-              className="rounded-full size-8 p-0"
-            >
-              <X className="size-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                onClick={() => handleResetToDefault(editingTheme.slug)}
+                className="rounded-xl text-xs gap-1.5"
+              >
+                <RotateCcw className="size-3.5" />
+                <span>{isAr ? "استعادة الافتراضي" : "Reset to Default"}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingTheme(null)}
+                className="rounded-full size-8 p-0"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
@@ -316,11 +333,9 @@ export function AdminThemesView({ initialThemes }: Props) {
               <div>
                 <Label className="text-xs font-semibold">{isAr ? "المعرف (Slug)" : "Slug"}</Label>
                 <Input
-                  value={slug}
-                  disabled={!isCreating}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="e.g. emerald"
-                  className="mt-1 font-mono text-sm"
+                  value={editingTheme.slug}
+                  disabled
+                  className="mt-1 font-mono text-sm bg-muted/50 cursor-not-allowed"
                 />
               </div>
               <div>
@@ -328,7 +343,7 @@ export function AdminThemesView({ initialThemes }: Props) {
                 <Input
                   value={nameAr}
                   onChange={(e) => setNameAr(e.target.value)}
-                  placeholder="مثال: زمرد"
+                  placeholder="مثال: فاتح"
                   className="mt-1 text-sm"
                 />
               </div>
@@ -337,7 +352,7 @@ export function AdminThemesView({ initialThemes }: Props) {
                 <Input
                   value={nameEn}
                   onChange={(e) => setNameEn(e.target.value)}
-                  placeholder="e.g. Emerald"
+                  placeholder="e.g. Light"
                   className="mt-1 text-sm"
                 />
               </div>
@@ -502,10 +517,7 @@ export function AdminThemesView({ initialThemes }: Props) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setEditingTheme(null);
-                  setIsCreating(false);
-                }}
+                onClick={() => setEditingTheme(null)}
                 className="rounded-xl"
               >
                 {isAr ? "إلغاء" : "Cancel"}

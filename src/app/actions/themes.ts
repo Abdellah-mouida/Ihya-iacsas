@@ -114,6 +114,11 @@ export async function saveTheme(data: {
   const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-");
   if (!slug) throw new Error("INVALID_SLUG");
 
+  const builtInMatch = BUILT_IN_THEMES.find((b) => b.slug === slug);
+  if (!builtInMatch) {
+    throw new Error("CUSTOM_THEMES_DISABLED: Only built-in themes (light, sunset, amoled, black) can be edited.");
+  }
+
   if (data.id) {
     const existing = await prisma.theme.findUnique({ where: { id: data.id } });
     if (!existing) throw new Error("NOT_FOUND");
@@ -134,21 +139,65 @@ export async function saveTheme(data: {
     safeRevalidateTag("themes");
     return { success: true, theme: updated };
   } else {
-    const created = await prisma.theme.create({
-      data: {
+    // If saving an unpersisted built-in theme
+    const upserted = await prisma.theme.upsert({
+      where: { slug },
+      update: {
+        nameAr: data.nameAr.trim(),
+        nameEn: data.nameEn.trim(),
+        mode: data.mode,
+        tokens: data.tokens as unknown as Prisma.InputJsonValue,
+        enabled: data.enabled ?? true,
+      },
+      create: {
         slug,
         nameAr: data.nameAr.trim(),
         nameEn: data.nameEn.trim(),
         mode: data.mode,
         tokens: data.tokens as unknown as Prisma.InputJsonValue,
         enabled: data.enabled ?? true,
-        builtIn: false,
+        builtIn: true,
       },
     });
 
     safeRevalidatePath("/admin/themes");
     safeRevalidatePath("/settings");
     safeRevalidateTag("themes");
-    return { success: true, theme: created };
+    return { success: true, theme: upserted };
   }
+}
+
+export async function resetThemeToDefault(slug: string) {
+  await assertAdmin();
+
+  const defaultTheme = BUILT_IN_THEMES.find((b) => b.slug === slug);
+  if (!defaultTheme) {
+    throw new Error("INVALID_THEME_SLUG");
+  }
+
+  const updated = await prisma.theme.upsert({
+    where: { slug: defaultTheme.slug },
+    update: {
+      nameAr: defaultTheme.nameAr,
+      nameEn: defaultTheme.nameEn,
+      mode: defaultTheme.mode,
+      tokens: defaultTheme.tokens as unknown as Prisma.InputJsonValue,
+      enabled: defaultTheme.enabled,
+      builtIn: true,
+    },
+    create: {
+      slug: defaultTheme.slug,
+      nameAr: defaultTheme.nameAr,
+      nameEn: defaultTheme.nameEn,
+      mode: defaultTheme.mode,
+      tokens: defaultTheme.tokens as unknown as Prisma.InputJsonValue,
+      enabled: defaultTheme.enabled,
+      builtIn: true,
+    },
+  });
+
+  safeRevalidatePath("/admin/themes");
+  safeRevalidatePath("/settings");
+  safeRevalidateTag("themes");
+  return { success: true, theme: updated };
 }

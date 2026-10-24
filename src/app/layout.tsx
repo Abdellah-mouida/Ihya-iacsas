@@ -52,7 +52,17 @@ export default function RootLayout({
 var l=localStorage.getItem('ihyaa-locale');
 if(l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';}
 var t=localStorage.getItem('ihyaa-theme');
-if(t){document.documentElement.setAttribute('data-theme',t);if(t==='dark'||t==='black'||t==='amoled'||t==='emerald'||t==='indigo'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}
+var validThemes=['light','sunset','amoled','black'];
+if(!t||!validThemes.includes(t)){
+  var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+  t=prefersDark?'black':'light';
+}
+document.documentElement.setAttribute('data-theme',t);
+if(t==='dark'||t==='black'||t==='amoled'){
+  document.documentElement.classList.add('dark');
+}else{
+  document.documentElement.classList.remove('dark');
+}
 }catch(e){}})();`,
           }}
         />
