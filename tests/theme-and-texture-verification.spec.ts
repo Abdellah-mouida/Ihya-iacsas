@@ -20,17 +20,18 @@ test.describe("Theme main color & pattern texture layer verification", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Check shared page background texture layer exists
-    const textureSurface = page.locator(".texture-surface").first();
+    const textureSurface = page.locator('[data-testid="page-texture-layer"]').first();
     await expect(textureSurface).toBeAttached();
 
-    // Verify computed mask-image is not none
-    const maskImage = await textureSurface.evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      return style.maskImage || style.webkitMaskImage;
+    // Verify SVG pattern element or rect mask is present in texture layer
+    const patternPresent = await textureSurface.evaluate((el) => {
+      const svg = el.querySelector("svg");
+      const pattern = el.querySelector("pattern");
+      const rect = el.querySelector("rect");
+      return Boolean(svg && pattern && rect);
     });
 
-    expect(maskImage).toBeTruthy();
-    expect(maskImage).not.toBe("none");
+    expect(patternPresent).toBe(true);
 
     // Verify theme colors on Morocco map
     const map = page.locator('svg[role="img"]').filter({ hasText: /فروع|المغرب|Branches|Morocco/i }).first();

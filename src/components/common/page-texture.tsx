@@ -104,15 +104,6 @@ export function PageTexture({
           }}
         />
       </svg>
-
-      {/* 2. Soft radial dim over the central content column (letting side gutters breathe) */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 65% 100% at 50% 50%, color-mix(in srgb, var(--background) 72%, transparent) 0%, transparent 100%)",
-        }}
-      />
     </div>
   );
 }
