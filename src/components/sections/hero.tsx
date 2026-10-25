@@ -35,8 +35,14 @@ export function Hero() {
           sizes="100vw"
           className="object-cover object-center"
         />
-        {/* Soft edge-only scrim: 100% transparent in middle 60% of viewport */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background/80" />
+        {/* Soft edge-only scrim: fades smoothly to 100% solid background at bottom so photo completely melts into the page background */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, color-mix(in srgb, var(--background) 70%, transparent) 0%, transparent 45%, color-mix(in srgb, var(--background) 70%, transparent) 80%, var(--background) 95%, var(--background) 100%)",
+          }}
+        />
       </div>
 
       {/* Layer 3: Ambient Aurora + Particles + Corner Vignette */}
@@ -110,12 +116,6 @@ export function Hero() {
           </Button>
         </motion.div>
       </motion.div>
-
-      {/* Bottom fade into the subsequent section */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-36 bg-gradient-to-b from-transparent via-background/60 to-background dark:via-background/80 dark:to-background"
-      />
 
       {/* Scroll cue */}
       <motion.a

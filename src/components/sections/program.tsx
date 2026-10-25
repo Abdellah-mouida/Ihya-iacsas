@@ -14,17 +14,9 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[70vh] items-center overflow-hidden py-28 text-foreground dark:bg-card/40 sm:py-36 z-0"
+      className="relative isolate flex min-h-[70vh] items-center overflow-hidden py-28 text-foreground sm:py-36 z-0"
     >
       {/* Layer 1: Ambient Glows */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-36 bg-gradient-to-b from-background via-background/40 to-transparent"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-36 bg-gradient-to-t from-background via-background/40 to-transparent"
-      />
       <div className="absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
       <div
         aria-hidden

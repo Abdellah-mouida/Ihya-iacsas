@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
-import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
 
@@ -13,7 +12,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative isolate overflow-hidden bg-gradient-to-b from-transparent to-black/20 dark:to-black/40 pt-16 pb-8 z-0">
+    <footer className="relative isolate overflow-hidden pt-16 pb-8 z-0">
       <div className="relative z-10 mx-auto max-w-6xl px-5">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}

@@ -61,11 +61,6 @@ export function Gallery() {
           </Button>
         </div>
       </div>
-      {/* Bottom fade into program section */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-b from-transparent to-background/50 dark:to-background/40"
-      />
     </section>
   );
 }
