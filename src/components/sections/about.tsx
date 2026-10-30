@@ -10,7 +10,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { ABOUT_CARDS, IMAGES } from "@/lib/content";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
-export function About() {
+export function   About() {
   const { t, dir } = useLocale();
 
   return (
@@ -75,7 +75,7 @@ export function About() {
                 alt=""
                 width={1280}
                 height={720}
-                sizes="(max-width: 1024px) 100vw, 45vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, (max-width: 1280px) 45vw, 520px"
                 className="h-64 w-full object-cover sm:h-72"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-night/50 to-transparent" />
@@ -98,7 +98,7 @@ export function About() {
                 radiusClass="rounded-2xl"
                 wrapperClassName="group h-full"
               >
-                <div className="glass overflow-hidden relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-1 hover:border-[var(--main)]/40 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.35)]">
+                <div className="glass overflow-hidden relative flex h-full flex-col gap-3 rounded-2xl p-5 border border-border/70 shadow-sm transition-[box-shadow,transform,border-color] duration-300 hover:-translate-y-0.8 hover:border-[var(--main)]/40 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.35)]">
                   {/* Subtle card texture */}
                   <Texture pattern="star-rosette" size={48} fade="radial" opacity={0.06} className="rounded-2xl" />
                   <div className="relative z-10 flex items-center justify-between">

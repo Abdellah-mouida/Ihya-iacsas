@@ -31,8 +31,8 @@ test.describe("Task 2: Section Boundary Seams & Line Removal Audit", () => {
     }) => {
       // Set viewport
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto("/");
-      await page.waitForLoadState("networkidle");
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(500);
 
       // Apply theme
       await page.evaluate((t) => {

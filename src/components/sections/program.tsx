@@ -14,7 +14,7 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[70vh] items-center overflow-hidden py-28 text-foreground sm:py-36 z-0"
+      className="relative isolate flex min-h-[130vh] items-center overflow-hidden py-28 text-foreground sm:py-36 z-0"
     >
       {/* Layer 1: Ambient Glows */}
       <div className="absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
