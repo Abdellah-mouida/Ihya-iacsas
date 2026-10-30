@@ -52,12 +52,16 @@ export function   About() {
           >
             {t("about.p2")}
           </motion.p>
-          <motion.blockquote
-            variants={fadeUp}
-            className="glass mt-2 rounded-2xl border-s-2 border-brass px-5 py-4 font-heading text-xl text-foreground"
-          >
-            {t("about.quote")}
-          </motion.blockquote>
+          <motion.div variants={fadeUp}>
+            <MotionCard intensity={6} radiusClass="rounded-2xl" wrapperClassName="mt-2">
+              <blockquote
+                className="glass rounded-2xl border-s-2 border-brass px-5 py-4 font-heading text-xl text-foreground transition-all duration-300 hover:shadow-card-hover"
+                style={{ transform: "translateY(var(--lift, 0))" }}
+              >
+                {t("about.quote")}
+              </blockquote>
+            </MotionCard>
+          </motion.div>
         </motion.div>
 
         {/* Visual column */}
@@ -90,7 +94,7 @@ export function   About() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-3 overflow-visible p-1">
             {ABOUT_CARDS.map((card, idx) => (
               <MotionCard
                 key={card.titleKey}
