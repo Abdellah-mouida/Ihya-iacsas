@@ -215,8 +215,10 @@ export function LoginView() {
           src="/images/gathering.jpg"
           alt="Ihyaa Program"
           fill
+          sizes="(max-width: 1024px) 100vw, 42vw"
+          quality={90}
           priority
-          className="object-cover opacity-20 mix-blend-overlay"
+          className="object-cover opacity-25 mix-blend-overlay"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
 

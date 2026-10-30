@@ -171,6 +171,8 @@ export function SignUpView() {
             src="/images/gathering.jpg"
             alt="Ihyaa Gathering"
             fill
+            sizes="(max-width: 1024px) 100vw, 42vw"
+            quality={90}
             className="object-cover mix-blend-overlay opacity-30 select-none pointer-events-none"
             priority
           />
