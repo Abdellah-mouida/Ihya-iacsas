@@ -7,6 +7,7 @@ import { notify } from "@/lib/toast";
 
 import { submitContactMessage } from "@/app/actions/contacts";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { Texture } from "@/components/common/texture";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -206,8 +207,10 @@ export function Contact() {
             initial="hidden"
             whileInView="show"
             viewport={viewportOnce}
-            className="glass-strong group relative flex flex-col gap-6 overflow-hidden rounded-3xl p-8 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30"
+            className="glass-strong group relative flex flex-col gap-6 overflow-hidden rounded-3xl p-8 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30 backdrop-blur-xl"
           >
+            {/* Subtle moroccan texture on contact card */}
+            <Texture pattern="girih" size={72} opacity={0.08} fade="radial" className="rounded-3xl pointer-events-none" />
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_22%,transparent),transparent_70%)] opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-40"
