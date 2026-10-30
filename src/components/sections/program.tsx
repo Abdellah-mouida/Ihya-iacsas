@@ -14,7 +14,7 @@ export function Program() {
   return (
     <section
       id="program"
-      className="relative isolate flex min-h-[130vh] items-center overflow-hidden py-28 text-foreground sm:py-36 z-0"
+      className="relative isolate flex min-h-[70vh] items-center overflow-visible py-20 text-foreground sm:py-28 z-0"
     >
       {/* Layer 1: Ambient Glows */}
       <div className="absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
@@ -63,10 +63,10 @@ export function Program() {
           {t("program.desc")}
         </motion.p>
 
-        <motion.div variants={fadeUp} className="mt-8">
+        <motion.div variants={fadeUp} className="mt-8 relative z-10">
           <Button
             asChild
-            className="bg-green-gradient h-12 rounded-full px-8 text-base font-semibold text-white shadow-layered ring-1 ring-gold/25 transition-all hover:-translate-y-0.5 hover:opacity-95"
+            className="bg-green-gradient h-12 rounded-full px-8 text-base font-semibold text-white shadow-layered ring-1 ring-gold/25 transition-transform duration-200 hover:-translate-y-1 hover:shadow-xl active:translate-y-0"
           >
             <a href="#contact">{t("program.cta")}</a>
           </Button>
