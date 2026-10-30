@@ -3,6 +3,7 @@ import { Montserrat, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { RouteHistoryTracker } from "@/components/common/route-history-tracker";
+import { ThemeMetaColor } from "@/components/common/theme-meta-color";
 import { DynamicThemeStyles } from "@/components/common/dynamic-theme-styles";
 
 const montserrat = Montserrat({
@@ -26,10 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#12101c" },
-  ],
+  themeColor: "#faf8f2",
 };
 
 export default function RootLayout({
@@ -63,12 +61,18 @@ if(t==='dark'||t==='black'||t==='amoled'){
 }else{
   document.documentElement.classList.remove('dark');
 }
+var colors={'light':'#faf8f2','sunset':'#faf3ea','amoled':'#000000','black':'#12101c'};
+var c=colors[t]||'#faf8f2';
+var m=document.querySelector('meta[name="theme-color"]');
+if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}
+m.setAttribute('content',c);
 }catch(e){}})();`,
           }}
         />
         <DynamicThemeStyles />
       </head>
       <body className="min-h-dvh bg-background text-foreground overflow-x-hidden">
+        <ThemeMetaColor />
         <Providers>
           <RouteHistoryTracker />
           {children}
