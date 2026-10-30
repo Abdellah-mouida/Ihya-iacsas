@@ -238,18 +238,3 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 }
 
-model Theme {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  nameAr    String
-  nameEn    String
-  mode      String   @default("light") // "light" | "dark"
-  tokens    Json     // custom CSS token overrides
-  enabled   Boolean  @default(true)
-  builtIn   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([slug])
-  @@index([enabled])
-}
