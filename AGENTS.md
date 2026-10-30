@@ -128,4 +128,9 @@ This project integrates Model Context Protocol (MCP) servers to accelerate devel
 9. **Active Nav Link LayoutId Highlighting**:
    - Navigation links in desktop navbar must utilize a single sliding layoutId pill indicator with Framer Motion (`layoutId="active-nav-pill"`).
    - Must set `aria-current="page"` on the active link and respect `prefers-reduced-motion` and RTL orientation.
+10. **Theme Pattern Textures**:
+   - Moroccan geometric patterns rendered via `PageTexture` must dynamically inherit theme accents via `--texture-color` (`var(--main)` by default) and `--texture-opacity` tokens.
+   - Textures must never be occluded by flat or opaque radial background washes.
+   - In dark and AMOLED modes, background fill must remain true black/deep night while the texture pattern renders subtly with sufficient contrast (standard deviation >= 0.3, luminance delta >= 2 in gutter strips).
+
 

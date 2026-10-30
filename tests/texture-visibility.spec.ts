@@ -39,6 +39,11 @@ test.describe("Task 1: Texture Visibility & Numeric Contrast Verification", () =
       const radialDimOverlay = textureLayer.locator("div.pointer-events-none.absolute.inset-0");
       await expect(radialDimOverlay).toHaveCount(0);
 
+      // Also assert that the texture rect computes to the theme's expected color
+      const textureRect = svg.locator("rect").nth(1);
+      const rectFill = await textureRect.getAttribute("fill");
+      expect(rectFill).toContain("--texture-color");
+
       // Capture desktop viewport screenshot for visual evidence
       await page.setViewportSize({ width: 1440, height: 900 });
       const evidencePath = path.join(process.cwd(), `evidence/task-1/texture-${theme}-1440.png`);

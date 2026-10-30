@@ -79,11 +79,11 @@ export function PageTexture({
           </mask>
         </defs>
 
-        {/* Render pattern in theme main color with master opacity */}
+        {/* Render pattern in theme texture color with master opacity */}
         <rect
           width="100%"
           height="100%"
-          fill="var(--main)"
+          fill="var(--texture-color, var(--main))"
           mask={`url(#${maskId})`}
           style={{
             maskImage: `url(#${patternId})`,
