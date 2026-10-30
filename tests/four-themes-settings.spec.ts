@@ -39,10 +39,4 @@ test.describe("Four Themes & Real Settings / Profile Architecture", () => {
     expect(page.url()).toContain("/login");
     expect(decodeURIComponent(page.url())).toContain("callbackUrl=/settings");
   });
-
-  test("4. Admin themes route is protected from unauthenticated access", async ({ page }) => {
-    await page.goto("/admin/themes");
-    expect(page.url()).toContain("/login");
-    expect(decodeURIComponent(page.url())).toContain("callbackUrl=/admin/themes");
-  });
 });

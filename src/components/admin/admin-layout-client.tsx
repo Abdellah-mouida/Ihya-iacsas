@@ -59,7 +59,6 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     ...(user.role === "ADMIN"
       ? [
           { href: "/admin/users", label: isAr ? "المستخدمون" : "Users", icon: Users },
-          { href: "/admin/themes", label: isAr ? "إدارة السمات" : "Themes", icon: Palette },
         ]
       : []),
   ];

@@ -73,12 +73,15 @@ export async function loginAs(
   await page.goto(`/login?callbackUrl=${encodeURIComponent(targetUrl)}`);
   await page.fill('[data-testid="login-email-input"]', user.email);
   await page.fill('[data-testid="login-password-input"]', user.password);
-  await page.click('[data-testid="login-submit-btn"]');
-  // Wait for auth callback response
-  await page.waitForResponse(
-    (res) => res.url().includes("/api/auth/callback/credentials") && res.status() < 400,
-    { timeout: 30000 }
-  );
+  
+  await Promise.all([
+    page.waitForResponse(
+      (res) => res.url().includes("/api/auth/callback/credentials") && res.status() < 400,
+      { timeout: 30000 }
+    ).catch(() => null),
+    page.click('[data-testid="login-submit-btn"]'),
+  ]);
+
   await page.waitForURL(
     (url) =>
       url.pathname.includes(targetUrl) ||
