@@ -19,6 +19,11 @@ function getDatabaseUrl(): string | undefined {
       url = `${url}${sep}connection_limit=25&pool_timeout=30&connect_timeout=30`;
     }
   }
+  // Ensure robust timeouts for Neon serverless connections
+  const sep = url.includes("?") ? "&" : "?";
+  if (!url.includes("connect_timeout=")) {
+    url = `${url}${sep}connect_timeout=30&pool_timeout=30`;
+  }
   return url;
 }
 

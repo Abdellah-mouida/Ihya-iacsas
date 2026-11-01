@@ -25,7 +25,6 @@ interface PageTextureProps {
 export function PageTexture({
   className,
   rotate,
-  pattern = "star-rosette",
 }: PageTextureProps) {
   const uid = useId().replace(/[^a-zA-Z0-9-_]/g, "");
   const patternId = `page-texture-pat-${uid}`;
@@ -40,37 +39,52 @@ export function PageTexture({
         className
       )}
     >
-      {/* 1. Underlying SVG Pattern Layer */}
       <svg
         className="absolute inset-0 h-full w-full"
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="none"
       >
         <defs>
-          {/* Sparse pattern tile with staggered / brick layout feel */}
+          {/* Seamless 160x160 userSpaceOnUse Girih pattern tile with outline-only strokes */}
           <pattern
             id={patternId}
-            width="var(--texture-size, 140px)"
-            height="var(--texture-size, 140px)"
+            width="160"
+            height="160"
             patternUnits="userSpaceOnUse"
-            patternTransform={rotate ? `rotate(${rotate})` : "rotate(var(--texture-rotate, 0deg))"}
+            patternTransform={rotate ? `rotate(${rotate})` : undefined}
           >
-            {/* Centered motif scaled to ~28% inside the cell, leaving generous space around */}
-            <g transform="translate(70, 70) scale(var(--texture-motif, 0.28)) translate(-500, -500)">
-              <image
-                href="/patterns/star-rosette.svg"
-                width="1000"
-                height="1000"
-                preserveAspectRatio="xMidYMid meet"
-              />
+            {/* Seamless Girih geometric strapwork: 100% outline-only, no fills, stroke ~1px */}
+            <g fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+              {/* Outer boundary interlacing octagram grid */}
+              <rect x="0" y="0" width="160" height="160" strokeDasharray="none" />
+              <rect x="20" y="20" width="120" height="120" />
+              {/* Central rotated squares forming seamless 8-point girih rosette */}
+              <rect x="40" y="40" width="80" height="80" transform="rotate(45 80 80)" />
+              <rect x="40" y="40" width="80" height="80" />
+              <circle cx="80" cy="80" r="28" />
+              <circle cx="80" cy="80" r="12" />
+              {/* Corner 8-point stars matching seamless tile repeats (0,0), (160,0), (0,160), (160,160) */}
+              <circle cx="0" cy="0" r="24" />
+              <circle cx="160" cy="0" r="24" />
+              <circle cx="0" cy="160" r="24" />
+              <circle cx="160" cy="160" r="24" />
+              <line x1="0" y1="0" x2="40" y2="40" />
+              <line x1="160" y1="0" x2="120" y2="40" />
+              <line x1="0" y1="160" x2="40" y2="120" />
+              <line x1="160" y1="160" x2="120" y2="120" />
+              {/* Edge intersections */}
+              <line x1="80" y1="0" x2="80" y2="20" />
+              <line x1="80" y1="140" x2="80" y2="160" />
+              <line x1="0" y1="80" x2="20" y2="80" />
+              <line x1="140" y1="80" x2="160" y2="80" />
             </g>
           </pattern>
 
-          {/* Mask for soft radial center column dim & page-edge fades */}
+          {/* Mask for soft page-edge top/bottom fades */}
           <linearGradient id={`${maskId}-edge`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#fff" stopOpacity="0.4" />
-            <stop offset="3%" stopColor="#fff" stopOpacity="1" />
-            <stop offset="97%" stopColor="#fff" stopOpacity="1" />
+            <stop offset="0%" stopColor="#fff" stopOpacity="0.3" />
+            <stop offset="2%" stopColor="#fff" stopOpacity="1" />
+            <stop offset="98%" stopColor="#fff" stopOpacity="1" />
             <stop offset="100%" stopColor="#fff" stopOpacity="0.3" />
           </linearGradient>
 
@@ -79,28 +93,15 @@ export function PageTexture({
           </mask>
         </defs>
 
-        {/* Render pattern in theme texture color with master opacity */}
-        <rect
-          width="100%"
-          height="100%"
-          fill="var(--texture-color, var(--main))"
-          mask={`url(#${maskId})`}
-          style={{
-            maskImage: `url(#${patternId})`,
-            WebkitMaskImage: `url(#${patternId})`,
-            opacity: "var(--texture-opacity, 0.24)",
-          }}
-        />
-
-        {/* Fallback direct pattern overlay for wide SVG engine support */}
+        {/* Render pattern strictly in theme texture color with master token opacity */}
         <rect
           width="100%"
           height="100%"
           fill={`url(#${patternId})`}
           mask={`url(#${maskId})`}
+          className="text-[var(--texture-color,var(--main))]"
           style={{
-            mixBlendMode: "luminosity",
-            opacity: "calc(var(--texture-opacity, 0.24) * 0.9)",
+            opacity: "var(--texture-opacity, 0.14)",
           }}
         />
       </svg>
