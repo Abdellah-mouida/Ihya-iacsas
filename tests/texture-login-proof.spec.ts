@@ -13,7 +13,7 @@ test.describe("Task 2: Texture Proof & Stacking Contract on Login Page", () => {
       page,
     }) => {
       await page.goto("/login");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Set theme attribute
       await page.evaluate((theme) => {
@@ -25,7 +25,7 @@ test.describe("Task 2: Texture Proof & Stacking Contract on Login Page", () => {
       }, themeClass);
 
       // Verify Texture element is present and in DOM Layer 2
-      const textureEl = page.locator('[data-testid="texture-layer"]').first();
+      const textureEl = page.locator('[data-testid="site-atmosphere-pattern"]');
       await expect(textureEl).toBeAttached();
 
       // Check stacking context & z-index
@@ -35,12 +35,11 @@ test.describe("Task 2: Texture Proof & Stacking Contract on Login Page", () => {
       expect(Number(zIndex) || 2).toBeGreaterThanOrEqual(1);
 
       // Verify pattern image loaded
-      const patternImageHref = await textureEl.locator("image").getAttribute("href");
-      expect(patternImageHref).toBeTruthy();
+      await expect(textureEl.locator("pattern#site-khatam-pattern")).toBeAttached();
 
       // Compute pixel difference between texture visible and texture hidden directly in browser canvas
       const meanDiffCalculated = await page.evaluate(async () => {
-        const texture = document.querySelector('[data-testid="texture-layer"]') as HTMLElement | null;
+        const texture = document.querySelector('[data-testid="site-atmosphere-pattern"]') as HTMLElement | null;
         if (!texture) throw new Error("Texture not found");
 
         const w = window.innerWidth;

@@ -53,12 +53,12 @@ test.describe("Task 1 Auth, Hero & Onboarding Fixes", () => {
     await expect(nameInputEn).toHaveAttribute("placeholder", "e.g. Youssef El Idrissi");
   });
 
-  test("4. Auth pages render ambient backdrop and divider uses font-sans instead of font-mono", async ({ page }) => {
+  test("4. Auth pages use the shared atmosphere and divider uses font-sans instead of font-mono", async ({ page }) => {
     await page.goto("/login");
     await page.waitForLoadState("domcontentloaded");
 
     // Backdrop present in DOM
-    const backdrop = page.locator('[data-testid="auth-ambient-backdrop"]');
+    const backdrop = page.locator('[data-testid="site-atmosphere"]');
     await expect(backdrop).toBeAttached();
 
     // Divider does not have font-mono

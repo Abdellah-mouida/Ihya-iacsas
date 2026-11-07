@@ -19,7 +19,6 @@ import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
 import { validatePasswordStrength } from "@/lib/password";
 import { signUpWithCredentials } from "@/app/actions/auth";
-import { AuthAmbientBackdrop } from "./auth-ambient-backdrop";
 
 export function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -45,7 +44,7 @@ export function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function SignUpView() {
-  const { t, locale, dir } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isAr = locale === "ar";
@@ -69,7 +68,6 @@ export function SignUpView() {
     } else {
       toast.error(t("auth.oauthError"));
     }
-    setIsGooglePending(false);
   }, [searchParams, t]);
 
   useEffect(() => {
@@ -156,9 +154,8 @@ export function SignUpView() {
   const BackIcon = isAr ? ArrowRight : ArrowLeft;
 
   return (
-    <div className="relative isolate min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 bg-background z-0">
+    <div className="relative isolate min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 z-0">
       {/* Ambient background with depth and glow */}
-      <AuthAmbientBackdrop />
 
       {/* Container with max width */}
       <div

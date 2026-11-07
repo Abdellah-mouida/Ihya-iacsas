@@ -105,7 +105,6 @@ export function TermsView() {
           {/* Main sections card */}
           <main className="lg:col-span-8">
             <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/75 p-6 backdrop-blur-xl shadow-xl sm:p-10">
-              <div className="pattern-islamic pointer-events-none absolute inset-0 opacity-[0.03]" />
 
               <div className="relative space-y-10">
                 {TERMS_SECTIONS.map((sec, idx) => (

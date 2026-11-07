@@ -20,12 +20,12 @@ test.describe("Task 1: Single Continuous Page-Level Texture Architecture & Seam 
         document.documentElement.setAttribute("data-theme", t);
       }, theme);
 
-      // Verify single page-texture-layer exists at top level
-      const pageTexture = page.locator('[data-testid="page-texture-layer"]').first();
-      await expect(pageTexture).toBeAttached();
+      // Verify the single root atmosphere pattern remains continuous across sections.
+      const pageTexture = page.locator('[data-testid="site-atmosphere"]');
+      await expect(pageTexture.locator("pattern#site-khatam-pattern")).toHaveCount(1);
 
       // Check that navbar does NOT contain its own texture layer
-      const navTexture = page.locator("header nav [data-testid=\"texture-layer\"]");
+      const navTexture = page.locator("header nav [data-testid=\"site-atmosphere\"]");
       await expect(navTexture).toHaveCount(0);
 
       // Seam test: measure section boundaries (e.g. hero -> about, program -> contact, contact -> footer)

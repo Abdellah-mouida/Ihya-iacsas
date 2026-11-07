@@ -5,6 +5,8 @@ import { Providers } from "@/components/providers";
 import { RouteHistoryTracker } from "@/components/common/route-history-tracker";
 import { ThemeMetaColor } from "@/components/common/theme-meta-color";
 import { DynamicThemeStyles } from "@/components/common/dynamic-theme-styles";
+import { SiteAtmosphere } from "@/components/common/site-atmosphere";
+import { SitePointerGlow } from "@/components/common/site-pointer-glow";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -73,10 +75,14 @@ m.setAttribute('content',c);
       </head>
       <body className="min-h-dvh bg-background text-foreground overflow-x-hidden">
         <ThemeMetaColor />
-        <Providers>
-          <RouteHistoryTracker />
-          {children}
-        </Providers>
+        <SiteAtmosphere />
+        <SitePointerGlow />
+        <div className="relative z-10">
+          <Providers>
+            <RouteHistoryTracker />
+            {children}
+          </Providers>
+        </div>
       </body>
     </html>
   );

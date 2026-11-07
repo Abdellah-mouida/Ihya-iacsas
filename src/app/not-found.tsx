@@ -8,16 +8,12 @@ import {
   Home,
   Calendar,
   MessageSquare,
-  Sparkles,
-  MapPin,
 } from "lucide-react";
 
 import { useLocale } from "@/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { PageTexture } from "@/components/common/page-texture";
-import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
 
 export default function NotFound() {
   const { t, locale } = useLocale();
@@ -26,9 +22,8 @@ export default function NotFound() {
   return (
     <div
       data-testid="page-not-found"
-      className="relative isolate min-h-dvh flex flex-col items-center justify-between p-4 sm:p-8 text-foreground bg-background overflow-hidden z-0"
+      className="relative isolate min-h-dvh flex flex-col items-center justify-between p-4 sm:p-8 text-foreground overflow-hidden z-0"
     >
-      <PageTexture />
 
       {/* Top Header Utilities */}
       <header className="w-full max-w-5xl flex items-center justify-between py-2 z-20">

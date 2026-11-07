@@ -65,7 +65,7 @@ test.describe("Task 1 - Vertical Striping, Base Background & Texture Contrast Ve
           shot1440
         );
 
-        // Analyze vertical stripes in empty side margin (x: 10 to 330, y: 150 to 550) - 320px = 2 full tiles (160px each)
+        // Analyze adjacent 120px khatam tiles in an empty side margin.
         const stripStartX = 10;
         const stripEndX = 330;
         const stripStartY = 150;
@@ -88,10 +88,10 @@ test.describe("Task 1 - Vertical Striping, Base Background & Texture Contrast Ve
           }
         });
 
-        const tileW = 160;
+        const tileW = 120;
         const bgBuffer1440 = await page.screenshot({ fullPage: false });
         const crop1440 = await sharp(bgBuffer1440)
-          .extract({ left: 60, top: 120, width: tileW * 2, height: 160 })
+          .extract({ left: 60, top: 120, width: tileW * 2, height: 120 })
           .raw()
           .toBuffer({ resolveWithObject: true });
 
@@ -100,9 +100,9 @@ test.describe("Task 1 - Vertical Striping, Base Background & Texture Contrast Ve
         let sumTile1 = 0;
         let sumTile2 = 0;
         const halfW = tileW;
-        const totalP = halfW * 160;
+        const totalP = halfW * 120;
 
-        for (let y = 0; y < 160; y++) {
+        for (let y = 0; y < 120; y++) {
           for (let x = 0; x < halfW; x++) {
             const idx = (y * (tileW * 2) + x) * channels;
             sumTile1 += 0.2126 * data1440[idx] + 0.7152 * data1440[idx + 1] + 0.0722 * data1440[idx + 2];
@@ -132,25 +132,25 @@ test.describe("Task 1 - Vertical Striping, Base Background & Texture Contrast Ve
           shot360
         );
 
-        // Mobile 360px: sample isolated texture layer where edge fade mask and layout are stable (y=380-460)
+        // Mobile 360px: compare adjacent khatam tiles below the header.
         const bgBuffer360 = await page.screenshot({ fullPage: false });
         const crop360 = await sharp(bgBuffer360)
-          .extract({ left: 10, top: 380, width: 160 * 2, height: 80 })
+          .extract({ left: 10, top: 380, width: 120 * 2, height: 80 })
           .raw()
           .toBuffer({ resolveWithObject: true });
 
         const data360 = crop360.data;
-        const totalP360 = 160 * 80;
+        const totalP360 = 120 * 80;
         let sumTile360_1 = 0;
         let sumTile360_2 = 0;
 
         for (let y = 0; y < 80; y++) {
-          for (let x = 0; x < 160; x++) {
-            const idx = (y * 320 + x) * 3;
+          for (let x = 0; x < 120; x++) {
+            const idx = (y * 240 + x) * 3;
             sumTile360_1 += 0.2126 * data360[idx] + 0.7152 * data360[idx + 1] + 0.0722 * data360[idx + 2];
           }
-          for (let x = 160; x < 320; x++) {
-            const idx = (y * 320 + x) * 3;
+          for (let x = 120; x < 240; x++) {
+            const idx = (y * 240 + x) * 3;
             sumTile360_2 += 0.2126 * data360[idx] + 0.7152 * data360[idx + 1] + 0.0722 * data360[idx + 2];
           }
         }

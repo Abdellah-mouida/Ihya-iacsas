@@ -5,11 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  ShieldAlert,
   Home,
   ArrowLeft,
   ArrowRight,
-  Tent,
   Lock,
 } from "lucide-react";
 
@@ -17,8 +15,6 @@ import { useLocale } from "@/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { PageTexture } from "@/components/common/page-texture";
-import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
 
 export function ForbiddenView() {
   const { t, locale } = useLocale();
@@ -28,10 +24,8 @@ export function ForbiddenView() {
   return (
     <div
       data-testid="page-forbidden"
-      className="relative isolate min-h-dvh flex flex-col items-center justify-between p-4 sm:p-8 text-foreground bg-background overflow-hidden z-0"
+      className="relative isolate min-h-dvh flex flex-col items-center justify-between p-4 sm:p-8 text-foreground overflow-hidden z-0"
     >
-      <PageTexture />
-
       {/* Top Header Utilities */}
       <header className="w-full max-w-5xl flex items-center justify-between py-2 z-20">
         <Link

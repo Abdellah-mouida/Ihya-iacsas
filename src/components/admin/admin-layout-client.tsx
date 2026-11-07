@@ -8,7 +8,6 @@ import {
   LogOut,
   Mail,
   Menu,
-  Palette,
   Shield,
   Sparkles,
   Ticket,
@@ -24,7 +23,6 @@ import { useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { PageTexture } from "@/components/common/page-texture";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
@@ -67,13 +65,9 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     await signOut({ callbackUrl: "/login" });
   };
 
-  const isActive = (href: string) =>
-    href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-
   return (
-    <div className="relative isolate min-h-screen bg-background text-foreground antialiased transition-colors duration-300 z-0">
+    <div className="relative isolate min-h-screen text-foreground antialiased transition-colors duration-300 z-0">
       {/* Background Page Texture */}
-      <PageTexture />
 
       <div className="relative z-10 flex w-full flex-col lg:flex-row min-h-screen">
         {/* Desktop Sidebar */}

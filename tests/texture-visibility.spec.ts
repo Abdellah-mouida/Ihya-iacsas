@@ -28,7 +28,7 @@ test.describe("Task 1: Texture Visibility & Numeric Contrast Verification", () =
       }, theme);
 
       // Verify page texture layer exists and is attached
-      const textureLayer = page.locator('[data-testid="page-texture-layer"]').first();
+      const textureLayer = page.locator('[data-testid="site-atmosphere"]');
       await expect(textureLayer).toBeAttached();
 
       // Check SVG pattern element inside
@@ -40,9 +40,10 @@ test.describe("Task 1: Texture Visibility & Numeric Contrast Verification", () =
       await expect(radialDimOverlay).toHaveCount(0);
 
       // Also assert that the texture rect computes to the theme's expected color
-      const textureRect = svg.locator("rect").nth(1);
-      const rectFill = await textureRect.getAttribute("fill");
-      expect(rectFill).toContain("--texture-color");
+      const patternColor = await svg.evaluate((el) => getComputedStyle(el).color);
+      expect(patternColor).not.toBe("rgba(0, 0, 0, 0)");
+      const patternOpacity = await svg.evaluate((el) => getComputedStyle(el).opacity);
+      expect(Number(patternOpacity)).toBeGreaterThan(0);
 
       // Capture desktop viewport screenshot for visual evidence
       await page.setViewportSize({ width: 1440, height: 900 });

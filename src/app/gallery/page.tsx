@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { auth } from "@/auth";
-import { PageTexture } from "@/components/common/page-texture";
 import { Footer } from "@/components/sections/footer";
 import { GalleryPageContent } from "@/components/sections/gallery-page-content";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
@@ -17,9 +16,8 @@ export default async function GalleryPage() {
   return (
     <>
       <GlassNavbar initialSession={session} />
-      <main className="relative isolate min-h-screen overflow-hidden bg-background z-0">
-        <PageTexture />
-        <div className="relative z-10 pt-24">
+      <main className="relative isolate min-h-screen overflow-hidden z-0">
+          <div className="relative z-10 pt-24">
           <GalleryPageContent />
         </div>
       </main>

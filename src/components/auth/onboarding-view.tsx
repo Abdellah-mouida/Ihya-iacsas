@@ -224,16 +224,6 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
       data-testid="onboarding-container"
       className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center p-4 sm:p-6 lg:p-8"
     >
-      {/* Background Islamic Watermark Pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
-        style={{
-          backgroundImage: "url(/patterns/girih.svg)",
-          backgroundSize: "260px 260px",
-        }}
-        aria-hidden="true"
-      />
-
       <div className="relative w-full max-w-xl mx-auto">
         {/* Main Card */}
         <div className="relative overflow-hidden rounded-3xl border border-brass/20 bg-card/85 backdrop-blur-xl shadow-2xl p-6 sm:p-8 md:p-10">

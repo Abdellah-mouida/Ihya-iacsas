@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
-import { PageTexture } from "@/components/common/page-texture";
 import { Button } from "@/components/ui/button";
 
 export default function ErrorPage({
@@ -21,11 +20,7 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <div className="relative isolate min-h-dvh flex flex-col items-center justify-center p-6 text-foreground bg-background overflow-hidden z-0">
-      {/* Background ambient lighting and pattern */}
-      <PageTexture />
-      <div className="bg-destructive absolute top-1/3 start-1/2 z-[1] size-96 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-10 blur-3xl pointer-events-none" />
-
+    <div className="relative isolate min-h-dvh flex flex-col items-center justify-center p-6 text-foreground overflow-hidden z-0">
       <motion.div
         initial={{ opacity: 0, scale: 0.92, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
