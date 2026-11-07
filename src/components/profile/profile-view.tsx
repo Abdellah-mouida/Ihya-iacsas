@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { UserAccountData, AccountBookingItem } from "@/app/actions/account";
+import { UserAccountData } from "@/app/actions/account";
 import { useLocale } from "@/i18n/locale-provider";
 import { RoleBadge } from "@/components/common/role-badge";
 import { StatusNotice } from "@/components/common/status-notice";
@@ -19,8 +17,6 @@ import {
   Building,
   Heart,
   Wrench,
-  Globe2,
-  Users,
   Settings,
   CalendarCheck,
   CheckCircle2,
@@ -36,7 +32,7 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ initialData }: ProfileViewProps) {
-  const { t, locale, dir } = useLocale();
+  const { locale } = useLocale();
   const isAr = locale === "ar";
   const { user, bookings } = initialData;
 
@@ -61,8 +57,8 @@ export function ProfileView({ initialData }: ProfileViewProps) {
         </div>
 
         {/* Profile Card & Avatar */}
-        <div className="relative px-6 sm:px-10 pb-8 pt-0 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 -mt-16 sm:-mt-20">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-start">
+          <div className="relative flex min-w-0 flex-col gap-6 px-6 pb-8 pt-0 sm:flex-row sm:items-end sm:justify-between sm:px-10 -mt-16 sm:-mt-20">
+          <div className="flex min-w-0 flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-start">
             {/* Centered Avatar with layout wrapper */}
             <div className="relative rounded-full border-4 border-background bg-card shadow-profile-card hover:shadow-profile-hover transition-all duration-300 ring-2 ring-primary/30 shrink-0">
               <UserAvatar
@@ -77,7 +73,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               />
             </div>
 
-            <div className="space-y-1.5 min-w-0">
+            <div className="min-w-0 max-w-full space-y-1.5">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">
                   {user.name || (isAr ? "مستخدم إحياء" : "Ihyaa Member")}
@@ -86,17 +82,17 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               </div>
 
               {/* Basics: City, Age, Email stay at the top */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex min-w-0 flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground sm:justify-start sm:text-sm">
                 {user.email && (
-                  <span className="flex items-center gap-1 font-sans">
-                    <Mail className="size-3.5 text-primary" />
-                    <span>{user.email}</span>
+                  <span className="flex min-w-0 max-w-full items-center gap-1 font-sans">
+                    <Mail className="size-3.5 shrink-0 text-primary" />
+                    <span className="min-w-0 break-all" title={user.email}>{user.email}</span>
                   </span>
                 )}
                 {user.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="size-3.5 text-primary" />
-                    <span>{user.city}</span>
+                  <span className="flex min-w-0 max-w-full items-center gap-1">
+                    <MapPin className="size-3.5 shrink-0 text-primary" />
+                    <span className="min-w-0 break-words">{user.city}</span>
                   </span>
                 )}
                 {user.age && (
@@ -108,16 +104,16 @@ export function ProfileView({ initialData }: ProfileViewProps) {
             </div>
           </div>
 
-          <div className="flex justify-center sm:justify-end shrink-0">
+          <div className="flex w-full min-w-0 justify-center sm:w-auto sm:justify-end sm:shrink-0">
             <Button
               asChild
               variant="outline"
               data-testid="profile-edit-settings-btn"
-              className="rounded-xl gap-2 font-heading font-semibold h-11 px-5 border-border/80 hover:bg-primary/10 hover:text-primary"
+              className="h-auto min-h-11 max-w-full min-w-0 rounded-xl border-border/80 px-3 font-heading text-xs font-semibold hover:bg-primary/10 hover:text-primary sm:px-5 sm:text-sm"
             >
-              <Link href="/settings">
-                <Settings className="size-4" />
-                <span>{isAr ? "تعديل الملف والإعدادات" : "Edit Profile & Settings"}</span>
+              <Link href="/settings" className="flex min-w-0 max-w-full items-center gap-2 whitespace-normal">
+                <Settings className="size-4 shrink-0" />
+                <span className="min-w-0 break-words text-start">{isAr ? "تعديل الملف والإعدادات" : "Edit Profile & Settings"}</span>
               </Link>
             </Button>
           </div>
@@ -395,18 +391,18 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                       {eventTitle}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="size-3 text-primary" />
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex min-w-0 max-w-full items-center gap-1">
+                        <Calendar className="size-3 shrink-0 text-primary" />
                         <span>{booking.event.date}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3 text-primary" />
+                      <span className="flex min-w-0 max-w-full items-center gap-1">
+                        <Clock className="size-3 shrink-0 text-primary" />
                         <span>{booking.event.time}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="size-3 text-primary" />
-                        <span>{booking.event.location}</span>
+                      <span className="flex min-w-0 max-w-full items-center gap-1">
+                        <MapPin className="size-3 shrink-0 text-primary" />
+                        <span className="min-w-0 break-words" title={booking.event.location}>{booking.event.location}</span>
                       </span>
                     </div>
                   </div>

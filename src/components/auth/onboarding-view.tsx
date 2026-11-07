@@ -16,8 +16,6 @@ import {
   Loader2,
   Sparkles,
   ShieldCheck,
-  ArrowRight,
-  ArrowLeft,
   UploadCloud,
 } from "lucide-react";
 
@@ -149,7 +147,7 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
     const ageNum = parseInt(age, 10);
     if (!age.trim()) {
       newErrors.age = t("onboarding.errAgeRequired");
-    } else if (isNaN(ageNum) || ageNum < 10 || ageNum > 120) {
+    } else if (!/^\d+$/.test(age.trim()) || isNaN(ageNum) || ageNum < 10 || ageNum > 120) {
       newErrors.age = t("onboarding.errAgeInvalid");
     }
 
@@ -304,11 +302,12 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
             <div data-testid="onboarding-step-1" className="space-y-5 animate-in fade-in duration-300">
               {/* Name (pre-filled or editable) */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                <label htmlFor="onboarding-name" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   {t("onboarding.fullNameLabel")}
                 </label>
                 <input
                   type="text"
+                  id="onboarding-name"
                   data-testid="onboarding-name-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -319,7 +318,7 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
 
               {/* City Combobox */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                <label htmlFor="b-city" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   {t("onboarding.cityLabel")} <span className="text-destructive">*</span>
                 </label>
                 <CityCombobox
@@ -341,14 +340,18 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
 
               {/* Age Input */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                <label htmlFor="onboarding-age" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   {t("onboarding.ageLabel")} <span className="text-destructive">*</span>
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
-                    min={10}
-                    max={120}
+                    id="onboarding-age"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.age)}
+                    aria-describedby={errors.age ? "onboarding-age-help onboarding-age-error" : "onboarding-age-help"}
                     data-testid="onboarding-age-input"
                     value={age}
                     onChange={(e) => {
@@ -357,7 +360,7 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
                     }}
                     placeholder={t("onboarding.agePlaceholder")}
                     className={cn(
-                      "w-full rounded-xl border bg-background/60 px-4 py-2.5 text-sm font-medium text-foreground outline-none transition-all",
+                      "min-h-11 w-full rounded-xl border bg-background/60 px-4 py-2.5 text-base font-medium text-foreground outline-none transition-colors",
                       errors.age
                         ? "border-destructive focus:ring-2 focus:ring-destructive/20"
                         : "border-border/80 focus:border-primary focus:ring-2 focus:ring-primary/20",
@@ -367,25 +370,12 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
                     {t("onboarding.yearsOld")}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{t("onboarding.ageHelp")}</p>
+                <p id="onboarding-age-help" className="mt-1 text-xs text-muted-foreground">{t("onboarding.ageHelp")}</p>
                 {errors.age && (
-                  <p data-testid="error-age" className="mt-1.5 text-xs font-medium text-destructive">
+                  <p id="onboarding-age-error" data-testid="error-age" className="mt-1.5 text-xs font-medium text-destructive">
                     {errors.age}
                   </p>
                 )}
-              </div>
-
-              {/* Step 1 Actions */}
-              <div className="pt-4 flex justify-end">
-                <button
-                  type="button"
-                  data-testid="onboarding-next-btn"
-                  onClick={handleNext}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 active:scale-[0.98]"
-                >
-                  <span>{t("onboarding.nextStep")}</span>
-                  {isAr ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
-                </button>
               </div>
             </div>
           )}
@@ -469,40 +459,6 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
                 )}
               </div>
 
-              {/* Step 2 Actions */}
-              <div className="pt-4 flex items-center justify-between border-t border-border/50">
-                <button
-                  type="button"
-                  data-testid="onboarding-back-btn"
-                  onClick={handleBack}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted/40 transition-colors"
-                >
-                  {isAr ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-                  <span>{t("onboarding.prevStep")}</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {!imagePreview && (
-                    <button
-                      type="button"
-                      data-testid="skip-photo-btn"
-                      onClick={handleNext}
-                      className="text-xs font-semibold text-muted-foreground hover:text-foreground px-3 py-2 transition-colors"
-                    >
-                      {t("onboarding.skipPhoto")}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    data-testid="onboarding-next-btn"
-                    onClick={handleNext}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 transition-all hover:bg-primary/90"
-                  >
-                    <span>{t("onboarding.nextStep")}</span>
-                    {isAr ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 
@@ -599,41 +555,68 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
                 </div>
               )}
 
-              {/* Step 3 Actions */}
-              <div className="pt-4 flex items-center justify-between border-t border-border/50">
+            </div>
+          )}
+
+          <div
+            data-testid="onboarding-step-footer"
+            data-step={step}
+            className={cn(
+              "mt-6 flex flex-col gap-2.5 border-t border-border/50 pt-4 min-[520px]:grid min-[520px]:items-stretch min-[520px]:gap-3",
+              step === 1
+                ? "min-[520px]:grid-cols-1"
+                : step === 2 && !imagePreview
+                  ? "min-[520px]:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+                  : "min-[520px]:grid-cols-2",
+            )}
+          >
+            <button
+              type="button"
+              data-testid={step === 3 ? "onboarding-submit-btn" : "onboarding-next-btn"}
+              onClick={step === 3 ? handleSubmit : handleNext}
+              disabled={isPending || (step === 3 && !termsAccepted && !acceptTermsCheckbox)}
+              className="inline-flex min-h-12 w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold leading-tight text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+            >
+              {isPending && step === 3 ? (
+                <Loader2 className="size-4 shrink-0 animate-spin" />
+              ) : step === 3 ? (
+                <ShieldCheck className="size-4 shrink-0" />
+              ) : null}
+              <span className="min-w-0 break-words">
+                {isPending && step === 3
+                  ? t("onboarding.completing")
+                  : step === 3
+                    ? t("onboarding.completeSetup")
+                    : t("onboarding.nextStep")}
+              </span>
+              {step !== 3 && (isAr ? <ChevronLeft className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />)}
+            </button>
+
+            {step > 1 && (
+              <div className="flex w-full min-w-0 gap-2">
                 <button
                   type="button"
                   data-testid="onboarding-back-btn"
                   onClick={handleBack}
                   disabled={isPending}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
+                  className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border px-2 text-[11px] font-semibold leading-tight text-muted-foreground transition-colors hover:bg-muted/40 disabled:opacity-50"
                 >
-                  {isAr ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-                  <span>{t("onboarding.prevStep")}</span>
+                  {isAr ? <ChevronRight className="size-4 shrink-0" /> : <ChevronLeft className="size-4 shrink-0" />}
+                  <span className="min-w-0 break-words">{t("onboarding.prevStep")}</span>
                 </button>
-
-                <button
-                  type="button"
-                  data-testid="onboarding-submit-btn"
-                  onClick={handleSubmit}
-                  disabled={isPending || (!termsAccepted && !acceptTermsCheckbox)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      <span>{t("onboarding.completing")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="size-4" />
-                      <span>{t("onboarding.completeSetup")}</span>
-                    </>
-                  )}
-                </button>
+                {step === 2 && !imagePreview && (
+                  <button
+                    type="button"
+                    data-testid="skip-photo-btn"
+                    onClick={handleNext}
+                    className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-xl border border-border px-2 text-[11px] font-semibold leading-tight text-muted-foreground transition-colors hover:bg-muted/40"
+                  >
+                    <span className="min-w-0 break-words">{t("onboarding.skipPhoto")}</span>
+                  </button>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
