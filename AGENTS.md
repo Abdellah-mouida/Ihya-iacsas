@@ -133,4 +133,18 @@ This project integrates Model Context Protocol (MCP) servers to accelerate devel
    - Textures must never be occluded by flat or opaque radial background washes.
    - In dark and AMOLED modes, background fill must remain true black/deep night while the texture pattern renders subtly with sufficient contrast (standard deviation >= 0.3, luminance delta >= 2 in gutter strips).
 
+## Agent handoff protocol (strict)
+
+1. Start by reading this file, `.agent/STATE.md`, then only the active task file. Run `git status` and `git log -5`. If the tree is dirty, reconcile with `RESUME HERE`: continue that task or stash it with a reason and log the stash.
+2. For a new instruction set, save its exact prompt in `.agent/prompts/`, split it into small verifiable todos in `.agent/tasks/`, update STATE, then begin.
+3. Mark one todo `[~]` and update STATE before work. Implement, run relevant typecheck/lint/tests and UI screenshots when applicable, scan the diff for secrets, commit as `type(scope): message [NN-Tx]`, then mark `[x]` with hash, push `dev`, and update STATE. Never tick before commit and checks pass; one todo per commit.
+4. Do not end with new uncommitted work. If interrupted mid-todo, make a `wip(NN-Tx): ...` commit and record remaining work and exact resume point. Preserve pre-existing user changes; never fold them into an unrelated commit.
+5. Conserve context: search before reading, use line ranges, and avoid reading the session export, lockfiles, `graphify-out/`, or whole locale files unless necessary. Record useful findings in the task file. At about 60% context, finish the current todo, commit, update RESUME HERE, and ask for a fresh session.
+6. Record failures and blockers in STATE and the task file. Never skip a todo silently, falsify a check, or remove a failing test.
+7. On “handoff”, update STATE with the exact file, function, and next command before other work.
+8. Keep `.agent/` ignored and secret-free. Check ignore rules and scan every diff before pushing. If push fails, record the unpushed commit count and keep the work committed locally.
+9. Work on `dev`, or a user-named branch created from `dev`. Never push or merge to `main` without explicit instruction.
+10. A task prompt overrides this file only for that task; record the override in its task file. Resolve conflicts by checking git/code first, `.agent/` second, session export third, memory last.
+11. Templates and examples are in `docs/agent-protocol.md`; read them only when creating a task set. Archive finished task files under `.agent/archive/` and add one line to `.agent/DONE.md`.
+
 

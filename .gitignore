@@ -45,10 +45,13 @@ next-env.d.ts
 
 # local agent/session artifacts
 /.playwright-mcp/
+.agent/
 session-*.md
 session*.md
 session.md
 litellm-config.yaml
+/graphify-out/
+/skills-lock.json
 # Zenrows CLI (do not commit secrets or run artifacts)
 .zenrows/secrets.json
 .zenrows/config.json
