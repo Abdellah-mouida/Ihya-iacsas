@@ -75,9 +75,6 @@ export default async function EventBookPage({
 
   return (
     <div className="relative min-h-dvh overflow-hidden">
-      <div className="pattern-islamic absolute inset-0 -z-10" />
-      <div className="bg-brass-gradient absolute -top-24 start-1/2 -z-10 size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl" />
-
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
           <span className="relative shrink-0">
