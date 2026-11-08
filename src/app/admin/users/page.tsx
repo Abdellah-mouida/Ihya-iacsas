@@ -1,18 +1,16 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Activity,
   AlertTriangle,
-  Calendar,
+  ArrowLeft,
+  ArrowRight,
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Eye,
   Filter,
-  Mail,
-  MapPin,
   MoreVertical,
   RefreshCw,
   Search,
@@ -21,14 +19,13 @@ import {
   Sparkles,
   Trash2,
   User,
-  UserCheck,
   UserCog,
   Users,
   UserX,
   X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -43,6 +40,7 @@ import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -57,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { AuditActivityFeed, type AuditActivityItem } from "@/components/admin/audit-activity-feed";
 import {
   Select,
   SelectContent,
@@ -94,22 +93,25 @@ type UserItem = {
   };
 };
 
-type AuditItem = {
-  id: string;
-  action: string;
-  targetType: string;
-  targetId: string | null;
-  details: any;
-  ipAddress: string | null;
-  userAgent: string | null;
-  createdAt: Date;
-  actor: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    role: string;
-  } | null;
-};
+function formatUserRelativeTime(
+  date: Date | null,
+  locale: string,
+  neverActive: string,
+  justNow: string,
+) {
+  if (!date) return neverActive;
+  const d = new Date(date);
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return justNow;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d`;
+  return d.toLocaleDateString(locale === "ar" ? "ar-MA" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function AdminUsersPage() {
   const { t, locale } = useLocale();
@@ -143,12 +145,24 @@ export default function AdminUsersPage() {
   const [deleteReason, setDeleteReason] = useState("");
 
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [userAuditLogs, setUserAuditLogs] = useState<AuditItem[]>([]);
+  const [activityView, setActivityView] = useState(false);
+  const [userAuditLogs, setUserAuditLogs] = useState<AuditActivityItem[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
+  const [loadingMoreAudit, setLoadingMoreAudit] = useState(false);
+  const [auditError, setAuditError] = useState(false);
+  const [auditActionFilter, setAuditActionFilter] = useState("ALL");
+  const [auditCursor, setAuditCursor] = useState<string | null>(null);
+  const viewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const reduceMotion = useReducedMotion();
 
   const [isPending, startTransition] = useTransition();
 
-  const fetchUsers = async (p = page, s = search, r = roleFilter, l = limit) => {
+  const searchRef = useRef(search);
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+
+  const fetchUsers = useCallback(async (p: number, s: string, r: string, l: number) => {
     try {
       setLoading(true);
       const res = await getAdminUsers({
@@ -167,16 +181,19 @@ export default function AdminUsersPage() {
           setStats(res.stats);
         }
       }
-    } catch (err: any) {
-      toast.error(err.message || (isAr ? "فشل تحميل المستخدمين" : "Failed to load users"));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : (isAr ? "فشل تحميل المستخدمين" : "Failed to load users"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAr]);
 
   useEffect(() => {
-    fetchUsers(1, search, roleFilter, limit);
-  }, [roleFilter, limit]);
+    const timeoutId = window.setTimeout(() => {
+      void fetchUsers(1, searchRef.current, roleFilter, limit);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchUsers, roleFilter, limit]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,8 +213,8 @@ export default function AdminUsersPage() {
         setRoleDialogOpen(false);
         setRoleReason("");
         fetchUsers(page, search, roleFilter, limit);
-      } catch (err: any) {
-        toast.error(err.message || (isAr ? "فشل تحديث الدور" : "Failed to update role"));
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : (isAr ? "فشل تحديث الدور" : "Failed to update role"));
       }
     });
   };
@@ -215,42 +232,60 @@ export default function AdminUsersPage() {
         setDeleteDialogOpen(false);
         setDeleteReason("");
         fetchUsers(page, search, roleFilter, limit);
-      } catch (err: any) {
-        toast.error(err.message || (isAr ? "فشل إزالة المستخدم" : "Failed to remove user"));
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : (isAr ? "فشل إزالة المستخدم" : "Failed to remove user"));
       }
     });
   };
 
-  const openDetailsDialog = async (u: UserItem) => {
+  const openDetailsDialog = (u: UserItem) => {
     setSelectedUser(u);
+    setActivityView(false);
+    setUserAuditLogs([]);
+    setAuditCursor(null);
+    setAuditActionFilter("ALL");
+    setAuditError(false);
     setDetailsDialogOpen(true);
-    setLoadingAudit(true);
+  };
+
+  const fetchUserActivity = async (
+    action = auditActionFilter,
+    cursor: string | null = null,
+    append = false,
+  ) => {
+    if (!selectedUser) return;
+    if (append) setLoadingMoreAudit(true);
+    else setLoadingAudit(true);
+    setAuditError(false);
     try {
-      const res = await getUserAuditLogs(u.id);
-      if (res.success) {
-        setUserAuditLogs(res.logs as AuditItem[]);
-      }
-    } catch (err) {
-      setUserAuditLogs([]);
+      const res = await getUserAuditLogs(selectedUser.id, { action, cursor });
+      if (!res.success) throw new Error("Unable to load user activity");
+      setUserAuditLogs((current) => append
+        ? [...current, ...(res.logs as AuditActivityItem[])]
+        : res.logs as AuditActivityItem[]);
+      setAuditCursor(res.nextCursor);
+    } catch {
+      setAuditError(true);
     } finally {
-      setLoadingAudit(false);
+      if (append) setLoadingMoreAudit(false);
+      else setLoadingAudit(false);
     }
   };
 
-  const formatRelativeTime = (date: Date | null) => {
-    if (!date) return t("adminUsers.neverActive");
-    const d = new Date(date);
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (diff < 60) return t("adminUsers.justNow");
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d`;
-    return d.toLocaleDateString(isAr ? "ar-MA" : "en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const openActivityView = () => {
+    setActivityView(true);
+    setAuditActionFilter("ALL");
+    setUserAuditLogs([]);
+    setAuditCursor(null);
+    void fetchUserActivity("ALL", null, false);
   };
+
+  useEffect(() => {
+    if (detailsDialogOpen) viewHeadingRef.current?.focus();
+  }, [activityView, detailsDialogOpen]);
+
+  const formatRelativeTime = (date: Date | null) =>
+    formatUserRelativeTime(date, locale, t("adminUsers.neverActive"), t("adminUsers.justNow"));
 
   const formatDate = (date: Date | null) => {
     if (!date) return "—";
@@ -678,6 +713,7 @@ export default function AdminUsersPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      data-testid={`view-user-card-${u.id}`}
                       onClick={() => openDetailsDialog(u)}
                       className="text-xs h-8 px-2.5 gap-1.5"
                     >
@@ -964,23 +1000,102 @@ export default function AdminUsersPage() {
       </Dialog>
 
       {/* User Details & Audit History Dialog */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+      <Dialog
+        open={detailsDialogOpen}
+        onOpenChange={(open) => {
+          setDetailsDialogOpen(open);
+          if (!open) setActivityView(false);
+        }}
+      >
         <DialogContent
           data-testid="user-details-dialog"
-          className="w-[95vw] sm:max-w-2xl rounded-2xl max-h-[min(90dvh,850px)] flex flex-col p-0 overflow-hidden shadow-2xl"
+          showCloseButton={false}
+          fullScreenMobile
+          closeLabel={t("common.close")}
+          className="h-dvh max-h-dvh w-full max-w-none rounded-none flex flex-col p-0 overflow-hidden shadow-2xl relative sm:h-[min(90dvh,850px)] sm:max-h-[min(90dvh,850px)] sm:w-[95vw] sm:max-w-2xl sm:rounded-2xl"
         >
-          <DialogHeader className="p-5 sm:p-6 pb-4 border-b border-border/60 shrink-0 bg-card/80 backdrop-blur-md sticky top-0 z-10">
-            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <Eye className="size-5 text-primary" />
-              {t("adminUsers.detailsModalTitle")}
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              {t("adminUsers.detailsModalSub")}
-            </DialogDescription>
+          <DialogHeader className="relative z-10 flex-row items-center border-b border-border/60 bg-card/85 p-4 pe-16 sm:p-6 sm:pe-16">
+            <div className="flex min-w-0 items-center gap-3">
+              {activityView && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  data-testid="activity-back-button"
+                  onClick={() => setActivityView(false)}
+                  className="min-h-11 shrink-0 gap-2 rounded-xl px-3"
+                >
+                  {isAr ? <ArrowRight className="size-4" /> : <ArrowLeft className="size-4" />}
+                  <span>{t("adminUsers.activityBack")}</span>
+                </Button>
+              )}
+              {!activityView && <Eye className="size-5 shrink-0 text-primary" />}
+              <div className="min-w-0">
+                <DialogTitle
+                  ref={viewHeadingRef}
+                  tabIndex={-1}
+                  data-testid="user-details-view-heading"
+                  className="text-base font-bold outline-none sm:text-xl"
+                >
+                  {activityView
+                    ? t("adminUsers.activityTitle", { name: selectedUser?.name || selectedUser?.email || "" })
+                    : t("adminUsers.detailsModalTitle")}
+                </DialogTitle>
+                <DialogDescription className="mt-0.5 truncate text-xs sm:text-sm">
+                  {activityView ? selectedUser?.email : t("adminUsers.detailsModalSub")}
+                </DialogDescription>
+              </div>
+            </div>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid="close-user-details-dialog"
+                aria-label={t("common.close")}
+                className="absolute top-2 end-2 size-11 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </Button>
+            </DialogClose>
           </DialogHeader>
 
           {selectedUser && (
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-6 scrollbar-thin">
+            <AnimatePresence mode="wait" initial={false}>
+              {activityView ? (
+                <motion.div
+                  key="activity-view"
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: isAr ? 16 : -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: isAr ? -16 : 16 }}
+                  transition={{ duration: reduceMotion ? 0.01 : 0.18 }}
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                  data-testid="user-activity-view"
+                >
+                  <AuditActivityFeed
+                    logs={userAuditLogs}
+                    loading={loadingAudit}
+                    loadingMore={loadingMoreAudit}
+                    error={auditError}
+                    hasMore={Boolean(auditCursor)}
+                    action={auditActionFilter}
+                    onActionChange={(action) => {
+                      setAuditActionFilter(action);
+                      void fetchUserActivity(action, null, false);
+                    }}
+                    onLoadMore={() => void fetchUserActivity(auditActionFilter, auditCursor, true)}
+                    onRetry={() => void fetchUserActivity(auditActionFilter, null, false)}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="user-details-view"
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: isAr ? -16 : 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: isAr ? 16 : -16 }}
+                  transition={{ duration: reduceMotion ? 0.01 : 0.18 }}
+                  className="flex-1 space-y-6 overflow-y-auto px-5 py-4 scrollbar-thin sm:px-6"
+                  data-testid="user-info-view"
+                >
               {/* Profile Card */}
               <div className="p-4 rounded-xl bg-muted/40 border border-border/60 flex items-center gap-4">
                 <UserAvatar
@@ -1196,64 +1311,22 @@ export default function AdminUsersPage() {
                 )}
               </div>
 
-              {/* Audit Trail Section */}
-              <div>
-                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Activity className="size-3.5 text-primary" />
-                  {t("adminUsers.detailsAuditTrail")}
-                </h4>
-
-                {loadingAudit ? (
-                  <div className="py-6 flex justify-center">
-                    <IslamicLoader />
-                  </div>
-                ) : userAuditLogs.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
-                    {t("adminUsers.detailsNoAudit")}
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pe-1">
-                    {userAuditLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs flex items-start justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <span className="font-semibold text-foreground block truncate">
-                            {log.action}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground block truncate">
-                            by: {log.actor?.name || log.actor?.email || "System"} (
-                            {log.actor?.role || "SYSTEM"})
-                          </span>
-                          {log.details && (
-                            <span className="text-[10px] text-muted-foreground/80 font-mono block truncate mt-0.5">
-                              {typeof log.details === "string"
-                                ? log.details
-                                : JSON.stringify(log.details)}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          {formatDate(log.createdAt)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="border-t border-border/50 pt-5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  data-testid="view-user-activity-button"
+                  onClick={openActivityView}
+                  className="min-h-11 w-full justify-center gap-2 rounded-xl sm:w-auto"
+                >
+                  <Activity className="size-4 text-primary" />
+                  {t("adminUsers.viewActivity")}
+                </Button>
               </div>
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
-
-          <DialogFooter className="p-4 sm:p-5 border-t border-border/60 shrink-0 bg-card/80 backdrop-blur-md sticky bottom-0 z-10">
-            <Button
-              variant="outline"
-              onClick={() => setDetailsDialogOpen(false)}
-              className="rounded-xl w-full"
-            >
-              {isAr ? "إغلاق" : "Close"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
