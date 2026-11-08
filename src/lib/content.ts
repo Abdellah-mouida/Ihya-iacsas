@@ -1,8 +1,9 @@
 import {
   BookOpen,
+  Compass,
+  GraduationCap,
   HandHeart,
-  MessagesSquare,
-  Trophy,
+  MessageCircle,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -97,25 +98,27 @@ export const ABOUT_CARDS: IconItem[] = [
   },
 ];
 
-export type Activity = IconItem & { num: string };
+export type Activity = { icon: LucideIcon; num: string; titleKey: string };
 export const ACTIVITIES: Activity[] = [
   {
     num: "01",
-    icon: MessagesSquare,
-    titleKey: "activities.gatheringsTitle",
-    descKey: "activities.gatheringsDesc",
+    icon: Users,
+    titleKey: "activities.gatherings",
   },
   {
     num: "02",
-    icon: Trophy,
-    titleKey: "activities.sportsTitle",
-    descKey: "activities.sportsDesc",
+    icon: Compass,
+    titleKey: "activities.outings",
   },
   {
     num: "03",
-    icon: BookOpen,
-    titleKey: "activities.learningTitle",
-    descKey: "activities.learningDesc",
+    icon: MessageCircle,
+    titleKey: "activities.dialogues",
+  },
+  {
+    num: "04",
+    icon: GraduationCap,
+    titleKey: "activities.training",
   },
 ];
 

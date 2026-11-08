@@ -7,12 +7,14 @@ import { notify } from "@/lib/toast";
 
 import { submitContactMessage } from "@/app/actions/contacts";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { SocialIcon } from "@/components/common/social-icons";
 import { Texture } from "@/components/common/texture";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
+import { SOCIAL_LINKS } from "@/config/social";
 import { EVENT } from "@/lib/content";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
@@ -60,51 +62,6 @@ export function Contact() {
 
   const info = [
     { icon: Phone, label: t("contact.phoneLabel"), value: t("contact.phone"), href: EVENT.phoneHref, ltr: true },
-  ];
-
-  const socialLinks = [
-    {
-      name: t("contact.facebook"),
-      icon: function FacebookIcon({ className }: { className?: string }) {
-        return (
-          <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-          </svg>
-        );
-      },
-      href: "https://www.facebook.com/profile.php?id=61580907187601",
-      hoverClass: "hover:text-blue-500 hover:border-blue-500/40 hover:bg-blue-500/10",
-    },
-    {
-      name: t("contact.instagram"),
-      icon: function InstagramIcon({ className }: { className?: string }) {
-        return (
-          <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-          </svg>
-        );
-      },
-      href: "https://www.instagram.com/i7yae_shabab/",
-      hoverClass: "hover:text-pink-500 hover:border-pink-500/40 hover:bg-pink-500/10",
-    },
   ];
 
   return (
@@ -253,20 +210,19 @@ export function Contact() {
               <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
                 {t("contact.socialTitle")}
               </span>
-              <div className="flex items-center gap-3">
-                {socialLinks.map((s) => {
-                  const Icon = s.icon;
+              <div className="flex flex-wrap items-center gap-3">
+                {SOCIAL_LINKS.map((social) => {
                   return (
                     <a
-                      key={s.name}
-                      href={s.href}
+                      key={social.platform}
+                      href={social.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={s.name}
-                      className={`group/btn inline-flex items-center gap-2.5 rounded-2xl px-4 py-2.5 glass text-sm font-semibold text-foreground transition-all duration-300 ${s.hoverClass}`}
+                      aria-label={t(social.ariaLabelKey)}
+                      className="group/btn glass inline-flex min-h-11 items-center gap-2.5 rounded-2xl px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <Icon className="size-5 shrink-0 transition-transform duration-300 group-hover/btn:scale-110" />
-                      <span>{s.name}</span>
+                      <SocialIcon platform={social.platform} className="size-5 shrink-0 transition-transform duration-300 group-hover/btn:scale-110" />
+                      <span>{t(social.labelKey)}</span>
                     </a>
                   );
                 })}

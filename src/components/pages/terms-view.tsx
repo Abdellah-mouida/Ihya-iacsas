@@ -6,7 +6,8 @@ import { ArrowLeft, ArrowRight, FileText, Phone, ShieldCheck } from "lucide-reac
 
 import { useLocale } from "@/i18n/locale-provider";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
-import { FacebookIcon, InstagramIcon } from "@/components/common/social-icons";
+import { SocialIcon } from "@/components/common/social-icons";
+import { SOCIAL_LINKS } from "@/config/social";
 import { EVENT, IMAGES } from "@/lib/content";
 import { TERMS_VERSION } from "@/lib/terms";
 
@@ -132,24 +133,19 @@ export function TermsView() {
                           <Phone className="size-4 text-brass" />
                           <span>{t("contact.phone")}</span>
                         </a>
-                        <a
-                          href="https://www.facebook.com/profile.php?id=61580907187601"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brass/50 hover:text-brass"
-                        >
-                          <FacebookIcon className="size-4 text-brass" />
-                          <span>Facebook</span>
-                        </a>
-                        <a
-                          href="https://www.instagram.com/i7yae_shabab/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brass/50 hover:text-brass"
-                        >
-                          <InstagramIcon className="size-4 text-brass" />
-                          <span>Instagram</span>
-                        </a>
+                        {SOCIAL_LINKS.map((social) => (
+                          <a
+                            key={social.platform}
+                            href={social.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={t(social.ariaLabelKey)}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brass/50 hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <SocialIcon platform={social.platform} className="size-4 text-brass" />
+                            <span>{t(social.labelKey)}</span>
+                          </a>
+                        ))}
                       </div>
                     )}
 

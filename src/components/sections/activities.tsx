@@ -26,10 +26,10 @@ export function Activities() {
           initial="hidden"
           whileInView="show"
           viewport={viewportOnce}
-          className="mt-14 grid gap-6 md:grid-cols-3"
+          className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4"
         >
-          {ACTIVITIES.map((item, idx) => (
-            <motion.div key={item.num} variants={fadeUp} className="group h-full">
+          {ACTIVITIES.map((item) => (
+            <motion.div key={item.num} variants={fadeUp} className="group h-full" data-testid="home-activity-card">
               <MotionCard intensity={8} radiusClass="rounded-3xl" className="h-full">
                 <div className="glass preserve-3d relative flex h-full flex-col gap-5 overflow-hidden rounded-3xl p-8 sm:p-9 text-foreground shadow-layered transition-[box-shadow,transform,border-color] duration-300 group-hover:-translate-y-0.8 group-hover:border-primary/40 group-hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] dark:group-hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.4)]">
                   {/* Card Texture in --main with radial fade */}
@@ -64,22 +64,9 @@ export function Activities() {
                     style={{ transform: "translateZ(20px)" }}
                     className="mt-auto flex flex-col gap-2.5 pt-4"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-6 rounded-full bg-[var(--main)]/70" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--main)]">
-                        {idx === 0
-                          ? `01 / ${t("activities.categorySpiritual")}`
-                          : idx === 1
-                            ? `02 / ${t("activities.categorySocial")}`
-                            : `03 / ${t("activities.categoryIntellectual")}`}
-                      </span>
-                    </div>
-                    <h3 className="font-heading text-2xl font-bold tracking-tight">
+                    <h3 className="font-heading text-xl font-bold tracking-tight sm:text-2xl">
                       {t(item.titleKey)}
                     </h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {t(item.descKey)}
-                    </p>
                   </div>
                 </div>
               </MotionCard>

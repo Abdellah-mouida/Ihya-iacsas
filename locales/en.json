@@ -74,6 +74,10 @@
     "kicker": "What we offer",
     "title": "Activities that revive ambition",
     "desc": "Integrated programs blending spiritual, social, and intellectual growth.",
+    "gatherings": "Youth gatherings and educational circles.",
+    "outings": "Recreational outings and sports activities.",
+    "dialogues": "Intellectual discussions and cultural dialogues.",
+    "training": "Training courses and workshops.",
     "gatheringsTitle": "Circles & gatherings",
     "gatheringsDesc": "Regular knowledge and faith sessions that build awareness.",
     "sportsTitle": "Sports & leisure",
@@ -176,11 +180,19 @@
     "goTo": "Go to poster {n}"
   },
   "program": {
-    "kicker": "Ihyaa Youth Program",
-    "title": "Together we revive, together we grow",
+    "kicker": "Our program",
+    "title": "Ihyaa Youth Program",
     "quote": "\u201cThe believers are but brothers.\u201d",
     "desc": "The Ihyaa Youth Program is more than activities; it is a bond that unites hearts around one purpose: to live with meaning and leave an impact.",
     "cta": "Join us"
+  },
+  "social": {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "youtube": "YouTube",
+    "facebookAria": "Follow Ihyaa Youth Program on Facebook",
+    "instagramAria": "Follow Ihyaa Youth Program on Instagram",
+    "youtubeAria": "Follow Ihyaa Youth Program on YouTube"
   },
   "contact": {
     "kicker": "Get in touch",
@@ -213,7 +225,7 @@
     "branchesTitle": "Our branches",
     "contactTitle": "Contact",
     "rights": "All rights reserved.",
-    "made": "Made with love to serve the community."
+    "made": "Made with care to serve the program."
   },
   "booking": {
     "loading": "Loading event details and booking form...",
@@ -311,7 +323,7 @@
     "secAccountsTitle": "3. Accounts & Security",
     "secAccountsBody": "Users are responsible for maintaining the confidentiality of their account credentials and password, and for all activities conducted under their account. Notify Ihyaa management immediately of any unauthorized access.",
     "secAcceptableUseTitle": "4. Acceptable Use",
-    "secAcceptableUseBody": "You agree to use the platform only for lawful purposes that foster positive values and community fellowship, and refrain from abusive behavior, inappropriate content, or attempts to compromise platform security.",
+    "secAcceptableUseBody": "You agree to use the platform only for lawful purposes that foster positive values and fellowship, and refrain from abusive behavior, inappropriate content, or attempts to compromise platform security.",
     "secRegistrationTitle": "5. Event Registration & Waitlist",
     "secRegistrationBody": "Limited-capacity events are subject to approval and waitlist rules. Ihyaa Program organizers reserve the right to approve, reject, or cancel registrations based on organizational and capacity requirements.",
     "secUserContentTitle": "6. User Content & Profile Photos",
@@ -336,7 +348,7 @@
     "toc": "Table of Contents",
     "backHome": "Back to Home",
     "secCollectionTitle": "1. Information We Collect",
-    "secCollectionBody": "We collect information necessary to deliver our services, including: full name, email address, encrypted password hash (bcrypt), city, age, profile photograph, event booking details, and contact messages. Additionally, you may optionally provide supplemental profile details (short bio, field of study, school/institution, interests, skills, languages spoken, and volunteer preferences) to help organizers tailor community activities. These optional details are entirely voluntary and visible only to you and verified platform administrators. Automated security metadata such as last login and last active timestamps are also recorded to safeguard account integrity.",
+    "secCollectionBody": "We collect information necessary to deliver our services, including: full name, email address, encrypted password hash (bcrypt), city, age, profile photograph, event booking details, and contact messages. Additionally, you may optionally provide supplemental profile details (short bio, field of study, school/institution, interests, skills, languages spoken, and volunteer preferences) to help organizers tailor program activities. These optional details are entirely voluntary and visible only to you and verified platform administrators. Automated security metadata such as last login and last active timestamps are also recorded to safeguard account integrity.",
     "secPurposeTitle": "2. Purpose of Collection",
     "secPurposeBody": "We use your data to manage your account, confirm event attendance, send OTP verification codes, notify you of booking approvals or waitlist promotions, and respond to your inquiries.",
     "secProcessorsTitle": "3. Third-Party Processors",
@@ -568,7 +580,7 @@
     "errAgeRequired": "Please enter a valid age (10 years or older)",
     "errPhotoTooLarge": "Photo must be less than 5MB",
     "optionalDetailsTitle": "Optional Profile Details",
-    "optionalDetailsDesc": "Help organizers get to know you better. All fields are optional and visible only to you and community administrators.",
+    "optionalDetailsDesc": "Help organizers get to know you better. All fields are optional and visible only to you and program administrators.",
     "bioLabel": "Short Bio",
     "bioPlaceholder": "Share a few words about yourself, your passion, or your goals (max 280 characters)...",
     "studyLevelLabel": "Field of Study / Level",
@@ -591,7 +603,7 @@
     "errInstitutionTooLong": "Institution name cannot exceed 120 characters",
     "errTagsLimit": "Tag count exceeds maximum allowed limit",
     "errTagLength": "Tag length cannot exceed 30 characters",
-    "privacyNoticeText": "Optional profile details are never made public. They are visible only to you and verified community administrators for activity organization and mentoring.",
+    "privacyNoticeText": "Optional profile details are never made public. They are visible only to you and verified program administrators for activity organization and mentoring.",
     "privacyNoticeLink": "Read our Privacy Policy",
     "statTotalBookings": "Total Bookings",
     "statConfirmedBookings": "Confirmed Bookings",

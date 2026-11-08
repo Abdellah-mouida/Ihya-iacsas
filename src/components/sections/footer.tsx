@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { SocialIcon } from "@/components/common/social-icons";
 import { useLocale } from "@/i18n/locale-provider";
+import { SOCIAL_LINKS } from "@/config/social";
 import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
 
 export function Footer() {
@@ -91,6 +93,25 @@ export function Footer() {
             >
               {t("nav.book")}
             </Link>
+            <div className="mt-2 flex flex-col gap-3">
+              <span className="text-xs font-medium text-muted-foreground">{t("contact.socialTitle")}</span>
+              <div className="flex items-center gap-2">
+                {SOCIAL_LINKS.map((social) => {
+                  return (
+                    <a
+                      key={social.platform}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t(social.ariaLabelKey)}
+                      className="glass inline-flex size-11 min-h-11 min-w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <SocialIcon platform={social.platform} className="size-5" />
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
