@@ -71,7 +71,6 @@ html[data-theme="dark"],
   border-radius: 9999px;
   background: radial-gradient(circle, color-mix(in oklch, var(--main) var(--mb-glow-alpha), transparent), transparent 66%);
   opacity: var(--mb-ambient-opacity);
-  filter: blur(2rem);
   animation: site-atmosphere-drift 42s ease-in-out infinite alternate;
 }
 

@@ -1,11 +1,16 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
 
-import { fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
+import { staggerContainer, viewportOnce } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { OrnamentDivider } from "./ornament-divider";
+
+const headingReveal: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] } },
+};
 
 export function SectionHeading({
   kicker,
@@ -24,7 +29,7 @@ export function SectionHeading({
 }) {
   return (
     <motion.div
-      variants={staggerContainer(0.12)}
+      variants={staggerContainer(0.04, 0.02)}
       initial="hidden"
       whileInView="show"
       viewport={viewportOnce}
@@ -36,7 +41,7 @@ export function SectionHeading({
     >
       {kicker ? (
         <motion.span
-          variants={fadeUp}
+          variants={headingReveal}
           className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass"
         >
           <span className="size-1.5 rounded-full bg-brass" />
@@ -45,7 +50,7 @@ export function SectionHeading({
       ) : null}
 
       <motion.h2
-        variants={fadeUp}
+        variants={headingReveal}
         className="font-heading text-3xl font-semibold text-balance sm:text-4xl md:text-5xl"
       >
         {title}
@@ -53,7 +58,7 @@ export function SectionHeading({
 
       {desc ? (
         <motion.p
-          variants={fadeUp}
+          variants={headingReveal}
           className="max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg"
         >
           {desc}
@@ -61,7 +66,7 @@ export function SectionHeading({
       ) : null}
 
       {divider ? (
-        <motion.div variants={fadeUp}>
+        <motion.div variants={headingReveal}>
           <OrnamentDivider className={align === "center" ? "mx-auto" : ""} />
         </motion.div>
       ) : null}

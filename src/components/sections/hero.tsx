@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
+import { useEffect, useState } from "react";
 import { ArrowDown, CalendarDays, Info } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -8,10 +9,14 @@ import Link from "next/link";
 
 import { AuroraBackground } from "@/components/react-bits/aurora-background";
 import { Button } from "@/components/ui/button";
-import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENTS_HREF, IMAGES } from "@/lib/content";
-import { fadeUp, staggerContainer } from "@/lib/motion";
+import { staggerContainer } from "@/lib/motion";
+
+const heroReveal: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] } },
+};
 
 const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
   ssr: false,
@@ -19,6 +24,13 @@ const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
 
 export function Hero() {
   const { t } = useLocale();
+  const [showParticles, setShowParticles] = useState(false);
+
+  useEffect(() => {
+    // Keep the decorative WebGL scene off the first paint and initial input window.
+    const timer = window.setTimeout(() => setShowParticles(true), 4500);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <section
@@ -52,7 +64,7 @@ export function Hero() {
 
         {/* Drifting ambient particles */}
         <div aria-hidden className="pointer-events-none absolute inset-0 opacity-70">
-          <HeroScene />
+          {showParticles ? <HeroScene /> : null}
         </div>
 
         {/* Soft corner perimeter vignette — strictly transparent at center */}
@@ -64,13 +76,13 @@ export function Hero() {
 
       {/* Layer 4: Interactive Typography & Actions */}
       <motion.div
-        variants={staggerContainer(0.14, 0.1)}
+        variants={staggerContainer(0.04, 0.02)}
         initial="hidden"
         animate="show"
         className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center"
       >
         <motion.span
-          variants={fadeUp}
+          variants={heroReveal}
           className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/85 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground shadow-xs backdrop-blur-md"
         >
           <span className="size-1.5 animate-pulse rounded-full bg-gold" />
@@ -78,21 +90,21 @@ export function Hero() {
         </motion.span>
 
         <motion.h1
-          variants={fadeUp}
+          variants={heroReveal}
           className="mt-6 font-heading text-7xl font-extrabold leading-[0.95] sm:text-8xl md:text-9xl"
         >
           <span className="text-shine">{t("hero.title")}</span>
         </motion.h1>
 
         <motion.p
-          variants={fadeUp}
+          variants={heroReveal}
           className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80 sm:text-xl"
         >
           {t("hero.subtitle")}
         </motion.p>
 
         <motion.div
-          variants={fadeUp}
+          variants={heroReveal}
           className="mt-9 flex flex-col items-center gap-3 sm:flex-row"
         >
           <Button

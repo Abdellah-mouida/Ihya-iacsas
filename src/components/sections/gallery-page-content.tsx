@@ -139,7 +139,7 @@ export function GalleryPageContent() {
       {/* Ambient glow behind header */}
       <div
         aria-hidden
-        className="bg-brass-gradient pointer-events-none absolute left-1/2 top-24 -z-10 size-80 max-w-[85vw] -translate-x-1/2 rounded-full opacity-[0.14] blur-3xl"
+        className="bg-brass-gradient pointer-events-none absolute left-1/2 top-24 -z-10 size-80 max-w-[85vw] -translate-x-1/2 rounded-full opacity-[0.14]"
       />
 
       <div className="mx-auto max-w-6xl px-5">
