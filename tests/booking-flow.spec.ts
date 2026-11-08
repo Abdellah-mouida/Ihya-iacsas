@@ -528,7 +528,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(allBookings.some((b) => b.eventId === "test-event-second")).toBe(true);
   });
 
-  test("10. Event listing displays all open events; booking Event 1 marks ONLY Event 1 as booked, Event 2 remains bookable", async ({
+  test("10. Event listing ignores unscoped local booking markers", async ({
     page,
     context,
   }) => {
@@ -611,9 +611,9 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
     await page.reload();
 
-    // 5. Assert: Event 1 is marked as booked, Event 2 is STILL active and bookable!
-    await expect(event1Card.locator('[data-testid="booked-state-badge"]')).toBeVisible({ timeout: 10000 });
-    await expect(event1BookBtn).not.toBeVisible();
+    // Legacy browser markers cannot claim a booking without an authenticated DB row.
+    await expect(event1Card.locator('[data-testid="booked-state-badge"]')).toHaveCount(0);
+    await expect(event1BookBtn).toBeVisible();
 
     await expect(event2Card.locator('[data-testid="booked-state-badge"]')).not.toBeVisible();
     await expect(event2BookBtn).toBeVisible();
@@ -624,7 +624,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(page.url()).toContain("test-event-second");
   });
 
-  test("11. Already-booked visitors: navbar hides Book now when all events booked; booking page blocks form and redirects to event", async ({
+  test("11. Legacy browser markers cannot hide booking actions or imply a user booking", async ({
     page,
     context,
   }) => {
@@ -673,15 +673,15 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
     await page.reload();
 
-    // 4. Since the visitor already booked all open events, navbar "Book now" is HIDDEN
-    await expect(navbarBookBtn).not.toBeVisible({ timeout: 10000 });
+    // Legacy browser markers do not affect DB-derived booking availability.
+    await expect(navbarBookBtn).toBeVisible({ timeout: 10000 });
 
     // 5. Try navigating directly to the booking page for this event
     await page.goto("/events/majlis-ihyaa/book?eventId=majlis-ihyaa-2026");
 
-    // 6. Assert redirection to event page happens and form fields are never shown
-    await page.waitForURL(/.*\/events.*/, { timeout: 15000 });
-    expect(page.url()).toContain("/events");
+    // The unauthenticated visitor is sent to login; browser cookies cannot claim a booking.
+    await page.waitForURL(/.*\/login.*/, { timeout: 15000 });
+    expect(page.url()).toContain("/login");
     await expect(page.locator("#b-name")).not.toBeVisible();
 
     // Restore bookingOpen on the other event for upcoming tests
@@ -810,7 +810,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     }
   });
 
-  test("15. Event card booked status as small top badge and single-line inquiries without wrapping (Task 9)", async ({
+  test("15. Legacy local booking markers do not change event card state", async ({
     page,
     context,
   }) => {
@@ -844,24 +844,8 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
     await page.reload();
 
-    // 3. When booked:
-    // a. Book button is hidden
-    await expect(eventCard.locator('[data-testid="book-btn-majlis-ihyaa-2026"]')).not.toBeVisible();
-
-    // b. Small top badge is visible
-    const badge = eventCard.locator('[data-testid="booked-state-badge"]');
-    await expect(badge).toBeVisible();
-    await expect(badge).toContainText(/أنت مسجل|You're booked/i);
-
-    // c. Badge is positioned at the top of the details card, above the event title
-    const title = eventCard.locator("h3");
-    const badgeBox = await badge.boundingBox();
-    const titleBox = await title.boundingBox();
-    expect(badgeBox).not.toBeNull();
-    expect(titleBox).not.toBeNull();
-    if (badgeBox && titleBox) {
-      expect(badgeBox.y).toBeLessThan(titleBox.y);
-    }
+    await expect(eventCard.locator('[data-testid="book-btn-majlis-ihyaa-2026"]')).toBeVisible();
+    await expect(eventCard.locator('[data-testid="booked-state-badge"]')).toHaveCount(0);
   });
 
   test("16. Small screen (<360px) responsive OTP layout and email template branding (Task 10)", async ({

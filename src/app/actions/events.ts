@@ -1,6 +1,7 @@
 "use server";
 
 import { safeRevalidatePath } from "@/lib/cache";
+import { auth } from "@/auth";
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
@@ -61,6 +62,7 @@ export async function getEvents() {
 
 export async function getPublicEvents() {
   try {
+    const session = await auth();
     const events = await prisma.event.findMany({
       orderBy: { date: "desc" },
       include: {
@@ -73,6 +75,16 @@ export async function getPublicEvents() {
         },
       },
     });
+
+    const userBookings = session?.user?.id
+      ? await prisma.booking.findMany({
+          where: { userId: session.user.id },
+          select: { eventId: true, status: true },
+        })
+      : [];
+    const bookingStatusByEventId = new Map(
+      userBookings.map((booking) => [booking.eventId, booking.status]),
+    );
 
     const enriched = events.map((ev) => {
       const confirmedCount = ev.bookings.filter(
@@ -98,6 +110,7 @@ export async function getPublicEvents() {
         capacity: ev.capacity,
         confirmedCount,
         isFull,
+        userBookingStatus: bookingStatusByEventId.get(ev.id) ?? null,
       };
     });
 

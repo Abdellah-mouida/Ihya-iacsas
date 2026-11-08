@@ -8,7 +8,6 @@ import { EventPoster } from "@/components/common/event-poster";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { useIsEventBooked } from "@/lib/booking-state";
 import { EVENT, IMAGES } from "@/lib/content";
 import { isEventEnded } from "@/lib/event-time";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -29,6 +28,7 @@ type FeaturedEventProps = {
     capacity?: number | null;
     confirmedCount?: number;
     isFull?: boolean;
+    userBookingStatus?: string | null;
     poster?: string;
     titleKey?: string;
     dateKey?: string;
@@ -41,7 +41,7 @@ type FeaturedEventProps = {
 export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const { t, locale, dir } = useLocale();
   const eventId = event?.id || "majlis-ihyaa";
-  const isBooked = useIsEventBooked(eventId);
+  const isBooked = Boolean(event?.userBookingStatus);
   const isEnded = event?.date ? isEventEnded(event.date, event.time) : false;
 
   const title = event

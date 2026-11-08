@@ -20,7 +20,6 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { RoleBadge } from "@/components/common/role-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Texture } from "@/components/common/texture";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +33,7 @@ import {
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/lib/content";
 import { getPublicEvents } from "@/app/actions/events";
-import { isEventBooked } from "@/lib/booking-state";
+import { clearLegacyBookingState } from "@/lib/booking-state";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +82,7 @@ export function GlassNavbar({
       getPublicEvents().then((res) => {
         if (!mounted) return;
         if (res.success && res.openEvents) {
-          const unbookedEvents = res.openEvents.filter((e) => !isEventBooked(e.id));
+          const unbookedEvents = res.openEvents.filter((e) => !e.userBookingStatus);
           const hasAny = unbookedEvents.length > 0;
           setHasNewEvent(hasAny);
           setHasBookableEvents(hasAny);
@@ -114,7 +113,8 @@ export function GlassNavbar({
 
   // Close the mobile menu on route change
   useEffect(() => {
-    setOpen(false);
+    const frame = window.requestAnimationFrame(() => setOpen(false));
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
   // Top sentinel IntersectionObserver: transparent at top (scrollY = 0), glass after scrolling past 200px threshold
@@ -384,7 +384,10 @@ export function GlassNavbar({
                   <DropdownMenuItem
                     variant="destructive"
                     data-testid="navbar-logout-btn"
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={() => {
+                      clearLegacyBookingState();
+                      signOut({ callbackUrl: "/login" });
+                    }}
                     className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
                   >
                     <LogOut className="size-4" />
@@ -600,6 +603,7 @@ export function GlassNavbar({
                       data-testid="navbar-mobile-logout-btn"
                       onClick={() => {
                         setOpen(false);
+                        clearLegacyBookingState();
                         signOut({ callbackUrl: "/login" });
                       }}
                       className="h-11 w-full rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10"

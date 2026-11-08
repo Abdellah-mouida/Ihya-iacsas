@@ -2,7 +2,6 @@
 
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 
 import { auth } from "@/auth";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
@@ -186,10 +185,7 @@ export async function getBookingUserState(eventId?: string) {
         const existing = await prisma.booking.findFirst({
           where: {
             eventId: event.id,
-            OR: [
-              { userId: user.id },
-              { email: user.email! },
-            ],
+            userId: user.id,
           },
         });
         if (existing) {
@@ -1010,18 +1006,14 @@ export async function resendBookingOtp(data: {
 
 export async function isEventBookedByVisitor(eventId: string): Promise<boolean> {
   try {
-    const cookieStore = await cookies();
-    const specificCookie = cookieStore.get(`ihyaa_booked_${eventId}`)?.value;
-    if (specificCookie === "true") return true;
-
-    const allBooked = cookieStore.get("ihyaa_booked_events")?.value;
-    if (allBooked) {
-      const ids = JSON.parse(allBooked);
-      if (Array.isArray(ids) && ids.includes(eventId)) {
-        return true;
-      }
-    }
-    return false;
+    const session = await auth();
+    if (!session?.user?.id || !eventId) return false;
+    const event = await resolveTargetEvent(eventId);
+    if (!event) return false;
+    return Boolean(await prisma.booking.findUnique({
+      where: { eventId_userId: { eventId: event.id, userId: session.user.id } },
+      select: { id: true },
+    }));
   } catch {
     return false;
   }

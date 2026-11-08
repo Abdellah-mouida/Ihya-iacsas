@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { clearLegacyBookingState } from "@/lib/booking-state";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -62,6 +63,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
   ];
 
   const handleLogout = async () => {
+    clearLegacyBookingState();
     await signOut({ callbackUrl: "/login" });
   };
 

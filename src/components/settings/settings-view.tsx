@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
+import { clearLegacyBookingState } from "@/lib/booking-state";
 import { UserAccountData, updateUserProfile } from "@/app/actions/account";
 import { changePassword } from "@/app/actions/auth";
 import { useLocale } from "@/i18n/locale-provider";
@@ -842,7 +843,10 @@ export function SettingsView({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => {
+                    clearLegacyBookingState();
+                    signOut({ callbackUrl: "/login" });
+                  }}
                   data-testid="settings-signout-btn"
                   className="rounded-xl font-heading font-semibold text-xs gap-2"
                 >

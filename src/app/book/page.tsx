@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -36,8 +36,6 @@ export default async function BookPage({
     redirect(`/onboarding?callbackUrl=${encodeURIComponent(currentPath)}`);
   }
 
-  const cookieStore = await cookies();
-
   let targetEventId = params?.eventId;
   const event = targetEventId
     ? await prisma.event.findFirst({
@@ -61,31 +59,12 @@ export default async function BookPage({
     const existing = await prisma.booking.findFirst({
       where: {
         eventId: event.id,
-        OR: [
-          { userId: session.user.id },
-          { email: session.user.email! },
-        ],
+        userId: session.user.id,
       },
     });
     if (existing) {
       redirect(`/events#event-${targetEventId}`);
     }
-  }
-
-  const hasEventCookie = cookieStore.get(`ihyaa_booked_${targetEventId}`)?.value === "true";
-  let hasListCookie = false;
-  const bookedListRaw = cookieStore.get("ihyaa_booked_events")?.value;
-  if (bookedListRaw) {
-    try {
-      const list = JSON.parse(decodeURIComponent(bookedListRaw));
-      if (Array.isArray(list) && list.includes(targetEventId)) {
-        hasListCookie = true;
-      }
-    } catch {}
-  }
-
-  if (!isServerAction && (hasEventCookie || hasListCookie)) {
-    redirect(`/events#event-${targetEventId}`);
   }
 
   return (

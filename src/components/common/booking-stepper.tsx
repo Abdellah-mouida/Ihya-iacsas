@@ -6,15 +6,12 @@ import {
   ArrowRight,
   Calendar,
   Check,
-  CheckCircle2,
   Clock,
-  Home,
   MapPin,
   Pencil,
   Phone,
   ShieldCheck,
   Sparkles,
-  User,
   Users,
 } from "lucide-react";
 import Image from "next/image";
@@ -34,7 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
-import { isEventBooked, markEventBooked } from "@/lib/booking-state";
 import { notify } from "@/lib/toast";
 import { EVENT, IMAGES } from "@/lib/content";
 import { EASE } from "@/lib/motion";
@@ -137,47 +133,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     };
   }, [targetEventId]);
 
-  const [arrivedAlreadyBooked] = useState<boolean>(() => isEventBooked(targetEventId));
-
-  useEffect(() => {
-    if (arrivedAlreadyBooked && step !== 2) {
-      const timer = setTimeout(() => {
-        router.replace(`/events#event-${targetEventId}`);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [arrivedAlreadyBooked, step, targetEventId, router]);
-
-  if (arrivedAlreadyBooked && step !== 2) {
-    return (
-      <div
-        data-testid="already-booked-gate"
-        className="mx-auto w-full max-w-lg text-center py-12 px-6 rounded-3xl border border-brass/20 bg-card/60 backdrop-blur-sm shadow-layered"
-      >
-        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-brass/10 text-brass">
-          <CheckCircle2 className="size-8" />
-        </div>
-        <h2 className="font-amiri text-2xl font-bold text-foreground">
-          {t("booking.alreadyRegisteredTitle")}
-        </h2>
-        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-          {t("booking.alreadyRegisteredDesc")}
-        </p>
-        <div className="mt-8 flex justify-center">
-          <Button
-            asChild
-            data-testid="already-booked-back-btn"
-            className="rounded-full bg-brass-gradient px-8 py-3 text-night font-bold shadow-layered hover:brightness-110"
-          >
-            <Link href={`/events#event-${targetEventId}`}>
-              {t("booking.alreadyRegisteredBack")}
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   if (!userAuthChecked || (eventLoading && !eventInfo)) {
     return (
       <div
@@ -219,7 +174,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
           setWaitlistOrder(res.waitlistOrder ?? null);
         }
 
-        markEventBooked(res.eventId || targetEventId, res.bookingRef);
         setStep(2);
         notify.success(t("booking.bookingSuccessToast"));
       } else {
