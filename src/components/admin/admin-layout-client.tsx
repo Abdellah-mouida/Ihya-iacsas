@@ -73,7 +73,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
 
       <div className="relative z-10 flex w-full flex-col lg:flex-row min-h-screen">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-xl p-5 xl:p-6 shrink-0 justify-between sticky top-0 h-screen overflow-y-auto">
+        <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-sm p-5 xl:p-6 shrink-0 justify-between sticky top-0 h-screen overflow-y-auto">
           <div>
             {/* Header Brand */}
             <Link href="/" prefetch={false} className="flex items-center gap-3 px-2 py-3 mb-4">
