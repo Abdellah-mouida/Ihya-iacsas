@@ -7,6 +7,7 @@ import { ThemeMetaColor } from "@/components/common/theme-meta-color";
 import { DynamicThemeStyles } from "@/components/common/dynamic-theme-styles";
 import { SiteAtmosphere } from "@/components/common/site-atmosphere";
 import { SitePointerGlow } from "@/components/common/site-pointer-glow";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -83,6 +84,7 @@ m.setAttribute('content',c);
             {children}
           </Providers>
         </div>
+        {process.env.VERCEL_ENV === "production" ? <SpeedInsights /> : null}
       </body>
     </html>
   );
