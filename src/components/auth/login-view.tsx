@@ -210,7 +210,7 @@ export function LoginView() {
       className="w-full max-w-5xl mx-auto rounded-3xl border border-brass/15 bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[560px]"
     >
       {/* Visual Side Banner (Desktop Only) */}
-      <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/95 text-white">
+      <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/70 text-primary-foreground">
         <Image
           src="/images/gathering.jpg"
           alt="Ihyaa Program"
@@ -218,12 +218,12 @@ export function LoginView() {
           sizes="(max-width: 1024px) 100vw, 42vw"
           quality={90}
           priority
-          className="object-cover opacity-25 mix-blend-overlay"
+          className="object-cover opacity-40 mix-blend-overlay"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/75 via-primary/50 to-primary/70" />
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="size-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center p-1.5 shadow-inner">
+          <div className="size-11 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/20 flex items-center justify-center p-1.5 shadow-inner">
             <Image
               src="/images/logo-circle.png"
               alt="Ihyaa Logo"
@@ -233,33 +233,33 @@ export function LoginView() {
             />
           </div>
           <div>
-            <h2 className="font-heading text-lg font-bold text-white tracking-wide">
+            <h2 className="font-heading text-lg font-bold text-primary-foreground tracking-wide">
               {isAr ? "برنامج إحياء" : "Ihyaa Program"}
             </h2>
-            <p className="text-[11px] text-white/70">
+            <p className="text-[11px] text-primary-foreground/70">
               {isAr ? "تسجيل الدخول إلى حسابك" : "Sign in to your account"}
             </p>
           </div>
         </div>
 
         <div className="relative z-10 my-auto py-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs text-brass-light mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/15 text-xs text-primary-foreground mb-4">
             <Sparkles className="size-3.5" />
             <span>{isAr ? "مرحباً بعودتك" : "Welcome Back"}</span>
           </div>
-          <h3 className="font-heading text-2xl font-bold text-white leading-relaxed mb-3">
+          <h3 className="font-heading text-2xl font-bold text-primary-foreground leading-relaxed mb-3">
             {isAr
               ? "متابعة الفعاليات، إدارة الحجوزات، والتواصل مع أعضاء البرنامج"
               : "Track events, manage bookings, and stay connected with program members"}
           </h3>
-          <p className="text-xs text-white/75 leading-relaxed">
+          <p className="text-xs text-primary-foreground/75 leading-relaxed">
             {isAr
               ? "منصة شبابية تجمع بين القيم الإيمانية، البناء الفكري، والأنشطة التربوية الهادفة."
               : "A youth platform uniting spiritual values, intellectual growth, and purposeful activities."}
           </p>
         </div>
 
-        <div className="relative z-10 text-[11px] text-white/60 flex items-center justify-between border-t border-white/10 pt-4">
+        <div className="relative z-10 text-[11px] text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/10 pt-4">
           <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
           <span>{isAr ? "المملكة المغربية" : "Kingdom of Morocco"}</span>
         </div>

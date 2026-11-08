@@ -163,17 +163,17 @@ export function SignUpView() {
         className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden"
       >
         {/* Visual / Branding Panel (Desktop Only) */}
-        <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-white overflow-hidden bg-primary/95">
+        <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-primary-foreground overflow-hidden bg-primary/70">
           <Image
             src="/images/gathering.jpg"
             alt="Ihyaa Gathering"
             fill
             sizes="(max-width: 1024px) 100vw, 42vw"
             quality={90}
-            className="object-cover mix-blend-overlay opacity-30 select-none pointer-events-none"
+            className="object-cover mix-blend-overlay opacity-40 select-none pointer-events-none"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/90 via-primary/70 to-emerald-950/95" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/75 via-primary/50 to-primary/70" />
 
           {/* Top Brand */}
           <div className="relative z-10">
@@ -193,7 +193,7 @@ export function SignUpView() {
                 <span className="font-heading text-xl font-bold tracking-tight block">
                   {isAr ? "برنامج إحياء" : "Ihyaa Program"}
                 </span>
-                <span className="text-xs text-brass-muted font-medium block">
+                <span className="text-xs text-primary-foreground/75 font-medium block">
                   {isAr ? "مبادرات ولقاءات شبابية" : "Youth Programs & Gatherings"}
                 </span>
               </div>
@@ -202,16 +202,16 @@ export function SignUpView() {
 
           {/* Center Quote / Pitch */}
           <div className="relative z-10 my-auto py-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brass/15 border border-brass/30 text-xs font-semibold text-brass mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-xs font-semibold text-primary-foreground mb-4">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "انضم إلى برنامج إحياء" : "Join Ihyaa Program"}</span>
             </div>
-            <h2 className="font-heading text-2xl font-bold leading-snug mb-3">
+            <h2 className="font-heading text-2xl font-bold text-primary-foreground leading-snug mb-3">
               {isAr
                 ? "مساحتك للتلاقي، البناء، والإحياء"
                 : "Your space for connection, growth, and revival"}
             </h2>
-            <p className="text-sm text-white/80 leading-relaxed font-sans">
+            <p className="text-sm text-primary-foreground/80 leading-relaxed font-sans">
               {isAr
                 ? "سجّل الآن لتتمكن من حجز مقعدك في كافة المجالس والفعاليات بنقرة واحدة، ومتابعة حالة حجوزاتك بشكل فوري."
                 : "Sign up today to reserve your seat at all upcoming gatherings and events with one click, and track your bookings in real time."}
@@ -219,10 +219,10 @@ export function SignUpView() {
           </div>
 
           {/* Bottom Back Link */}
-          <div className="relative z-10 pt-4 border-t border-white/10">
+          <div className="relative z-10 pt-4 border-t border-primary-foreground/10">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-xs text-white/70 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors"
             >
               <BackIcon className="size-3.5" />
               <span>{isAr ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}</span>

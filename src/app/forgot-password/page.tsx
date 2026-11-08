@@ -15,7 +15,7 @@ export default function ForgotPasswordPage() {
     <>
       <GlassNavbar />
       <main className="relative isolate min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center overflow-hidden z-0">
-          <div className="relative z-10 w-full max-w-lg">
+          <div className="relative z-10 w-full max-w-5xl">
           <Suspense
             fallback={
               <div className="flex items-center justify-center p-12">

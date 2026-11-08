@@ -63,34 +63,34 @@ export function ForgotPasswordView() {
     >
       <div className="w-full max-w-5xl my-auto grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden border border-brass/20 bg-card/60 backdrop-blur-2xl shadow-2xl">
         {/* Left/Right Branding Banner (Desktop) */}
-        <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/95 text-white border-e border-brass/20">
+        <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/70 text-primary-foreground border-e border-brass/20">
           <Image
             src="/images/gathering.jpg"
             alt="Ihyaa Program"
             fill
-            className="object-cover opacity-20 mix-blend-overlay"
+            className="object-cover opacity-40 mix-blend-overlay"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/75 via-primary/50 to-primary/70" />
 
           <div className="relative z-10 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs font-semibold text-brass-light backdrop-blur-md">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 text-xs font-semibold text-primary-foreground backdrop-blur-md">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "استعادة الوصول إلى الحساب" : "Account Recovery"}</span>
             </div>
-            <h2 className="font-heading text-2xl xl:text-3xl font-bold text-white leading-tight">
+            <h2 className="font-heading text-2xl xl:text-3xl font-bold text-primary-foreground leading-tight">
               {isAr ? "برنامج إحياء" : "Ihyaa Program"}
             </h2>
-            <p className="text-sm text-white/80 leading-relaxed">
+            <p className="text-sm text-primary-foreground/80 leading-relaxed">
               {isAr
                 ? "أدخل بريدك الإلكتروني لتلقي كلمة مرور مؤقتة وتعيين كلمة مرور جديدة لحسابك."
                 : "Enter your email to receive a temporary password and restore access to your account."}
             </p>
           </div>
 
-          <div className="relative z-10 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
+          <div className="relative z-10 pt-8 border-t border-primary-foreground/10 flex items-center justify-between text-xs text-primary-foreground/70">
             <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
-            <div className="size-6 rounded-full border border-white/30 flex items-center justify-center text-brass-light font-heading font-bold text-xs">
+            <div className="size-6 rounded-full border border-primary-foreground/30 flex items-center justify-center text-primary-foreground font-heading font-bold text-xs">
               ۞
             </div>
           </div>
