@@ -5,7 +5,8 @@
   },
   "common": {
     "loading": "Loading...",
-    "accountLoading": "Loading account..."
+    "accountLoading": "Loading account...",
+    "close": "Close"
   },
   "nav": {
     "home": "Home",
@@ -533,6 +534,15 @@
     "updatingPassword": "Updating...",
     "passwordUpdated": "Password changed successfully",
     "signOut": "Sign Out",
+    "deleteAccountTitle": "Delete account",
+    "deleteAccountDescription": "Deleting your account permanently removes your profile and bookings.",
+    "deleteAccountAction": "Delete my account",
+    "deleteAccountConfirmTitle": "Confirm account deletion",
+    "deleteAccountConfirmDescription": "Your account and all bookings will be permanently deleted. If a limited-event seat opens, the first person on the waitlist may be promoted. Required audit records remain with your name and email.",
+    "deleteAccountConfirm": "Delete account permanently",
+    "deleteAccountCancel": "Cancel",
+    "deleteAccountDeleting": "Deleting account...",
+    "deleteAccountFailed": "Could not delete the account. Please try again.",
     "bookingsTitle": "My Event Bookings",
     "bookingsSubtitle": "List of events you registered for and each booking's status",
     "noBookingsTitle": "No bookings yet",

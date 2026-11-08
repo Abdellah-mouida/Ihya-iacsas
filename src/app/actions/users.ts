@@ -1,11 +1,12 @@
 "use server";
 
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { createAuditLog } from "@/lib/audit";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { deleteUserAccount } from "@/lib/user-deletion";
 
 export interface GetAdminUsersParams {
   page?: number;
@@ -27,7 +28,7 @@ export async function getAdminUsers({
   const skip = (safePage - 1) * safeLimit;
 
   // Build where query
-  const where: any = {};
+  const where: Prisma.UserWhereInput = {};
 
   if (role && role !== "ALL" && Object.values(Role).includes(role as Role)) {
     where.role = role as Role;
@@ -240,28 +241,29 @@ export async function deleteOrAnonymizeUser({
         },
       });
     });
+    await createAuditLog({
+      actorId: actor.id,
+      actorName: actor.name,
+      actorEmail: actor.email,
+      action: "USER_ANONYMIZE",
+      targetType: "USER",
+      targetId: userId,
+      targetName: targetUser.name,
+      targetEmail: targetUser.email,
+      details: {
+        targetRole: targetUser.role,
+        action,
+        reason: reason?.trim() || "User anonymized via admin panel",
+      },
+    });
   } else {
-    // Permanent deletion
-    await prisma.$transaction(async (tx) => {
-      // Delete user: sessions & accounts cascade; bookings userId set to null by relation
-      await tx.user.delete({
-        where: { id: userId },
-      });
+    await deleteUserAccount({
+      targetUserId: userId,
+      actorId: actor.id,
+      action: "USER_DELETE",
+      reason: reason?.trim() || "User deleted via admin panel",
     });
   }
-
-  await createAuditLog({
-    actorId: actor.id,
-    action: action === "delete" ? "USER_DELETE" : "USER_ANONYMIZE",
-    targetType: "USER",
-    targetId: userId,
-    details: {
-      targetEmail: targetUser.email,
-      targetRole: targetUser.role,
-      action,
-      reason: reason?.trim() || `User ${action}d via admin panel`,
-    },
-  });
 
   revalidatePath("/admin/users");
   return { success: true };

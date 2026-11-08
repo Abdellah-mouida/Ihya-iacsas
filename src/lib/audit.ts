@@ -3,9 +3,13 @@ import { Prisma } from "@prisma/client";
 
 export interface CreateAuditLogParams {
   actorId?: string | null;
+  actorName?: string | null;
+  actorEmail?: string | null;
   action: string;
   targetType: string;
   targetId?: string | null;
+  targetName?: string | null;
+  targetEmail?: string | null;
   details?: Record<string, unknown> | null;
   ipAddress?: string | null;
   userAgent?: string | null;
@@ -13,9 +17,13 @@ export interface CreateAuditLogParams {
 
 export async function createAuditLog({
   actorId,
+  actorName,
+  actorEmail,
   action,
   targetType,
   targetId,
+  targetName,
+  targetEmail,
   details,
   ipAddress,
   userAgent,
@@ -24,9 +32,13 @@ export async function createAuditLog({
     return await prisma.auditLog.create({
       data: {
         actorId: actorId ?? null,
+        actorName: actorName ?? null,
+        actorEmail: actorEmail ?? null,
         action,
         targetType,
         targetId: targetId ?? null,
+        targetName: targetName ?? null,
+        targetEmail: targetEmail ?? null,
         details: (details as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         ipAddress: ipAddress ?? null,
         userAgent: userAgent ?? null,

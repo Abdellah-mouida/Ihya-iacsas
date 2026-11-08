@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
 import { clearLegacyBookingState } from "@/lib/booking-state";
-import { UserAccountData, updateUserProfile } from "@/app/actions/account";
+import { UserAccountData, deleteOwnAccount, updateUserProfile } from "@/app/actions/account";
 import { changePassword } from "@/app/actions/auth";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
@@ -32,7 +32,16 @@ import {
   ExternalLink,
   ArrowRight,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { ThemeDto } from "@/lib/theme-constants";
 
@@ -47,7 +56,7 @@ export function SettingsView({
   initialTab = "profile",
   availableThemes = [],
 }: SettingsViewProps) {
-  const { locale, setLocale } = useLocale();
+  const { locale, setLocale, t } = useLocale();
   const isAr = locale === "ar";
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -61,6 +70,8 @@ export function SettingsView({
 
   const [userData] = useState(initialData.user);
   const [isPending, startTransition] = useTransition();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingAccount, startDeleteTransition] = useTransition();
 
   // Profile Form States
   const [name, setName] = useState(userData.name || "");
@@ -227,6 +238,20 @@ export function SettingsView({
       } else {
         notify.error(res.error || (isAr ? "فشل تغيير كلمة المرور" : "Failed to change password"));
       }
+    });
+  };
+
+  const handleDeleteOwnAccount = () => {
+    startDeleteTransition(async () => {
+      const result = await deleteOwnAccount();
+      if (!result.success) {
+        notify.error(t("account.deleteAccountFailed"));
+        return;
+      }
+
+      clearLegacyBookingState();
+      setDeleteDialogOpen(false);
+      await signOut({ callbackUrl: "/login" });
     });
   };
 
@@ -815,9 +840,29 @@ export function SettingsView({
                 </h3>
                 <p className="text-xs text-muted-foreground max-w-xl">
                   {isAr
-                    ? "وفقاً لسياسة الخصوصية، يمكنك في أي وقت طلب نسخة من بياناتك أو طلب تصحيحها أو حذفها بالتواصل المباشر مع إدارة البرنامج عبر وسائل الاتصال المعتمدة."
-                    : "In accordance with our Privacy Policy, you may request a copy of your personal data, corrections, or deletion at any time by contacting the program administrators directly."}
+                    ? "وفقاً لسياسة الخصوصية، يمكنك طلب نسخة من بياناتك أو تصحيحها بالتواصل مع إدارة البرنامج. يمكنك حذف حسابك مباشرة من هذا القسم."
+                    : "You may request a copy of your data or corrections by contacting the program administrators. You can delete your account directly from this section."}
                 </p>
+              </div>
+
+              <div className="pt-6 border-t border-border/60 space-y-2">
+                <h3 className="text-sm font-heading font-bold text-destructive">
+                  {t("account.deleteAccountTitle")}
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-xl">
+                  {t("account.deleteAccountDescription")}
+                </p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  data-testid="settings-delete-account-btn"
+                  disabled={isDeletingAccount}
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="mt-2 rounded-xl font-heading font-semibold text-xs gap-2"
+                >
+                  <Trash2 className="size-4" />
+                  <span>{t("account.deleteAccountAction")}</span>
+                </Button>
               </div>
 
               {/* Legal Links */}
@@ -858,6 +903,47 @@ export function SettingsView({
           )}
         </div>
       </div>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingAccount) setDeleteDialogOpen(open);
+        }}
+      >
+        <DialogContent
+          data-testid="settings-delete-account-dialog"
+          closeLabel={t("common.close")}
+          className="rounded-2xl sm:max-w-md"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="size-5" />
+              {t("account.deleteAccountConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription>{t("account.deleteAccountConfirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              data-testid="settings-delete-account-cancel"
+              disabled={isDeletingAccount}
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              {t("account.deleteAccountCancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              data-testid="settings-delete-account-confirm"
+              disabled={isDeletingAccount}
+              onClick={handleDeleteOwnAccount}
+            >
+              {isDeletingAccount ? t("account.deleteAccountDeleting") : t("account.deleteAccountConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cropper Dialogs */}
       {rawAvatarSrc && (

@@ -11,6 +11,7 @@ import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
 import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
+import { deleteUserAccount } from "@/lib/user-deletion";
 
 export interface AccountBookingItem {
   id: string;
@@ -156,6 +157,10 @@ export async function getUserAccountData(): Promise<{
         image: true,
         emailVerified: true,
         passwordHash: true,
+        coverImage: true,
+        theme: true,
+        reduceMotion: true,
+        locale: true,
         termsAcceptedAt: true,
         role: true,
         createdAt: true,
@@ -241,10 +246,10 @@ export async function getUserAccountData(): Promise<{
           hasPassword: Boolean(user.passwordHash),
           termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
           createdAt: user.createdAt.toISOString(),
-          coverImage: (user as any).coverImage || null,
-          theme: (user as any).theme || "oasis",
-          reduceMotion: Boolean((user as any).reduceMotion),
-          locale: (user as any).locale || "ar",
+          coverImage: user.coverImage || null,
+          theme: user.theme || "oasis",
+          reduceMotion: Boolean(user.reduceMotion),
+          locale: user.locale || "ar",
           bio: user.bio,
           studyLevel: user.studyLevel,
           institution: user.institution,
@@ -654,5 +659,32 @@ export async function cancelUserBooking(
             ? "فشل إلغاء الحجز"
             : "Failed to cancel booking",
     };
+  }
+}
+
+export async function deleteOwnAccount(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "ACCOUNT_DELETE_FAILED" };
+  }
+
+  try {
+    await deleteUserAccount({
+      targetUserId: session.user.id,
+      actorId: session.user.id,
+      action: "ACCOUNT_DELETE",
+      reason: "User deleted own account from Settings",
+    });
+    safeRevalidatePath("/settings");
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/admin/bookings");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting own account:", error);
+    return { success: false, error: "ACCOUNT_DELETE_FAILED" };
   }
 }

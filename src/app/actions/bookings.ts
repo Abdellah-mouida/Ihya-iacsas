@@ -6,11 +6,12 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ALLOWED_EMAIL_DOMAINS } from "@/lib/constants";
 import { safeRevalidatePath } from "@/lib/cache";
-import { sendOTPEmail, sendWaitlistPromotionEmail } from "@/lib/email";
+import { sendOTPEmail } from "@/lib/email";
 import { isEventEnded } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { createAuditLog } from "@/lib/audit";
+import { confirmBookingAndNotify } from "@/lib/booking-promotion";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 const MAX_VERIFICATION_ATTEMPTS = 5;
@@ -1060,75 +1061,6 @@ export async function getBookings(eventId?: string, status?: string) {
   }
 }
 
-type ApprovalBooking = {
-  id: string;
-  eventId: string;
-  email: string;
-  fullName: string;
-  event: {
-    slug: string;
-    titleAr: string;
-    titleEn: string;
-    date: Date;
-    time: string;
-    location: string;
-  };
-  user: { locale: string | null } | null;
-};
-
-/** Claim one pending-to-confirmed transition, then send the shared promotion email. */
-async function confirmBookingAndNotify(
-  booking: ApprovalBooking,
-  actorId: string,
-  sourceAction: string,
-) {
-  const transition = await prisma.booking.updateMany({
-    where: {
-      id: booking.id,
-      status: { in: ["PENDING", "WAITLISTED"] },
-      confirmed: false,
-    },
-    data: {
-      status: "CONFIRMED",
-      confirmed: true,
-      waitlistOrder: null,
-    },
-  });
-
-  if (transition.count !== 1) {
-    return { changed: false, emailSent: false };
-  }
-
-  try {
-    const result = await sendWaitlistPromotionEmail(
-      booking.email,
-      {
-        titleAr: booking.event.titleAr,
-        titleEn: booking.event.titleEn,
-        date: booking.event.date,
-        time: booking.event.time,
-        location: booking.event.location,
-        url: `/events/${booking.event.slug}/book`,
-      },
-      booking.user?.locale || "ar",
-      { sendOnce: true },
-    );
-    if (!result.success) throw new Error(result.error || "Email transport failed");
-    return { changed: true, emailSent: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Email transport failed";
-    console.error(`[booking:${booking.id}] Approval email failed:`, message);
-    await createAuditLog({
-      actorId,
-      action: "BOOKING_APPROVAL_EMAIL_FAILED",
-      targetType: "Booking",
-      targetId: booking.id,
-      details: { sourceAction, email: booking.email, error: message },
-    });
-    return { changed: true, emailSent: false };
-  }
-}
-
 export async function approveBooking(id: string) {
   try {
     const user = await requirePermission("bookings:manage");
@@ -1148,7 +1080,7 @@ export async function approveBooking(id: string) {
       return { success: false, error: "Only pending or waitlisted bookings can be approved" };
     }
 
-    const approval = await confirmBookingAndNotify(booking, user.id, "BOOKING_APPROVE");
+    const approval = await confirmBookingAndNotify(booking, user, "BOOKING_APPROVE");
     if (!approval.changed) {
       const latest = await prisma.booking.findUnique({ where: { id }, select: { status: true } });
       if (latest?.status === "CONFIRMED") return { success: true, alreadyApproved: true };
@@ -1226,7 +1158,7 @@ export async function rejectBooking(id: string) {
       if (nextWaitlisted) {
         const promotion = await confirmBookingAndNotify(
           { ...nextWaitlisted, event: booking.event },
-          user.id,
+          user,
           "BOOKING_AUTO_PROMOTE_AFTER_REJECT",
         );
         if (promotion.changed) autoPromotedName = nextWaitlisted.fullName;
@@ -1279,7 +1211,7 @@ export async function promoteWaitlistBooking(id: string) {
     if (booking.status !== "WAITLISTED") {
       return { success: false, error: "Only waitlisted bookings can be promoted" };
     }
-    const promotion = await confirmBookingAndNotify(booking, user.id, "BOOKING_PROMOTE_WAITLIST");
+    const promotion = await confirmBookingAndNotify(booking, user, "BOOKING_PROMOTE_WAITLIST");
     if (!promotion.changed) {
       const latest = await prisma.booking.findUnique({ where: { id }, select: { status: true } });
       if (latest?.status === "CONFIRMED") return { success: true, alreadyApproved: true };
@@ -1346,7 +1278,7 @@ export async function deleteBooking(id: string) {
         if (nextWaitlisted) {
           await confirmBookingAndNotify(
             { ...nextWaitlisted, event: booking.event },
-            user.id,
+            user,
             "BOOKING_AUTO_PROMOTE_AFTER_DELETE",
           );
         }

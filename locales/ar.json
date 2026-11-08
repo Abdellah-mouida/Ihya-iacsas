@@ -5,7 +5,8 @@
   },
   "common": {
     "loading": "جارٍ التحميل...",
-    "accountLoading": "جاري تحميل الحساب..."
+    "accountLoading": "جاري تحميل الحساب...",
+    "close": "إغلاق"
   },
   "nav": {
     "home": "الرئيسية",
@@ -533,6 +534,15 @@
     "updatingPassword": "جاري التحديث...",
     "passwordUpdated": "تم تغيير كلمة المرور بنجاح",
     "signOut": "تسجيل الخروج",
+    "deleteAccountTitle": "حذف الحساب",
+    "deleteAccountDescription": "سيؤدي حذف الحساب إلى إزالة ملفك الشخصي وحجوزاتك نهائياً.",
+    "deleteAccountAction": "حذف حسابي",
+    "deleteAccountConfirmTitle": "تأكيد حذف الحساب",
+    "deleteAccountConfirmDescription": "سيتم حذف حسابك وجميع حجوزاتك نهائياً. قد يُرقّى أول شخص في قائمة الانتظار عند توفر مقعد، وستبقى سجلات التدقيق اللازمة محفوظة باسمك وبريدك الإلكتروني.",
+    "deleteAccountConfirm": "حذف الحساب نهائياً",
+    "deleteAccountCancel": "إلغاء",
+    "deleteAccountDeleting": "جارٍ حذف الحساب...",
+    "deleteAccountFailed": "تعذر حذف الحساب. يرجى المحاولة مرة أخرى.",
     "bookingsTitle": "حجوزاتي في الفعاليات",
     "bookingsSubtitle": "قائمة الفعاليات التي سجلت فيها وحالة كل حجز",
     "noBookingsTitle": "لا توجد حجوزات حتى الآن",
