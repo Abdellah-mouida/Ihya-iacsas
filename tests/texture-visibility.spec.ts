@@ -39,9 +39,17 @@ test.describe("Task 1: Texture Visibility & Numeric Contrast Verification", () =
       const radialDimOverlay = textureLayer.locator("div.pointer-events-none.absolute.inset-0");
       await expect(radialDimOverlay).toHaveCount(0);
 
-      // Also assert that the texture rect computes to the theme's expected color
+      // The pattern and the selected theme accent must resolve to the same color token.
       const patternColor = await svg.evaluate((el) => getComputedStyle(el).color);
-      expect(patternColor).not.toBe("rgba(0, 0, 0, 0)");
+      const themeAccent = await page.evaluate(() => {
+        const span = document.createElement("span");
+        span.style.color = "var(--main)";
+        document.body.append(span);
+        const color = getComputedStyle(span).color;
+        span.remove();
+        return color;
+      });
+      expect(patternColor).toBe(themeAccent);
       const patternOpacity = await svg.evaluate((el) => getComputedStyle(el).opacity);
       expect(Number(patternOpacity)).toBeGreaterThan(0);
 
@@ -51,53 +59,42 @@ test.describe("Task 1: Texture Visibility & Numeric Contrast Verification", () =
       await page.screenshot({ path: evidencePath, fullPage: false });
       expect(fs.existsSync(evidencePath)).toBe(true);
 
-      // Numeric contrast check on the background texture:
-      // Capture a clip of the background outside foreground content cards (e.g. hero gutter area)
-      const gutterStrip = await page.screenshot({
-        clip: {
-          x: 20,
-          y: 120,
-          width: 120,
-          height: 120,
-        },
+      // Isolate the root atmosphere so page content cannot create false contrast.
+      await page.evaluate(() => {
+        const app = document.querySelector("body > div.relative.z-10") as HTMLElement | null;
+        if (app) app.style.display = "none";
       });
+      const textureVisible = await page.screenshot();
+      await svg.evaluate((el) => ((el as SVGElement).style.visibility = "hidden"));
+      const textureHidden = await page.screenshot();
+      const visiblePixels = await sharp(textureVisible).raw().toBuffer({ resolveWithObject: true });
+      const hiddenPixels = await sharp(textureHidden).raw().toBuffer();
 
-      const { data, info } = await sharp(gutterStrip)
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-
-      // Compute standard deviation of luminance across pixels in the texture patch.
-      // A visible pattern introduces luminance variations between pattern strokes and background fill.
-      // If the texture was completely blocked or invisible (flat color), standard deviation would be ~0.
-      let sumLum = 0;
-      let sumSqLum = 0;
-      const totalPixels = info.width * info.height;
-      const channels = info.channels;
-
-      let minLum = 255;
-      let maxLum = 0;
-
-      for (let i = 0; i < totalPixels; i++) {
-        const idx = i * channels;
-        const r = data[idx];
-        const g = data[idx + 1];
-        const b = data[idx + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-        sumLum += lum;
-        sumSqLum += lum * lum;
-        if (lum < minLum) minLum = lum;
-        if (lum > maxLum) maxLum = lum;
+      const luminance = (r: number, g: number, b: number) => {
+        const linear = [r, g, b].map((channel) => {
+          const value = channel / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+      };
+      let pixelsAtOrAboveFloor = 0;
+      let maximumContrast = 1;
+      for (let i = 0; i < visiblePixels.data.length; i += visiblePixels.info.channels) {
+        const visibleLum = luminance(
+          visiblePixels.data[i],
+          visiblePixels.data[i + 1],
+          visiblePixels.data[i + 2],
+        );
+        const hiddenLum = luminance(hiddenPixels[i], hiddenPixels[i + 1], hiddenPixels[i + 2]);
+        const contrast = (Math.max(visibleLum, hiddenLum) + 0.05) / (Math.min(visibleLum, hiddenLum) + 0.05);
+        maximumContrast = Math.max(maximumContrast, contrast);
+        if (contrast >= 1.05) pixelsAtOrAboveFloor++;
       }
-
-      const meanLum = sumLum / totalPixels;
-      const variance = sumSqLum / totalPixels - meanLum * meanLum;
-      const stdDev = Math.sqrt(Math.max(0, variance));
-      const range = maxLum - minLum;
-
-      // Expect measurable luminance variation (stdDev >= 0.5 and range >= 2) indicating active, non-flat texture
-      expect(range).toBeGreaterThanOrEqual(2);
-      expect(stdDev).toBeGreaterThanOrEqual(0.3);
+      expect(
+        maximumContrast,
+        `${theme}: visible pattern pixels must reach at least 1.05:1 against the same atmosphere without the SVG`,
+      ).toBeGreaterThanOrEqual(1.05);
+      expect(pixelsAtOrAboveFloor, `${theme}: texture must occupy more than isolated pixels`).toBeGreaterThan(100);
     });
   }
 });

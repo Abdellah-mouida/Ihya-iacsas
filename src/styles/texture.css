@@ -7,15 +7,16 @@ html {
 :root,
 html[data-theme="light"],
 [data-theme="light"] {
+  --texture-edge-mid: 0.56;
+  --texture-edge: 0.3;
   --mb-glow-alpha: 14%;
   --mb-ambient-opacity: 0.72;
   --mb-pointer-opacity: 0.18;
-  --texture-opacity: 0.08;
+  --texture-opacity: 0.14;
   --texture-size: 140px;
   --texture-motif: 0.28;
   --texture-rotate: 0deg;
   --texture-dim: 0.88;
-  --texture-edge: 0.95;
 }
 
 html[data-theme="sunset"],
@@ -23,12 +24,11 @@ html[data-theme="sunset"],
   --mb-glow-alpha: 13%;
   --mb-ambient-opacity: 0.68;
   --mb-pointer-opacity: 0.16;
-  --texture-opacity: 0.08;
+  --texture-opacity: 0.14;
   --texture-size: 140px;
   --texture-motif: 0.28;
   --texture-rotate: 0deg;
   --texture-dim: 0.88;
-  --texture-edge: 0.95;
 }
 
 html[data-theme="amoled"],
@@ -37,12 +37,11 @@ html[data-theme="amoled"],
   --mb-glow-alpha: 9%;
   --mb-ambient-opacity: 0.56;
   --mb-pointer-opacity: 0.12;
-  --texture-opacity: 0.045;
+  --texture-opacity: 0.2;
   --texture-size: 140px;
   --texture-motif: 0.28;
   --texture-rotate: 0deg;
   --texture-dim: 0.85;
-  --texture-edge: 0.92;
 }
 
 .dark,
@@ -55,12 +54,11 @@ html[data-theme="dark"],
   --mb-glow-alpha: 10%;
   --mb-ambient-opacity: 0.62;
   --mb-pointer-opacity: 0.14;
-  --texture-opacity: 0.05;
+  --texture-opacity: 0.17;
   --texture-size: 140px;
   --texture-motif: 0.28;
   --texture-rotate: 0deg;
   --texture-dim: 0.85;
-  --texture-edge: 0.92;
 }
 
 .site-atmosphere {
@@ -93,6 +91,14 @@ html[data-theme="dark"],
 .site-atmosphere-pattern {
   color: var(--texture-color, var(--main));
   opacity: var(--texture-opacity);
+}
+
+.site-atmosphere-pattern .site-pattern-edge-mid {
+  stop-opacity: var(--texture-edge-mid);
+}
+
+.site-atmosphere-pattern .site-pattern-edge {
+  stop-opacity: var(--texture-edge);
 }
 
 .site-atmosphere-vignette {

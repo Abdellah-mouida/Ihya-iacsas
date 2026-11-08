@@ -22,8 +22,8 @@ export function SiteAtmosphere() {
           </pattern>
           <radialGradient id="site-pattern-fade">
             <stop offset="30%" stopColor="white" stopOpacity="1" />
-            <stop offset="78%" stopColor="white" stopOpacity=".18" />
-            <stop offset="100%" stopColor="white" stopOpacity="0" />
+            <stop className="site-pattern-edge-mid" offset="78%" stopColor="white" />
+            <stop className="site-pattern-edge" offset="100%" stopColor="white" />
           </radialGradient>
           <mask id="site-pattern-mask">
             <rect width="100%" height="100%" fill="url(#site-pattern-fade)" />
