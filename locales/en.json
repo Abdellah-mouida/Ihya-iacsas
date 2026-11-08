@@ -29,7 +29,8 @@
     "myBookings": "My Bookings",
     "signOut": "Sign Out",
     "userMenu": "User Menu",
-    "adminPortal": "Admin Portal"
+    "adminPortal": "Admin Portal",
+    "logs": "Logs"
   },
   "lang": {
     "toggle": "Change language",
@@ -653,6 +654,21 @@
     "forbiddenHome": "Return Home",
     "forbiddenBack": "Go Back"
   },
+  "adminLogs": {
+    "eyebrow": "Audit trail",
+    "title": "Activity logs",
+    "description": "Review account, booking, and administrative activity across the program.",
+    "userSearch": "User",
+    "userSearchPlaceholder": "Search name or email",
+    "from": "From date",
+    "to": "To date",
+    "apply": "Apply filters",
+    "clear": "Clear",
+    "results": "Activity log results",
+    "empty": "No activity matches these filters.",
+    "error": "Activity logs could not be loaded. Try again.",
+    "loading": "Loading activity logs…"
+  },
   "adminUsers": {
     "title": "Users Management",
     "subtitle": "Manage member accounts, permissions, and administrative roles across Ihyaa Program",
@@ -709,6 +725,7 @@
     "activityBack": "Back",
     "activityActionFilter": "Filter by action",
     "activityAllActions": "All actions",
+    "activityDeletedActor": "Deleted account",
     "activityEmpty": "No activity recorded for this user.",
     "activityError": "Activity could not be loaded.",
     "activityRetry": "Retry",

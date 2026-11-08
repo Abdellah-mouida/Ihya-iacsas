@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import {
   Calendar,
+  FileText,
   Image as ImageIcon,
   LayoutDashboard,
   LogOut,
@@ -58,6 +59,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     ...(user.role === "ADMIN"
       ? [
           { href: "/admin/users", label: isAr ? "المستخدمون" : "Users", icon: Users },
+          { href: "/admin/logs", label: t("nav.logs"), icon: FileText },
         ]
       : []),
   ];

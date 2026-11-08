@@ -35,7 +35,7 @@ export async function deleteUserAccount({
 
     const actor = await tx.user.findUnique({
       where: { id: actorId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, role: true },
     });
     if (!actor) throw new Error("Deleting actor not found.");
 
@@ -51,6 +51,7 @@ export async function deleteUserAccount({
     const snapshot = {
       actorName: target.name,
       actorEmail: target.email,
+      actorRole: target.role,
     };
     await tx.auditLog.updateMany({
       where: { actorId: targetUserId },
@@ -67,6 +68,7 @@ export async function deleteUserAccount({
       actorId,
       actorName: actor.name,
       actorEmail: actor.email,
+      actorRole: actor.role,
       action,
       targetType: "USER",
       targetId: target.id,

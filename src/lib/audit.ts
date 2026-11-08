@@ -7,6 +7,7 @@ export interface LogActivityParams {
   actorId?: string | null;
   actorName?: string | null;
   actorEmail?: string | null;
+  actorRole?: string | null;
   action: string;
   targetType: string;
   targetId?: string | null;
@@ -60,6 +61,7 @@ export async function logActivity({ client, details, required = false, ...entry 
         actorId: entry.actorId ?? null,
         actorName: entry.actorName ?? null,
         actorEmail: entry.actorEmail ?? null,
+        actorRole: entry.actorRole ?? null,
         action: entry.action,
         targetType: entry.targetType,
         targetId: entry.targetId ?? null,

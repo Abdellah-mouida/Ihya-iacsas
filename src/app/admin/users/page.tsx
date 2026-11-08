@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -116,6 +117,7 @@ function formatUserRelativeTime(
 export default function AdminUsersPage() {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
+  const linkedSearch = useSearchParams().get("search")?.trim() || "";
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
 
@@ -162,6 +164,12 @@ export default function AdminUsersPage() {
     searchRef.current = search;
   }, [search]);
 
+  useEffect(() => {
+    searchRef.current = linkedSearch;
+    const timeoutId = window.setTimeout(() => setSearch(linkedSearch), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [linkedSearch]);
+
   const fetchUsers = useCallback(async (p: number, s: string, r: string, l: number) => {
     try {
       setLoading(true);
@@ -193,7 +201,7 @@ export default function AdminUsersPage() {
       void fetchUsers(1, searchRef.current, roleFilter, limit);
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [fetchUsers, roleFilter, limit]);
+  }, [fetchUsers, roleFilter, limit, linkedSearch]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

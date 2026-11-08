@@ -219,6 +219,7 @@ model AuditLog {
   actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
   actorName  String?
   actorEmail String?
+  actorRole  String?
   action     String
   targetType String
   targetId   String?

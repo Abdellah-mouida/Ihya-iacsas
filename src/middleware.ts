@@ -164,6 +164,7 @@ export async function middleware(request: NextRequest) {
       const restrictedForModerator = [
         "/admin/users",
         "/admin/audit",
+        "/admin/logs",
         "/admin/settings",
       ];
       const isRestricted = restrictedForModerator.some(

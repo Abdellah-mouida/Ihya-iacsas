@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,8 @@ import { useLocale } from "@/i18n/locale-provider";
 
 export type AuditActivityItem = {
   id: string;
+  actorId: string | null;
+  actorRole: string | null;
   action: string;
   targetType: string;
   targetId: string | null;
@@ -45,6 +48,9 @@ type AuditActivityFeedProps = {
   onRetry: () => void;
   showActionFilter?: boolean;
   showActor?: boolean;
+  emptyLabel?: string;
+  errorLabel?: string;
+  loadingLabel?: string;
 };
 
 function asDetails(value: unknown): Record<string, unknown> {
@@ -143,6 +149,9 @@ export function AuditActivityFeed({
   onRetry,
   showActionFilter = true,
   showActor = false,
+  emptyLabel,
+  errorLabel,
+  loadingLabel,
 }: AuditActivityFeedProps) {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
@@ -181,21 +190,21 @@ export function AuditActivityFeed({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6" aria-live="polite" aria-busy={loading || loadingMore}>
         {loading ? (
-          <div className="space-y-3" data-testid="activity-loading-skeleton" aria-label={t("adminUsers.activityLoading")}>
+          <div className="space-y-3" data-testid="activity-loading-skeleton" aria-label={loadingLabel || t("adminUsers.activityLoading")}>
             {Array.from({ length: 5 }, (_, index) => (
               <div key={index} className="h-24 animate-pulse rounded-xl border border-border/50 bg-muted/30" />
             ))}
           </div>
         ) : error ? (
           <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/10 p-6 text-center">
-            <p className="text-sm text-muted-foreground">{t("adminUsers.activityError")}</p>
+            <p className="text-sm text-muted-foreground">{errorLabel || t("adminUsers.activityError")}</p>
             <Button type="button" variant="outline" className="min-h-11 rounded-xl" onClick={onRetry}>
               {t("adminUsers.activityRetry")}
             </Button>
           </div>
         ) : logs.length === 0 ? (
           <div className="flex min-h-48 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/10 p-6 text-center text-sm text-muted-foreground" data-testid="activity-empty-state">
-            {t("adminUsers.activityEmpty")}
+            {emptyLabel || t("adminUsers.activityEmpty")}
           </div>
         ) : (
           <div className="space-y-5">
@@ -207,6 +216,17 @@ export function AuditActivityFeed({
                 <ol className="space-y-2" aria-label={dayLabel(dayLogs[0].createdAt, locale)}>
                   {dayLogs.map((log) => {
                     const actorName = log.actor?.name || log.actorName || log.actor?.email || log.actorEmail || t("adminUsers.activitySystem");
+                    const actorEmail = log.actorEmail || log.actor?.email;
+                    const actorId = log.actor?.id;
+                    const hasDeletedActorSnapshot = !log.actor && Boolean(log.actorName || log.actorEmail);
+                    const actorRole = log.actor?.role || log.actorRole;
+                    const actorRoleLabel = actorRole === "ADMIN"
+                      ? t("adminUsers.roleAdmin")
+                      : actorRole === "MODERATOR"
+                        ? t("adminUsers.roleModerator")
+                        : actorRole === "USER"
+                          ? t("adminUsers.roleUser")
+                          : null;
                     const actionLabel = t(`audit.actions.${log.action}`);
                     return (
                       <li key={log.id} className="rounded-xl border border-border/50 bg-card/75 p-3 shadow-sm backdrop-blur-md sm:p-4" data-testid="activity-row">
@@ -219,8 +239,17 @@ export function AuditActivityFeed({
                             </p>
                             {showActor && (
                               <p className="mt-1 break-words text-xs text-muted-foreground">
-                                {actorName}{log.actor?.role ? ` · ${log.actor.role}` : ""}
-                                {(log.actorEmail || log.actor?.email) ? ` · ${log.actorEmail || log.actor?.email}` : ""}
+                                {actorId && actorEmail ? (
+                                  <Link
+                                    href={`/admin/users?search=${encodeURIComponent(actorEmail)}`}
+                                    className="font-medium text-primary underline-offset-2 hover:underline"
+                                  >
+                                    {actorName}
+                                  </Link>
+                                ) : actorName}
+                                {actorRoleLabel ? ` · ${actorRoleLabel}` : ""}
+                                {hasDeletedActorSnapshot ? ` · ${t("adminUsers.activityDeletedActor")}` : ""}
+                                {actorEmail ? ` · ${actorEmail}` : ""}
                               </p>
                             )}
                           </div>
