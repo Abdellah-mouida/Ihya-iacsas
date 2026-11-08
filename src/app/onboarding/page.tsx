@@ -8,6 +8,7 @@ import { Footer } from "@/components/sections/footer";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OnboardingView } from "@/components/auth/onboarding-view";
+import { safeOnboardingCallbackUrl } from "@/lib/onboarding-guard";
 
 export const metadata: Metadata = {
   title: "إعداد الملف الشخصي — برنامج إحياء | Profile Setup — Ihyaa Program",
@@ -21,7 +22,7 @@ export default async function OnboardingPage({
 }) {
   const session = await auth();
   const params = await searchParams;
-  const callbackUrl = params?.callbackUrl || "/";
+  const callbackUrl = safeOnboardingCallbackUrl(params?.callbackUrl);
 
   if (!session?.user?.id) {
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);

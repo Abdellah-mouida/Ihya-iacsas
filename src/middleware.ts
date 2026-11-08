@@ -6,6 +6,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { decideOnboardingRedirect } from "@/lib/onboarding-guard";
 
 async function getAuthToken(request: NextRequest) {
   const secret = process.env.AUTH_SECRET;
@@ -60,9 +61,18 @@ const PROTECTED_USER_ROUTES = [
 function isSafeRelativeUrl(url: string | null): boolean {
   if (!url) return false;
   // Must start with a single slash and not double slashes (protocol-relative)
-  if (!url.startsWith("/") || url.startsWith("//")) return false;
+  if (
+    !url.startsWith("/") ||
+    url.startsWith("//") ||
+    url.startsWith("/\\")
+  ) return false;
   // Must not redirect to another auth route
-  if (PUBLIC_AUTH_ROUTES.some((route) => url === route || url.startsWith(`${route}?`))) {
+  if (
+    PUBLIC_AUTH_ROUTES.some((route) => url === route || url.startsWith(`${route}?`)) ||
+    url === "/onboarding" ||
+    url.startsWith("/onboarding?") ||
+    url.startsWith("/onboarding/")
+  ) {
     return false;
   }
   return true;
@@ -92,13 +102,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const token = await getAuthToken(request);
+  const onboardingRedirect = decideOnboardingRedirect({
+    pathname,
+    search: request.nextUrl.search,
+    authenticated: Boolean(token),
+    onboardingComplete: token?.onboardingComplete === true,
+  });
+  if (onboardingRedirect) {
+    return NextResponse.redirect(new URL(onboardingRedirect, request.url));
+  }
+
   // 1. Check if user is already signed in on public auth routes
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
   if (isPublicAuthRoute) {
-    const token = await getAuthToken(request);
     if (token) {
       const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
       const target = isSafeRelativeUrl(callbackUrl) ? callbackUrl! : "/";
@@ -113,7 +133,6 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isProtectedUserRoute) {
-    const token = await getAuthToken(request);
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       const callbackUrl = pathname + (request.nextUrl.search || "");
@@ -125,8 +144,6 @@ export async function middleware(request: NextRequest) {
 
   // 3. Protected /admin routes
   if (pathname.startsWith("/admin")) {
-    const token = await getAuthToken(request);
-
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       const callbackUrl = pathname + (request.nextUrl.search || "");

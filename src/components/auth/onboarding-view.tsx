@@ -26,6 +26,7 @@ import { completeOnboarding, getOnboardingProfile } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { safeOnboardingCallbackUrl } from "@/lib/onboarding-guard";
 
 interface OnboardingViewProps {
   initialProfile?: {
@@ -47,7 +48,7 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
   const [isPending, startTransition] = useTransition();
 
   const isAr = locale === "ar";
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = safeOnboardingCallbackUrl(searchParams.get("callbackUrl"));
 
   // Multi-step state
   const [step, setStep] = useState<1 | 2 | 3>(1);
