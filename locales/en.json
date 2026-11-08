@@ -262,6 +262,7 @@
     "accountSnapshotTitle": "Account Attendee Details",
     "accountSnapshotDesc": "Your verified account details are used to confirm your booking directly without needing a verification code.",
     "editAccountProfile": "Edit account details",
+    "editProfileShort": "Edit",
     "submitBookingConfirmed": "Confirm Booking",
     "submitBookingPending": "Request Seat",
     "submitBookingWaitlist": "Join Waitlist",

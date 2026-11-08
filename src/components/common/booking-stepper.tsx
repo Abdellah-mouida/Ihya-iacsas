@@ -313,8 +313,8 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                     data-testid="account-snapshot-card"
                     className="rounded-2xl border border-brass/25 bg-muted/40 p-4 sm:p-5 flex flex-col gap-4 shadow-sm"
                   >
-                    <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <UserAvatar
                           src={userSnapshot?.image}
                           name={userSnapshot?.name}
@@ -323,9 +323,9 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                           shape="circle"
                           className="size-12 shrink-0 border-brass/30 ring-1 ring-primary/20"
                         />
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-heading font-bold text-foreground">
+                            <span className="truncate font-heading font-bold text-foreground">
                               {userSnapshot?.name}
                             </span>
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
@@ -333,7 +333,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                               {locale === "ar" ? "موثق" : "Verified"}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground dir-ltr block">
+                          <span className="block truncate text-xs text-muted-foreground dir-ltr">
                             {userSnapshot?.email}
                           </span>
                         </div>
@@ -343,11 +343,12 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         asChild
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-brass hover:text-brass/80 gap-1.5 h-8 px-2.5 rounded-full"
+                        className="h-11 min-w-11 shrink-0 gap-1.5 rounded-full px-2.5 text-xs text-brass hover:text-brass/80"
                       >
-                        <Link href="/settings?tab=profile" target="_blank">
+                        <Link href="/settings?tab=profile" target="_blank" rel="noopener noreferrer">
                           <Pencil className="size-3" />
-                          {t("booking.editAccountProfile")}
+                          <span className="sm:hidden">{t("booking.editProfileShort")}</span>
+                          <span className="hidden sm:inline">{t("booking.editAccountProfile")}</span>
                         </Link>
                       </Button>
                     </div>

@@ -262,6 +262,7 @@
     "accountSnapshotTitle": "بيانات الحساب المعتمدة",
     "accountSnapshotDesc": "يتم استخدام بياناتك الشخصية المسجلة في حسابك لتأكيد الحجز مباشرة دون الحاجة لرمز تحقق.",
     "editAccountProfile": "تعديل بيانات الحساب",
+    "editProfileShort": "تعديل",
     "submitBookingConfirmed": "تأكيد الحجز",
     "submitBookingPending": "طلب حجز مقعد",
     "submitBookingWaitlist": "الانضمام لقائمة الانتظار",
