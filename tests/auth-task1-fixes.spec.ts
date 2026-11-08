@@ -28,7 +28,7 @@ test.describe("Task 1 Auth, Hero & Onboarding Fixes", () => {
     await expect(kicker).toBeVisible();
     const kickerClass = await kicker.getAttribute("class");
     expect(kickerClass).toContain("text-foreground");
-    expect(kickerClass).toContain("dark:text-white");
+    expect(kickerClass).toContain("bg-background/85");
   });
 
   test("3. Sign up heading is 'انضم إلى برنامج إحياء' (ar) and 'Join Ihyaa Program' (en)", async ({ page }) => {
