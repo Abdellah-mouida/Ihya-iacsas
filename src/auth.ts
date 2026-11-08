@@ -331,8 +331,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }).user ?? null
         : null;
       const actorId = token?.id || sessionUser?.id || null;
+      const existingActor = actorId
+        ? await prisma.user.findUnique({ where: { id: actorId }, select: { id: true } })
+        : null;
       await logActivity({
-        actorId,
+        actorId: existingActor?.id ?? null,
         actorName: token?.name || sessionUser?.name,
         actorEmail: token?.email || sessionUser?.email,
         action: "SIGN_OUT",

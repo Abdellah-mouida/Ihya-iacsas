@@ -9,7 +9,7 @@ import { assertDevBranchDatabase, loginAs } from "./helpers/admin-auth";
 
 const THEMES = ["light", "sunset", "amoled", "black"] as const;
 const LOCALES = ["ar", "en"] as const;
-const WIDTHS = [320, 360, 390, 1440] as const;
+const WIDTHS = [320, 360, 390, 768, 1440] as const;
 
 test.describe("Responsive booking profile edit action", () => {
   test.setTimeout(300_000);

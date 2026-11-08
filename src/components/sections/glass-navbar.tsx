@@ -234,7 +234,7 @@ export function GlassNavbar({
                   className={cn(
                     "relative flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200",
                     active
-                      ? "text-primary-foreground dark:text-white"
+                      ? "text-primary-foreground dark:text-primary-foreground"
                       : transparentTop
                       ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
                       : "text-foreground/80 hover:text-foreground",

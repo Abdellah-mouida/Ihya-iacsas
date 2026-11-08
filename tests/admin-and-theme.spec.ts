@@ -1,19 +1,18 @@
 import { test, expect, type Page } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import fs from "fs";
 import { execSync } from "child_process";
-import { loginAdmin } from "./helpers/admin-auth";
+import { assertDevBranchDatabase, loginAdmin } from "./helpers/admin-auth";
 
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
-  const testContactEmail = "contact.tester@example.com";
+  const testContactEmail = `contact-${randomBytes(12).toString("hex")}@example.test`;
 
   test.beforeEach(async () => {
     try {
+      assertDevBranchDatabase("Admin theme/contact test setup");
       await prisma.contactMessage.deleteMany({
         where: { email: testContactEmail },
-      });
-      await prisma.rateLimit.deleteMany({
-        where: { key: { contains: "admin_login" } },
       });
     } catch {
       // transient connection pool warmup
@@ -200,10 +199,11 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     await expect(galleryCta.first()).toBeVisible();
 
     // Contact section social links
-    const fbLink = page.locator('a[href*="facebook.com"]');
-    const igLink = page.locator('a[href*="instagram.com"]');
-    await expect(fbLink).toBeVisible();
-    await expect(igLink).toBeVisible();
+    const contact = page.locator("#contact");
+    await expect(contact.locator('a[href*="facebook.com"]')).toBeVisible();
+    await expect(contact.locator('a[href*="instagram.com"]')).toBeVisible();
+    await expect(contact.locator('a[href*="youtube.com"]')).toBeVisible();
+    await expect(page.locator("footer").locator('a[target="_blank"]')).toHaveCount(3);
 
     // Verify demo site disclaimer is completely gone
     await expect(page.locator("body")).not.toContainText("موقع تجريبي");

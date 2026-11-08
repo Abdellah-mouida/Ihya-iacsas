@@ -111,7 +111,7 @@ export function EventsHeader({
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-bold leading-none",
                 filter === "open"
-                  ? "bg-primary-foreground/25 text-primary-foreground"
+                  ? "bg-background text-primary"
                   : "bg-primary/15 text-primary",
               )}
             >

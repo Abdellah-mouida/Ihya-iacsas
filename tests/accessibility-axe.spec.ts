@@ -19,7 +19,7 @@ async function preparePage(page: Page, config: ScanConfig, path: string) {
   await page.addInitScript(
     ({ locale, theme }) => {
       window.localStorage.setItem("ihyaa-locale", locale);
-      window.localStorage.setItem("theme", theme);
+      window.localStorage.setItem("ihyaa-theme", theme === "dark" ? "black" : "light");
     },
     { locale: config.locale, theme: config.theme }
   );
@@ -33,9 +33,11 @@ async function preparePage(page: Page, config: ScanConfig, path: string) {
       document.documentElement.lang = locale;
       document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
       if (theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "black");
         document.documentElement.classList.add("dark");
         document.documentElement.classList.remove("light");
       } else {
+        document.documentElement.setAttribute("data-theme", "light");
         document.documentElement.classList.add("light");
         document.documentElement.classList.remove("dark");
       }

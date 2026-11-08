@@ -205,7 +205,11 @@ test.describe("User deletion cascade and waitlist promotion", () => {
       await page.locator('[data-testid="settings-delete-account-confirm"]').click();
       await page.waitForURL((url) => url.pathname === "/login", { timeout: 30_000 });
       expect(await prisma.user.findUnique({ where: { id: user.id }, select: { id: true } })).toBeNull();
+      await expect.poll(() => prisma.auditLog.findFirst({
+        where: { action: "SIGN_OUT", actorEmail: email },
+      })).toMatchObject({ actorId: null, actorName: "Synthetic Settings Deletion Member", actorEmail: email });
     } finally {
+      await prisma.auditLog.deleteMany({ where: { actorEmail: email } });
       await prisma.user.deleteMany({ where: { id: user.id } });
     }
   });
