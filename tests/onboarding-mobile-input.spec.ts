@@ -5,10 +5,10 @@ import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { createSyntheticUser, removeSyntheticUser } from "./helpers/synthetic-user";
 
 test.describe("Onboarding mobile input and shared footer", () => {
-  test.setTimeout(120_000);
+  test.setTimeout(600_000);
   test.beforeAll(() => fs.mkdirSync("evidence/task-2", { recursive: true }));
 
-  test("age takes the first tap and footer actions fit through 400px in both directions", async ({ page, browser }) => {
+  test("age takes the first tap and footer actions fit at 320/360/390px across locales and themes", async ({ page, browser }) => {
     assertDevBranchDatabase("Onboarding mobile UI test");
     const user = await createSyntheticUser("Onboarding mobile UI test account");
     const baseURL = String(test.info().project.use.baseURL || "http://localhost:3000");
@@ -27,22 +27,23 @@ test.describe("Onboarding mobile input and shared footer", () => {
         { name: "iPhone 13", descriptor: devices["iPhone 13"] },
         { name: "320px Android", descriptor: { viewport: { width: 320, height: 720 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
         { name: "360px Android", descriptor: { viewport: { width: 360, height: 740 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
-        { name: "400px Android", descriptor: { viewport: { width: 400, height: 800 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
+        { name: "390px Android", descriptor: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
       ];
 
       for (const { name, descriptor } of deviceCases) {
         for (const locale of ["ar", "en"] as const) {
-          const context = await browser.newContext({
-            ...descriptor,
-            baseURL,
-            storageState,
-            locale: locale === "ar" ? "ar-MA" : "en-US",
-          });
+          for (const theme of ["light", "sunset", "amoled", "black"] as const) {
+            const context = await browser.newContext({
+              ...descriptor,
+              baseURL,
+              storageState,
+              locale: locale === "ar" ? "ar-MA" : "en-US",
+            });
           try {
-            await context.addInitScript(({ localeValue }) => {
+            await context.addInitScript(({ localeValue, themeValue }) => {
               localStorage.setItem("ihyaa-locale", localeValue);
-              localStorage.setItem("ihyaa-theme", "light");
-            }, { localeValue: locale });
+              localStorage.setItem("ihyaa-theme", themeValue);
+            }, { localeValue: locale, themeValue: theme });
             const mobilePage = await context.newPage();
             await mobilePage.goto("/onboarding", { waitUntil: "domcontentloaded" });
             await expect(mobilePage.locator('[data-testid="onboarding-step-1"]')).toBeVisible();
@@ -77,11 +78,14 @@ test.describe("Onboarding mobile input and shared footer", () => {
             }
             expect(await mobilePage.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 400);
 
-            await age.fill("24");
-            await mobilePage.locator('[data-testid="city-combobox-trigger"]').click();
-            await mobilePage.locator('[data-testid="city-option-tetouan"]').click();
-            await mobilePage.locator('[data-testid="onboarding-next-btn"]').click();
-            await expect(mobilePage.locator('[data-testid="onboarding-step-2"]')).toBeVisible();
+            await mobilePage.screenshot({ path: `evidence/task-2/onboarding-${name.replaceAll(" ", "-")}-${locale}-${theme}-${viewport?.width}-step1.png`, fullPage: true });
+
+            if (theme === "light") {
+              await age.fill("24");
+              await mobilePage.locator('[data-testid="city-combobox-trigger"]').click();
+              await mobilePage.locator('[data-testid="city-option-tetouan"]').click();
+              await mobilePage.locator('[data-testid="onboarding-next-btn"]').click();
+              await expect(mobilePage.locator('[data-testid="onboarding-step-2"]')).toBeVisible();
 
             const step2Footer = mobilePage.locator('[data-testid="onboarding-step-footer"]');
             const step2Primary = mobilePage.locator('[data-testid="onboarding-next-btn"]');
@@ -114,7 +118,7 @@ test.describe("Onboarding mobile input and shared footer", () => {
                 `${name} ${locale}: footer label stays readable without narrow word columns`,
               ).toBeLessThanOrEqual((viewport?.width ?? 400) < 360 ? 2 : 1);
             }
-            await mobilePage.screenshot({ path: `evidence/task-2/onboarding-${name.replaceAll(" ", "-")}-${locale}-${viewport?.width}.png`, fullPage: true });
+            await mobilePage.screenshot({ path: `evidence/task-2/onboarding-${name.replaceAll(" ", "-")}-${locale}-${theme}-${viewport?.width}-step2.png`, fullPage: true });
 
             await mobilePage.locator('[data-testid="onboarding-next-btn"]').click();
             await expect(mobilePage.locator('[data-testid="onboarding-step-3"]')).toBeVisible();
@@ -125,8 +129,10 @@ test.describe("Onboarding mobile input and shared footer", () => {
               return !span || span.scrollWidth <= span.clientWidth;
             });
             expect(submitLabelFits, `${name} ${locale}: submit label fits`).toBe(true);
+            }
           } finally {
             await context.close();
+          }
           }
         }
       }

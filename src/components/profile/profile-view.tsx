@@ -280,7 +280,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
         data-testid="profile-bookings-section"
         className="p-6 sm:p-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card space-y-6"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
               <CalendarCheck className="size-5 text-primary" />
