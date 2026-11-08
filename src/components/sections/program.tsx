@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
-import { Texture } from "@/components/common/texture";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
 import { fadeUp, scaleIn, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -16,11 +15,10 @@ export function Program() {
       id="program"
       className="relative isolate flex min-h-[70vh] items-center overflow-visible py-20 text-foreground sm:py-28 z-0"
     >
-      {/* Layer 1: Ambient Glows */}
-      <div className="absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--gold)_16%,transparent),transparent_60%)]" />
+      {/* A section-sized glow that fades fully before the section edge. */}
       <div
         aria-hidden
-        className="bg-brass-gradient animate-float-slow absolute left-1/2 top-1/2 z-[1] size-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.08] blur-3xl"
+        className="pointer-events-none absolute inset-x-[5%] inset-y-[10%] z-[1] bg-[radial-gradient(ellipse_55%_55%_at_center,color-mix(in_oklch,var(--gold)_16%,transparent)_0%,transparent_80%)]"
       />
 
       <motion.div
