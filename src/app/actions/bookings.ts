@@ -1060,26 +1060,100 @@ export async function getBookings(eventId?: string, status?: string) {
   }
 }
 
+type ApprovalBooking = {
+  id: string;
+  eventId: string;
+  email: string;
+  fullName: string;
+  event: {
+    slug: string;
+    titleAr: string;
+    titleEn: string;
+    date: Date;
+    time: string;
+    location: string;
+  };
+  user: { locale: string | null } | null;
+};
+
+/** Claim one pending-to-confirmed transition, then send the shared promotion email. */
+async function confirmBookingAndNotify(
+  booking: ApprovalBooking,
+  actorId: string,
+  sourceAction: string,
+) {
+  const transition = await prisma.booking.updateMany({
+    where: {
+      id: booking.id,
+      status: { in: ["PENDING", "WAITLISTED"] },
+      confirmed: false,
+    },
+    data: {
+      status: "CONFIRMED",
+      confirmed: true,
+      waitlistOrder: null,
+    },
+  });
+
+  if (transition.count !== 1) {
+    return { changed: false, emailSent: false };
+  }
+
+  try {
+    const result = await sendWaitlistPromotionEmail(
+      booking.email,
+      {
+        titleAr: booking.event.titleAr,
+        titleEn: booking.event.titleEn,
+        date: booking.event.date,
+        time: booking.event.time,
+        location: booking.event.location,
+        url: `/events/${booking.event.slug}/book`,
+      },
+      booking.user?.locale || "ar",
+      { sendOnce: true },
+    );
+    if (!result.success) throw new Error(result.error || "Email transport failed");
+    return { changed: true, emailSent: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Email transport failed";
+    console.error(`[booking:${booking.id}] Approval email failed:`, message);
+    await createAuditLog({
+      actorId,
+      action: "BOOKING_APPROVAL_EMAIL_FAILED",
+      targetType: "Booking",
+      targetId: booking.id,
+      details: { sourceAction, email: booking.email, error: message },
+    });
+    return { changed: true, emailSent: false };
+  }
+}
+
 export async function approveBooking(id: string) {
   try {
     const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { event: true },
+      include: { event: true, user: { select: { locale: true } } },
     });
 
     if (!booking) {
       return { success: false, error: "Booking not found" };
     }
 
-    await prisma.booking.update({
-      where: { id },
-      data: {
-        status: "CONFIRMED",
-        confirmed: true,
-        waitlistOrder: null,
-      },
-    });
+    if (booking.status === "CONFIRMED" || booking.confirmed) {
+      return { success: true, alreadyApproved: true };
+    }
+    if (booking.status !== "PENDING" && booking.status !== "WAITLISTED") {
+      return { success: false, error: "Only pending or waitlisted bookings can be approved" };
+    }
+
+    const approval = await confirmBookingAndNotify(booking, user.id, "BOOKING_APPROVE");
+    if (!approval.changed) {
+      const latest = await prisma.booking.findUnique({ where: { id }, select: { status: true } });
+      if (latest?.status === "CONFIRMED") return { success: true, alreadyApproved: true };
+      return { success: false, error: "Booking status changed before approval" };
+    }
 
     await createAuditLog({
       actorId: user.id,
@@ -1090,6 +1164,7 @@ export async function approveBooking(id: string) {
         fullName: booking.fullName,
         email: booking.email,
         eventTitle: booking.event?.titleEn || booking.event?.titleAr,
+        approvalEmailSent: approval.emailSent,
       },
     });
 
@@ -1098,7 +1173,7 @@ export async function approveBooking(id: string) {
     revalidatePath(`/events/${booking.eventId}`);
     revalidatePath("/events");
 
-    return { success: true };
+    return { success: true, approvalEmailSent: approval.emailSent };
   } catch (error) {
     console.error("Error approving booking:", error);
     return {
@@ -1114,7 +1189,7 @@ export async function rejectBooking(id: string) {
     const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { event: true },
+      include: { event: true, user: { select: { locale: true } } },
     });
 
     if (!booking) {
@@ -1145,32 +1220,16 @@ export async function rejectBooking(id: string) {
           { waitlistOrder: "asc" },
           { createdAt: "asc" },
         ],
+        include: { user: { select: { locale: true } } },
       });
 
       if (nextWaitlisted) {
-        await prisma.booking.update({
-          where: { id: nextWaitlisted.id },
-          data: {
-            status: "CONFIRMED",
-            confirmed: true,
-            waitlistOrder: null,
-          },
-        });
-
-        autoPromotedName = nextWaitlisted.fullName;
-
-        // Send Brevo congratulations email
-        try {
-          await sendWaitlistPromotionEmail(nextWaitlisted.email, {
-            titleAr: booking.event.titleAr,
-            titleEn: booking.event.titleEn,
-            date: booking.event.date,
-            time: booking.event.time,
-            location: booking.event.location,
-          });
-        } catch (emailErr) {
-          console.error("Error sending auto-promotion email:", emailErr);
-        }
+        const promotion = await confirmBookingAndNotify(
+          { ...nextWaitlisted, event: booking.event },
+          user.id,
+          "BOOKING_AUTO_PROMOTE_AFTER_REJECT",
+        );
+        if (promotion.changed) autoPromotedName = nextWaitlisted.fullName;
       }
     }
 
@@ -1207,33 +1266,24 @@ export async function promoteWaitlistBooking(id: string) {
     const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { event: true },
+      include: { event: true, user: { select: { locale: true } } },
     });
 
     if (!booking) {
       return { success: false, error: "Booking not found" };
     }
 
-    await prisma.booking.update({
-      where: { id },
-      data: {
-        status: "CONFIRMED",
-        confirmed: true,
-        waitlistOrder: null,
-      },
-    });
-
-    // Send Brevo congratulations email
-    try {
-      await sendWaitlistPromotionEmail(booking.email, {
-        titleAr: booking.event.titleAr,
-        titleEn: booking.event.titleEn,
-        date: booking.event.date,
-        time: booking.event.time,
-        location: booking.event.location,
-      });
-    } catch (emailErr) {
-      console.error("Error sending promotion email:", emailErr);
+    if (booking.status === "CONFIRMED" || booking.confirmed) {
+      return { success: true, alreadyApproved: true };
+    }
+    if (booking.status !== "WAITLISTED") {
+      return { success: false, error: "Only waitlisted bookings can be promoted" };
+    }
+    const promotion = await confirmBookingAndNotify(booking, user.id, "BOOKING_PROMOTE_WAITLIST");
+    if (!promotion.changed) {
+      const latest = await prisma.booking.findUnique({ where: { id }, select: { status: true } });
+      if (latest?.status === "CONFIRMED") return { success: true, alreadyApproved: true };
+      return { success: false, error: "Booking status changed before promotion" };
     }
 
     await createAuditLog({
@@ -1244,6 +1294,7 @@ export async function promoteWaitlistBooking(id: string) {
       details: {
         fullName: booking.fullName,
         email: booking.email,
+        approvalEmailSent: promotion.emailSent,
       },
     });
 
@@ -1252,7 +1303,7 @@ export async function promoteWaitlistBooking(id: string) {
     revalidatePath(`/events/${booking.eventId}`);
     revalidatePath("/events");
 
-    return { success: true };
+    return { success: true, approvalEmailSent: promotion.emailSent };
   } catch (error) {
     console.error("Error promoting waitlist booking:", error);
     return {
@@ -1268,7 +1319,7 @@ export async function deleteBooking(id: string) {
     const user = await requirePermission("bookings:manage");
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { event: true },
+      include: { event: true, user: { select: { locale: true } } },
     });
 
     if (booking) {
@@ -1289,29 +1340,15 @@ export async function deleteBooking(id: string) {
             { waitlistOrder: "asc" },
             { createdAt: "asc" },
           ],
+          include: { user: { select: { locale: true } } },
         });
 
         if (nextWaitlisted) {
-          await prisma.booking.update({
-            where: { id: nextWaitlisted.id },
-            data: {
-              status: "CONFIRMED",
-              confirmed: true,
-              waitlistOrder: null,
-            },
-          });
-
-          try {
-            await sendWaitlistPromotionEmail(nextWaitlisted.email, {
-              titleAr: booking.event.titleAr,
-              titleEn: booking.event.titleEn,
-              date: booking.event.date,
-              time: booking.event.time,
-              location: booking.event.location,
-            });
-          } catch (emailErr) {
-            console.error("Error sending auto-promotion email:", emailErr);
-          }
+          await confirmBookingAndNotify(
+            { ...nextWaitlisted, event: booking.event },
+            user.id,
+            "BOOKING_AUTO_PROMOTE_AFTER_DELETE",
+          );
         }
       }
 

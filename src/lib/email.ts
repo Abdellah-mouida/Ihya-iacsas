@@ -85,7 +85,7 @@ async function sendBrevoEmail(payload: {
   subject: string;
   htmlContent: string;
   textContent: string;
-}): Promise<{ success: boolean; error?: string; messageId?: string }> {
+}, maxAttempts = 2): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
@@ -100,7 +100,7 @@ async function sendBrevoEmail(payload: {
 
   let lastError = "Could not connect to email service.";
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
@@ -382,8 +382,10 @@ export async function sendWaitlistPromotionEmail(
     date: Date | string;
     time?: string;
     location: string;
+    url?: string;
   },
   locale: string = "ar",
+  options?: { sendOnce?: boolean },
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const isArabic = locale === "ar";
   const eventTitle = isArabic ? eventDetails.titleAr : eventDetails.titleEn;
@@ -391,14 +393,25 @@ export async function sendWaitlistPromotionEmail(
     isArabic ? "ar-MA" : "en-US",
     { weekday: "long", year: "numeric", month: "long", day: "numeric" },
   );
+  const configuredBase = process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    process.env.NEXTAUTH_URL || "https://ihyaa.is-cool.dev";
+  let baseUrl = "https://ihyaa.is-cool.dev";
+  try {
+    const parsedBase = new URL(configuredBase);
+    if (parsedBase.protocol === "https:") baseUrl = parsedBase.origin;
+  } catch { /* use the stable production origin */ }
+  const eventPath = eventDetails.url?.startsWith("/") ? eventDetails.url : "/events";
+  const eventUrl = `${baseUrl}${eventPath}`;
+  const safeEventUrl = eventUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
   const subject = isArabic
-    ? `تهانينا! تم تأكيد مقعدك في فعالية: ${eventTitle} — برنامج إحياء`
-    : `Congratulations! Your seat is confirmed for: ${eventTitle} — Ihyaa Program`;
+    ? `تمت الموافقة على حجزك في فعالية: ${eventTitle} — برنامج إحياء`
+    : `Your booking is approved for: ${eventTitle} — Ihyaa Program`;
 
   const plainText = isArabic
-    ? `السلام عليكم ورحمة الله وبركاته،\n\nيسر إدارة برنامج إحياء إشعارك بأنه قد توفر مقعد لك وتمت ترقيتك وتأكيد حضورك رسمياً في الفعالية:\n${eventTitle}\n\nالموعد: ${formattedDate} (${eventDetails.time || ""})\nالمكان: ${eventDetails.location}\n\nنتطلع لحضورك ومشاركتك معنا!\n\nبرنامج إحياء`
-    : `Hello,\n\nWe are pleased to inform you that a seat has become available and your registration has been officially confirmed for:\n${eventTitle}\n\nDate: ${formattedDate} (${eventDetails.time || ""})\nLocation: ${eventDetails.location}\n\nWe look forward to seeing you there!\n\nIhyaa Program`;
+    ? `السلام عليكم ورحمة الله وبركاته،\n\nتمت الموافقة على حجزك وتأكيد حضورك في الفعالية:\n${eventTitle}\n\nالموعد: ${formattedDate} (${eventDetails.time || ""})\nالمكان: ${eventDetails.location}\n\nتفاصيل الفعالية: ${eventUrl}\n\nنتطلع لحضورك ومشاركتك معنا!\n\nبرنامج إحياء`
+    : `Hello,\n\nYour booking has been approved and your attendance confirmed for:\n${eventTitle}\n\nDate: ${formattedDate} (${eventDetails.time || ""})\nLocation: ${eventDetails.location}\n\nEvent details: ${eventUrl}\n\nWe look forward to seeing you there!\n\nIhyaa Program`;
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -459,7 +472,7 @@ export async function sendWaitlistPromotionEmail(
       <td class="content-cell" style="padding: 12px 32px 28px; text-align: right; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
         <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">السلام عليكم ورحمة الله وبركاته،</p>
         <p style="margin: 0 0 20px; color: #cbd5e1;">
-          يسرنا إعلامك بأنه قد توفر مقعد لك في الفعالية وتمت ترقية طلبك من قائمة الانتظار إلى <strong style="color: #34d399;">الحجز المؤكد</strong>.
+          تمت الموافقة على طلب حجزك وأصبح <strong style="color: #34d399;">حجزك مؤكداً</strong>.
         </p>
 
         <!-- Event Summary Card -->
@@ -476,7 +489,7 @@ export async function sendWaitlistPromotionEmail(
         </div>
 
         <p style="margin: 20px 0 0; color: #cbd5e1;">
-          نتطلع لحضورك ومشاركتك القيّمة. في حال تعذر حضورك، يُرجى التواصل معنا لإتاحة الفرصة لغيرك.
+          <a href="${safeEventUrl}" style="color:#34d399;text-decoration:underline;">تفاصيل الفعالية</a><br><br>نتطلع لحضورك ومشاركتك القيّمة. في حال تعذر حضورك، يُرجى التواصل معنا لإتاحة الفرصة لغيرك.
         </p>
       </td>
     </tr>
@@ -542,7 +555,7 @@ export async function sendWaitlistPromotionEmail(
       <td class="content-cell" style="padding: 12px 32px 28px; text-align: left; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
         <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">Hello,</p>
         <p style="margin: 0 0 20px; color: #cbd5e1;">
-          We are pleased to inform you that a seat has opened up and your registration has been upgraded from the waitlist to <strong style="color: #34d399;">Confirmed Booking</strong>.
+          Your booking request has been approved and your <strong style="color: #34d399;">booking is confirmed</strong>.
         </p>
 
         <!-- Event Summary Card -->
@@ -559,7 +572,7 @@ export async function sendWaitlistPromotionEmail(
         </div>
 
         <p style="margin: 20px 0 0; color: #cbd5e1;">
-          We look forward to welcoming you. If you can no longer attend, please let us know so we can offer your place to someone else.
+          <a href="${safeEventUrl}" style="color:#34d399;text-decoration:underline;">View event details</a><br><br>We look forward to welcoming you. If you can no longer attend, please let us know so we can offer your place to someone else.
         </p>
       </td>
     </tr>
@@ -574,12 +587,10 @@ export async function sendWaitlistPromotionEmail(
 </html>
 `;
 
-  return sendBrevoEmail({
-    to,
-    subject,
-    htmlContent: html,
-    textContent: plainText,
-  });
+  return sendBrevoEmail(
+    { to, subject, htmlContent: html, textContent: plainText },
+    options?.sendOnce ? 1 : 2,
+  );
 }
 
 /**

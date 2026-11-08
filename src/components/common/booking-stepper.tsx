@@ -459,7 +459,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         ? "bg-amber-500/20 text-amber-500 border border-amber-500/40"
                         : bookingStatus === "WAITLISTED"
                           ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
-                          : "bg-brass-gradient text-night",
+                          : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40",
                     )}
                   >
                     {bookingStatus === "PENDING" ? (
@@ -488,6 +488,11 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         ? `${t("booking.statusWaitlistDesc")} (#${waitlistOrder || 1})`
                         : t("booking.confirmDesc")}
                   </p>
+                  {(bookingStatus === "PENDING" || bookingStatus === "WAITLISTED") && (
+                    <p data-testid="booking-email-notification-note" className="text-xs text-muted-foreground">
+                      {t("booking.statusNotificationNote")}
+                    </p>
+                  )}
 
                   <OrnamentDivider compact />
 
@@ -507,16 +512,10 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         )}
                       >
                         {bookingStatus === "CONFIRMED"
-                          ? locale === "ar"
-                            ? "مؤكد"
-                            : "Confirmed"
+                          ? t("booking.statusConfirmedShort")
                           : bookingStatus === "PENDING"
-                            ? locale === "ar"
-                              ? "قيد المراجعة والموافقة"
-                              : "Pending Approval"
-                            : locale === "ar"
-                              ? `قائمة الانتظار (#${waitlistOrder || 1})`
-                              : `Waitlist (#${waitlistOrder || 1})`}
+                            ? t("booking.statusPendingShort")
+                            : t("booking.statusWaitlistPosition", { order: waitlistOrder || 1 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">

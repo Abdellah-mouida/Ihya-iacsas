@@ -32,7 +32,7 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ initialData }: ProfileViewProps) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const isAr = locale === "ar";
   const { user, bookings } = initialData;
 
@@ -346,7 +346,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                           variant="success"
                           size="sm"
                           icon={<CheckCircle2 className="size-3.5" />}
-                          message={isAr ? "حجز مؤكد" : "Confirmed"}
+                          message={t("booking.statusConfirmedShort")}
                           testId={`booking-status-${booking.id}`}
                         />
                       )}
@@ -355,7 +355,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                           variant="warning"
                           size="sm"
                           icon={<Clock3 className="size-3.5" />}
-                          message={isAr ? "قيد المراجعة" : "Pending"}
+                          message={t("booking.statusPendingShort")}
                           testId={`booking-status-${booking.id}`}
                         />
                       )}
@@ -364,15 +364,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                           variant="pending"
                           size="sm"
                           icon={<AlertCircle className="size-3.5" />}
-                          message={
-                            booking.waitlistOrder
-                              ? (isAr
-                                  ? `قائمة الانتظار (رقم #${booking.waitlistOrder})`
-                                  : `Waitlist (Position #${booking.waitlistOrder})`)
-                              : isAr
-                              ? "قائمة الانتظار"
-                              : "Waitlist"
-                          }
+                          message={t("booking.statusWaitlistPosition", { order: booking.waitlistOrder || 1 })}
                           testId={`booking-status-${booking.id}`}
                         />
                       )}
@@ -386,6 +378,12 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                         />
                       )}
                     </div>
+
+                    {(isPending || isWaitlisted) && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("booking.statusNotificationNote")}
+                      </p>
+                    )}
 
                     <h3 className="font-heading font-bold text-base text-foreground truncate">
                       {eventTitle}

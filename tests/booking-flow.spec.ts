@@ -263,7 +263,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     // On event page, verify booked state replaces normal CTA
     const bookedBadge = page.getByTestId("booked-state-badge").first();
     await expect(bookedBadge).toBeVisible({ timeout: 15000 });
-    await expect(bookedBadge).toContainText(/أنت مسجل|You're booked|حجزك مؤكد|Booking Confirmed/i);
+    await expect(bookedBadge).toContainText(/تم تأكيد الحجز|Booking confirmed/i);
   });
 
   test("7. Light mode & Dark mode verification", async ({ page }) => {

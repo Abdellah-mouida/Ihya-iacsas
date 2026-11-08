@@ -272,7 +272,12 @@
     "statusPendingTitle": "Booking Request Under Review",
     "statusPendingDesc": "Your booking request has been received. As seats are limited, you will be notified as soon as program administration reviews it.",
     "statusWaitlistTitle": "You are on the Waitlist",
-    "statusWaitlistDesc": "This event is currently at capacity. You have been added to the waitlist in order, and will be automatically promoted and emailed if a spot opens up."
+    "statusWaitlistDesc": "This event is currently at capacity. You have been added to the waitlist in order, and will be automatically promoted if a spot opens up.",
+    "statusConfirmedShort": "Booking confirmed",
+    "statusPendingShort": "Pending approval",
+    "statusWaitlistShort": "On the waitlist",
+    "statusWaitlistPosition": "Waitlist (position #{order})",
+    "statusNotificationNote": "We will notify you by email when your booking status changes."
   },
   "dashboard": {
     "title": "Control Panel",
