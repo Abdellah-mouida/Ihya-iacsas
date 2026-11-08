@@ -4,7 +4,7 @@ import { safeRevalidatePath } from "@/lib/cache";
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 
 export async function getGalleryPhotos() {
   try {
@@ -74,7 +74,7 @@ export async function createGalleryPhoto(formData: FormData) {
       },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "GALLERY_CREATE",
       targetType: "GalleryPhoto",
@@ -173,7 +173,7 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
       });
     }
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "GALLERY_UPDATE",
       targetType: "GalleryPhoto",
@@ -211,7 +211,7 @@ export async function deleteGalleryPhoto(id: string) {
       where: { id },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "GALLERY_DELETE",
       targetType: "GalleryPhoto",

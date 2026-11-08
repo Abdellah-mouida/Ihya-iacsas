@@ -3,7 +3,7 @@
 import { Prisma, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { deleteUserAccount } from "@/lib/user-deletion";
@@ -167,11 +167,15 @@ export async function updateUserRole({
     },
   });
 
-  await createAuditLog({
+  await logActivity({
     actorId: actor.id,
+    actorName: actor.name,
+    actorEmail: actor.email,
     action: "USER_ROLE_UPDATE",
     targetType: "USER",
     targetId: userId,
+    targetName: updated.name,
+    targetEmail: updated.email,
     details: {
       targetEmail: targetUser.email,
       previousRole: targetUser.role,
@@ -241,7 +245,7 @@ export async function deleteOrAnonymizeUser({
         },
       });
     });
-    await createAuditLog({
+    await logActivity({
       actorId: actor.id,
       actorName: actor.name,
       actorEmail: actor.email,

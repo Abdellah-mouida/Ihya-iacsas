@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
 import { deleteUserAccount } from "@/lib/user-deletion";
+import { logActivity } from "@/lib/audit";
 
 export interface AccountBookingItem {
   id: string;
@@ -498,6 +499,17 @@ export async function updateUserProfile(
       },
     });
 
+    await logActivity({
+      actorId: updatedUser.id,
+      actorName: updatedUser.name,
+      actorEmail: updatedUser.email,
+      action: "PROFILE_UPDATED",
+      targetType: "User",
+      targetId: updatedUser.id,
+      targetName: updatedUser.name,
+      targetEmail: updatedUser.email,
+    });
+
     // Asynchronously record user activity
     touchUserActive(session.user.id).catch(() => {});
 
@@ -605,6 +617,22 @@ export async function cancelUserBooking(
       where: { id: bookingId },
     });
 
+    await logActivity({
+      actorId: session.user.id,
+      actorName: session.user.name,
+      actorEmail: session.user.email,
+      action: "BOOKING_CANCELLED",
+      targetType: "Booking",
+      targetId: booking.id,
+      targetName: booking.fullName,
+      targetEmail: booking.email,
+      details: {
+        eventId: booking.eventId,
+        eventTitle: booking.event.titleEn || booking.event.titleAr,
+        previousStatus: booking.status,
+      },
+    });
+
     // If confirmed on limited event, auto-promote next waitlisted attendee
     if (wasConfirmed && booking.event.capacityType === "LIMITED") {
       const nextWaitlisted = await prisma.booking.findFirst({
@@ -625,6 +653,22 @@ export async function cancelUserBooking(
             status: "CONFIRMED",
             confirmed: true,
             waitlistOrder: null,
+          },
+        });
+
+        await logActivity({
+          actorId: session.user.id,
+          actorName: session.user.name,
+          actorEmail: session.user.email,
+          action: "BOOKING_PROMOTE_WAITLIST",
+          targetType: "Booking",
+          targetId: nextWaitlisted.id,
+          targetName: nextWaitlisted.fullName,
+          targetEmail: nextWaitlisted.email,
+          details: {
+            sourceAction: "BOOKING_AUTO_PROMOTE_AFTER_CANCEL",
+            eventId: booking.eventId,
+            eventTitle: booking.event.titleEn || booking.event.titleAr,
           },
         });
 

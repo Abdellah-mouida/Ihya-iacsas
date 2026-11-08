@@ -232,6 +232,7 @@ model AuditLog {
   @@index([actorId])
   @@index([action])
   @@index([targetType])
+  @@index([actorId, createdAt])
   @@index([createdAt])
 }
 

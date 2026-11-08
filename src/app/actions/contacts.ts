@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 
 export async function submitContactMessage(data: {
   name: string;
@@ -67,7 +67,7 @@ export async function deleteContactMessage(id: string) {
       where: { id },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "CONTACT_DELETE",
       targetType: "ContactMessage",

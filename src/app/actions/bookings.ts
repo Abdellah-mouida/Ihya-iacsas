@@ -10,7 +10,7 @@ import { sendOTPEmail } from "@/lib/email";
 import { isEventEnded } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 import { confirmBookingAndNotify } from "@/lib/booking-promotion";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
@@ -386,6 +386,23 @@ export async function createAuthenticatedBooking(data: {
       }
       throw createErr;
     }
+
+    await logActivity({
+      actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
+      action: "BOOKING_CREATED",
+      targetType: "Booking",
+      targetId: booking.id,
+      targetName: booking.fullName,
+      targetEmail: booking.email,
+      details: {
+        eventId: event.id,
+        eventTitle: event.titleEn || event.titleAr,
+        status: newStatus,
+        waitlistOrder,
+      },
+    });
 
     safeRevalidatePath("/events");
     safeRevalidatePath("/book");
@@ -857,6 +874,21 @@ export async function verifyBookingOtp(data: {
       throw createErr;
     }
 
+    await logActivity({
+      action: "BOOKING_CREATED",
+      targetType: "Booking",
+      targetId: confirmedBooking.id,
+      targetName: confirmedBooking.fullName,
+      targetEmail: confirmedBooking.email,
+      details: {
+        eventId: event.id,
+        eventTitle: event.titleEn || event.titleAr,
+        status: newStatus,
+        waitlistOrder,
+        method: "email_otp",
+      },
+    });
+
     revalidatePath("/events");
     revalidatePath("/admin");
     revalidatePath("/admin/bookings");
@@ -1087,11 +1119,15 @@ export async function approveBooking(id: string) {
       return { success: false, error: "Booking status changed before approval" };
     }
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
       action: "BOOKING_APPROVE",
       targetType: "Booking",
       targetId: id,
+      targetName: booking.fullName,
+      targetEmail: booking.email,
       details: {
         fullName: booking.fullName,
         email: booking.email,
@@ -1165,11 +1201,15 @@ export async function rejectBooking(id: string) {
       }
     }
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
       action: "BOOKING_REJECT",
       targetType: "Booking",
       targetId: id,
+      targetName: booking.fullName,
+      targetEmail: booking.email,
       details: {
         fullName: booking.fullName,
         email: booking.email,
@@ -1218,11 +1258,15 @@ export async function promoteWaitlistBooking(id: string) {
       return { success: false, error: "Booking status changed before promotion" };
     }
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
       action: "BOOKING_PROMOTE_WAITLIST",
       targetType: "Booking",
       targetId: id,
+      targetName: booking.fullName,
+      targetEmail: booking.email,
       details: {
         fullName: booking.fullName,
         email: booking.email,
@@ -1284,11 +1328,15 @@ export async function deleteBooking(id: string) {
         }
       }
 
-      await createAuditLog({
+      await logActivity({
         actorId: user.id,
+        actorName: user.name,
+        actorEmail: user.email,
         action: "BOOKING_DELETE",
         targetType: "Booking",
         targetId: id,
+        targetName: booking.fullName,
+        targetEmail: booking.email,
         details: {
           fullName: booking.fullName,
           email: booking.email,

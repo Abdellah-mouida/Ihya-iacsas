@@ -4,7 +4,7 @@ import { safeRevalidatePath } from "@/lib/cache";
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 
 export async function getCarouselPosts(onlyActive = false) {
   try {
@@ -72,7 +72,7 @@ export async function createCarouselPost(formData: FormData) {
       },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "CAROUSEL_CREATE",
       targetType: "CarouselPost",
@@ -168,7 +168,7 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       });
     }
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "CAROUSEL_UPDATE",
       targetType: "CarouselPost",
@@ -198,7 +198,7 @@ export async function toggleCarouselActive(id: string, active: boolean) {
       data: { active },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "CAROUSEL_TOGGLE",
       targetType: "CarouselPost",
@@ -236,7 +236,7 @@ export async function deleteCarouselPost(id: string) {
       where: { id },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: user.id,
       action: "CAROUSEL_DELETE",
       targetType: "CarouselPost",

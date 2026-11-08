@@ -12,6 +12,7 @@ import { generateTempPassword, validatePasswordStrength } from "@/lib/password";
 import { uploadImageToCloudinaryDetailed, deleteImageFromCloudinary } from "@/lib/cloudinary";
 import { safeRevalidatePath } from "@/lib/cache";
 import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { logActivity } from "@/lib/audit";
 
 async function getClientIp(): Promise<string> {
   const headerList = await headers();
@@ -105,8 +106,8 @@ export async function signUpWithCredentials(
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  if (existingUser && !existingUser.emailVerified) {
-    await prisma.user.update({
+  const registeredUser = existingUser && !existingUser.emailVerified
+    ? await prisma.user.update({
       where: { id: existingUser.id },
       data: {
         name,
@@ -115,9 +116,9 @@ export async function signUpWithCredentials(
         termsVersion: TERMS_VERSION,
         locale,
       },
-    });
-  } else {
-    await prisma.user.create({
+      select: { id: true, name: true, email: true },
+    })
+    : await prisma.user.create({
       data: {
         email: emailRaw,
         name,
@@ -127,8 +128,19 @@ export async function signUpWithCredentials(
         termsVersion: TERMS_VERSION,
         locale,
       },
+      select: { id: true, name: true, email: true },
     });
-  }
+
+  await logActivity({
+    actorId: registeredUser.id,
+    actorName: registeredUser.name,
+    actorEmail: registeredUser.email,
+    action: "SIGN_UP_CREDENTIALS",
+    targetType: "User",
+    targetId: registeredUser.id,
+    targetName: registeredUser.name,
+    targetEmail: registeredUser.email,
+  });
 
   // Invalidate previous ACCOUNT_VERIFY OTPs for this email
   await prisma.otpVerification.updateMany({
@@ -413,6 +425,18 @@ export async function requestPasswordReset(
       },
     });
 
+    await logActivity({
+      actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
+      action: "PASSWORD_RESET",
+      targetType: "User",
+      targetId: user.id,
+      targetName: user.name,
+      targetEmail: user.email,
+      details: { method: "temporary_password" },
+    });
+
     await sendTempPasswordEmail(user.email, tempPassword, locale);
   }
 
@@ -534,6 +558,17 @@ export async function changePassword(
       mustChangePassword: false,
       sessionVersion: { increment: 1 },
     },
+  });
+
+  await logActivity({
+    actorId: user.id,
+    actorName: user.name,
+    actorEmail: user.email,
+    action: "PASSWORD_CHANGED",
+    targetType: "User",
+    targetId: user.id,
+    targetName: user.name,
+    targetEmail: user.email,
   });
 
   return {
@@ -734,6 +769,18 @@ export async function completeOnboarding(
         : {}),
       onboardingCompletedAt: new Date(),
     },
+  });
+
+  await logActivity({
+    actorId: user.id,
+    actorName: name || user.name,
+    actorEmail: user.email,
+    action: "ONBOARDING_COMPLETED",
+    targetType: "User",
+    targetId: user.id,
+    targetName: name || user.name,
+    targetEmail: user.email,
+    details: { termsAccepted: Boolean(user.termsAcceptedAt || termsAccepted) },
   });
 
   safeRevalidatePath("/onboarding");

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/audit";
 import {
   promoteNextWaitlistedBooking,
   type PromotionActor,
@@ -60,20 +61,20 @@ export async function deleteUserAccount({
       data: { targetName: target.name, targetEmail: target.email },
     });
 
-    await tx.auditLog.create({
-      data: {
-        actorId,
-        actorName: actor.name,
-        actorEmail: actor.email,
-        action,
-        targetType: "USER",
-        targetId: target.id,
-        targetName: target.name,
-        targetEmail: target.email,
-        details: {
-          targetRole: target.role,
-          reason: reason?.trim() || (action === "ACCOUNT_DELETE" ? "User deleted own account" : "User deleted by administrator"),
-        },
+    await logActivity({
+      client: tx,
+      required: true,
+      actorId,
+      actorName: actor.name,
+      actorEmail: actor.email,
+      action,
+      targetType: "USER",
+      targetId: target.id,
+      targetName: target.name,
+      targetEmail: target.email,
+      details: {
+        targetRole: target.role,
+        reason: reason?.trim() || (action === "ACCOUNT_DELETE" ? "User deleted own account" : "User deleted by administrator"),
       },
     });
 

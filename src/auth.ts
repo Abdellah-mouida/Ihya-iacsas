@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
+import { logActivity } from "@/lib/audit";
 
 export class UnverifiedEmailError extends CredentialsSignin {
   code = "unverified_email";
@@ -195,6 +196,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } catch (loginErr) {
           console.warn("[auth] Failed to record lastLoginAt:", loginErr);
         }
+
+        await logActivity({
+          actorId: user.id,
+          actorName: user.name,
+          actorEmail: user.email,
+          action: account?.provider === "google" ? "SIGN_IN_GOOGLE" : "SIGN_IN_CREDENTIALS",
+          targetType: "User",
+          targetId: user.id,
+          targetName: user.name,
+          targetEmail: user.email,
+        });
       }
 
       return true;
@@ -294,6 +306,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.lastActiveAt = (token.lastActiveAt as Date | null) ?? null;
       }
       return session;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      await logActivity({
+        actorId: user.id,
+        actorName: user.name,
+        actorEmail: user.email,
+        action: "SIGN_UP",
+        targetType: "User",
+        targetId: user.id,
+        targetName: user.name,
+        targetEmail: user.email,
+      });
+    },
+    async signOut(message) {
+      const token = "token" in message
+        ? message.token as { id?: string; name?: string | null; email?: string | null }
+        : null;
+      const sessionUser = "session" in message && message.session
+        ? (message.session as unknown as {
+            user?: { id?: string; name?: string | null; email?: string | null };
+          }).user ?? null
+        : null;
+      const actorId = token?.id || sessionUser?.id || null;
+      await logActivity({
+        actorId,
+        actorName: token?.name || sessionUser?.name,
+        actorEmail: token?.email || sessionUser?.email,
+        action: "SIGN_OUT",
+        targetType: "User",
+        targetId: actorId,
+      });
     },
   },
 });

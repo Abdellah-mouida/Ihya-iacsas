@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
 
 export type BookingPromotionRecord = {
@@ -74,7 +74,7 @@ export async function confirmBookingAndNotify(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Email transport failed";
     console.error(`[booking:${booking.id}] Approval email failed:`, message);
-    await createAuditLog({
+    await logActivity({
       actorId: actor.id,
       actorName: actor.name,
       actorEmail: actor.email,
@@ -129,7 +129,7 @@ export async function promoteNextWaitlistedBooking(
   );
 
   if (promotion.changed) {
-    await createAuditLog({
+    await logActivity({
       actorId: actor.id,
       actorName: actor.name,
       actorEmail: actor.email,

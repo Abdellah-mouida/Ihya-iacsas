@@ -7,7 +7,7 @@ import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
 import { requirePermission } from "@/lib/permissions";
-import { createAuditLog } from "@/lib/audit";
+import { logActivity } from "@/lib/audit";
 
 export async function getEvents() {
   await requirePermission("events:view");
@@ -307,7 +307,7 @@ export async function createEvent(formData: FormData) {
       },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.create",
       targetType: "event",
@@ -418,7 +418,7 @@ export async function updateEvent(id: string, formData: FormData) {
       data: dataToUpdate,
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.update",
       targetType: "event",
@@ -460,7 +460,7 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
       data: { [field]: value },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.toggle",
       targetType: "event",
@@ -500,7 +500,7 @@ export async function deleteEvent(id: string) {
       where: { id },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.delete",
       targetType: "event",
