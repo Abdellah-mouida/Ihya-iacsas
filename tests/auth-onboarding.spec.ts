@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { clearRateLimit } from "../src/lib/rate-limit";
@@ -9,12 +10,13 @@ assertDevBranchDatabase("Auth onboarding test");
 test.describe("Task 6: Onboarding Multi-step Flow & Server Enforcement", () => {
   test.setTimeout(60000);
 
-  const testUserLoginEmail = "onboarding.login.test@ihyaa.org";
-  const testUserStep1Email = "onboarding.step1.test@ihyaa.org";
-  const testUserFlowEmail = "onboarding.flow.test@ihyaa.org";
-  const testUserGoogleEmail = "onboarding.google.test@ihyaa.org";
-  const testUserCompletedEmail = "onboarding.done.test@ihyaa.org";
-  const testPassword = "OnboardPassword123!#";
+  const suffix = randomBytes(12).toString("hex");
+  const testUserLoginEmail = `onboarding.login.${suffix}@example.test`;
+  const testUserStep1Email = `onboarding.step1.${suffix}@example.test`;
+  const testUserFlowEmail = `onboarding.flow.${suffix}@example.test`;
+  const testUserGoogleEmail = `onboarding.google.${suffix}@example.test`;
+  const testUserCompletedEmail = `onboarding.done.${suffix}@example.test`;
+  const testPassword = `Onboard-${randomBytes(18).toString("base64url")}!`;
 
   async function loginAsUser(
     page: import("@playwright/test").Page,

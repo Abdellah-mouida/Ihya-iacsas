@@ -18,10 +18,11 @@ function isCloudinaryNotFound(error: unknown): boolean {
 
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   const testContactEmail = `contact-${randomBytes(12).toString("hex")}@example.test`;
+  const bookingFixtureEmail = `booking-modal-${randomBytes(12).toString("hex")}@example.test`;
 
   test.beforeEach(async () => {
+    assertDevBranchDatabase("Admin theme/contact test setup");
     try {
-      assertDevBranchDatabase("Admin theme/contact test setup");
       await prisma.contactMessage.deleteMany({
         where: { email: testContactEmail },
       });
@@ -67,40 +68,49 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   });
 
   test("3. Bookings admin table: row click opens detail modal", async ({ page }) => {
-    // Ensure at least one confirmed booking exists
-    await prisma.booking.deleteMany({ where: { email: "soufiane.test@gmail.com" } });
-    const event = await prisma.event.findFirst();
-    if (event) {
+    const suffix = randomBytes(8).toString("hex");
+    const event = await prisma.event.create({
+      data: {
+        slug: `booking-modal-${suffix}`,
+        titleAr: `فعالية اختبار ${suffix}`,
+        titleEn: `Booking modal test ${suffix}`,
+        descriptionAr: "وصف اختبار",
+        descriptionEn: "Test description",
+        date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        time: "18:00",
+        location: "طنجة",
+        posterUrl: "/images/event-poster.jpg",
+      },
+    });
+    try {
       await prisma.booking.create({
         data: {
           eventId: event.id,
-          fullName: "سفيان العمري",
-          email: "soufiane.test@gmail.com",
+          fullName: `سفيان العمري ${suffix}`,
+          email: bookingFixtureEmail,
           city: "طنجة",
           age: 26,
           motive: "الرغبة في حضور المجلس القرآني والتعرف على البرنامج",
           confirmed: true,
         },
       });
+
+      await loginAdmin(page);
+      await page.goto("/admin/bookings");
+
+      const row = page.locator("tr", { hasText: `سفيان العمري ${suffix}` }).first();
+      await expect(row).toBeVisible({ timeout: 10000 });
+      await row.click();
+
+      const modal = page.getByTestId("booking-detail-modal");
+      await expect(modal).toBeVisible();
+      await expect(modal).toContainText(`سفيان العمري ${suffix}`);
+      await expect(modal).toContainText("طنجة");
+      await expect(modal).toContainText("الرغبة في حضور المجلس القرآني");
+    } finally {
+      await prisma.booking.deleteMany({ where: { email: bookingFixtureEmail } });
+      await prisma.event.delete({ where: { id: event.id } });
     }
-
-    await loginAdmin(page);
-    await page.goto("/admin/bookings");
-
-    // Click on row
-    const row = page.locator("tr", { hasText: "سفيان العمري" }).first();
-    await expect(row).toBeVisible({ timeout: 10000 });
-    await row.click();
-
-    // Verify detail modal opens
-    const modal = page.getByTestId("booking-detail-modal");
-    await expect(modal).toBeVisible();
-    await expect(modal).toContainText("سفيان العمري");
-    await expect(modal).toContainText("طنجة");
-    await expect(modal).toContainText("الرغبة في حضور المجلس القرآني");
-
-    // Clean up
-    await prisma.booking.deleteMany({ where: { email: "soufiane.test@gmail.com" } });
   });
 
   test("4. Navbar theme toggle works cleanly at top and scrolled states", async ({ page }) => {
@@ -248,13 +258,9 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   test("10. Admin event creation supports 2.5-4MB images and rejects >8MB images client-side", async ({ page }) => {
     test.setTimeout(90000);
 
-    const testEventTitleAr = "فعالية اختبارية بحجم صورة كبير";
-    const testEventTitleEn = "Large Image Upload Test Event";
-
-    // Clean up any previous test event
-    await prisma.event.deleteMany({
-      where: { titleEn: testEventTitleEn },
-    });
+    const suffix = randomBytes(8).toString("hex");
+    const testEventTitleAr = `فعالية اختبارية بحجم صورة كبير ${suffix}`;
+    const testEventTitleEn = `Large Image Upload Test Event ${suffix}`;
 
     // Ensure 8.5MB test file exists
     const path8MB = "/tmp/ihyaa-test-8.5mb.jpg";
@@ -311,16 +317,13 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
     expect(created?.titleAr).toBe(testEventTitleAr);
     expect(created?.posterUrl).toMatch(/^https:\/\/res\.cloudinary\.com\//);
 
-    // Clean up
-    await prisma.event.deleteMany({
-      where: { titleEn: testEventTitleEn },
-    });
+    await prisma.event.deleteMany({ where: { titleEn: testEventTitleEn } });
   });
 
   test("11. Islamic geometric themed toast notifications with glassmorphism, RTL/LTR awareness, and timeout safety net", async ({
     page,
   }) => {
-    const testEmail = "test.toast.geom@gmail.com";
+    const testEmail = `toast.${randomBytes(12).toString("hex")}@example.test`;
     await prisma.contactMessage.deleteMany({
       where: { email: testEmail },
     });
@@ -428,8 +431,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       nativeDialogTriggered = true;
     });
 
-    const testContactEmail = "dialog-test@ihyaa.org";
-    await prisma.contactMessage.deleteMany({ where: { email: testContactEmail } });
+    const testContactEmail = `dialog-${randomBytes(12).toString("hex")}@example.test`;
     const contact = await prisma.contactMessage.create({
       data: {
         name: "Confirm Dialog Tester",
@@ -492,12 +494,24 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   }) => {
     test.setTimeout(90000);
 
-    const initialEvent = await prisma.event.findFirst();
-    expect(initialEvent).not.toBeNull();
-    const testEventId = initialEvent!.id;
-    const originalSlug = initialEvent!.slug;
-    const originalTitleAr = initialEvent!.titleAr;
-    const originalTitleEn = initialEvent!.titleEn;
+    const suffix = randomBytes(8).toString("hex");
+    const originalTitleAr = `فعالية اختبارية ${suffix}`;
+    const originalTitleEn = `Test event ${suffix}`;
+    const initialEvent = await prisma.event.create({
+      data: {
+        slug: `immutable-slug-${suffix}`,
+        titleAr: originalTitleAr,
+        titleEn: originalTitleEn,
+        descriptionAr: "وصف اختبار",
+        descriptionEn: "Test description",
+        date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        time: "18:00",
+        location: "الرباط",
+        posterUrl: "/images/event-poster.jpg",
+      },
+    });
+    const testEventId = initialEvent.id;
+    const originalSlug = initialEvent.slug;
 
     try {
       await loginAdmin(page);
@@ -551,15 +565,7 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       expect(afterUpdate?.titleAr).toBe(updatedTitleAr);
       expect(afterUpdate?.slug).toBe(originalSlug);
     } finally {
-      // Restore original title
-      await prisma.event.update({
-        where: { id: testEventId },
-        data: {
-          titleAr: originalTitleAr,
-          titleEn: originalTitleEn,
-          slug: originalSlug,
-        },
-      });
+      await prisma.event.delete({ where: { id: testEventId } });
     }
   });
 

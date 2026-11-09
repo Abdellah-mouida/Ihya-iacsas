@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import crypto from "crypto";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { generateUniqueEventSlug } from "../src/lib/slug";
@@ -18,18 +19,19 @@ function computeHash(otp: string, email: string): string {
 test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   test.setTimeout(45_000);
 
-  const testEmail = "playwright.test@gmail.com";
-  const testEmailA = "playwright.flowa@gmail.com";
-  const testEmailB = "playwright.flowb@gmail.com";
-  const testEmailUnique = "playwright.unique@gmail.com";
+  const testEmail = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const testEmailA = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const testEmailB = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const testEmailUnique = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const invalidEmail = `invalid.${randomBytes(12).toString("hex")}@bad-domain.invalid`;
 
   test.beforeEach(async () => {
     // Clean up test bookings, OTPs and rate limits
     await prisma.booking.deleteMany({
-      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, invalidEmail] } },
     });
     await prisma.otpVerification.deleteMany({
-      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, invalidEmail] } },
     });
     await prisma.rateLimit.deleteMany({
       where: {
@@ -59,7 +61,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.goto("/events/majlis-ihyaa/book");
 
     await page.fill("#b-name", "Test Attendee");
-    await page.fill("#b-email", "unapproved@bad-domain.xyz");
+    await page.fill("#b-email", invalidEmail);
 
     // Select Moroccan city via Combobox
     await page.click('[data-testid="city-combobox-trigger"]');
@@ -733,7 +735,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    const uniqueEmail = `otp.caret.${Date.now()}@gmail.com`;
+    const uniqueEmail = `otp.caret.${randomBytes(12).toString("hex")}@gmail.com`;
 
     // Fill Step 1 to reach Step 2
     await page.fill("#b-name", "Caret Tester");
@@ -864,7 +866,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    const uniqueEmail = `smallscreen.${Date.now()}@gmail.com`;
+    const uniqueEmail = `smallscreen.${randomBytes(12).toString("hex")}@gmail.com`;
 
     // Fill Step 1 to reach Step 2
     await page.fill("#b-name", "Small Screen Tester");
@@ -982,7 +984,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await expect(summaryCard).not.toContainText("الدار البيضاء");
 
     // 4. Fill Step 1 details and advance to Step 2 (OTP)
-    const testEmail = `event.isolation.${Date.now()}@gmail.com`;
+    const testEmail = `event.isolation.${randomBytes(12).toString("hex")}@gmail.com`;
     await page.fill("#b-name", "Event Isolation Tester");
     await page.fill("#b-email", testEmail);
     await page.fill("#b-age", "25");
@@ -1345,7 +1347,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     const { requestBookingOtp } = await import("../src/app/actions/bookings");
     const bookRes = await requestBookingOtp({
       fullName: "Test Attendee",
-      email: "test.auto.past@gmail.com",
+      email: `past-event.${randomBytes(12).toString("hex")}@gmail.com`,
       city: "الرباط",
       age: 25,
       motive: "الحضور",

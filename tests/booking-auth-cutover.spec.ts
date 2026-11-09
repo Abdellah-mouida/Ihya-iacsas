@@ -1,11 +1,12 @@
 import { test, expect, Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 
 assertDevBranchDatabase("Booking auth cutover test");
 
-const TEST_PASSWORD = "StrongP@ssw0rd123";
+const TEST_PASSWORD = `Cutover-${randomBytes(18).toString("base64url")}!`;
 
 async function loginAsUser(page: Page, email: string, pass: string = TEST_PASSWORD, callbackUrl = "/account") {
   await prisma.rateLimit.deleteMany({
@@ -22,9 +23,9 @@ async function loginAsUser(page: Page, email: string, pass: string = TEST_PASSWO
 
 test.describe("Task 9: Booking Cutover Suite", () => {
   test.setTimeout(60000);
-  const timestamp = Date.now();
-  const testEmail = `booking.user.${timestamp}@ihyaa.org`;
-  const incompleteEmail = `booking.incomplete.${timestamp}@ihyaa.org`;
+  const suffix = randomBytes(12).toString("hex");
+  const testEmail = `booking.user.${suffix}@example.test`;
+  const incompleteEmail = `booking.incomplete.${suffix}@example.test`;
   let userId = "";
   let openEventId = "";
   let openEventSlug = "";
@@ -66,7 +67,7 @@ test.describe("Task 9: Booking Cutover Suite", () => {
     });
 
     // 3. Create an OPEN event
-    openEventSlug = `open-event-${timestamp}`;
+    openEventSlug = `open-event-${suffix}`;
     const openEvent = await prisma.event.create({
       data: {
         slug: openEventSlug,
@@ -85,7 +86,7 @@ test.describe("Task 9: Booking Cutover Suite", () => {
     openEventId = openEvent.id;
 
     // 4. Create a LIMITED event with capacity 1
-    limitedEventSlug = `limited-event-${timestamp}`;
+    limitedEventSlug = `limited-event-${suffix}`;
     const limitedEvent = await prisma.event.create({
       data: {
         slug: limitedEventSlug,

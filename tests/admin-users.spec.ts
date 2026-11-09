@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import {
@@ -12,8 +13,8 @@ import {
 assertDevBranchDatabase("Admin users test");
 
 const TEST_TARGET_USER = {
-  email: "target.member.test@ihyaa.org",
-  password: "Password123!",
+  email: `target.member.${randomBytes(12).toString("hex")}@example.test`,
+  password: `Target-${randomBytes(18).toString("base64url")}!`,
   fullName: "Target Test Member",
   role: "USER" as const,
   city: "Casablanca",
@@ -105,7 +106,7 @@ test.describe("Task 8: Admin Users Management & Role Control", () => {
     // Wait for filtered result
     await page.waitForTimeout(1000);
     await expect(page.locator("body")).toContainText("Target Test Member");
-    await expect(page.locator("body")).toContainText("target.member.test@ihyaa.org");
+    await expect(page.locator("body")).toContainText(TEST_TARGET_USER.email);
   });
 
   test("6. View Details dialog displays profile and audit history", async ({ page }) => {

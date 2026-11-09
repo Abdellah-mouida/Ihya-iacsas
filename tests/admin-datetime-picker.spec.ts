@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { loginAdmin } from "./helpers/admin-auth";
@@ -6,16 +7,12 @@ import { loginAdmin } from "./helpers/admin-auth";
 assertDevBranchDatabase("Admin date-time picker test");
 
 test.describe("Task 2: Custom Date and Time Picker", () => {
-  const testTitle = `فعالية اختبار التقويم ${Date.now()}`;
+  const testTitle = `فعالية اختبار التقويم ${randomBytes(8).toString("hex")}`;
+  const testTitleEn = `Calendar Test ${randomBytes(8).toString("hex")}`;
 
   test.afterAll(async () => {
     await prisma.event.deleteMany({
-      where: {
-        OR: [
-          { titleAr: { contains: "اختبار التقويم" } },
-          { titleEn: { contains: "Calendar Test" } },
-        ],
-      },
+      where: { OR: [{ titleAr: testTitle }, { titleEn: testTitleEn }] },
     });
   });
 
@@ -120,7 +117,7 @@ test.describe("Task 2: Custom Date and Time Picker", () => {
 
     // Fill form fields
     await page.fill('input[name="titleAr"]', testTitle);
-    await page.fill('input[name="titleEn"]', "Calendar Test Event");
+    await page.fill('input[name="titleEn"]', testTitleEn);
     await page.fill('textarea[name="descriptionAr"]', "وصف تجريبي لاختبار التقويم");
     await page.fill('textarea[name="descriptionEn"]', "Test description for calendar");
 

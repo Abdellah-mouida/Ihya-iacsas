@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { clearRateLimit } from "../src/lib/rate-limit";
@@ -8,10 +9,11 @@ assertDevBranchDatabase("Auth login test");
 
 test.describe("Task 4: Login with Credentials & Google, Rate Limiting & Account Security", () => {
   test.setTimeout(60000);
-  const verifiedEmail = "verified.user.test@ihyaa.org";
-  const unverifiedEmail = "unverified.user.test@ihyaa.org";
-  const rateLimitTargetEmail = "ratelimit.target@ihyaa.org";
-  const testPassword = "ValidPassword123!";
+  const suffix = randomBytes(12).toString("hex");
+  const verifiedEmail = `verified.${suffix}@example.test`;
+  const unverifiedEmail = `unverified.${suffix}@example.test`;
+  const rateLimitTargetEmail = `rate-limit.${suffix}@example.test`;
+  const testPassword = `Login-${randomBytes(18).toString("base64url")}!`;
 
   test.beforeAll(async () => {
     // Clean up any old test users and rate limits
@@ -129,7 +131,7 @@ test.describe("Task 4: Login with Credentials & Google, Rate Limiting & Account 
     await page.goto("/login");
     await expect(page.locator('[data-testid="login-view"]')).toBeVisible({ timeout: 15000 });
 
-    await page.locator('[data-testid="login-email-input"]').fill("nonexistent.random.user@ihyaa.org");
+    await page.locator('[data-testid="login-email-input"]').fill(`missing.${randomBytes(12).toString("hex")}@example.test`);
     await page.locator('[data-testid="login-password-input"]').fill("RandomPass123!");
     await page.locator('[data-testid="login-submit-btn"]').click();
 

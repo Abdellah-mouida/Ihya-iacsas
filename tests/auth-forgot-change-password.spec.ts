@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { clearRateLimit } from "../src/lib/rate-limit";
@@ -9,11 +10,12 @@ assertDevBranchDatabase("Forgot and change password test");
 test.describe("Task 5: Forgot Password & Forced Change Password with Session Revocation", () => {
   test.setTimeout(60000);
 
-  const resetTargetEmail = "forgot.target.test@ihyaa.org";
-  const nonExistentEmail = "does.not.exist.999@ihyaa.org";
-  const initialPassword = "InitialPassword123!";
-  const tempPasswordDirect = "TempSecretPass123!";
-  const newPermanentPassword = "BrandNewPassword2026!#";
+  const suffix = randomBytes(12).toString("hex");
+  const resetTargetEmail = `forgot.target.${suffix}@example.test`;
+  const nonExistentEmail = `not-found.${suffix}@example.test`;
+  const initialPassword = `Initial-${randomBytes(18).toString("base64url")}!`;
+  const tempPasswordDirect = `Temp-${randomBytes(18).toString("base64url")}!`;
+  const newPermanentPassword = `Permanent-${randomBytes(18).toString("base64url")}!`;
 
   async function loginAsUser(
     page: import("@playwright/test").Page,

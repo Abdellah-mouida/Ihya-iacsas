@@ -1,4 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import bcrypt from "bcryptjs";
@@ -9,8 +10,8 @@ import { loginAdmin } from "./helpers/admin-auth";
 assertDevBranchDatabase("Image cropper test");
 
 test.describe("Task 3: Reusable Image Cropper Dialog for Every Upload", () => {
-  const testEmail = `cropper.user.${Date.now()}@ihyaa.org`;
-  const testPassword = "Password123!";
+  const testEmail = `cropper.user.${randomBytes(12).toString("hex")}@example.test`;
+  const testPassword = `Cropper-${randomBytes(18).toString("base64url")}!`;
   let testUserId: string;
 
   test.beforeAll(async () => {
@@ -55,7 +56,7 @@ test.describe("Task 3: Reusable Image Cropper Dialog for Every Upload", () => {
   test("1. Onboarding avatar file selection opens ImageCropperDialog with round crop", async ({ page }) => {
     // 1. Log in
     await prisma.rateLimit.deleteMany({
-      where: { key: { contains: testEmail } },
+      where: { key: `auth_login:${testEmail}` },
     });
     await page.goto("/login?callbackUrl=/onboarding");
     await page.fill('[data-testid="login-email-input"]', testEmail);

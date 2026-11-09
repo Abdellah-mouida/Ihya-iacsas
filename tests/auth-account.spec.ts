@@ -1,12 +1,13 @@
 import { test, expect, Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 
 assertDevBranchDatabase("Auth account test");
 
-const TEST_PASSWORD = "StrongP@ssw0rd123";
-const TEST_NEW_PASSWORD = "NewStrongP@ssw0rd456";
+const TEST_PASSWORD = `Test-${randomBytes(18).toString("base64url")}!`;
+const TEST_NEW_PASSWORD = `New-${randomBytes(18).toString("base64url")}!`;
 
 async function loginAsUser(page: Page, email: string, pass: string = TEST_PASSWORD, callbackUrl = "/account") {
   await prisma.rateLimit.deleteMany({
@@ -22,9 +23,9 @@ async function loginAsUser(page: Page, email: string, pass: string = TEST_PASSWO
 
 test.describe("Account Page (/account) Feature Suite", () => {
   test.setTimeout(45000);
-  const timestamp = Date.now();
-  const testEmail = `account.tester.${timestamp}@ihyaa.org`;
-  const incompleteEmail = `incomplete.tester.${timestamp}@ihyaa.org`;
+  const suffix = randomBytes(12).toString("hex");
+  const testEmail = `account.tester.${suffix}@example.test`;
+  const incompleteEmail = `incomplete.tester.${suffix}@example.test`;
   let userId = "";
   let testEventId = "";
 
@@ -65,7 +66,7 @@ test.describe("Account Page (/account) Feature Suite", () => {
     // 3. Always create a dedicated future test event for bookings
     const event = await prisma.event.create({
       data: {
-        slug: `account-test-event-${timestamp}`,
+        slug: `account-test-event-${suffix}`,
         titleAr: "مجلس إحياء التجريبي",
         titleEn: "Ihyaa Test Council",
         descriptionAr: "وصف الفعالية التجريبية",
@@ -97,13 +98,12 @@ test.describe("Account Page (/account) Feature Suite", () => {
   });
 
   test.beforeEach(async () => {
-    // Clear any rate limits for test emails between tests
+    const emails = [testEmail, incompleteEmail];
     await prisma.rateLimit.deleteMany({
-      where: {
-        key: {
-          contains: "tester",
-        },
-      },
+      where: { key: { in: emails.flatMap((email) => [
+        `auth_login:${email}`,
+        `forgot_email_${email}`,
+      ]) } },
     }).catch(() => {});
   });
 
@@ -115,11 +115,10 @@ test.describe("Account Page (/account) Feature Suite", () => {
       },
     }).catch(() => {});
     await prisma.rateLimit.deleteMany({
-      where: {
-        key: {
-          contains: "tester",
-        },
-      },
+      where: { key: { in: [testEmail, incompleteEmail].flatMap((email) => [
+        `auth_login:${email}`,
+        `forgot_email_${email}`,
+      ]) } },
     }).catch(() => {});
     await prisma.user.deleteMany({
       where: {

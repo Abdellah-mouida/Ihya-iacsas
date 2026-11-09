@@ -1,4 +1,5 @@
 import { Page, expect } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../../src/lib/prisma";
 import bcrypt from "bcryptjs";
 import { assertDevBranchDatabase } from "./dev-guard";
@@ -6,22 +7,22 @@ import { assertDevBranchDatabase } from "./dev-guard";
 export { assertDevBranchDatabase };
 
 export const TEST_ADMIN = {
-  email: "admin.suite.test@ihyaa.test",
-  password: "AdminPassword123!",
+  email: `admin.suite.${randomBytes(12).toString("hex")}@example.test`,
+  password: `Admin-${randomBytes(18).toString("base64url")}!`,
   fullName: "مسؤول النظام التجريبي",
   role: "ADMIN" as const,
 };
 
 export const TEST_MODERATOR = {
-  email: "moderator.suite.test@ihyaa.test",
-  password: "ModPassword123!",
+  email: `moderator.suite.${randomBytes(12).toString("hex")}@example.test`,
+  password: `Mod-${randomBytes(18).toString("base64url")}!`,
   fullName: "مشرف الفعاليات التجريبي",
   role: "MODERATOR" as const,
 };
 
 export const TEST_REGULAR_USER = {
-  email: "user.suite.test@ihyaa.test",
-  password: "UserPassword123!",
+  email: `user.suite.${randomBytes(12).toString("hex")}@example.test`,
+  password: `User-${randomBytes(18).toString("base64url")}!`,
   fullName: "مستخدم عادي تجريبي",
   role: "USER" as const,
 };

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import { hashOtp } from "../src/lib/otp";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 
@@ -8,15 +9,15 @@ assertDevBranchDatabase("Signup test");
 const prisma = new PrismaClient();
 
 test.describe("Task 3: Sign Up and Email Verification", () => {
-  const testEmail = `test.user.${Date.now()}@example.com`;
-  const testPassword = "Password123!";
+  const testEmail = `signup.${randomBytes(12).toString("hex")}@example.test`;
+  const testPassword = `Signup-${randomBytes(18).toString("base64url")}!`;
   const testName = "عبد الله المرابط";
 
   test.afterAll(async () => {
     // Cleanup test records
-    await prisma.otpVerification.deleteMany({ where: { email: { contains: "test.user." } } });
-    await prisma.booking.deleteMany({ where: { email: { contains: "test.user." } } });
-    await prisma.user.deleteMany({ where: { email: { contains: "test.user." } } });
+    await prisma.otpVerification.deleteMany({ where: { email: testEmail } });
+    await prisma.booking.deleteMany({ where: { email: testEmail } });
+    await prisma.user.deleteMany({ where: { email: testEmail } });
     await prisma.$disconnect();
   });
 

@@ -2,13 +2,14 @@ import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
 assertDevBranchDatabase("Navbar auth test");
 
 test.describe("Task 8: Navbar Auth State & Entry Points", () => {
   const testUser = {
-    email: "navbar.user.test@ihyaa.test",
-    password: "Password123!",
+    email: `navbar.user.${randomBytes(12).toString("hex")}@example.test`,
+    password: `Navbar-${randomBytes(18).toString("base64url")}!`,
     fullName: "طارق الإدريسي",
     city: "Casablanca",
     age: 24,

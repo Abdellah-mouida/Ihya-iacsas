@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { execSync } from "child_process";
 import type { Role } from "@prisma/client";
 import {
@@ -103,8 +104,9 @@ test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", ()
 
   test("6. Every newly registered user receives USER role, and users cannot modify their own role", async () => {
     test.setTimeout(90000);
-    const firstEmail = `user1.${Date.now()}@example.test`;
-    const secondEmail = `user2.${Date.now()}@example.test`;
+    const suffix = randomBytes(12).toString("hex");
+    const firstEmail = `user1.${suffix}@example.test`;
+    const secondEmail = `user2.${suffix}@example.test`;
 
     // Create first user in isolation
     const firstUser = await prisma.user.create({
@@ -150,7 +152,7 @@ test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", ()
   });
 
   test("7. touchUserActive() updates lastActiveAt and respects 5-minute throttling", async () => {
-    const testEmail = `activity.test.${Date.now()}@ihyaa.org`;
+    const testEmail = `activity.test.${randomBytes(12).toString("hex")}@example.test`;
     const testUser = await prisma.user.create({
       data: {
         email: testEmail,
