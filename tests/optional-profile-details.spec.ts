@@ -1,10 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import {
   TEST_ADMIN,
   ensureTestUser,
   loginAs,
 } from "./helpers/admin-auth";
+
+assertDevBranchDatabase("Optional profile details test");
 
 const TEST_PROFILE_USER = {
   email: "profile.tester.2026@ihyaa.test",

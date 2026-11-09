@@ -12,6 +12,9 @@ import {
 } from "../src/lib/permissions";
 import { touchUserActive } from "../src/lib/activity";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
+
+assertDevBranchDatabase("Roles foundation test");
 
 test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", () => {
   test("1. Permissions matrix accurately enforces USER permissions", () => {

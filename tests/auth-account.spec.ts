@@ -1,6 +1,9 @@
 import { test, expect, Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
+
+assertDevBranchDatabase("Auth account test");
 
 const TEST_PASSWORD = "StrongP@ssw0rd123";
 const TEST_NEW_PASSWORD = "NewStrongP@ssw0rd456";

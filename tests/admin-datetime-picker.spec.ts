@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { loginAdmin } from "./helpers/admin-auth";
+
+assertDevBranchDatabase("Admin date-time picker test");
 
 test.describe("Task 2: Custom Date and Time Picker", () => {
   const testTitle = `فعالية اختبار التقويم ${Date.now()}`;

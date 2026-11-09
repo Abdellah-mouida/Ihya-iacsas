@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { clearRateLimit } from "../src/lib/rate-limit";
+
+assertDevBranchDatabase("Auth onboarding test");
 
 test.describe("Task 6: Onboarding Multi-step Flow & Server Enforcement", () => {
   test.setTimeout(60000);

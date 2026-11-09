@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { hashOtp } from "../src/lib/otp";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
+
+assertDevBranchDatabase("Signup test");
 
 const prisma = new PrismaClient();
 

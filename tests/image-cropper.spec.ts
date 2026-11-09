@@ -1,9 +1,12 @@
 import { test, expect, Page } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import bcrypt from "bcryptjs";
 import path from "path";
 import fs from "fs";
 import { loginAdmin } from "./helpers/admin-auth";
+
+assertDevBranchDatabase("Image cropper test");
 
 test.describe("Task 3: Reusable Image Cropper Dialog for Every Upload", () => {
   const testEmail = `cropper.user.${Date.now()}@ihyaa.org`;

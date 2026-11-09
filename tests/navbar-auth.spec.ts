@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import bcrypt from "bcryptjs";
+
+assertDevBranchDatabase("Navbar auth test");
 
 test.describe("Task 8: Navbar Auth State & Entry Points", () => {
   const testUser = {

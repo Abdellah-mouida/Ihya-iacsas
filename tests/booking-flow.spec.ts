@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 import crypto from "crypto";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { generateUniqueEventSlug } from "../src/lib/slug";
+
+assertDevBranchDatabase("Booking flow test");
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 

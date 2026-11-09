@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import {
   TEST_ADMIN,
   TEST_MODERATOR,
@@ -7,6 +8,8 @@ import {
   ensureTestUser,
   loginAs,
 } from "./helpers/admin-auth";
+
+assertDevBranchDatabase("Admin users test");
 
 const TEST_TARGET_USER = {
   email: "target.member.test@ihyaa.org",

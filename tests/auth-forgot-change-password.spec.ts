@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { clearRateLimit } from "../src/lib/rate-limit";
+
+assertDevBranchDatabase("Forgot and change password test");
 
 test.describe("Task 5: Forgot Password & Forced Change Password with Session Revocation", () => {
   test.setTimeout(60000);

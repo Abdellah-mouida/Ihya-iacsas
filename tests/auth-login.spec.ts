@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { clearRateLimit } from "../src/lib/rate-limit";
+
+assertDevBranchDatabase("Auth login test");
 
 test.describe("Task 4: Login with Credentials & Google, Rate Limiting & Account Security", () => {
   test.setTimeout(60000);
