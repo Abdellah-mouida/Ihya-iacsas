@@ -128,6 +128,8 @@ export function UserAvatar({
 
   // Reset error state if image src changes
   useEffect(() => {
+    // A new image source starts a new loading attempt.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setImageError(false);
   }, [imageSrc]);
 

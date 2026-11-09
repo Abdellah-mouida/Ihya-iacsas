@@ -33,6 +33,7 @@ export async function ensureTestUser(user: {
   role: "USER" | "MODERATOR" | "ADMIN";
   city?: string;
   age?: number;
+  image?: string | null;
 }) {
   assertDevBranchDatabase("Test User Setup");
   const passwordHash = await bcrypt.hash(user.password, 10);
@@ -44,6 +45,7 @@ export async function ensureTestUser(user: {
       role: user.role,
       city: user.city ?? null,
       age: user.age ?? null,
+      ...(user.image !== undefined ? { image: user.image } : {}),
       emailVerified: new Date(),
       onboardingCompletedAt: new Date(),
       termsAcceptedAt: new Date(),
@@ -56,6 +58,7 @@ export async function ensureTestUser(user: {
       role: user.role,
       city: user.city ?? null,
       age: user.age ?? null,
+      image: user.image ?? null,
       emailVerified: new Date(),
       onboardingCompletedAt: new Date(),
       termsAcceptedAt: new Date(),

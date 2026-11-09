@@ -101,6 +101,8 @@ export default function AdminCarouselPage() {
   };
 
   useEffect(() => {
+    // The async server action resolves before it updates this page's loaded data.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPosts();
   }, []);
 

@@ -5,6 +5,17 @@ import fs from "fs";
 import { execSync } from "child_process";
 import { assertDevBranchDatabase, loginAdmin } from "./helpers/admin-auth";
 
+function isCloudinaryNotFound(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("error" in error)) {
+    return false;
+  }
+  const details = error.error;
+  return (
+    typeof details === "object" && details !== null && "http_code" in details &&
+    details.http_code === 404
+  ) || ("http_code" in error && error.http_code === 404);
+}
+
 test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
   const testContactEmail = `contact-${randomBytes(12).toString("hex")}@example.test`;
 
@@ -628,9 +639,11 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       let assetAStillExists = true;
       try {
         await cloudinary.api.resource(publicIdA);
-      } catch (notFoundErr: any) {
-        if (notFoundErr?.error?.http_code === 404 || notFoundErr?.http_code === 404) {
+      } catch (notFoundErr: unknown) {
+        if (isCloudinaryNotFound(notFoundErr)) {
           assetAStillExists = false;
+        } else {
+          throw notFoundErr;
         }
       }
       expect(assetAStillExists).toBe(false);
@@ -646,9 +659,11 @@ test.describe("Admin Polish, Contacts, Navbar Theme & Error Pages", () => {
       let assetBStillExists = true;
       try {
         await cloudinary.api.resource(publicIdB);
-      } catch (notFoundErr: any) {
-        if (notFoundErr?.error?.http_code === 404 || notFoundErr?.http_code === 404) {
+      } catch (notFoundErr: unknown) {
+        if (isCloudinaryNotFound(notFoundErr)) {
           assetBStillExists = false;
+        } else {
+          throw notFoundErr;
         }
       }
       expect(assetBStillExists).toBe(false);

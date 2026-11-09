@@ -38,6 +38,8 @@ export function EventFlyerDialog({
   // Reset zoom on open/close
   useEffect(() => {
     if (!isOpen) {
+      // Reset transient zoom state after the modal closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsZoomed(false);
     }
   }, [isOpen]);

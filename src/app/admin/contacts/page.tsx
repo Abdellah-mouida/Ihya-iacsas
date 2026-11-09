@@ -48,6 +48,8 @@ export default function AdminContactsPage() {
   };
 
   useEffect(() => {
+    // This fetch initializes the route's server-backed table state after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, []);
 

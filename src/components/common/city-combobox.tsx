@@ -52,6 +52,8 @@ export function CityCombobox({
         searchInputRef.current?.focus();
       }, 50);
     } else {
+      // Clear transient search text when the popover closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
     }
   }, [open]);

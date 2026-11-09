@@ -197,8 +197,7 @@ test.describe("Task 8: Admin Users Management & Role Control", () => {
       orderBy: { createdAt: "desc" },
     });
     expect(audit).not.toBeNull();
-    expect((audit?.details as any)?.newRole).toBe("MODERATOR");
-    expect((audit?.details as any)?.previousRole).toBe("USER");
+    expect(audit?.details).toMatchObject({ newRole: "MODERATOR", previousRole: "USER" });
   });
 
   test("8. Admin row has '(You)' indicator and disables self-role-change and self-deletion", async ({

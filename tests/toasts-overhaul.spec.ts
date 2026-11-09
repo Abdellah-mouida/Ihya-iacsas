@@ -1,15 +1,26 @@
 import { test, expect } from "@playwright/test";
 
+declare global {
+  interface Window {
+    __IHYAA_TOAST__?: {
+      error: (message: string) => void;
+      info: (message: string) => void;
+      clearAll: () => void;
+    };
+  }
+}
+
 test.describe("Toasts Overhaul & Deduplication System", () => {
   test("firing same toast multiple times shows 1 toast with deduplication badge (e.g. ×5)", async ({ page }) => {
     await page.goto("/login");
 
     // Wait for window.__IHYAA_TOAST__ to be available
-    await page.waitForFunction(() => typeof (window as any).__IHYAA_TOAST__ !== "undefined");
+    await page.waitForFunction(() => typeof window.__IHYAA_TOAST__ !== "undefined");
 
     // Fire toast 5 times with identical message
     await page.evaluate(() => {
-      const toast = (window as any).__IHYAA_TOAST__;
+      const toast = window.__IHYAA_TOAST__;
+      if (!toast) throw new Error("Toast API is unavailable");
       for (let i = 0; i < 5; i++) {
         toast.error("بيانات الاعتماد غير صالحة");
       }
@@ -29,17 +40,19 @@ test.describe("Toasts Overhaul & Deduplication System", () => {
     await page.goto("/login");
 
     // Wait for window.__IHYAA_TOAST__ to be available
-    await page.waitForFunction(() => typeof (window as any).__IHYAA_TOAST__ !== "undefined");
+    await page.waitForFunction(() => typeof window.__IHYAA_TOAST__ !== "undefined");
 
     // Clear any previous toasts
     await page.evaluate(() => {
-      const toast = (window as any).__IHYAA_TOAST__;
+      const toast = window.__IHYAA_TOAST__;
+      if (!toast) throw new Error("Toast API is unavailable");
       toast.clearAll();
     });
 
     // Fire 6 different toasts
     await page.evaluate(() => {
-      const toast = (window as any).__IHYAA_TOAST__;
+      const toast = window.__IHYAA_TOAST__;
+      if (!toast) throw new Error("Toast API is unavailable");
       for (let i = 1; i <= 6; i++) {
         toast.info(`رسالة تنبيه تجريبية رقم ${i}`);
       }

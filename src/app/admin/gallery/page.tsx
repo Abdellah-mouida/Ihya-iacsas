@@ -95,6 +95,8 @@ export default function AdminGalleryPage() {
   };
 
   useEffect(() => {
+    // This fetch initializes the route's server-backed gallery state after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPhotos();
   }, []);
 

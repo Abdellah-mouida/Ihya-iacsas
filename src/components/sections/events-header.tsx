@@ -31,10 +31,7 @@ export function EventsHeader({
   });
 
   useEffect(() => {
-    if (initialOpenCount !== undefined && initialPastCount !== undefined) {
-      setCounts({ open: initialOpenCount, past: initialPastCount });
-      return;
-    }
+    if (initialOpenCount !== undefined && initialPastCount !== undefined) return;
     let ignore = false;
     getPublicEvents().then((res) => {
       if (!ignore && res.success) {

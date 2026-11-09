@@ -57,9 +57,13 @@ export function LoginView() {
     if (!errorParam) return;
 
     if (errorParam === "access_denied" || errorParam === "OAuthCallbackError_access_denied") {
+      // Mirror the URL-provided OAuth result into the localized form state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(t("auth.oauthCancelled"));
       toast.error(t("auth.oauthCancelled"));
     } else {
+      // Mirror the URL-provided OAuth result into the localized form state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(t("auth.oauthError"));
       toast.error(t("auth.oauthError"));
     }

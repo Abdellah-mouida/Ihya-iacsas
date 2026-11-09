@@ -25,6 +25,8 @@ export function VerifyEmailView() {
 
   useEffect(() => {
     if (emailParam) {
+      // A changed query parameter replaces the verification form's address.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(emailParam);
     }
   }, [emailParam]);

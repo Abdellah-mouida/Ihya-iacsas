@@ -40,6 +40,8 @@ export function ThemeToggle({
   );
 
   useEffect(() => {
+    // This hydration flag intentionally prevents a theme icon mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     fetch("/api/themes")
       .then((res) => res.json())
@@ -56,6 +58,8 @@ export function ThemeToggle({
     document.documentElement.setAttribute("data-theme", th.slug);
     try {
       localStorage.setItem("ihyaa-theme", th.slug);
+      // The cookie is an imperative theme preference consumed by the server.
+      // eslint-disable-next-line react-hooks/immutability
       document.cookie = `ihyaa-theme=${th.slug}; path=/; max-age=31536000; SameSite=Lax`;
     } catch {}
   };

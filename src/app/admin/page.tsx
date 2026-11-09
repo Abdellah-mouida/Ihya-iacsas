@@ -63,6 +63,8 @@ export default function AdminOverviewPage() {
   };
 
   useEffect(() => {
+    // This async loader refreshes data when the selected locale changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [locale]);
 

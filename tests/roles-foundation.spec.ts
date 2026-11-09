@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "child_process";
+import type { Role } from "@prisma/client";
 import {
   can,
   hasAnyPermission,
@@ -82,7 +83,7 @@ test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", ()
   test("4. Unauthenticated / null / undefined roles return false for all actions", () => {
     expect(can(null, "events:view")).toBe(false);
     expect(can(undefined, "events:view")).toBe(false);
-    expect(can("UNKNOWN_ROLE" as any, "events:view")).toBe(false);
+    expect(can("UNKNOWN_ROLE" as Role, "events:view")).toBe(false);
     expect(hasAnyPermission(null, ["events:view", "users:view"])).toBe(false);
     expect(getPermissionsForRole(null)).toEqual([]);
   });
