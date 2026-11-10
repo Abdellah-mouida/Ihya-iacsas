@@ -7,7 +7,7 @@ for (const width of widths) {
   const output = `public/images/group-portrait-hero-${width}.avif`;
   const result = await sharp(source)
     .resize({ width })
-    .avif({ quality: 60, effort: 4 })
+    .avif({ quality: 48, effort: 4 })
     .toFile(output);
   process.stdout.write(`${output}: ${result.width}×${result.height}, ${result.size} bytes\n`);
 }
