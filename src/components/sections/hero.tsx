@@ -17,6 +17,12 @@ const STICKERS = [
   "hero.stickerGiving",
 ] as const;
 
+function groupPortraitLoader({ width }: { width: number }) {
+  // Use pre-encoded AVIF widths so first-view LCP does not wait for a cold optimizer encode.
+  if (width >= 3840) return IMAGES.groupPortrait;
+  return `/images/group-portrait-hero-${width}.avif`;
+}
+
 export function Hero() {
   const { t, dir } = useLocale();
   const heroRef = useRef<HTMLElement>(null);
@@ -133,12 +139,13 @@ export function Hero() {
           >
             <div data-testid="hero-photo-frame" className={`${styles.photoReveal} relative aspect-[1.351/1] overflow-hidden`}>
               <Image
-                src={IMAGES.groupPortrait}
+                src={IMAGES.groupPortraitHero}
+                loader={groupPortraitLoader}
                 alt={t("hero.photoAlt")}
                 fill
                 priority
                 fetchPriority="high"
-                sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), 56vw"
+                sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"
                 className={`${styles.photoDrift} object-cover object-center`}
               />
             </div>

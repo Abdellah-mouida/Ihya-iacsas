@@ -13,6 +13,7 @@ export const IMAGES = {
   prayer: "/images/prayer.jpg",
   gathering: "/images/gathering.jpg",
   groupPortrait: "/images/group-portrait.avif",
+  groupPortraitHero: "/images/group-portrait-hero-1800.avif",
   logoBanner: "/images/logo-banner.jpg",
   logoCircle: "/images/logo-circle.png",
   defaultPoster: "/images/gathering.jpg",

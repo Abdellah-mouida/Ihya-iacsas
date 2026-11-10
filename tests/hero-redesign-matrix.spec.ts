@@ -63,7 +63,7 @@ test.describe("Home hero redesign", () => {
           const image = hero.locator("img[src*='group-portrait']").first();
           await expect(image).toBeVisible();
           await image.evaluate((node: HTMLImageElement) => node.decode());
-          expect(await image.getAttribute("sizes")).toContain("56vw");
+          expect(await image.getAttribute("sizes")).toContain("607px");
           const geometry = await page.evaluate(() => {
             const frame = document.querySelector("#home [data-testid='hero-frame']") as HTMLElement | null;
             const copy = document.querySelector("#home [data-testid='hero-copy']") as HTMLElement | null;
@@ -106,6 +106,15 @@ test.describe("Home hero redesign", () => {
           for (const width of WIDTHS) {
             await page.evaluate(() => window.scrollTo(0, 0));
             await page.setViewportSize({ width, height: 900 });
+            const responsiveImage = await image.evaluate(async (node: HTMLImageElement) => {
+              await node.decode();
+              return {
+                src: node.currentSrc,
+                ratio: node.naturalWidth / node.naturalHeight,
+              };
+            });
+            expect(responsiveImage.src).toContain("group-portrait-hero-");
+            expect(responsiveImage.ratio).toBeCloseTo(4096 / 3032, 1);
             await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
             const seamDocumentY = await hero.evaluate((node) => Math.round(node.getBoundingClientRect().bottom + window.scrollY));
             await page.evaluate((y) => window.scrollTo(0, Math.max(0, y - 400)), seamDocumentY);
