@@ -1,0 +1,194 @@
+[
+  {
+    "id": "beni-mellal-khenifra",
+    "type": "region",
+    "name": {
+      "en": "Beni Mellal-Khenifra",
+      "fr": "Béni Mellal-Khénifra",
+      "ar": "بني ملال-خنيفرة"
+    },
+    "country": "MA",
+    "isoCode": "MA-05",
+    "population": {
+      "total": 2525801,
+      "urban": 1283492,
+      "rural": 1242309
+    }
+  },
+  {
+    "id": "casablanca-settat",
+    "type": "region",
+    "name": {
+      "en": "Casablanca-Settat",
+      "fr": "Casablanca-Settat",
+      "ar": "الدار البيضاء-سطات"
+    },
+    "country": "MA",
+    "isoCode": "MA-06",
+    "population": {
+      "total": 7688967,
+      "urban": 5633748,
+      "rural": 2055219
+    }
+  },
+  {
+    "id": "dakhla-oued-ed-dahab",
+    "type": "region",
+    "name": {
+      "en": "Dakhla-Oued Ed-Dahab",
+      "fr": "Dakhla-Oued Ed-Dahab",
+      "ar": "الداخلة-وادي الذهب"
+    },
+    "country": "MA",
+    "isoCode": "MA-12",
+    "population": {
+      "total": 219965,
+      "urban": 176836,
+      "rural": 43129
+    }
+  },
+  {
+    "id": "draa-tafilalet",
+    "type": "region",
+    "name": {
+      "en": "Draa-Tafilalet",
+      "fr": "Drâa-Tafilalet",
+      "ar": "درعة-تافيلالت"
+    },
+    "country": "MA",
+    "isoCode": "MA-08",
+    "population": {
+      "total": 1655623,
+      "urban": 607724,
+      "rural": 1047899
+    }
+  },
+  {
+    "id": "fes-meknes",
+    "type": "region",
+    "name": {
+      "en": "Fes-Meknes",
+      "fr": "Fès-Meknès",
+      "ar": "فاس-مكناس"
+    },
+    "country": "MA",
+    "isoCode": "MA-03",
+    "population": {
+      "total": 4467911,
+      "urban": 2855366,
+      "rural": 1612545
+    }
+  },
+  {
+    "id": "guelmim-oued-noun",
+    "type": "region",
+    "name": {
+      "en": "Guelmim-Oued Noun",
+      "fr": "Guelmim-Oued Noun",
+      "ar": "كلميم-واد نون"
+    },
+    "country": "MA",
+    "isoCode": "MA-10",
+    "population": {
+      "total": 448685,
+      "urban": 299543,
+      "rural": 149142
+    }
+  },
+  {
+    "id": "laayoune-sakia-el-hamra",
+    "type": "region",
+    "name": {
+      "en": "Laayoune-Sakia El Hamra",
+      "fr": "Laâyoune-Sakia El Hamra",
+      "ar": "العيون-الساقية الحمراء"
+    },
+    "country": "MA",
+    "isoCode": "MA-11",
+    "population": {
+      "total": 451028,
+      "urban": 416636,
+      "rural": 34392
+    }
+  },
+  {
+    "id": "marrakech-safi",
+    "type": "region",
+    "name": {
+      "en": "Marrakech-Safi",
+      "fr": "Marrakech-Safi",
+      "ar": "مراكش-آسفي"
+    },
+    "country": "MA",
+    "isoCode": "MA-07",
+    "population": {
+      "total": 4892393,
+      "urban": 2248954,
+      "rural": 2643439
+    }
+  },
+  {
+    "id": "oriental",
+    "type": "region",
+    "name": {
+      "en": "Oriental",
+      "fr": "Oriental",
+      "ar": "الشرق"
+    },
+    "country": "MA",
+    "isoCode": "MA-02",
+    "population": {
+      "total": 2294665,
+      "urban": 1505714,
+      "rural": 788951
+    }
+  },
+  {
+    "id": "rabat-sale-kenitra",
+    "type": "region",
+    "name": {
+      "en": "Rabat-Sale-Kenitra",
+      "fr": "Rabat-Salé-Kénitra",
+      "ar": "الرباط-سلا-القنيطرة"
+    },
+    "country": "MA",
+    "isoCode": "MA-04",
+    "population": {
+      "total": 5132639,
+      "urban": 3627178,
+      "rural": 1505461
+    }
+  },
+  {
+    "id": "souss-massa",
+    "type": "region",
+    "name": {
+      "en": "Souss-Massa",
+      "fr": "Souss-Massa",
+      "ar": "سوس-ماسة"
+    },
+    "country": "MA",
+    "isoCode": "MA-09",
+    "population": {
+      "total": 3020431,
+      "urban": 1816102,
+      "rural": 1204329
+    }
+  },
+  {
+    "id": "tanger-tetouan-al-hoceima",
+    "type": "region",
+    "name": {
+      "en": "Tanger-Tetouan-Al Hoceima",
+      "fr": "Tanger-Tétouan-Al Hoceïma",
+      "ar": "طنجة-تطوان-الحسيمة"
+    },
+    "country": "MA",
+    "isoCode": "MA-01",
+    "population": {
+      "total": 4030222,
+      "urban": 2638815,
+      "rural": 1391407
+    }
+  }
+]

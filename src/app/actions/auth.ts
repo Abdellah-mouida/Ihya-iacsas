@@ -11,7 +11,7 @@ import { sendAccountVerificationEmail, sendTempPasswordEmail } from "@/lib/email
 import { generateTempPassword, validatePasswordStrength } from "@/lib/password";
 import { uploadImageToCloudinaryDetailed, deleteImageFromCloudinary } from "@/lib/cloudinary";
 import { safeRevalidatePath } from "@/lib/cache";
-import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { findMoroccanCity } from "@/data/morocco";
 import { logActivity } from "@/lib/audit";
 
 async function getClientIp(): Promise<string> {
@@ -670,15 +670,15 @@ export async function completeOnboarding(
     };
   }
 
-  // Validate city against MOROCCAN_CITIES list or non-empty string
-  const cityMatch = MOROCCAN_CITIES.find(
-    (c) =>
-      c.id.toLowerCase() === city.toLowerCase() ||
-      c.nameAr.toLowerCase() === city.toLowerCase() ||
-      c.nameEn.toLowerCase() === city.toLowerCase(),
-  );
+  const cityMatch = findMoroccanCity(city);
+  if (!cityMatch) {
+    return {
+      success: false,
+      error: isAr ? "يرجى اختيار مدينتك" : "Please select your city",
+    };
+  }
 
-  const normalizedCity = cityMatch ? (isAr ? cityMatch.nameAr : cityMatch.nameEn) : city;
+  const normalizedCity = isAr ? cityMatch.nameAr : cityMatch.nameEn;
 
   const age = typeof ageRaw === "string" ? parseInt(ageRaw, 10) : Number(ageRaw);
   if (!age || isNaN(age) || age < 10 || age > 120) {

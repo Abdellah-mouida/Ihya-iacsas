@@ -3,7 +3,7 @@
 import { Check, ChevronsUpDown, MapPin, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { MOROCCAN_CITIES, type MoroccanCity } from "@/lib/moroccan-cities";
+import { findMoroccanCity, MOROCCAN_CITIES, normalizeMoroccanCityValue } from "@/data/morocco";
 import { cn } from "@/lib/utils";
 
 type CityComboboxProps = {
@@ -61,25 +61,18 @@ export function CityCombobox({
   // Find currently selected city
   const selectedCity = useMemo(() => {
     if (!value) return null;
-    const norm = value.trim().toLowerCase();
-    return (
-      MOROCCAN_CITIES.find(
-        (c) =>
-          c.id === norm ||
-          c.nameAr.toLowerCase() === norm ||
-          c.nameEn.toLowerCase() === norm,
-      ) || null
-    );
+    return findMoroccanCity(value) || null;
   }, [value]);
 
   const filteredCities = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = normalizeMoroccanCityValue(query);
     if (!q) return MOROCCAN_CITIES;
     return MOROCCAN_CITIES.filter(
       (c) =>
-        c.nameAr.toLowerCase().includes(q) ||
-        c.nameEn.toLowerCase().includes(q) ||
-        c.id.toLowerCase().includes(q),
+        normalizeMoroccanCityValue(c.nameAr).includes(q) ||
+        normalizeMoroccanCityValue(c.nameEn).includes(q) ||
+        normalizeMoroccanCityValue(c.nameFr).includes(q) ||
+        normalizeMoroccanCityValue(c.id).includes(q),
     );
   }, [query]);
 

@@ -11,6 +11,7 @@ import { changePassword } from "@/app/actions/auth";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
 import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { findMoroccanCity } from "@/data/morocco";
 import { ProfileTagEditor } from "@/components/settings/profile-tag-editor";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { PatternCover } from "@/components/common/pattern-cover";
@@ -90,6 +91,7 @@ export function SettingsView({
   // Profile Form States
   const [name, setName] = useState(userData.name || "");
   const [city, setCity] = useState(userData.city || "");
+  const selectedCity = findMoroccanCity(city);
   const [age, setAge] = useState(userData.age ? String(userData.age) : "");
   const [bio, setBio] = useState(userData.bio || "");
   const [studyLevel, setStudyLevel] = useState(userData.studyLevel || "");
@@ -465,7 +467,7 @@ export function SettingsView({
                   <div>
                     <Label className="text-xs font-semibold">{isAr ? "المدينة" : "City"}</Label>
                     <select
-                      value={city}
+                      value={selectedCity ? (isAr ? selectedCity.nameAr : selectedCity.nameEn) : city}
                       onChange={(e) => setCity(e.target.value)}
                       className="mt-1 w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground"
                     >

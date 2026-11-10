@@ -7,7 +7,7 @@ import {
   uploadImageToCloudinaryDetailed,
 } from "@/lib/cloudinary";
 import { isEventEnded } from "@/lib/event-time";
-import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { findMoroccanCity } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
@@ -319,10 +319,8 @@ export async function updateUserProfile(
     };
   }
 
-  const validCity = MOROCCAN_CITIES.some(
-    (c) => c.nameAr === city || c.nameEn.toLowerCase() === city.toLowerCase(),
-  );
-  if (!city || !validCity) {
+  const cityMatch = findMoroccanCity(city);
+  if (!cityMatch) {
     return {
       success: false,
       error: isAr
@@ -485,7 +483,7 @@ export async function updateUserProfile(
       where: { id: session.user.id },
       data: {
         name,
-        city,
+        city: isAr ? cityMatch.nameAr : cityMatch.nameEn,
         age: ageNum,
         image: finalImageUrl,
         imagePublicId: finalImagePublicId,

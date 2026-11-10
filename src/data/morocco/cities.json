@@ -1,0 +1,962 @@
+[
+  {
+    "id": "agadir",
+    "type": "city",
+    "name": {
+      "en": "Agadir",
+      "fr": "Agadir",
+      "ar": "أكادير"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "coordinates": {
+      "latitude": 30.4278,
+      "longitude": -9.5981
+    }
+  },
+  {
+    "id": "al-hoceima",
+    "type": "city",
+    "name": {
+      "en": "Al Hoceima",
+      "fr": "Al Hoceïma",
+      "ar": "الحسيمة"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 35.2517,
+      "longitude": -3.9372
+    }
+  },
+  {
+    "id": "assa",
+    "type": "city",
+    "name": {
+      "en": "Assa",
+      "fr": "Assa",
+      "ar": "آسا"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "coordinates": {
+      "latitude": 28.6086,
+      "longitude": -9.4269
+    }
+  },
+  {
+    "id": "azilal",
+    "type": "city",
+    "name": {
+      "en": "Azilal",
+      "fr": "Azilal",
+      "ar": "أزيلال"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "coordinates": {
+      "latitude": 31.9616,
+      "longitude": -6.5718
+    }
+  },
+  {
+    "id": "benguerir",
+    "type": "city",
+    "name": {
+      "en": "Benguerir",
+      "fr": "Benguerir",
+      "ar": "ابن جرير"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 32.236,
+      "longitude": -7.9538
+    }
+  },
+  {
+    "id": "beni-mellal",
+    "type": "city",
+    "name": {
+      "en": "Beni Mellal",
+      "fr": "Béni Mellal",
+      "ar": "بني ملال"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "coordinates": {
+      "latitude": 32.3373,
+      "longitude": -6.3498
+    }
+  },
+  {
+    "id": "benslimane",
+    "type": "city",
+    "name": {
+      "en": "Benslimane",
+      "fr": "Benslimane",
+      "ar": "بنسليمان"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "coordinates": {
+      "latitude": 33.6186,
+      "longitude": -7.121
+    }
+  },
+  {
+    "id": "berkane",
+    "type": "city",
+    "name": {
+      "en": "Berkane",
+      "fr": "Berkane",
+      "ar": "بركان"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 34.92,
+      "longitude": -2.32
+    }
+  },
+  {
+    "id": "berrechid",
+    "type": "city",
+    "name": {
+      "en": "Berrechid",
+      "fr": "Berrechid",
+      "ar": "برشيد"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "coordinates": {
+      "latitude": 33.2655,
+      "longitude": -7.5875
+    }
+  },
+  {
+    "id": "boujdour",
+    "type": "city",
+    "name": {
+      "en": "Boujdour",
+      "fr": "Boujdour",
+      "ar": "بوجدور"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "coordinates": {
+      "latitude": 26.1256,
+      "longitude": -14.4847
+    }
+  },
+  {
+    "id": "casablanca",
+    "type": "city",
+    "name": {
+      "en": "Casablanca",
+      "fr": "Casablanca",
+      "ar": "الدار البيضاء"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "coordinates": {
+      "latitude": 33.5731,
+      "longitude": -7.5898
+    }
+  },
+  {
+    "id": "chefchaouen",
+    "type": "city",
+    "name": {
+      "en": "Chefchaouen",
+      "fr": "Chefchaouen",
+      "ar": "شفشاون"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 35.1688,
+      "longitude": -5.2636
+    }
+  },
+  {
+    "id": "chichaoua",
+    "type": "city",
+    "name": {
+      "en": "Chichaoua",
+      "fr": "Chichaoua",
+      "ar": "شيشاوة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 31.545,
+      "longitude": -8.765
+    }
+  },
+  {
+    "id": "dakhla",
+    "type": "city",
+    "name": {
+      "en": "Dakhla",
+      "fr": "Dakhla",
+      "ar": "الداخلة"
+    },
+    "country": "MA",
+    "region": "dakhla-oued-ed-dahab",
+    "coordinates": {
+      "latitude": 23.6848,
+      "longitude": -15.958
+    }
+  },
+  {
+    "id": "el-jadida",
+    "type": "city",
+    "name": {
+      "en": "El Jadida",
+      "fr": "El Jadida",
+      "ar": "الجديدة"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "coordinates": {
+      "latitude": 33.2543,
+      "longitude": -8.5063
+    }
+  },
+  {
+    "id": "el-kelaa-des-sraghna",
+    "type": "city",
+    "name": {
+      "en": "El Kelaa des Sraghna",
+      "fr": "El Kelaâ des Sraghna",
+      "ar": "قلعة السراغنة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 32.0481,
+      "longitude": -7.4083
+    }
+  },
+  {
+    "id": "errachidia",
+    "type": "city",
+    "name": {
+      "en": "Errachidia",
+      "fr": "Errachidia",
+      "ar": "الرشيدية"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "coordinates": {
+      "latitude": 31.9314,
+      "longitude": -4.4244
+    }
+  },
+  {
+    "id": "essaouira",
+    "type": "city",
+    "name": {
+      "en": "Essaouira",
+      "fr": "Essaouira",
+      "ar": "الصويرة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 31.5085,
+      "longitude": -9.7595
+    }
+  },
+  {
+    "id": "es-semara",
+    "type": "city",
+    "name": {
+      "en": "Es-Semara",
+      "fr": "Es-Semara",
+      "ar": "السمارة"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "coordinates": {
+      "latitude": 26.7384,
+      "longitude": -11.6719
+    }
+  },
+  {
+    "id": "fes",
+    "type": "city",
+    "name": {
+      "en": "Fes",
+      "fr": "Fès",
+      "ar": "فاس"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "coordinates": {
+      "latitude": 34.0181,
+      "longitude": -5.0078
+    }
+  },
+  {
+    "id": "figuig",
+    "type": "city",
+    "name": {
+      "en": "Figuig",
+      "fr": "Figuig",
+      "ar": "فجيج"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 32.1089,
+      "longitude": -1.2286
+    }
+  },
+  {
+    "id": "fquih-ben-salah",
+    "type": "city",
+    "name": {
+      "en": "Fquih Ben Salah",
+      "fr": "Fquih Ben Salah",
+      "ar": "الفقيه بن صالح"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "coordinates": {
+      "latitude": 32.5021,
+      "longitude": -6.6906
+    }
+  },
+  {
+    "id": "guelmim",
+    "type": "city",
+    "name": {
+      "en": "Guelmim",
+      "fr": "Guelmim",
+      "ar": "كلميم"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "coordinates": {
+      "latitude": 28.987,
+      "longitude": -10.0574
+    }
+  },
+  {
+    "id": "guercif",
+    "type": "city",
+    "name": {
+      "en": "Guercif",
+      "fr": "Guercif",
+      "ar": "جرسيف"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 34.2257,
+      "longitude": -3.3536
+    }
+  },
+  {
+    "id": "ifrane",
+    "type": "city",
+    "name": {
+      "en": "Ifrane",
+      "fr": "Ifrane",
+      "ar": "إفران"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "coordinates": {
+      "latitude": 33.5228,
+      "longitude": -5.1106
+    }
+  },
+  {
+    "id": "inezgane",
+    "type": "city",
+    "name": {
+      "en": "Inezgane",
+      "fr": "Inezgane",
+      "ar": "إنزكان"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "coordinates": {
+      "latitude": 30.3553,
+      "longitude": -9.5364
+    }
+  },
+  {
+    "id": "jerada",
+    "type": "city",
+    "name": {
+      "en": "Jerada",
+      "fr": "Jerada",
+      "ar": "جرادة"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 34.31,
+      "longitude": -2.16
+    }
+  },
+  {
+    "id": "kenitra",
+    "type": "city",
+    "name": {
+      "en": "Kenitra",
+      "fr": "Kénitra",
+      "ar": "القنيطرة"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 34.261,
+      "longitude": -6.5802
+    }
+  },
+  {
+    "id": "khemisset",
+    "type": "city",
+    "name": {
+      "en": "Khemisset",
+      "fr": "Khémisset",
+      "ar": "الخميسات"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 33.824,
+      "longitude": -6.0663
+    }
+  },
+  {
+    "id": "khenifra",
+    "type": "city",
+    "name": {
+      "en": "Khenifra",
+      "fr": "Khénifra",
+      "ar": "خنيفرة"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "coordinates": {
+      "latitude": 32.9349,
+      "longitude": -5.6686
+    }
+  },
+  {
+    "id": "khouribga",
+    "type": "city",
+    "name": {
+      "en": "Khouribga",
+      "fr": "Khouribga",
+      "ar": "خريبكة"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "coordinates": {
+      "latitude": 32.8811,
+      "longitude": -6.9063
+    }
+  },
+  {
+    "id": "ksar-el-kebir",
+    "type": "city",
+    "name": {
+      "en": "Ksar El Kebir",
+      "fr": "Ksar El Kebir",
+      "ar": "القصر الكبير"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 35.0017,
+      "longitude": -5.9053
+    }
+  },
+  {
+    "id": "laayoune",
+    "type": "city",
+    "name": {
+      "en": "Laayoune",
+      "fr": "Laâyoune",
+      "ar": "العيون"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "coordinates": {
+      "latitude": 27.1536,
+      "longitude": -13.2033
+    }
+  },
+  {
+    "id": "larache",
+    "type": "city",
+    "name": {
+      "en": "Larache",
+      "fr": "Larache",
+      "ar": "العرائش"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 35.1932,
+      "longitude": -6.1557
+    }
+  },
+  {
+    "id": "marrakech",
+    "type": "city",
+    "name": {
+      "en": "Marrakech",
+      "fr": "Marrakech",
+      "ar": "مراكش"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 31.6295,
+      "longitude": -7.9811
+    }
+  },
+  {
+    "id": "meknes",
+    "type": "city",
+    "name": {
+      "en": "Meknes",
+      "fr": "Meknès",
+      "ar": "مكناس"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "coordinates": {
+      "latitude": 33.8935,
+      "longitude": -5.5473
+    }
+  },
+  {
+    "id": "midelt",
+    "type": "city",
+    "name": {
+      "en": "Midelt",
+      "fr": "Midelt",
+      "ar": "ميدلت"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "coordinates": {
+      "latitude": 32.6852,
+      "longitude": -4.7451
+    }
+  },
+  {
+    "id": "mohammedia",
+    "type": "city",
+    "name": {
+      "en": "Mohammedia",
+      "fr": "Mohammedia",
+      "ar": "المحمدية"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "coordinates": {
+      "latitude": 33.6862,
+      "longitude": -7.383
+    }
+  },
+  {
+    "id": "nador",
+    "type": "city",
+    "name": {
+      "en": "Nador",
+      "fr": "Nador",
+      "ar": "الناظور"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 35.1681,
+      "longitude": -2.9335
+    }
+  },
+  {
+    "id": "ouarzazate",
+    "type": "city",
+    "name": {
+      "en": "Ouarzazate",
+      "fr": "Ouarzazate",
+      "ar": "ورزازات"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "coordinates": {
+      "latitude": 30.9189,
+      "longitude": -6.8934
+    }
+  },
+  {
+    "id": "ouazzane",
+    "type": "city",
+    "name": {
+      "en": "Ouazzane",
+      "fr": "Ouazzane",
+      "ar": "وزان"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 34.7972,
+      "longitude": -5.5786
+    }
+  },
+  {
+    "id": "oujda",
+    "type": "city",
+    "name": {
+      "en": "Oujda",
+      "fr": "Oujda",
+      "ar": "وجدة"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 34.6814,
+      "longitude": -1.9086
+    }
+  },
+  {
+    "id": "rabat",
+    "type": "city",
+    "name": {
+      "en": "Rabat",
+      "fr": "Rabat",
+      "ar": "الرباط"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 34.0209,
+      "longitude": -6.8417
+    }
+  },
+  {
+    "id": "safi",
+    "type": "city",
+    "name": {
+      "en": "Safi",
+      "fr": "Safi",
+      "ar": "آسفي"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 32.2994,
+      "longitude": -9.2372
+    }
+  },
+  {
+    "id": "sale",
+    "type": "city",
+    "name": {
+      "en": "Sale",
+      "fr": "Salé",
+      "ar": "سلا"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 34.0531,
+      "longitude": -6.7985
+    }
+  },
+  {
+    "id": "sefrou",
+    "type": "city",
+    "name": {
+      "en": "Sefrou",
+      "fr": "Sefrou",
+      "ar": "صفرو"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "coordinates": {
+      "latitude": 33.8305,
+      "longitude": -4.8353
+    }
+  },
+  {
+    "id": "settat",
+    "type": "city",
+    "name": {
+      "en": "Settat",
+      "fr": "Settat",
+      "ar": "سطات"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "coordinates": {
+      "latitude": 33.0011,
+      "longitude": -7.6166
+    }
+  },
+  {
+    "id": "sidi-ifni",
+    "type": "city",
+    "name": {
+      "en": "Sidi Ifni",
+      "fr": "Sidi Ifni",
+      "ar": "سيدي إفني"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "coordinates": {
+      "latitude": 29.3797,
+      "longitude": -10.173
+    }
+  },
+  {
+    "id": "sidi-kacem",
+    "type": "city",
+    "name": {
+      "en": "Sidi Kacem",
+      "fr": "Sidi Kacem",
+      "ar": "سيدي قاسم"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 34.226,
+      "longitude": -5.707
+    }
+  },
+  {
+    "id": "sidi-slimane",
+    "type": "city",
+    "name": {
+      "en": "Sidi Slimane",
+      "fr": "Sidi Slimane",
+      "ar": "سيدي سليمان"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 34.26,
+      "longitude": -5.92
+    }
+  },
+  {
+    "id": "tangier",
+    "type": "city",
+    "name": {
+      "en": "Tangier",
+      "fr": "Tanger",
+      "ar": "طنجة"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 35.7595,
+      "longitude": -5.834
+    }
+  },
+  {
+    "id": "tan-tan",
+    "type": "city",
+    "name": {
+      "en": "Tan-Tan",
+      "fr": "Tan-Tan",
+      "ar": "طانطان"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "coordinates": {
+      "latitude": 28.438,
+      "longitude": -11.1032
+    }
+  },
+  {
+    "id": "taounate",
+    "type": "city",
+    "name": {
+      "en": "Taounate",
+      "fr": "Taounate",
+      "ar": "تاونات"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "coordinates": {
+      "latitude": 34.5386,
+      "longitude": -4.64
+    }
+  },
+  {
+    "id": "taourirt",
+    "type": "city",
+    "name": {
+      "en": "Taourirt",
+      "fr": "Taourirt",
+      "ar": "تاوريرت"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "coordinates": {
+      "latitude": 34.4073,
+      "longitude": -2.8973
+    }
+  },
+  {
+    "id": "tarfaya",
+    "type": "city",
+    "name": {
+      "en": "Tarfaya",
+      "fr": "Tarfaya",
+      "ar": "طرفاية"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "coordinates": {
+      "latitude": 27.9392,
+      "longitude": -12.926
+    }
+  },
+  {
+    "id": "taroudant",
+    "type": "city",
+    "name": {
+      "en": "Taroudant",
+      "fr": "Taroudant",
+      "ar": "تارودانت"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "coordinates": {
+      "latitude": 30.4703,
+      "longitude": -8.877
+    }
+  },
+  {
+    "id": "tata",
+    "type": "city",
+    "name": {
+      "en": "Tata",
+      "fr": "Tata",
+      "ar": "طاطا"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "coordinates": {
+      "latitude": 29.7429,
+      "longitude": -7.9725
+    }
+  },
+  {
+    "id": "taza",
+    "type": "city",
+    "name": {
+      "en": "Taza",
+      "fr": "Taza",
+      "ar": "تازة"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "coordinates": {
+      "latitude": 34.21,
+      "longitude": -4.01
+    }
+  },
+  {
+    "id": "temara",
+    "type": "city",
+    "name": {
+      "en": "Temara",
+      "fr": "Témara",
+      "ar": "تمارة"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "coordinates": {
+      "latitude": 33.9287,
+      "longitude": -6.9067
+    }
+  },
+  {
+    "id": "tetouan",
+    "type": "city",
+    "name": {
+      "en": "Tetouan",
+      "fr": "Tétouan",
+      "ar": "تطوان"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "coordinates": {
+      "latitude": 35.5785,
+      "longitude": -5.3684
+    }
+  },
+  {
+    "id": "tinghir",
+    "type": "city",
+    "name": {
+      "en": "Tinghir",
+      "fr": "Tinghir",
+      "ar": "تنغير"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "coordinates": {
+      "latitude": 31.5147,
+      "longitude": -5.5328
+    }
+  },
+  {
+    "id": "tiznit",
+    "type": "city",
+    "name": {
+      "en": "Tiznit",
+      "fr": "Tiznit",
+      "ar": "تيزنيت"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "coordinates": {
+      "latitude": 29.6974,
+      "longitude": -9.7316
+    }
+  },
+  {
+    "id": "youssoufia",
+    "type": "city",
+    "name": {
+      "en": "Youssoufia",
+      "fr": "Youssoufia",
+      "ar": "اليوسفية"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "coordinates": {
+      "latitude": 32.2462,
+      "longitude": -8.5292
+    }
+  },
+  {
+    "id": "zagora",
+    "type": "city",
+    "name": {
+      "en": "Zagora",
+      "fr": "Zagora",
+      "ar": "زاكورة"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "coordinates": {
+      "latitude": 30.3306,
+      "longitude": -5.8381
+    }
+  }
+]
