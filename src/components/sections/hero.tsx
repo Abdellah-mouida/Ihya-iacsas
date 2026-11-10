@@ -1,21 +1,15 @@
 "use client";
 
-import { Fragment, useRef } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, Info } from "lucide-react";
 
 import styles from "./hero.module.css";
 import { Button } from "@/components/ui/button";
+import { InViewMount } from "@/components/common/in-view-mount";
 import { useLocale } from "@/i18n/locale-provider";
-import { ACTIVITIES, EVENTS_HREF, IMAGES } from "@/lib/content";
-
-const STICKERS = [
-  "hero.stickerValues",
-  "hero.stickerCompanionship",
-  "hero.stickerGiving",
-] as const;
+import { EVENTS_HREF, IMAGES } from "@/lib/content";
+import { useLowPower } from "@/hooks/use-low-power";
 
 function groupPortraitLoader({ width }: { width: number }) {
   // Use pre-encoded AVIF widths so first-view LCP does not wait for a cold optimizer encode.
@@ -25,67 +19,38 @@ function groupPortraitLoader({ width }: { width: number }) {
 
 export function Hero() {
   const { t, dir } = useLocale();
-  const heroRef = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const photoParallax = useTransform(scrollYProgress, [0, 1], [0, 28]);
-  const copyRise = useTransform(scrollYProgress, [0, 1], [0, 22]);
-  const copyFade = useTransform(scrollYProgress, [0, 0.9], [1, 0.72]);
+  const lowPower = useLowPower();
   const headline = t("hero.title");
   const words = headline.split(/\s+/).filter(Boolean);
-
-  function tiltPhoto(event: React.PointerEvent<HTMLDivElement>) {
-    if (
-      reducedMotion ||
-      !window.matchMedia("(hover: hover) and (pointer: fine)").matches ||
-      !event.currentTarget
-    ) {
-      return;
-    }
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
-    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
-    event.currentTarget.style.setProperty("--tilt-x", `${-y * 2.2}deg`);
-    event.currentTarget.style.setProperty("--tilt-y", `${x * 2.2}deg`);
-  }
-
-  function resetPhotoTilt(event: React.PointerEvent<HTMLDivElement>) {
-    event.currentTarget.style.setProperty("--tilt-x", "0deg");
-    event.currentTarget.style.setProperty("--tilt-y", "0deg");
-  }
 
   return (
     <section
       id="home"
-      ref={heroRef}
       dir={dir}
       className="relative z-10 mb-[-3.5rem] overflow-visible px-4 pt-24 pb-0 text-foreground sm:px-6 sm:pt-28"
     >
       <div className="mx-auto grid max-w-6xl items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-        <motion.div
+        <div
           data-testid="hero-copy"
-          style={reducedMotion ? undefined : { y: copyRise, opacity: copyFade }}
           className="relative z-10 order-2 flex flex-col items-start text-start lg:order-1"
         >
           <p className="w-full text-base font-semibold text-[var(--main)] sm:text-lg">
             {t("hero.programName")}
           </p>
-          <h1 className="mt-3 min-h-[2.2em] w-full text-balance font-heading text-4xl font-extrabold leading-[1.08] text-foreground sm:text-5xl lg:text-[clamp(3rem,4.2vw,4.25rem)]">
+          <h1
+            aria-label={headline}
+            className="mt-3 min-h-[2.2em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.85rem,8.8vw,3rem)] font-extrabold leading-[1.08] text-foreground lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]"
+          >
             {words.map((word, index) => (
-              <Fragment key={`${word}-${index}`}>
-                <span data-testid="hero-heading-word" className={styles.wordMask}>
-                  <span
-                    className={styles.word}
-                    style={{ animationDelay: `${index * 90}ms` }}
-                  >
-                    {word}
-                  </span>
-                </span>
-                {index < words.length - 1 ? " " : null}
-              </Fragment>
+              <span
+                key={`${word}-${index}`}
+                aria-hidden="true"
+                data-testid="hero-heading-word"
+                className={`${styles.word}${lowPower ? "" : ` ${styles.foldIn}`}`}
+                style={!lowPower ? { animationDelay: `${index * 90}ms` } : undefined}
+              >
+                {word}{index < words.length - 1 ? " " : null}
+              </span>
             ))}
           </h1>
           <p className="mt-5 min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
@@ -114,67 +79,39 @@ export function Hero() {
               </a>
             </Button>
           </div>
-        </motion.div>
-
-        <div
-          className={`${styles.tiltFrame} order-1 lg:order-2`}
-          onPointerMove={tiltPhoto}
-          onPointerLeave={resetPhotoTilt}
-        >
-          <div dir="ltr" className={`${styles.stickerRow} relative z-10 mx-auto mb-2 flex w-full max-w-[760px] items-center justify-between`}>
-            {STICKERS.map((key) => (
-              <span
-                key={key}
-                data-testid="hero-sticker"
-                className={`${styles.sticker} grid h-8 w-[5.25rem] place-items-center rounded-full bg-background/90 px-2 text-center text-xs font-semibold text-[var(--main)]`}
-              >
-                {t(key)}
-              </span>
-            ))}
-          </div>
-          <motion.div
-            data-testid="hero-frame"
-            style={reducedMotion ? undefined : { y: photoParallax }}
-            className={`${styles.archFrame} relative mx-auto w-full max-w-[760px]`}
-          >
-            <div data-testid="hero-photo-frame" className={`${styles.photoReveal} relative aspect-[1.351/1] overflow-hidden`}>
-              <Image
-                src={IMAGES.groupPortraitHero}
-                loader={groupPortraitLoader}
-                alt={t("hero.photoAlt")}
-                fill
-                priority
-                fetchPriority="high"
-                sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"
-                className={`${styles.photoDrift} object-cover object-center`}
-              />
-            </div>
-          </motion.div>
         </div>
-      </div>
 
-      <div
-        role="region"
-        aria-label={t("hero.activitiesMarquee")}
-        tabIndex={0}
-        dir="ltr"
-        data-testid="hero-marquee"
-        className={`${styles.marquee} relative z-20 mt-2 flex h-14 items-center overflow-hidden py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--main)]`}
-      >
-        <div data-testid="hero-marquee-track" className={styles.marqueeTrack}>
-          {[0, 1].map((copy) => (
-            <ul
-              key={copy}
-              aria-hidden={copy === 1 ? true : undefined}
-              className="flex shrink-0 items-center gap-8 pe-8 text-lg font-semibold sm:gap-12 sm:pe-12"
-            >
-              {ACTIVITIES.map((activity) => (
-                <li key={`${copy}-${activity.num}`} dir="auto" className="flex h-8 w-32 shrink-0 items-center justify-center whitespace-nowrap text-center">
-                  {t(activity.titleKey)}
-                </li>
-              ))}
-            </ul>
-          ))}
+        <div data-testid="hero-frame" className={`${styles.frameWrap} order-1 lg:order-2`}>
+          <svg aria-hidden="true" className={styles.clipDefinitions} viewBox="0 0 1 1" preserveAspectRatio="none">
+            <defs>
+              <clipPath id="ihyaa-hero-splash" clipPathUnits="objectBoundingBox">
+                <path d="M .08 .24 C .11 .14 .23 .10 .33 .15 C .41 .06 .53 .04 .61 .12 C .72 .08 .83 .13 .86 .24 C .96 .25 .99 .35 .95 .44 C 1 .54 .97 .64 .91 .70 C .96 .81 .87 .91 .77 .89 C .69 .98 .58 .97 .50 .92 C .40 .99 .29 .93 .25 .84 C .14 .89 .05 .82 .09 .72 C .01 .64 .03 .52 .08 .44 C .02 .36 .03 .29 .08 .24 Z" />
+              </clipPath>
+            </defs>
+          </svg>
+          <InViewMount className={styles.ornamentHost}>
+            <svg aria-hidden="true" className={lowPower ? styles.splashOrnaments : `${styles.splashOrnaments} ${styles.drift}`} viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M 8 24 C 11 14 23 10 33 15 C 41 6 53 4 61 12 C 72 8 83 13 86 24 C 96 25 99 35 95 44 C 100 54 97 64 91 70 C 96 81 87 91 77 89 C 69 98 58 97 50 92 C 40 99 29 93 25 84 C 14 89 5 82 9 72 C 1 64 3 52 8 44 C 2 36 3 29 8 24 Z" />
+              <circle cx="28" cy="8" r="1.7" />
+              <circle cx="72" cy="5" r="1.1" />
+              <circle cx="92" cy="19" r="1.3" />
+            </svg>
+          </InViewMount>
+          <div
+            data-testid="hero-photo-frame"
+            className={`${styles.photoFrame} relative mx-auto aspect-[1.351/1] w-full max-w-[760px]`}
+          >
+            <Image
+              src={IMAGES.groupPortraitHero}
+              loader={groupPortraitLoader}
+              alt={t("hero.photoAlt")}
+              fill
+              priority
+              fetchPriority="high"
+              sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"
+              className="object-cover object-center"
+            />
+          </div>
         </div>
       </div>
     </section>

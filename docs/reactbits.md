@@ -6,7 +6,7 @@ The `@react-bits` registry is configured in `components.json`. The Shadcn MCP se
 
 | Registry component | Site use | Dependency | Decision |
 |---|---|---|---|
-| `FoldText-TS-TW` | Home hero title (planned for T2) | Registry asks for `gsap@^3.13.0`; none added | Adapt whole-word fold motion to CSS transforms. Keep Arabic words joined, SSR title visible, static reduced-motion fallback. |
+| `FoldText-TS-TW` | Home hero title (`src/components/sections/hero.tsx`) | Registry asks for `gsap@^3.13.0`; none added | Adapt whole-word fold motion to CSS transforms. Keep Arabic words joined, SSR title visible, static reduced-motion fallback. |
 | `SpotlightCard-TS-TW` | Select image/surface cards only where it improves the page | None | Adapt with theme tokens and fine-pointer CSS only; do not copy its hard-coded colors, noise gradient, global pointer listeners or animation loop. Measure route cost before retaining. |
 | `Masonry-TS-TW` | Gallery candidate | Adds `@hugeicons/react` and `@hugeicons/core-free-icons` | Dropped: current responsive grid preserves reading order and reserved image size; source is about 42.8 KB (10.9 KB gzip). |
 | `BlurText-TS-TW` | Auth heading candidate | Adds `motion@^12.23.12` | Dropped: existing shared motion/CSS can provide a quiet heading treatment; avoid blur and a second motion package beside signup fields. |

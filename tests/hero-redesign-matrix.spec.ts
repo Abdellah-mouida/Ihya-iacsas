@@ -20,7 +20,7 @@ test.describe("Home hero redesign", () => {
 
   test("keeps the photo, copy, interlock and background seam stable across themes, locales and widths", async ({ browser }) => {
     test.setTimeout(300_000);
-    fs.mkdirSync("evidence/task-05/t5", { recursive: true });
+    fs.mkdirSync("evidence/task-06/t2", { recursive: true });
 
     for (const locale of LOCALES) {
       for (const theme of THEMES) {
@@ -68,7 +68,6 @@ test.describe("Home hero redesign", () => {
             const frame = document.querySelector("#home [data-testid='hero-frame']") as HTMLElement | null;
             const copy = document.querySelector("#home [data-testid='hero-copy']") as HTMLElement | null;
             const photo = document.querySelector("#home [data-testid='hero-photo-frame']") as HTMLElement | null;
-            const badges = [...document.querySelectorAll("#home [data-testid='hero-sticker']")];
             if (!frame || !copy || !photo) return null;
             const f = frame.getBoundingClientRect();
             const c = copy.getBoundingClientRect();
@@ -77,21 +76,16 @@ test.describe("Home hero redesign", () => {
               frame: { left: f.left, right: f.right, top: f.top, bottom: f.bottom, width: f.width, height: f.height },
               copy: { left: c.left, right: c.right, top: c.top, bottom: c.bottom },
               photo: { top: p.top, height: p.height },
-              badges: badges.map((badge) => {
-                const r = badge.getBoundingClientRect();
-                return { top: r.top, bottom: r.bottom };
-              }),
+              clipPath: getComputedStyle(photo).clipPath,
               headingLines: new Set([...document.querySelectorAll("#home [data-testid='hero-heading-word']")].map((word) => Math.round(word.getBoundingClientRect().top))).size,
             };
           });
           expect(geometry).not.toBeNull();
           if (!geometry) throw new Error("Hero geometry is unavailable");
-          expect(geometry.frame.width / geometry.frame.height).toBeCloseTo(4096 / 3032, 2);
           expect(geometry.headingLines).toBeLessThanOrEqual(2);
-          expect(geometry.badges).toHaveLength(3);
-          for (const badge of geometry.badges) {
-            expect(badge.bottom).toBeLessThanOrEqual(geometry.photo.top);
-          }
+          expect(geometry.clipPath).toContain("ihyaa-hero-splash");
+          await expect(hero.getByTestId("hero-sticker")).toHaveCount(0);
+          await expect(hero.getByTestId("hero-marquee")).toHaveCount(0);
           const copyOverlap = geometry.copy.left < geometry.frame.right && geometry.copy.right > geometry.frame.left && geometry.copy.top < geometry.frame.bottom && geometry.copy.bottom > geometry.frame.top;
           expect(copyOverlap, "Hero copy must remain outside the portrait and every face").toBe(false);
 
@@ -113,7 +107,6 @@ test.describe("Home hero redesign", () => {
                 ratio: node.naturalWidth / node.naturalHeight,
               };
             });
-            expect(responsiveImage.src).toContain("group-portrait-hero-");
             expect(responsiveImage.ratio).toBeCloseTo(4096 / 3032, 1);
             await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
             const seamDocumentY = await hero.evaluate((node) => Math.round(node.getBoundingClientRect().bottom + window.scrollY));
@@ -144,18 +137,12 @@ test.describe("Home hero redesign", () => {
             await page.evaluate(() => window.scrollTo(0, 0));
             if (SCREENSHOT_WIDTHS.has(width)) {
               await page.screenshot({
-                path: `evidence/task-05/t5/hero-${width}-${theme}-${locale}.png`,
+              path: `evidence/task-06/t2/hero-${width}-${theme}-${locale}.png`,
                 animations: "disabled",
               });
             }
           }
 
-          const marquee = hero.getByTestId("hero-marquee");
-          const track = hero.getByTestId("hero-marquee-track");
-          await marquee.hover();
-          await expect.poll(() => track.evaluate((node) => getComputedStyle(node).animationPlayState)).toBe("paused");
-          await marquee.focus();
-          await expect.poll(() => track.evaluate((node) => getComputedStyle(node).animationPlayState)).toBe("paused");
         } finally {
           await context.close();
         }
@@ -168,7 +155,7 @@ test.describe("Home hero redesign", () => {
     try {
       const page = await context.newPage();
       await page.goto("/", { waitUntil: "networkidle" });
-      const states = await page.locator("#home h1 span span, #home [data-testid='hero-photo-frame'], #home img[src*='group-portrait'], #home [data-testid='hero-sticker'], #home [data-testid='hero-marquee-track']").evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).animationName));
+      const states = await page.locator("#home h1 [data-testid='hero-heading-word'], #home img[src*='group-portrait'], #home .splashOrnaments").evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).animationName));
       expect(states.length).toBeGreaterThan(0);
       expect(states.every((animation) => animation === "none")).toBe(true);
       await expect(page.locator("#home h1")).toBeVisible();
