@@ -112,8 +112,7 @@ test.describe("Task 2: Section Boundary Seams & Line Removal Audit", () => {
           }
 
           // Continuous background sections: seam step <= 3.0 / 255 (no divider line or shadow shelf).
-          // Hero has full photographic imagery fading into the page background; no sharp border line (maxDelta < 60.0).
-          const threshold = pair.name === "hero-to-about" ? 60.0 : 3.0;
+          const threshold = 3.0;
 
           expect(
             maxDelta,

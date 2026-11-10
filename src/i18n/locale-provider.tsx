@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -48,13 +49,13 @@ function resolvePath(obj: unknown, path: string): unknown {
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   // Always start at the server-rendered default (Arabic) to avoid hydration
-  // mismatch; a stored preference is applied after mount.
+  // mismatch; apply a stored preference before paint to prevent a locale shift.
   const [locale, setLocaleState] = useState<Locale>("ar");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "ar" || stored === "en") {
-      // Apply the saved preference after the server-rendered Arabic default.
+      // Apply the saved preference after hydration, before the browser paints.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(stored);
     }

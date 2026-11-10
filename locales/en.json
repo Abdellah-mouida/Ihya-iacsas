@@ -45,17 +45,23 @@
   },
   "hero": {
     "kicker": "Youth program • Morocco",
-    "title": "Ihyaa",
-    "subtitle": "Reviving values, uniting hearts, and building a conscious generation — gatherings, activities and meaningful content across Moroccan cities.",
+    "title": "Values lived together",
+    "subtitle": "Gatherings, activities and purposeful content shaped by Islamic values.",
     "ctaPrimary": "Explore events",
-    "ctaSecondary": "About Ihyaa",
+    "ctaSecondary": "About the program",
     "scroll": "Scroll",
     "statBranchesValue": "4",
     "statBranchesLabel": "branches in Morocco",
     "statMembersValue": "500+",
     "statMembersLabel": "members & volunteers",
     "statEventsValue": "30+",
-    "statEventsLabel": "gatherings & activities"
+    "statEventsLabel": "gatherings & activities",
+    "programName": "Ihyaa Youth Program",
+    "photoAlt": "The Ihyaa youth group gathered in a Moroccan tile-lined room",
+    "activitiesMarquee": "Ihyaa activities",
+    "stickerValues": "Values",
+    "stickerCompanionship": "Friends",
+    "stickerGiving": "Giving"
   },
   "about": {
     "kicker": "Who we are",

@@ -45,17 +45,23 @@
   },
   "hero": {
     "kicker": "برنامج شبابي • المغرب",
-    "title": "إحياء",
-    "subtitle": "نُحيي القيم، ونجمع القلوب، ونبني جيلاً واعياً — لقاءات وأنشطة ومحتوى هادف في مدن المغرب.",
+    "title": "قيم نحياها معًا",
+    "subtitle": "لقاءات وأنشطة ومحتوى هادف يستلهم القيم الإسلامية.",
     "ctaPrimary": "اكتشف الفعاليات",
-    "ctaSecondary": "تعرّف على إحياء",
+    "ctaSecondary": "عن البرنامج",
     "scroll": "مرّر للأسفل",
     "statBranchesValue": "4",
     "statBranchesLabel": "فروع في المغرب",
     "statMembersValue": "+500",
     "statMembersLabel": "عضو ومتطوّع",
     "statEventsValue": "+30",
-    "statEventsLabel": "لقاءً ونشاطاً"
+    "statEventsLabel": "لقاءً ونشاطاً",
+    "programName": "برنامج إحياء الشبابي",
+    "photoAlt": "شباب إحياء مجتمعون في قاعة مغربية مزينة بالزليج",
+    "activitiesMarquee": "أنشطة إحياء",
+    "stickerValues": "قيم",
+    "stickerCompanionship": "صحبة",
+    "stickerGiving": "عطاء"
   },
   "about": {
     "kicker": "من نحن",

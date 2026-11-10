@@ -35,7 +35,7 @@ async function main() {
           active: true,
         },
         {
-          imageUrl: "/images/group-portrait.jpg",
+          imageUrl: "/images/group-portrait.avif",
           order: 2,
           active: true,
         },
@@ -60,7 +60,7 @@ async function main() {
           captionEn: "A session of supplication, prayer, and tranquility",
         },
         {
-          imageUrl: "/images/group-portrait.jpg",
+          imageUrl: "/images/group-portrait.avif",
           captionAr: "صورة جماعية لشباب إحياء في ختام اللقاء السنوي",
           captionEn: "Group photo of Ihyaa youth at the conclusion of the annual retreat",
         },
@@ -106,7 +106,7 @@ async function main() {
           date: new Date("2025-12-25T10:00:00Z"),
           time: "10:00 - 18:00",
           location: "تارودانت",
-          posterUrl: "/images/group-portrait.jpg",
+          posterUrl: "/images/group-portrait.avif",
           isNew: false,
           bookingOpen: false,
         },

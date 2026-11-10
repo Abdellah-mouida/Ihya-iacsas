@@ -5,6 +5,7 @@ import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudi
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
+import { resolveImageUrl } from "@/lib/content";
 
 export async function getCarouselPosts(onlyActive = false) {
   try {
@@ -12,7 +13,13 @@ export async function getCarouselPosts(onlyActive = false) {
       where: onlyActive ? { active: true } : undefined,
       orderBy: { order: "asc" },
     });
-    return { success: true, posts };
+    return {
+      success: true,
+      posts: posts.map((post) => ({
+        ...post,
+        imageUrl: resolveImageUrl(post.imageUrl) ?? post.imageUrl,
+      })),
+    };
   } catch (error) {
     console.error("Error fetching carousel posts:", error);
     return {

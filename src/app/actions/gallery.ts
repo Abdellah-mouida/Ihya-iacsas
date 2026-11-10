@@ -5,13 +5,20 @@ import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudi
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
+import { resolveImageUrl } from "@/lib/content";
 
 export async function getGalleryPhotos() {
   try {
     const photos = await prisma.galleryPhoto.findMany({
       orderBy: { createdAt: "desc" },
     });
-    return { success: true, photos };
+    return {
+      success: true,
+      photos: photos.map((photo) => ({
+        ...photo,
+        imageUrl: resolveImageUrl(photo.imageUrl) ?? photo.imageUrl,
+      })),
+    };
   } catch (error) {
     console.error("Error fetching gallery photos:", error);
     return {

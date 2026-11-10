@@ -1,150 +1,175 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
-import { useEffect, useState } from "react";
-import { ArrowDown, CalendarDays, Info } from "lucide-react";
-import dynamic from "next/dynamic";
+import { Fragment, useRef } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { CalendarDays, Info } from "lucide-react";
 
-import { AuroraBackground } from "@/components/react-bits/aurora-background";
+import styles from "./hero.module.css";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { EVENTS_HREF, IMAGES } from "@/lib/content";
-import { staggerContainer } from "@/lib/motion";
+import { ACTIVITIES, EVENTS_HREF, IMAGES } from "@/lib/content";
 
-const heroReveal: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] } },
-};
-
-const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
-  ssr: false,
-});
+const STICKERS = [
+  "hero.stickerValues",
+  "hero.stickerCompanionship",
+  "hero.stickerGiving",
+] as const;
 
 export function Hero() {
-  const { t } = useLocale();
-  const [showParticles, setShowParticles] = useState(false);
+  const { t, dir } = useLocale();
+  const heroRef = useRef<HTMLElement>(null);
+  const reducedMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const photoParallax = useTransform(scrollYProgress, [0, 1], [0, 28]);
+  const copyRise = useTransform(scrollYProgress, [0, 1], [0, 22]);
+  const copyFade = useTransform(scrollYProgress, [0, 0.9], [1, 0.72]);
+  const headline = t("hero.title");
+  const words = headline.split(/\s+/).filter(Boolean);
 
-  useEffect(() => {
-    // Keep the decorative WebGL scene off the first paint and initial input window.
-    const timer = window.setTimeout(() => setShowParticles(true), 4500);
-    return () => window.clearTimeout(timer);
-  }, []);
+  function tiltPhoto(event: React.PointerEvent<HTMLDivElement>) {
+    if (
+      reducedMotion ||
+      !window.matchMedia("(hover: hover) and (pointer: fine)").matches ||
+      !event.currentTarget
+    ) {
+      return;
+    }
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+    event.currentTarget.style.setProperty("--tilt-x", `${-y * 2.2}deg`);
+    event.currentTarget.style.setProperty("--tilt-y", `${x * 2.2}deg`);
+  }
+
+  function resetPhotoTilt(event: React.PointerEvent<HTMLDivElement>) {
+    event.currentTarget.style.setProperty("--tilt-x", "0deg");
+    event.currentTarget.style.setProperty("--tilt-y", "0deg");
+  }
 
   return (
     <section
       id="home"
-      className="relative isolate flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground z-0"
+      ref={heroRef}
+      dir={dir}
+      className="relative z-10 mb-[-3.5rem] overflow-visible px-4 pt-24 pb-0 text-foreground sm:px-6 sm:pt-28"
     >
-      {/* Layer 1: Photo Layer (real next/image at z-[1]) */}
-      <div className="absolute inset-0 z-[1] overflow-hidden select-none">
-        <Image
-          src={IMAGES.groupPortrait}
-          alt="Ihyaa Youth Gathering"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center"
-        />
-        {/* Soft edge-only scrim: fades smoothly to 100% solid background at bottom so photo completely melts into the page background */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, color-mix(in srgb, var(--background) 70%, transparent) 0%, transparent 45%, color-mix(in srgb, var(--background) 70%, transparent) 80%, var(--background) 95%, var(--background) 100%)",
-          }}
-        />
-      </div>
-
-      {/* Layer 3: Ambient Aurora + Particles + Corner Vignette */}
-      <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden select-none">
-        {/* React Bits aurora — warm animated light over photo */}
-        <AuroraBackground className="opacity-20 mix-blend-screen dark:opacity-30" />
-
-        {/* Drifting ambient particles */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-70">
-          {showParticles ? <HeroScene /> : null}
-        </div>
-
-        {/* Soft corner perimeter vignette — strictly transparent at center */}
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,var(--background)_100%)] opacity-70"
-        />
-      </div>
-
-      {/* Layer 4: Interactive Typography & Actions */}
-      <motion.div
-        variants={staggerContainer(0.04, 0.02)}
-        initial="hidden"
-        animate="show"
-        className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center"
-      >
-        <motion.span
-          variants={heroReveal}
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/85 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground shadow-xs backdrop-blur-md"
-        >
-          <span className="size-1.5 animate-pulse rounded-full bg-gold" />
-          {t("hero.kicker")}
-        </motion.span>
-
-        <motion.h1
-          variants={heroReveal}
-          className="mt-6 font-heading text-7xl font-extrabold leading-[0.95] sm:text-8xl md:text-9xl"
-        >
-          <span className="text-shine">{t("hero.title")}</span>
-        </motion.h1>
-
-        <motion.p
-          variants={heroReveal}
-          className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80 sm:text-xl"
-        >
-          {t("hero.subtitle")}
-        </motion.p>
-
+      <div className="mx-auto grid max-w-6xl items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
         <motion.div
-          variants={heroReveal}
-          className="mt-9 flex flex-col items-center gap-3 sm:flex-row"
+          data-testid="hero-copy"
+          style={reducedMotion ? undefined : { y: copyRise, opacity: copyFade }}
+          className="relative z-10 order-2 flex flex-col items-start text-start lg:order-1"
         >
-          <Button
-            asChild
-            className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
-          >
-            <Link href={EVENTS_HREF}>
-              <CalendarDays className="size-5" />
-              {t("hero.ctaPrimary")}
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="glass h-12 rounded-full border-border/70 px-7 text-base font-semibold text-foreground/95 transition-all hover:-translate-y-0.5 hover:bg-muted/60 dark:border-border/60 dark:hover:bg-accent/40"
-          >
-            <a href="#about">
-              <Info className="size-5" />
-              {t("hero.ctaSecondary")}
-            </a>
-          </Button>
+          <p className="w-full text-base font-semibold text-[var(--main)] sm:text-lg">
+            {t("hero.programName")}
+          </p>
+          <h1 className="mt-3 min-h-[2.2em] w-full text-balance font-heading text-4xl font-extrabold leading-[1.08] text-foreground sm:text-5xl lg:text-[clamp(3rem,4.2vw,4.25rem)]">
+            {words.map((word, index) => (
+              <Fragment key={`${word}-${index}`}>
+                <span data-testid="hero-heading-word" className={styles.wordMask}>
+                  <span
+                    className={styles.word}
+                    style={{ animationDelay: `${index * 90}ms` }}
+                  >
+                    {word}
+                  </span>
+                </span>
+                {index < words.length - 1 ? " " : null}
+              </Fragment>
+            ))}
+          </h1>
+          <p className="mt-5 min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
+            {t("hero.subtitle")}
+          </p>
+          <div className="mt-7 flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="h-12 w-full rounded-full bg-[var(--main)] px-6 font-semibold text-background transition-[transform,opacity] hover:-translate-y-0.5 hover:opacity-90 sm:w-auto"
+            >
+              <Link href={EVENTS_HREF} dir="ltr">
+                <CalendarDays aria-hidden className="size-5" />
+                <span dir="auto">{t("hero.ctaPrimary")}</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="lg"
+              className="h-12 w-full rounded-full px-5 text-foreground transition-[transform,background-color] hover:-translate-y-0.5 sm:w-auto"
+            >
+              <a href="#about" dir="ltr">
+                <Info aria-hidden className="size-5" />
+                <span dir="auto">{t("hero.ctaSecondary")}</span>
+              </a>
+            </Button>
+          </div>
         </motion.div>
-      </motion.div>
 
-      {/* Scroll cue */}
-      <motion.a
-        href="#about"
-        aria-label={t("hero.scroll")}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.1, duration: 0.8 }}
-        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-foreground/80 dark:text-foreground/90 transition-colors hover:text-foreground"
+        <div
+          className={`${styles.tiltFrame} order-1 lg:order-2`}
+          onPointerMove={tiltPhoto}
+          onPointerLeave={resetPhotoTilt}
+        >
+          <div dir="ltr" className={`${styles.stickerRow} relative z-10 mx-auto mb-2 flex w-full max-w-[760px] items-center justify-between`}>
+            {STICKERS.map((key) => (
+              <span
+                key={key}
+                data-testid="hero-sticker"
+                className={`${styles.sticker} grid h-8 w-[5.25rem] place-items-center rounded-full bg-background/90 px-2 text-center text-xs font-semibold text-[var(--main)]`}
+              >
+                {t(key)}
+              </span>
+            ))}
+          </div>
+          <motion.div
+            data-testid="hero-frame"
+            style={reducedMotion ? undefined : { y: photoParallax }}
+            className={`${styles.archFrame} relative mx-auto w-full max-w-[760px]`}
+          >
+            <div data-testid="hero-photo-frame" className={`${styles.photoReveal} relative aspect-[1.351/1] overflow-hidden`}>
+              <Image
+                src={IMAGES.groupPortrait}
+                alt={t("hero.photoAlt")}
+                fill
+                priority
+                fetchPriority="high"
+                sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), 56vw"
+                className={`${styles.photoDrift} object-cover object-center`}
+              />
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div
+        role="region"
+        aria-label={t("hero.activitiesMarquee")}
+        tabIndex={0}
+        dir="ltr"
+        data-testid="hero-marquee"
+        className={`${styles.marquee} relative z-20 mt-2 flex h-14 items-center overflow-hidden py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--main)]`}
       >
-        <span className="text-[0.75rem] font-medium uppercase tracking-[0.2em]">
-          {t("hero.scroll")}
-        </span>
-        <span className="grid size-9 place-items-center rounded-full border border-foreground/25 dark:border-white/25">
-          <ArrowDown className="size-4 animate-bounce" />
-        </span>
-      </motion.a>
+        <div data-testid="hero-marquee-track" className={styles.marqueeTrack}>
+          {[0, 1].map((copy) => (
+            <ul
+              key={copy}
+              aria-hidden={copy === 1 ? true : undefined}
+              className="flex shrink-0 items-center gap-8 pe-8 text-lg font-semibold sm:gap-12 sm:pe-12"
+            >
+              {ACTIVITIES.map((activity) => (
+                <li key={`${copy}-${activity.num}`} dir="auto" className="flex h-8 w-32 shrink-0 items-center justify-center whitespace-nowrap text-center">
+                  {t(activity.titleKey)}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }

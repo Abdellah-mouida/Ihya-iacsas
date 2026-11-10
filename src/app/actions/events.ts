@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
+import { resolveImageUrl } from "@/lib/content";
 
 export async function getEvents() {
   await requirePermission("events:view");
@@ -35,6 +36,7 @@ export async function getEvents() {
 
       return {
         ...ev,
+        posterUrl: resolveImageUrl(ev.posterUrl) ?? ev.posterUrl,
         isEnded: isEventEnded(ev.date, ev.time),
         _count: {
           bookings: ev.bookings.length,
@@ -103,7 +105,7 @@ export async function getPublicEvents() {
         date: ev.date,
         time: ev.time,
         location: ev.location,
-        posterUrl: ev.posterUrl,
+        posterUrl: resolveImageUrl(ev.posterUrl) ?? ev.posterUrl,
         isNew: ev.isNew,
         bookingOpen: ev.bookingOpen,
         capacityType: ev.capacityType,
@@ -203,7 +205,7 @@ export async function getEventById(id: string) {
         date: event.date,
         time: event.time,
         location: event.location,
-        posterUrl: event.posterUrl,
+        posterUrl: resolveImageUrl(event.posterUrl),
         bookingOpen: event.bookingOpen,
         capacityType: event.capacityType,
         capacity: event.capacity,

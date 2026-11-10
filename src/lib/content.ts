@@ -12,12 +12,17 @@ export const IMAGES = {
   football: "/images/football.jpg",
   prayer: "/images/prayer.jpg",
   gathering: "/images/gathering.jpg",
-  groupPortrait: "/images/group-portrait.jpg",
+  groupPortrait: "/images/group-portrait.avif",
   logoBanner: "/images/logo-banner.jpg",
   logoCircle: "/images/logo-circle.png",
   defaultPoster: "/images/gathering.jpg",
   eventPoster: "/images/gathering.jpg",
 } as const;
+
+/** Resolve the retired group JPG path that may still be stored in database rows. */
+export function resolveImageUrl(url: string | null): string | null {
+  return url === "/images/group-portrait.jpg" ? IMAGES.groupPortrait : url;
+}
 
 export const EVENT = {
   phone: "0615789337",
@@ -131,7 +136,7 @@ export type GalleryItem = { src: string; altKey: string; w: number; h: number };
 export const GALLERY: GalleryItem[] = [
   { src: IMAGES.gathering, altKey: "gallery.altGathering", w: 590, h: 332 },
   { src: IMAGES.prayer, altKey: "gallery.altPrayer", w: 1280, h: 960 },
-  { src: IMAGES.groupPortrait, altKey: "gallery.altGroup", w: 2048, h: 1516 },
+  { src: IMAGES.groupPortrait, altKey: "gallery.altGroup", w: 4096, h: 3032 },
   { src: IMAGES.football, altKey: "gallery.altFootball", w: 1280, h: 960 },
 ];
 

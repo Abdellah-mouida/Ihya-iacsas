@@ -3,6 +3,7 @@ export function SiteAtmosphere() {
   return (
     <div
       aria-hidden="true"
+      dir="ltr"
       data-testid="site-atmosphere"
       className="site-atmosphere pointer-events-none fixed inset-0 z-0 isolate overflow-hidden"
     >
