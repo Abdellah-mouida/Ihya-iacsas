@@ -7,10 +7,11 @@ import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { SocialIcon } from "@/components/common/social-icons";
 import { useLocale } from "@/i18n/locale-provider";
 import { SOCIAL_LINKS } from "@/config/social";
-import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
+import { EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
+import type { PublicBranch } from "@/lib/branches/types";
 
-export function Footer() {
-  const { t } = useLocale();
+export function Footer({ branches = [] }: { branches?: PublicBranch[] }) {
+  const { t, locale } = useLocale();
   const year = new Date().getFullYear();
 
   return (
@@ -55,22 +56,22 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Branches */}
-          <div className="flex flex-col gap-3">
+          {/* Public branch names are supplied by Home from the shared public branch cache. */}
+          {branches.length > 0 && <div className="flex flex-col gap-3">
             <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
               {t("footer.branchesTitle")}
             </h3>
             <ul className="flex flex-col gap-2">
-              {BRANCHES.map((branch) => (
+              {branches.map((branch) => (
                 <li
                   key={branch.id}
                   className="text-sm text-muted-foreground"
                 >
-                  {t(branch.nameKey)}
+                  {locale === "ar" ? branch.nameAr : branch.nameEn || branch.nameAr}
                 </li>
               ))}
             </ul>
-          </div>
+          </div>}
 
           {/* Contact */}
           <div className="flex flex-col gap-3">

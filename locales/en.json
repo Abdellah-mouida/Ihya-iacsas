@@ -140,15 +140,14 @@
     "title": "Ihyaa branches across Morocco",
     "desc": "We span several cities and keep expanding to stay close to you.",
     "cardLabel": "Branch",
-    "mapHint": "Hover or tap a city to view its branch details",
-    "marrakech": "Marrakech",
-    "taroudant": "Taroudant",
-    "famzguid": "Fam Zguid (Tata)",
-    "ouledteima": "Ouled Teima",
-    "regionMarrakech": "Marrakech-Safi",
-    "regionTaroudant": "Souss-Massa",
-    "regionFamzguid": "Tata · Souss-Massa",
-    "regionOuledteima": "Souss-Massa"
+    "mapHint": "Choose a point or branch to see its location and details.",
+    "empty": "There are no active branches to show right now.",
+    "noResults": "No branches match your search.",
+    "search": "Search branches",
+    "searchPlaceholder": "Search by branch or region",
+    "regionFilter": "Filter branches by region",
+    "allRegions": "All regions",
+    "branchList": "Branches by region"
   },
   "gallery": {
     "kicker": "Moments",

@@ -10,9 +10,10 @@ import { Gallery } from "@/components/sections/gallery";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { Hero } from "@/components/sections/hero";
 import { Program } from "@/components/sections/program";
+import { getPublicBranches } from "@/lib/branches/public-data";
 
 export default async function Home() {
-  const session = await auth();
+  const [session, branches] = await Promise.all([auth(), getPublicBranches()]);
   return (
     <PageBackground variant="default">
       <GlassNavbar initialSession={session} />
@@ -22,14 +23,14 @@ export default async function Home() {
         <div className="relative">
           <About />
           <Activities />
-          <Branches />
+          <Branches branches={branches} />
           <CardCarousel />
           <Gallery />
           <Program />
           <Contact />
         </div>
       </main>
-      <Footer />
+      <Footer branches={branches} />
     </PageBackground>
   );
 }
