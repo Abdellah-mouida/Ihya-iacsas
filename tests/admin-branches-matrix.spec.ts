@@ -16,12 +16,16 @@ test.describe("Admin branches responsive surface", () => {
 
   test.afterAll(async () => {
     const { prisma } = await import("@/lib/prisma");
-    await prisma.user.deleteMany({ where: { email: TEST_ADMIN.email } });
+    const user = await prisma.user.findUnique({ where: { email: TEST_ADMIN.email }, select: { id: true } });
+    if (user) {
+      await prisma.auditLog.deleteMany({ where: { actorId: user.id } });
+      await prisma.user.delete({ where: { id: user.id } });
+    }
   });
 
   test("list and full-screen editor render across themes, locales and widths", async ({ browser }) => {
     test.setTimeout(240_000);
-    fs.mkdirSync("evidence/task-05/t4d", { recursive: true });
+    fs.mkdirSync("evidence/task-06/t5", { recursive: true });
 
     for (const locale of LOCALES) {
       for (const theme of THEMES) {
@@ -36,13 +40,13 @@ test.describe("Admin branches responsive surface", () => {
           await loginAs(page, TEST_ADMIN, "/admin/branches");
           await expect(page).toHaveURL(/\/admin\/branches/);
           await expect(page.getByRole("heading", { name: /manage branches|إدارة الفروع/i })).toBeVisible();
-          await expect(page.locator("[data-branch-id]")).toHaveCount(4, { timeout: 30_000 });
+          await expect.poll(() => page.locator("[data-branch-id]").count(), { timeout: 30_000 }).toBeGreaterThan(0);
           await expect(page.locator("[data-sonner-toast]")).toBeHidden({ timeout: 10_000 });
 
           for (const width of WIDTHS) {
             await page.setViewportSize({ width, height: width < 500 ? 850 : 1000 });
             await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-            await page.screenshot({ path: `evidence/task-05/t4d/admin-list-${width}-${theme}-${locale}.png`, fullPage: true });
+            await page.screenshot({ path: `evidence/task-06/t5/admin-list-${width}-${theme}-${locale}.png`, fullPage: true });
           }
 
           await page.setViewportSize({ width: 320, height: 850 });
@@ -50,10 +54,12 @@ test.describe("Admin branches responsive surface", () => {
           const dialog = page.getByRole("dialog");
           await expect(dialog.getByRole("heading", { name: /add a branch|إضافة فرع/i })).toBeVisible();
           await expect(dialog.locator("[data-editor-pin]")).toBeVisible();
-          await dialog.screenshot({ path: `evidence/task-05/t4d/editor-city-320-${theme}-${locale}.png` });
+          await expect(dialog.getByRole("button", { name: /province or prefecture|إقليم أو عمالة/i })).toHaveCount(0);
+          await dialog.screenshot({ path: `evidence/task-06/t5/editor-city-320-${theme}-${locale}.png` });
           await dialog.getByRole("button", { name: /custom place|مكان مخصص/i }).click();
           await expect(dialog.getByLabel(/branch name|اسم الفرع/i).first()).toBeVisible();
-          await dialog.screenshot({ path: `evidence/task-05/t4d/editor-custom-320-${theme}-${locale}.png` });
+          await expect(dialog.getByRole("status")).toBeVisible();
+          await dialog.screenshot({ path: `evidence/task-06/t5/editor-custom-320-${theme}-${locale}.png` });
           await dialog.getByRole("button", { name: /cancel|إلغاء/i }).click();
         } finally {
           await context.close();

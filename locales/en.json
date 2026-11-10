@@ -650,7 +650,6 @@
     "editorDescription": "Choose a place type, then set or adjust its map pin.",
     "placeMode": "Place type",
     "city": "City",
-    "province": "Province or prefecture",
     "custom": "Custom place",
     "citySearch": "Search city names",
     "region": "Region",
@@ -658,6 +657,14 @@
     "nameEn": "Branch name in English",
     "latitude": "Latitude",
     "longitude": "Longitude",
+    "cityCoordinatesHint": "City coordinates come from the Morocco city dataset.",
+    "regionSuggestion": "Nearest-city suggestion: {region} ({confidence} confidence). You can choose another region.",
+    "regionSuggestionUnavailable": "Place the pin inside Morocco to get a nearby-city region suggestion.",
+    "confidence": {
+      "high": "high",
+      "medium": "medium",
+      "low": "low"
+    },
     "mapLabel": "Branch location pin",
     "pinRequired": "Click the map to place this branch.",
     "mapHint": "Click or drag the pin on the Morocco map to adjust its coordinates.",

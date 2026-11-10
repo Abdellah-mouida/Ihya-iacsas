@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { MOROCCAN_CITIES, MOROCCAN_PROVINCES } from "@/data/morocco";
+import { MOROCCAN_CITIES } from "@/data/morocco";
 import { parseBranchInput } from "@/lib/branches/validation";
 import { can } from "@/lib/permissions";
+import { inferRegionFromCoordinate, isWithinMoroccoBounds } from "@/lib/branches/region-inference";
 
 const marrakech = MOROCCAN_CITIES.find((item) => item.id === "marrakech")!;
-const taroudantProvince = MOROCCAN_PROVINCES.find((item) => item.id === "taroudannt")!;
 
 function cityBranch(overrides: Record<string, unknown> = {}) {
   return {
@@ -69,29 +69,12 @@ test.describe("branch input validation", () => {
     expect(parseBranchInput(cityBranch({ longitude: 1 })).success).toBe(false);
   });
 
-  test("requires province selections to match both dataset and region", () => {
-    const valid = parseBranchInput({
-      kind: "PROVINCE",
-      geoId: taroudantProvince.id,
-      nameAr: taroudantProvince.name.ar,
-      nameEn: taroudantProvince.name.en,
-      regionId: taroudantProvince.region,
-      provinceId: taroudantProvince.id,
-      latitude: 30.5,
-      longitude: -8.8,
-    });
-    expect(valid.success).toBe(true);
-    expect(
-      parseBranchInput({
-        kind: "PROVINCE",
-        geoId: taroudantProvince.id,
-        nameAr: taroudantProvince.name.ar,
-        regionId: "marrakech-safi",
-        provinceId: taroudantProvince.id,
-        latitude: 30.5,
-        longitude: -8.8,
-      }).success,
-    ).toBe(false);
+  test("rejects province kind and edited city coordinates", () => {
+    expect(parseBranchInput(cityBranch({ kind: "PROVINCE" })).success).toBe(false);
+    expect(parseBranchInput(cityBranch({ latitude: marrakech.latitude + 0.01 })).success).toBe(false);
+    const normalizedCity = parseBranchInput(cityBranch({ provinceId: "taroudannt" }));
+    expect(normalizedCity.success).toBe(true);
+    if (normalizedCity.success) expect(normalizedCity.data.provinceId).toBeNull();
   });
 
   test("custom branch cannot claim a dataset id; ADMIN and MODERATOR have permission", () => {
@@ -108,5 +91,32 @@ test.describe("branch input validation", () => {
     expect(can("ADMIN", "branches:manage")).toBe(true);
     expect(can("MODERATOR", "branches:manage")).toBe(true);
     expect(can("USER", "branches:manage")).toBe(false);
+  });
+});
+
+test.describe("custom branch region inference", () => {
+  test("uses the five nearest city records for Marrakech, Dakhla and Oujda", () => {
+    for (const cityId of ["marrakech", "dakhla", "oujda"]) {
+      const city = MOROCCAN_CITIES.find((item) => item.id === cityId)!;
+      const inferred = inferRegionFromCoordinate(city.latitude, city.longitude);
+      expect(inferred?.regionId, cityId).toBe(city.regionId);
+      expect(inferred?.nearestCityIds).toHaveLength(5);
+      expect(inferred?.confidence).toBeGreaterThan(0);
+      expect(inferred?.confidence).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("accepts the southern map boundary and rejects coordinates outside Morocco bounds", () => {
+    expect(isWithinMoroccoBounds(20, -17.5)).toBe(true);
+    expect(inferRegionFromCoordinate(20, -17.5)).not.toBeNull();
+    expect(isWithinMoroccoBounds(19.99, -17.5)).toBe(false);
+    expect(inferRegionFromCoordinate(19.99, -17.5)).toBeNull();
+    expect(parseBranchInput({
+      kind: "CUSTOM",
+      nameAr: "فرع خارج النطاق",
+      regionId: "guelmim-oued-noun",
+      latitude: 19.99,
+      longitude: -17.5,
+    }).success).toBe(false);
   });
 });

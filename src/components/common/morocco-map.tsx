@@ -21,6 +21,7 @@ type MoroccoMapProps = {
   onActivate?: (id: string | null) => void;
   focusRegionId?: string | null;
   editor?: boolean;
+  editorInteractive?: boolean;
   pin?: { latitude: number; longitude: number } | null;
   onPinChange?: (latitude: number, longitude: number) => void;
   ariaLabel?: string;
@@ -35,6 +36,7 @@ export function MoroccoMap({
   onActivate = () => {},
   focusRegionId = null,
   editor = false,
+  editorInteractive = true,
   pin = null,
   onPinChange,
   ariaLabel,
@@ -72,14 +74,14 @@ export function MoroccoMap({
   return (
     <div
       ref={mapRef}
-      className={cn("relative mx-auto w-full max-w-[26rem] touch-none", editor && "max-w-none cursor-crosshair", className)}
+      className={cn("relative mx-auto w-full max-w-[26rem] touch-none", editor && "max-w-none", editor && editorInteractive && "cursor-crosshair", className)}
       onPointerDown={(event) => {
-        if (!editor) return;
+        if (!editor || !editorInteractive) return;
         setDragging(true);
         event.currentTarget.setPointerCapture(event.pointerId);
         placePin(event);
       }}
-      onPointerMove={(event) => { if (editor && dragging && event.buttons !== 0) placePin(event); }}
+      onPointerMove={(event) => { if (editor && editorInteractive && dragging && event.buttons !== 0) placePin(event); }}
       onPointerUp={() => setDragging(false)}
       onPointerCancel={() => setDragging(false)}
     >
@@ -115,10 +117,11 @@ export function MoroccoMap({
           {editor && pin && (
             <button
               type="button"
+              disabled={!editorInteractive}
               data-editor-pin
               aria-label={ariaLabel ?? t("adminBranches.mapLabel")}
               style={{ left: `${(project(pin.latitude, pin.longitude).x / W) * 100}%`, top: `${(project(pin.latitude, pin.longitude).y / H) * 100}%` }}
-              className="absolute z-30 grid size-10 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none place-items-center rounded-full bg-background/80 text-[var(--main)] shadow-lg ring-2 ring-[var(--main)] active:cursor-grabbing"
+              className={cn("absolute z-30 grid size-10 -translate-x-1/2 -translate-y-1/2 touch-none place-items-center rounded-full bg-background/80 text-[var(--main)] shadow-lg ring-2 ring-[var(--main)]", editorInteractive ? "cursor-grab active:cursor-grabbing" : "cursor-default")}
             >
               <span className="size-3 rounded-full bg-[var(--main)]" />
             </button>

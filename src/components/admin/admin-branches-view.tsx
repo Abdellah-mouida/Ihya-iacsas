@@ -9,15 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { MoroccoMap } from "@/components/common/morocco-map";
-import { MOROCCAN_CITIES, MOROCCAN_PROVINCES, MOROCCAN_REGIONS, normalizeMoroccanCityValue } from "@/data/morocco";
+import { MOROCCAN_CITIES, MOROCCAN_REGIONS, normalizeMoroccanCityValue } from "@/data/morocco";
 import { createBranch, deleteBranch, getAdminBranches, setBranchActive, updateBranch } from "@/app/actions/branches";
 import { parseBranchInput } from "@/lib/branches/validation";
+import { confidenceLevel, inferRegionFromCoordinate, type RegionInference } from "@/lib/branches/region-inference";
 import type { PublicBranch } from "@/lib/branches/types";
 import { cn } from "@/lib/utils";
 import { Check, ChevronLeft, ChevronRight, LoaderCircle, MapPin, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 const blankDraft = () => ({
-  kind: "CITY" as "CITY" | "PROVINCE" | "CUSTOM",
+  kind: "CITY" as "CITY" | "CUSTOM",
   geoId: "",
   nameAr: "",
   nameEn: "",
@@ -56,6 +57,7 @@ export function AdminBranchesView() {
   const [saving, setSaving] = useState(false);
   const [coordinatesConfirmed, setCoordinatesConfirmed] = useState(true);
   const [customRegionSelected, setCustomRegionSelected] = useState(false);
+  const [regionInference, setRegionInference] = useState<RegionInference | null>(null);
   const [error, setError] = useState("");
 
   const filteredCities = useMemo(() => {
@@ -70,12 +72,6 @@ export function AdminBranchesView() {
     const region = MOROCCAN_REGIONS.find((item) => item.id === id);
     return region ? region.name[isAr ? "ar" : "en"] : id;
   };
-  const provinceName = (id: string | null) => {
-    if (!id) return "";
-    const province = MOROCCAN_PROVINCES.find((item) => item.id === id);
-    return province ? province.name[isAr ? "ar" : "en"] : id;
-  };
-
   const loadBranches = async (nextPage = page) => {
     setLoading(true);
     const result = await getAdminBranches({ search, regionId, page: nextPage });
@@ -120,6 +116,7 @@ export function AdminBranchesView() {
       latitude: city.latitude,
       longitude: city.longitude,
     }));
+    setRegionInference(null);
     setCityQuery((isAr ? city.nameAr : city.nameEn));
     setCityPickerOpen(false);
   };
@@ -132,44 +129,31 @@ export function AdminBranchesView() {
     setError("");
     setCoordinatesConfirmed(true);
     setCustomRegionSelected(false);
+    setRegionInference(null);
     setEditorOpen(true);
   };
 
   const openEdit = (branch: BranchRow) => {
     setDraft({
-      kind: branch.kind,
-      geoId: branch.geoId ?? "",
+      kind: branch.kind === "CITY" ? "CITY" : "CUSTOM",
+      geoId: branch.kind === "CITY" ? branch.geoId ?? "" : "",
       nameAr: branch.nameAr,
       nameEn: branch.nameEn ?? "",
       regionId: branch.regionId,
-      provinceId: branch.provinceId ?? "",
+      provinceId: "",
       latitude: branch.latitude,
       longitude: branch.longitude,
       active: branch.active,
       sortOrder: branch.sortOrder,
     });
-    const city = branch.geoId ? MOROCCAN_CITIES.find((item) => item.id === branch.geoId) : null;
+    const city = branch.kind === "CITY" && branch.geoId ? MOROCCAN_CITIES.find((item) => item.id === branch.geoId) : null;
     setCityQuery(city ? (isAr ? city.nameAr : city.nameEn) : "");
     setEditingId(branch.id);
     setCoordinatesConfirmed(true);
-    setCustomRegionSelected(branch.kind === "CUSTOM");
+    setCustomRegionSelected(branch.kind !== "CITY");
+    setRegionInference(inferRegionFromCoordinate(branch.latitude, branch.longitude));
     setError("");
     setEditorOpen(true);
-  };
-
-  const chooseProvince = (id: string) => {
-    const province = MOROCCAN_PROVINCES.find((item) => item.id === id);
-    if (!province) return;
-    setDraft((value) => ({
-      ...value,
-      kind: "PROVINCE",
-      geoId: province.id,
-      nameAr: province.name.ar,
-      nameEn: province.name.en,
-      regionId: province.region,
-      provinceId: province.id,
-    }));
-    setCoordinatesConfirmed(false);
   };
 
   const setMode = (kind: BranchDraft["kind"]) => {
@@ -179,36 +163,29 @@ export function AdminBranchesView() {
         ? draft.geoId
         : MOROCCAN_CITIES[0].id;
       chooseCity(current);
-    } else if (kind === "PROVINCE") {
-      const current = draft.provinceId && MOROCCAN_PROVINCES.some((province) => province.id === draft.provinceId)
-        ? draft.provinceId
-        : MOROCCAN_PROVINCES[0].id;
-      chooseProvince(current);
     } else {
-      const nearest = MOROCCAN_CITIES.reduce((best, city) => {
-        const distance = (city.latitude - draft.latitude) ** 2 + (city.longitude - draft.longitude) ** 2;
-        return distance < best.distance ? { distance, city } : best;
-      }, { distance: Number.POSITIVE_INFINITY, city: MOROCCAN_CITIES[0] }).city;
-      setDraft((value) => ({ ...value, kind, geoId: "", provinceId: "", regionId: nearest.regionId }));
+      const inference = inferRegionFromCoordinate(draft.latitude, draft.longitude);
+      setRegionInference(inference);
+      setDraft((value) => ({ ...value, kind, geoId: "", provinceId: "", regionId: inference?.regionId ?? value.regionId }));
       setCustomRegionSelected(false);
       setCoordinatesConfirmed(false);
     }
   };
 
-  const setMapPin = (latitude: number, longitude: number) => {
-    setCoordinatesConfirmed(true);
+  const updateCoordinates = (latitude: number, longitude: number, confirmPin = false) => {
+    const inference = inferRegionFromCoordinate(latitude, longitude);
+    setRegionInference(inference);
+    if (confirmPin) setCoordinatesConfirmed(true);
     setDraft((value) => {
       let regionId = value.regionId;
-      if (value.kind === "CUSTOM" && !customRegionSelected) {
-        const nearestCity = MOROCCAN_CITIES.reduce((nearest, city) => {
-          const distance = (city.latitude - latitude) ** 2 + (city.longitude - longitude) ** 2;
-          return distance < nearest.distance ? { distance, city } : nearest;
-        }, { distance: Number.POSITIVE_INFINITY, city: MOROCCAN_CITIES[0] }).city;
-        regionId = nearestCity.regionId;
+      if (value.kind === "CUSTOM" && !customRegionSelected && inference) {
+        regionId = inference.regionId;
       }
       return { ...value, latitude, longitude, regionId };
     });
   };
+
+  const setMapPin = (latitude: number, longitude: number) => updateCoordinates(latitude, longitude, true);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -322,7 +299,7 @@ export function AdminBranchesView() {
               <div className="min-w-0">
                 <h2 className="truncate font-heading text-lg font-bold text-foreground">{localizedName(branch, locale)}</h2>
                 {branch.nameEn && <p className="truncate text-sm text-muted-foreground" dir={locale === "ar" ? "ltr" : "rtl"}>{locale === "ar" ? branch.nameEn : branch.nameAr}</p>}
-                <p className="mt-1 text-sm text-muted-foreground">{regionName(branch.regionId)}{branch.provinceId ? ` · ${provinceName(branch.provinceId)}` : ""}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{regionName(branch.regionId)}</p>
                 <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{branch.latitude.toFixed(5)}, {branch.longitude.toFixed(5)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
@@ -359,9 +336,9 @@ export function AdminBranchesView() {
             <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-4 sm:p-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
               <div className="min-w-0 space-y-4">
                 <div className="flex flex-wrap gap-2" role="group" aria-label={t("adminBranches.placeMode")}>
-                  {(["CITY", "PROVINCE", "CUSTOM"] as const).map((kind) => (
+                  {(["CITY", "CUSTOM"] as const).map((kind) => (
                     <Button key={kind} type="button" variant={draft.kind === kind ? "default" : "outline"} onClick={() => setMode(kind)} className="h-10 flex-1 rounded-xl px-3">
-                      {t(kind === "CITY" ? "adminBranches.city" : kind === "PROVINCE" ? "adminBranches.province" : "adminBranches.custom")}
+                      {t(kind === "CITY" ? "adminBranches.city" : "adminBranches.custom")}
                     </Button>
                   ))}
                 </div>
@@ -383,14 +360,6 @@ export function AdminBranchesView() {
                   </div>
                 )}
 
-                {draft.kind === "PROVINCE" && (
-                  <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.province")}
-                    <select value={draft.geoId} onChange={(event) => chooseProvince(event.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                      {MOROCCAN_PROVINCES.map((province) => <option key={province.id} value={province.id}>{province.name[isAr ? "ar" : "en"]}</option>)}
-                    </select>
-                  </label>
-                )}
-
                 {draft.kind === "CUSTOM" && (
                   <>
                     <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.region")}
@@ -398,19 +367,27 @@ export function AdminBranchesView() {
                         {MOROCCAN_REGIONS.map((region) => <option key={region.id} value={region.id}>{region.name[isAr ? "ar" : "en"]}</option>)}
                       </select>
                     </label>
+                    <p role="status" className="text-xs leading-relaxed text-muted-foreground">
+                      {regionInference
+                        ? t("adminBranches.regionSuggestion", {
+                            region: regionName(regionInference.regionId),
+                            confidence: t(`adminBranches.confidence.${confidenceLevel(regionInference.confidence)}`),
+                          })
+                        : t("adminBranches.regionSuggestionUnavailable")}
+                    </p>
                     <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.nameAr")}<Input required minLength={2} maxLength={80} value={draft.nameAr} onChange={(event) => setDraft((value) => ({ ...value, nameAr: event.target.value }))} dir="rtl" className="h-11 rounded-xl" /></label>
                     <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.nameEn")}<Input maxLength={80} value={draft.nameEn} onChange={(event) => setDraft((value) => ({ ...value, nameEn: event.target.value }))} dir="ltr" className="h-11 rounded-xl" /></label>
                   </>
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.latitude")}<Input type="number" step="any" value={draft.latitude} onChange={(event) => setDraft((value) => ({ ...value, latitude: Number(event.target.value) }))} className="h-11 rounded-xl" dir="ltr" /></label>
-                  <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.longitude")}<Input type="number" step="any" value={draft.longitude} onChange={(event) => setDraft((value) => ({ ...value, longitude: Number(event.target.value) }))} className="h-11 rounded-xl" dir="ltr" /></label>
+                  <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.latitude")}<Input type="number" step="any" value={draft.latitude} onChange={(event) => updateCoordinates(Number(event.target.value), draft.longitude)} className="h-11 rounded-xl" dir="ltr" /></label>
+                  <label className="block space-y-1.5 text-sm font-medium">{t("adminBranches.longitude")}<Input type="number" step="any" value={draft.longitude} onChange={(event) => updateCoordinates(draft.latitude, Number(event.target.value))} className="h-11 rounded-xl" dir="ltr" /></label>
                 </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">{t("adminBranches.mapHint")}{!coordinatesConfirmed && <span className="ms-1 text-destructive">{t("adminBranches.pinRequired")}</span>}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{draft.kind === "CITY" ? t("adminBranches.cityCoordinatesHint") : t("adminBranches.mapHint")}{!coordinatesConfirmed && <span className="ms-1 text-destructive">{t("adminBranches.pinRequired")}</span>}</p>
               </div>
               <div className="min-h-72 rounded-2xl border border-border/60 bg-background/40 p-3 sm:min-h-[26rem]">
-                <MoroccoMap editor pin={{ latitude: draft.latitude, longitude: draft.longitude }} onPinChange={setMapPin} />
+                <MoroccoMap editor editorInteractive={draft.kind === "CUSTOM"} pin={{ latitude: draft.latitude, longitude: draft.longitude }} onPinChange={setMapPin} />
               </div>
             </div>
             {error && <p role="alert" className="px-5 text-sm text-destructive sm:px-6">{error}</p>}
