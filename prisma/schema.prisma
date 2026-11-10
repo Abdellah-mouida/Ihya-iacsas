@@ -14,6 +14,12 @@ enum Role {
   ADMIN
 }
 
+enum BranchKind {
+  CITY
+  PROVINCE
+  CUSTOM
+}
+
 model CarouselPost {
   id        String   @id @default(cuid())
   imageUrl  String
@@ -143,13 +149,37 @@ model User {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  accounts  Account[]
-  sessions  Session[]
-  bookings  Booking[]
-  auditLogs AuditLog[]
+  accounts        Account[]
+  sessions        Session[]
+  bookings        Booking[]
+  auditLogs       AuditLog[]
+  branchesCreated Branch[]
 
   @@index([email])
   @@index([role])
+}
+
+model Branch {
+  id          String     @id @default(cuid())
+  kind        BranchKind
+  geoId       String?
+  nameAr      String
+  nameEn      String?
+  regionId    String
+  provinceId  String?
+  latitude    Float
+  longitude   Float
+  active      Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([active, sortOrder])
+  @@index([regionId, active])
+  @@index([provinceId])
+  @@index([geoId])
 }
 
 model Account {
@@ -214,21 +244,21 @@ model ContactMessage {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String?
-  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  actorName  String?
-  actorEmail String?
-  actorRole  String?
-  action     String
-  targetType String
-  targetId   String?
-  targetName String?
+  id          String   @id @default(cuid())
+  actorId     String?
+  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName   String?
+  actorEmail  String?
+  actorRole   String?
+  action      String
+  targetType  String
+  targetId    String?
+  targetName  String?
   targetEmail String?
-  details    Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
 
   @@index([actorId])
   @@index([action])
@@ -243,4 +273,3 @@ model SystemSetting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-

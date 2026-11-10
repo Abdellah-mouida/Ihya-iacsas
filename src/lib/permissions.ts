@@ -18,6 +18,7 @@ export type Permission =
   | "users:manage_roles"
   | "users:delete"
   | "audit:view"
+  | "branches:manage"
   | "settings:manage";
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -32,6 +33,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "carousel:manage",
     "contacts:view",
     "contacts:manage",
+    "branches:manage",
   ],
   ADMIN: [
     "events:view",
@@ -49,6 +51,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "users:manage_roles",
     "users:delete",
     "audit:view",
+    "branches:manage",
     "settings:manage",
   ],
 } as const;
