@@ -7,10 +7,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getGalleryPhotos } from "@/app/actions/gallery";
 import { SectionHeading } from "@/components/common/section-heading";
+import { InViewReveal } from "@/components/common/in-view-reveal";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
-import { EASE, fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
+import { EASE } from "@/lib/motion";
 
 type PhotoItem = {
   id: string;
@@ -197,20 +198,14 @@ export function GalleryPageContent() {
                 </div>
 
                 {/* Group photos grid */}
-                <motion.div
-                  variants={staggerContainer(0.08)}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={viewportOnce}
-                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                >
+                <InViewReveal className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {group.items.map((item) => {
                     const globalIdx = flatPhotos.findIndex((p) => p.id === item.id);
                     return (
-                      <motion.div
+                      <div
                         key={item.id}
-                        variants={fadeUp}
-                        className="group glass relative overflow-hidden rounded-2xl shadow-layered transition-all duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-2 hover:ring-brass/35"
+                        data-gallery-card
+                        className="group glass relative overflow-hidden rounded-2xl shadow-layered transition-[transform,box-shadow] duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-2 hover:ring-brass/35"
                       >
                         <button
                           type="button"
@@ -233,19 +228,19 @@ export function GalleryPageContent() {
                           <div className="pointer-events-none absolute inset-2.5 rounded-xl ring-1 ring-inset ring-gold/20 transition-all duration-300 group-hover:ring-gold/40" />
 
                           {/* Hover scrim + zoom icon */}
-                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-night/45 opacity-0 backdrop-blur-[1px] transition-opacity duration-300 group-hover:opacity-100">
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-night/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                             <ZoomIn className="size-8 text-white" />
                           </span>
 
                           {/* Caption bar */}
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-night/85 via-night/40 to-transparent p-4 text-start text-sm font-medium text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-night/85 via-night/40 to-transparent p-4 text-start text-sm font-medium text-white opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                             <p className="line-clamp-2">{item.caption}</p>
                           </div>
                         </button>
-                      </motion.div>
+                      </div>
                     );
                   })}
-                </motion.div>
+                </InViewReveal>
               </section>
             ))}
           </div>
@@ -254,7 +249,7 @@ export function GalleryPageContent() {
 
       {/* Lightbox Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl border-brass/30 bg-background/95 p-3 sm:max-w-4xl">
+        <DialogContent closeLabel={t("gallery.close")} className="max-w-4xl border-brass/30 bg-background/95 p-3 sm:max-w-4xl">
           <DialogTitle className="sr-only">
             {current ? current.caption : ""}
           </DialogTitle>
@@ -287,18 +282,18 @@ export function GalleryPageContent() {
             {/* Navigation buttons */}
             <button
               type="button"
-              aria-label="prev"
+              aria-label={t("gallery.previousImage")}
               onClick={() => go(dir === "rtl" ? 1 : -1)}
-              className="glass absolute top-1/2 start-3 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full text-foreground transition hover:scale-110 hover:text-brass"
+              className="glass absolute top-1/2 start-3 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full text-foreground transition-[transform,color] hover:scale-110 hover:text-brass"
             >
               <ChevronLeft className="size-6 rtl:hidden" />
               <ChevronRight className="hidden size-6 rtl:block" />
             </button>
             <button
               type="button"
-              aria-label="next"
+              aria-label={t("gallery.nextImage")}
               onClick={() => go(dir === "rtl" ? -1 : 1)}
-              className="glass absolute top-1/2 end-3 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full text-foreground transition hover:scale-110 hover:text-brass"
+              className="glass absolute top-1/2 end-3 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full text-foreground transition-[transform,color] hover:scale-110 hover:text-brass"
             >
               <ChevronRight className="size-6 rtl:hidden" />
               <ChevronLeft className="hidden size-6 rtl:block" />

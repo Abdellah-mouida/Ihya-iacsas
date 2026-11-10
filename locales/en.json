@@ -162,6 +162,8 @@
     "title": "Glimpses of Ihyaa",
     "desc": "Snapshots from our gatherings, activities, and spiritual life.",
     "view": "View image",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
     "close": "Close",
     "viewAll": "View all photos",
     "pageKicker": "Photo Gallery",

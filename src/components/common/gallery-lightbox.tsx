@@ -142,7 +142,7 @@ export function GalleryLightbox({
       </InViewReveal>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl border-brass/30 bg-background/95 p-2 sm:max-w-3xl">
+        <DialogContent closeLabel={t("gallery.close")} className="max-w-3xl border-brass/30 bg-background/95 p-2 sm:max-w-3xl">
           <DialogTitle className="sr-only">
             {current ? current.caption : ""}
           </DialogTitle>
@@ -194,7 +194,7 @@ export function GalleryLightbox({
 
             <button
               type="button"
-              aria-label="prev"
+              aria-label={t("gallery.previousImage")}
               onClick={() => go(dir === "rtl" ? 1 : -1)}
               className="glass absolute top-1/2 start-2 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full text-foreground transition hover:scale-110 hover:text-brass"
             >
@@ -203,7 +203,7 @@ export function GalleryLightbox({
             </button>
             <button
               type="button"
-              aria-label="next"
+              aria-label={t("gallery.nextImage")}
               onClick={() => go(dir === "rtl" ? -1 : 1)}
               className="glass absolute top-1/2 end-2 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full text-foreground transition hover:scale-110 hover:text-brass"
             >
