@@ -104,6 +104,23 @@ test.describe("Task 7: Role-Based Admin Access & Permission Gate", () => {
     await expect(page).toHaveURL(/\/403/, { timeout: 30000 });
   });
 
+  test("Branches management is available to ADMIN and MODERATOR and forbidden to USER", async ({ page }) => {
+    test.setTimeout(90_000);
+    await loginAs(page, TEST_ADMIN, "/admin/branches");
+    await expect(page).toHaveURL(/\/admin\/branches/, { timeout: 30000 });
+    await expect(page.getByRole("heading", { name: /manage branches|إدارة الفروع/i })).toBeVisible();
+    await expect(page.locator("aside").getByRole("link", { name: /branches|الفروع/i })).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, TEST_MODERATOR, "/admin/branches");
+    await expect(page).toHaveURL(/\/admin\/branches/, { timeout: 30000 });
+    await expect(page.getByRole("heading", { name: /manage branches|إدارة الفروع/i })).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, TEST_REGULAR_USER, "/admin/branches");
+    await expect(page).toHaveURL(/\/403/, { timeout: 30000 });
+  });
+
   test("7. ADMIN sees Admin Portal in public navbar and session persists across public site", async ({
     page,
   }) => {

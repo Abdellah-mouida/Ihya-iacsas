@@ -27,6 +27,7 @@ export function sanitizeAuditDetails(
   value: unknown,
   depth = 0,
 ): Prisma.InputJsonValue | undefined {
+  if (value === null || value === undefined) return undefined;
   if (depth > 4) return undefined;
   if (typeof value === "boolean" || typeof value === "number") {
     return value;

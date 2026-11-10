@@ -29,6 +29,25 @@ test.describe("branch input validation", () => {
       expect(city.data.nameEn).toBe("Marrakech");
       expect(city.data.active).toBe(true);
     }
+    const noEnglishName = parseBranchInput(cityBranch({ nameEn: "   " }));
+    expect(noEnglishName.success).toBe(true);
+    if (noEnglishName.success) expect(noEnglishName.data.nameEn).toBeNull();
+
+    const custom = parseBranchInput({
+      kind: "CUSTOM",
+      geoId: "",
+      provinceId: "",
+      nameAr: "فرع تجريبي",
+      nameEn: "Test branch",
+      regionId: marrakech.regionId,
+      latitude: marrakech.latitude,
+      longitude: marrakech.longitude,
+    });
+    expect(custom.success).toBe(true);
+    if (custom.success) {
+      expect(custom.data.geoId).toBeNull();
+      expect(custom.data.provinceId).toBeNull();
+    }
 
     const southernCustom = parseBranchInput({
       kind: "CUSTOM",

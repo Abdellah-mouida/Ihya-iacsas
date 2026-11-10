@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  MapPin,
   Menu,
   Shield,
   Sparkles,
@@ -54,6 +55,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     { href: "/admin/carousel", label: isAr ? "شريط الصور" : "Carousel", icon: Sparkles },
     { href: "/admin/gallery", label: isAr ? "معرض الصور" : "Gallery", icon: ImageIcon },
     { href: "/admin/events", label: isAr ? "الفعاليات" : "Events", icon: Calendar },
+    { href: "/admin/branches", label: t("adminBranches.navLabel"), icon: MapPin },
     { href: "/admin/bookings", label: isAr ? "الحجوزات" : "Bookings", icon: Ticket },
     { href: "/admin/contacts", label: isAr ? "الرسائل" : "Messages", icon: Mail },
     ...(user.role === "ADMIN"

@@ -1,13 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { MOROCCAN_CITIES } from "@/data/morocco";
-import { MOROCCO_MAP } from "@/lib/morocco-map";
 import { project, unproject } from "@/lib/morocco-projection";
 
 const CALIBRATION_POINTS = [
   { id: "tangier", expected: { x: 684, y: 57 } },
   { id: "oujda", expected: { x: 907, y: 127 } },
   { id: "casablanca", expected: { x: 585, y: 198 } },
-  { id: "marrakech", expected: MOROCCO_MAP.pins.marrakech },
+  { id: "marrakech", expected: { x: 562.4, y: 322.8 } },
   { id: "agadir", expected: { x: 470, y: 400 } },
   { id: "laayoune", expected: { x: 266, y: 611 } },
   { id: "dakhla", expected: { x: 109, y: 834 } },
