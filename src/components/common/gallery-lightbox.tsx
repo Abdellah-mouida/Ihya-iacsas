@@ -9,7 +9,9 @@ import { getGalleryPhotos } from "@/app/actions/gallery";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
-import { EASE, fadeUp, staggerContainer, viewportOnce } from "@/lib/motion";
+import { EASE } from "@/lib/motion";
+import { InViewReveal } from "@/components/common/in-view-reveal";
+import { SpotlightCard } from "@/components/common/spotlight-card";
 
 const LIGHTBOX_SIZES = "(max-width: 768px) 92vw, 768px";
 
@@ -102,19 +104,13 @@ export function GalleryLightbox({
 
   return (
     <>
-      <motion.div
-        variants={staggerContainer(0.08)}
-        initial="hidden"
-        whileInView="show"
-        viewport={viewportOnce}
+      <InViewReveal
         className="columns-2 gap-4 md:columns-3 [&>*]:mb-4"
       >
         {items.map((item, i) => (
-          // Non-button wrapper; inner button is the lightbox trigger.
-          <motion.div
+          <SpotlightCard
             key={item.src}
-            variants={fadeUp}
-            className="group glass relative break-inside-avoid overflow-hidden rounded-2xl shadow-layered transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-layered hover:ring-2 hover:ring-brass/30"
+            className="group glass relative break-inside-avoid rounded-2xl shadow-layered transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-layered hover:ring-2 hover:ring-brass/30"
           >
             <button
               type="button"
@@ -134,16 +130,16 @@ export function GalleryLightbox({
                 sizes="(max-width: 768px) 50vw, 33vw"
                 className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-night/45 opacity-0 backdrop-blur-[1px] transition-opacity duration-300 group-hover:opacity-100">
-                <ZoomIn className="size-7 text-white" />
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <ZoomIn className="size-7 text-foreground" />
               </span>
-              <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-night/80 to-transparent p-3 text-start text-xs font-medium text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+              <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-background/80 to-transparent p-3 text-start text-xs font-medium text-foreground opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                 {item.caption}
               </span>
             </button>
-          </motion.div>
+          </SpotlightCard>
         ))}
-      </motion.div>
+      </InViewReveal>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl border-brass/30 bg-background/95 p-2 sm:max-w-3xl">

@@ -1,0 +1,40 @@
+.spotlight {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  overflow: hidden;
+  --spotlight-x: 50%;
+  --spotlight-y: 50%;
+}
+
+.spotlight::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: radial-gradient(
+    24rem circle at var(--spotlight-x) var(--spotlight-y),
+    color-mix(in oklch, var(--main) 16%, transparent),
+    transparent 72%
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+}
+
+.spotlight:hover::before,
+.spotlight:focus-within::before {
+  opacity: 1;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .spotlight::before {
+    display: none;
+  }
+}

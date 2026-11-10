@@ -13,26 +13,26 @@ const homeCopy = {
   ar: {
     title: "برنامج إحياء الشبابي",
     activities: [
-      "لقاءات شبابية ومجالس تربوية.",
-      "خرجات ترفيهية وأنشطة رياضية.",
-      "نقاشات فكرية وحوارات ثقافية.",
-      "دورات تكوينية وورشات تدريبية.",
+      { title: "لقاءات", desc: "لقاءات شبابية ومجالس تربوية." },
+      { title: "خرجات", desc: "خرجات ترفيهية وأنشطة رياضية." },
+      { title: "حوارات", desc: "نقاشات فكرية وحوارات ثقافية." },
+      { title: "تكوين", desc: "دورات تكوينية وورشات تدريبية." },
     ],
   },
   en: {
     title: "Ihyaa Youth Program",
     activities: [
-      "Youth gatherings and educational circles.",
-      "Recreational outings and sports activities.",
-      "Intellectual discussions and cultural dialogues.",
-      "Training courses and workshops.",
+      { title: "Gatherings", desc: "Youth gatherings and educational circles." },
+      { title: "Outings", desc: "Recreational outings and sports activities." },
+      { title: "Dialogues", desc: "Intellectual discussions and cultural dialogues." },
+      { title: "Training", desc: "Training courses and workshops." },
     ],
   },
 };
 
 test("home content and official social links stay localized and responsive", async ({ page }) => {
   test.setTimeout(300_000);
-  const screenshotDir = join(process.cwd(), "evidence/task-10");
+  const screenshotDir = join(process.cwd(), "evidence/task-06/t3");
   await mkdir(screenshotDir, { recursive: true });
 
   for (const locale of ["ar", "en"] as const) {
@@ -73,7 +73,8 @@ test("home content and official social links stay localized and responsive", asy
         const cards = page.locator('[data-testid="home-activity-card"]');
         await expect(cards).toHaveCount(4);
         for (const [index, activity] of homeCopy[locale].activities.entries()) {
-          await expect(cards.nth(index).locator("h3")).toHaveText(activity);
+          await expect(cards.nth(index).locator("h3")).toHaveText(activity.title);
+          await expect(cards.nth(index).locator("p")).toHaveText(activity.desc);
         }
         await expect(page.locator("body")).not.toContainText(/community|جمعية/i);
       }

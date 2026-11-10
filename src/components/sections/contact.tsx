@@ -1,12 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Phone, Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { notify } from "@/lib/toast";
 
 import { submitContactMessage } from "@/app/actions/contacts";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { InViewReveal } from "@/components/common/in-view-reveal";
 import { SocialIcon } from "@/components/common/social-icons";
 import { Texture } from "@/components/common/texture";
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
 import { SOCIAL_LINKS } from "@/config/social";
 import { EVENT } from "@/lib/content";
-import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
 type Errors = { name?: string; email?: string; message?: string };
 
 export function Contact() {
-  const { t, dir, locale } = useLocale();
+  const { t, locale } = useLocale();
   const [values, setValues] = useState({ name: "", email: "", message: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<"idle" | "sending" | "success">("idle");
@@ -70,16 +69,9 @@ export function Contact() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="grid gap-12 lg:grid-cols-2">
           {/* Form */}
-          <motion.form
-            noValidate
-            onSubmit={handleSubmit}
-            variants={staggerContainer(0.1)}
-            initial="hidden"
-            whileInView="show"
-            viewport={viewportOnce}
-            className="flex flex-col gap-5"
-          >
-            <motion.div variants={fadeUp} className="flex flex-col gap-3">
+          <InViewReveal className="flex flex-col gap-5">
+            <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3">
               <span className="inline-flex w-max items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass">
                 <span className="size-1.5 rounded-full bg-brass" />
                 {t("contact.kicker")}
@@ -88,9 +80,9 @@ export function Contact() {
                 {t("contact.title")}
               </h2>
               <p className="text-muted-foreground">{t("contact.desc")}</p>
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp} className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="name">{t("contact.name")}</Label>
               <Input
                 id="name"
@@ -104,9 +96,9 @@ export function Contact() {
               {errors.name ? (
                 <span className="text-xs text-destructive">{errors.name}</span>
               ) : null}
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp} className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="email">{t("contact.email")}</Label>
               <Input
                 id="email"
@@ -122,9 +114,9 @@ export function Contact() {
               {errors.email ? (
                 <span className="text-xs text-destructive">{errors.email}</span>
               ) : null}
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp} className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="message">{t("contact.message")}</Label>
               <Textarea
                 id="message"
@@ -140,9 +132,9 @@ export function Contact() {
               {errors.message ? (
                 <span className="text-xs text-destructive">{errors.message}</span>
               ) : null}
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp}>
+            <div>
               <Button
                 type="submit"
                 disabled={status === "sending"}
@@ -155,15 +147,12 @@ export function Contact() {
                     ? t("contact.success")
                     : t("contact.send")}
               </Button>
-            </motion.div>
-          </motion.form>
+            </div>
+            </form>
+          </InViewReveal>
 
           {/* Info panel */}
-          <motion.div
-            variants={slideIn(dir === "rtl" ? -1 : 1)}
-            initial="hidden"
-            whileInView="show"
-            viewport={viewportOnce}
+          <InViewReveal
             className="glass-strong group relative flex flex-col gap-6 overflow-hidden rounded-3xl p-8 shadow-layered transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-brass/30 backdrop-blur-xl"
           >
             {/* Subtle moroccan texture on contact card */}
@@ -228,7 +217,7 @@ export function Contact() {
                 })}
               </div>
             </div>
-          </motion.div>
+          </InViewReveal>
         </div>
       </div>
     </section>

@@ -7,7 +7,7 @@ The `@react-bits` registry is configured in `components.json`. The Shadcn MCP se
 | Registry component | Site use | Dependency | Decision |
 |---|---|---|---|
 | `FoldText-TS-TW` | Home hero title (`src/components/sections/hero.tsx`) | Registry asks for `gsap@^3.13.0`; none added | Adapt whole-word fold motion to CSS transforms. Keep Arabic words joined, SSR title visible, static reduced-motion fallback. |
-| `SpotlightCard-TS-TW` | Select image/surface cards only where it improves the page | None | Adapt with theme tokens and fine-pointer CSS only; do not copy its hard-coded colors, noise gradient, global pointer listeners or animation loop. Measure route cost before retaining. |
+| `SpotlightCard-TS-TW` | Home activity cards and home gallery preview | None | Adapted as a token-based radial highlight updated through CSS variables on fine-pointer events; no hard-coded colors, noise, React state updates or animation loop. `useLowPower({ pointerOnly: true })` turns it off for touch/low-power devices. |
 | `Masonry-TS-TW` | Gallery candidate | Adds `@hugeicons/react` and `@hugeicons/core-free-icons` | Dropped: current responsive grid preserves reading order and reserved image size; source is about 42.8 KB (10.9 KB gzip). |
 | `BlurText-TS-TW` | Auth heading candidate | Adds `motion@^12.23.12` | Dropped: existing shared motion/CSS can provide a quiet heading treatment; avoid blur and a second motion package beside signup fields. |
 | `CountUp-TS-TW` | Admin real-stat candidate | Adds `motion@^12.23.12` | Dropped: keep live numbers immediate, without a second motion package or delayed values. |
@@ -19,5 +19,6 @@ The measured compressed sizes above are registry source estimates (gzip), not th
 
 - `useLowPower({ pointerOnly })` gates optional effects for reduced motion, Save Data, device memory or hardware concurrency at or below four; pointer-only effects also disable on `(hover: none)`.
 - `InViewMount` mounts optional effects near the viewport and unmounts them when out of view or when the document is hidden. `minHeight` can reserve the region while the effect is absent.
+- `InViewReveal` uses one shared `IntersectionObserver` and DOM attributes for a transform/opacity reveal; it does not set React state per scroll or hide server-rendered text when JavaScript is unavailable.
 
 No third-party React Bits component has been copied verbatim. Any retained adaptation uses theme tokens, keeps locale content and RTL word boundaries, honors reduced motion and touch, and avoids animation work while idle.

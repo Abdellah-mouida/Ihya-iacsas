@@ -1,58 +1,41 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Image from "next/image";
 
+import { InViewReveal } from "@/components/common/in-view-reveal";
 import { MotionCard } from "@/components/common/motion-card";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Texture } from "@/components/common/texture";
 import { useLocale } from "@/i18n/locale-provider";
 import { ABOUT_CARDS, IMAGES } from "@/lib/content";
-import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
 
 export function   About() {
-  const { t, dir } = useLocale();
+  const { t } = useLocale();
 
   return (
     <section id="about" className="relative isolate overflow-hidden py-24 sm:py-32 z-0">
       <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
         {/* Text column */}
-        <motion.div
-          variants={staggerContainer(0.12)}
-          initial="hidden"
-          whileInView="show"
-          viewport={viewportOnce}
+        <InViewReveal
           className="flex flex-col items-start gap-5 text-start"
         >
-          <motion.span
-            variants={fadeUp}
-            className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass"
-          >
+          <span className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass">
             <span className="size-1.5 rounded-full bg-brass" />
             {t("about.kicker")}
-          </motion.span>
-          <motion.h2
-            variants={fadeUp}
-            className="font-heading text-3xl font-semibold text-balance sm:text-4xl md:text-5xl"
-          >
+          </span>
+          <h2 className="font-heading text-3xl font-semibold text-balance sm:text-4xl md:text-5xl">
             {t("about.title")}
-          </motion.h2>
-          <motion.div variants={fadeUp}>
+          </h2>
+          <div>
             <OrnamentDivider compact />
-          </motion.div>
-          <motion.p
-            variants={fadeUp}
-            className="text-pretty text-lg leading-relaxed text-muted-foreground"
-          >
+          </div>
+          <p className="text-pretty text-lg leading-relaxed text-muted-foreground">
             {t("about.p1")}
-          </motion.p>
-          <motion.p
-            variants={fadeUp}
-            className="text-pretty leading-relaxed text-muted-foreground"
-          >
+          </p>
+          <p className="text-pretty leading-relaxed text-muted-foreground">
             {t("about.p2")}
-          </motion.p>
-          <motion.div variants={fadeUp}>
+          </p>
+          <div>
             <MotionCard intensity={6} radiusClass="rounded-2xl" wrapperClassName="mt-2">
               <blockquote
                 className="glass rounded-2xl border-s-2 border-brass px-5 py-4 font-heading text-xl text-foreground transition-all duration-300 hover:shadow-card-hover"
@@ -61,15 +44,11 @@ export function   About() {
                 {t("about.quote")}
               </blockquote>
             </MotionCard>
-          </motion.div>
-        </motion.div>
+          </div>
+        </InViewReveal>
 
         {/* Visual column */}
-        <motion.div
-          variants={slideIn(dir === "rtl" ? -1 : 1)}
-          initial="hidden"
-          whileInView="show"
-          viewport={viewportOnce}
+        <InViewReveal
           className="flex flex-col gap-5"
         >
           <div className="relative">
@@ -123,7 +102,7 @@ export function   About() {
               </MotionCard>
             ))}
           </div>
-        </motion.div>
+        </InViewReveal>
       </div>
     </section>
   );

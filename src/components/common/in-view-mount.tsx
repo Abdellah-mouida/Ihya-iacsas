@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 
 type InViewMountProps = {
   children: ReactNode;
+  placeholder?: ReactNode;
   className?: string;
   /** Keeps layout space while effects below the fold are not mounted. */
   minHeight?: CSSProperties["minHeight"];
@@ -13,6 +14,7 @@ type InViewMountProps = {
 /** Mounts optional, expensive effects only while their reserved region is visible. */
 export function InViewMount({
   children,
+  placeholder = null,
   className,
   minHeight,
   rootMargin = "160px 0px",
@@ -48,7 +50,7 @@ export function InViewMount({
       style={minHeight === undefined ? undefined : { minHeight }}
       data-in-view-mount
     >
-      {active ? children : null}
+      {active ? children : placeholder}
     </div>
   );
 }
