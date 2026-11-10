@@ -11,6 +11,7 @@ import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { Hero } from "@/components/sections/hero";
 import { Program } from "@/components/sections/program";
 import { getPublicBranches } from "@/lib/branches/public-data";
+import deferred from "@/components/sections/home-deferred.module.css";
 
 export default async function Home() {
   const [session, branches] = await Promise.all([auth(), getPublicBranches()]);
@@ -22,11 +23,11 @@ export default async function Home() {
         {/* Content sections with subtle ambient depth */}
         <div className="relative">
           <About />
-          <Activities />
-          <Branches branches={branches} />
-          <CardCarousel />
-          <Gallery />
-          <Program />
+          <div className={deferred.activities}><Activities /></div>
+          <div className={deferred.branches}><Branches branches={branches} /></div>
+          <div className={deferred.carousel}><CardCarousel /></div>
+          <div className={deferred.gallery}><Gallery /></div>
+          <div className={deferred.program}><Program /></div>
           <Contact />
         </div>
       </main>
