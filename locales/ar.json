@@ -153,7 +153,9 @@
     "searchPlaceholder": "ابحث باسم الفرع أو الجهة",
     "regionFilter": "تصفية الفروع حسب الجهة",
     "allRegions": "جميع الجهات",
-    "branchList": "الفروع حسب الجهة"
+    "branchList": "الفروع حسب الجهة",
+    "showMore": "عرض {count} فروع إضافية",
+    "showLess": "عرض عدد أقل"
   },
   "gallery": {
     "kicker": "لحظات",

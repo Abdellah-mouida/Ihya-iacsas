@@ -153,6 +153,7 @@ export function MoroccoMap({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.92 }}
                       transition={{ duration: reducedMotion ? 0 : 0.2, ease: EASE }}
+                      data-testid="branch-map-tooltip"
                       className="glass-strong pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-40 flex -translate-x-1/2 flex-col items-center whitespace-nowrap rounded-xl px-3 py-2 shadow-layered"
                     >
                       <span className="font-heading text-sm font-semibold leading-tight text-foreground">{branch.name}</span>

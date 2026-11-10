@@ -7,10 +7,13 @@ import { SectionHeading } from "@/components/common/section-heading";
 import type { MapBranch } from "@/components/common/morocco-map";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocale } from "@/i18n/locale-provider";
 import { MOROCCAN_PROVINCES, MOROCCAN_REGIONS, normalizeMoroccanCityValue } from "@/data/morocco";
 import type { PublicBranch } from "@/lib/branches/types";
 import { cn } from "@/lib/utils";
+
+const INITIAL_REGION_BRANCHES = 8;
 
 function MapSkeleton() {
   return <div className="mx-auto aspect-[1000/1065] w-full max-w-[26rem] animate-pulse rounded-3xl bg-muted/40 motion-reduce:animate-none" aria-hidden="true" />;
@@ -27,6 +30,7 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [regionId, setRegionId] = useState("all");
+  const [expandedRegions, setExpandedRegions] = useState<Record<string, boolean>>({});
 
   const regionCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -81,32 +85,42 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
             </div>
 
             <div className="min-w-0 space-y-4">
-              <div className="flex gap-2 overflow-x-auto pb-2" aria-label={t("branches.regionFilter")}>
-                <Button type="button" data-region-id="all" variant={regionId === "all" ? "default" : "outline"} aria-pressed={regionId === "all"} onClick={() => setRegionId("all")} className="h-9 shrink-0 rounded-full px-4">
-                  {t("branches.allRegions")} <span className="ms-2 rounded-full bg-background/50 px-2 py-0.5 text-xs">{branches.length}</span>
-                </Button>
-                {MOROCCAN_REGIONS.filter((region) => regionCounts.has(region.id)).map((region) => (
-                  <Button key={region.id} type="button" data-region-id={region.id} variant={regionId === region.id ? "default" : "outline"} aria-pressed={regionId === region.id} onClick={() => setRegionId(region.id)} className="h-9 shrink-0 rounded-full px-4">
-                    {region.name[isAr ? "ar" : "en"]}<span className="ms-2 rounded-full bg-background/50 px-2 py-0.5 text-xs">{regionCounts.get(region.id)}</span>
-                  </Button>
-                ))}
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                <Select value={regionId} onValueChange={(value) => { setRegionId(value); setActiveId(null); }}>
+                  <SelectTrigger aria-label={t("branches.regionFilter")} data-testid="branch-region-filter" className="h-10 min-w-0 rounded-xl bg-card/60">
+                    <SelectValue placeholder={t("branches.regionFilter")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("branches.allRegions")} ({branches.length})</SelectItem>
+                    {MOROCCAN_REGIONS.filter((region) => regionCounts.has(region.id)).map((region) => (
+                      <SelectItem key={region.id} value={region.id} data-region-id={region.id}>
+                        {region.name[isAr ? "ar" : "en"]} ({regionCounts.get(region.id)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <label className="relative block min-w-0">
+                  <span className="sr-only">{t("branches.search")}</span>
+                  <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input value={searchText} onChange={(event) => { setSearchText(event.target.value); setActiveId(null); }} placeholder={t("branches.searchPlaceholder")} className="h-10 min-w-0 rounded-xl ps-10" />
+                </label>
               </div>
 
-              <label className="relative block">
-                <span className="sr-only">{t("branches.search")}</span>
-                <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder={t("branches.searchPlaceholder")} className="h-11 rounded-xl ps-10" />
-              </label>
-
               {visibleBranches.length ? (
-                <div className="space-y-5" aria-label={t("branches.branchList")}>
+                <div className="space-y-4" aria-label={t("branches.branchList")} data-testid="branches-list">
                   {visibleGroups.map(({ region: groupRegion, branches: groupBranches }) => (
                     <section key={groupRegion.id} aria-labelledby={`branch-region-${groupRegion.id}`} className="space-y-2">
-                      <h3 id={`branch-region-${groupRegion.id}`} className="font-heading text-sm font-semibold text-muted-foreground">
-                        {groupRegion.name[isAr ? "ar" : "en"]}
-                      </h3>
-                      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                        {groupBranches.map((branch) => {
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 id={`branch-region-${groupRegion.id}`} className="font-heading text-sm font-semibold text-muted-foreground">
+                          {groupRegion.name[isAr ? "ar" : "en"]}
+                        </h3>
+                        <span className="rounded-full bg-card/70 px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+                          {groupBranches.length}
+                        </span>
+                      </div>
+                      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                        {groupBranches.slice(0, expandedRegions[groupRegion.id] ? undefined : INITIAL_REGION_BRANCHES).map((branch) => {
                           const index = visibleBranches.findIndex((item) => item.id === branch.id);
                           const active = activeId === branch.id;
                           return (
@@ -120,23 +134,38 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
                                 onClick={() => setActiveId(active ? null : branch.id)}
                                 aria-pressed={active}
                                 className={cn(
-                                  "glass flex min-h-[4.5rem] w-full items-center gap-3 rounded-2xl border p-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                  "glass flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2 text-start transition-[background-color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                   active ? "glass-strong border-brass/40" : "border-border/60 hover:border-brass/30",
                                 )}
                               >
-                                <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", active ? "bg-brass-gradient text-night" : "bg-[var(--main)]/10 text-[var(--main)]")}>
-                                  <MapPin className="size-4" />
+                                <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", active ? "bg-brass-gradient text-night" : "bg-[var(--main)]/10 text-[var(--main)]")}>
+                                  <MapPin className="size-3.5" />
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                  <span className="block truncate font-heading text-base font-semibold text-foreground">{isAr ? branch.nameAr : branch.nameEn || branch.nameAr}</span>
-                                  <span className="block truncate text-sm text-muted-foreground">{branch.nameEn && (isAr ? branch.nameEn : branch.nameAr)}</span>
+                                  <span className="block truncate font-heading text-sm font-semibold text-foreground">{isAr ? branch.nameAr : branch.nameEn || branch.nameAr}</span>
+                                  <span className="block truncate text-xs text-muted-foreground">{branch.nameEn && (isAr ? branch.nameEn : branch.nameAr)}</span>
                                 </span>
-                                <span className="ms-auto text-xs tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                                <span className="ms-auto text-[0.7rem] tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
                               </button>
                             </li>
                           );
                         })}
                       </ul>
+                      {groupBranches.length > INITIAL_REGION_BRANCHES ? (
+                        <Button
+                          type="button"
+                          data-testid="branch-region-expander"
+                          data-region-id={groupRegion.id}
+                          aria-expanded={Boolean(expandedRegions[groupRegion.id])}
+                          variant="ghost"
+                          onClick={() => setExpandedRegions((current) => ({ ...current, [groupRegion.id]: !current[groupRegion.id] }))}
+                          className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          {expandedRegions[groupRegion.id]
+                            ? t("branches.showLess")
+                            : t("branches.showMore").replace("{count}", String(groupBranches.length - INITIAL_REGION_BRANCHES))}
+                        </Button>
+                      ) : null}
                     </section>
                   ))}
                 </div>

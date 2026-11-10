@@ -153,7 +153,9 @@
     "searchPlaceholder": "Search by branch or region",
     "regionFilter": "Filter branches by region",
     "allRegions": "All regions",
-    "branchList": "Branches by region"
+    "branchList": "Branches by region",
+    "showMore": "Show {count} more",
+    "showLess": "Show fewer"
   },
   "gallery": {
     "kicker": "Moments",
