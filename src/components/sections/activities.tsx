@@ -67,6 +67,9 @@ export function Activities() {
                     <h3 className="font-heading text-xl font-bold tracking-tight sm:text-2xl">
                       {t(item.titleKey)}
                     </h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {t(item.descKey)}
+                    </p>
                   </div>
                 </div>
               </MotionCard>

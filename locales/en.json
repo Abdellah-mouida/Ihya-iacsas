@@ -74,10 +74,10 @@
     "kicker": "What we offer",
     "title": "Activities that revive ambition",
     "desc": "Integrated programs blending spiritual, social, and intellectual growth.",
-    "gatherings": "Youth gatherings and educational circles.",
-    "outings": "Recreational outings and sports activities.",
-    "dialogues": "Intellectual discussions and cultural dialogues.",
-    "training": "Training courses and workshops.",
+    "gatherings": "Gatherings",
+    "outings": "Outings",
+    "dialogues": "Dialogues",
+    "training": "Training",
     "gatheringsTitle": "Circles & gatherings",
     "gatheringsDesc": "Regular knowledge and faith sessions that build awareness.",
     "sportsTitle": "Sports & leisure",
@@ -86,7 +86,11 @@
     "learningDesc": "Workshops and meaningful content that grow skills and knowledge.",
     "categorySpiritual": "Spiritual",
     "categorySocial": "Social",
-    "categoryIntellectual": "Intellectual"
+    "categoryIntellectual": "Intellectual",
+    "gatheringsDescription": "Youth gatherings and educational circles.",
+    "outingsDescription": "Recreational outings and sports activities.",
+    "dialoguesDescription": "Intellectual discussions and cultural dialogues.",
+    "trainingDescription": "Training courses and workshops."
   },
   "event": {
     "kicker": "Upcoming event",

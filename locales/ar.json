@@ -74,10 +74,10 @@
     "kicker": "ماذا نقدّم",
     "title": "أنشطة تُحيي الهمم",
     "desc": "برامج متكاملة تجمع بين البناء الروحي والاجتماعي والمعرفي.",
-    "gatherings": "لقاءات شبابية ومجالس تربوية.",
-    "outings": "خرجات ترفيهية وأنشطة رياضية.",
-    "dialogues": "نقاشات فكرية وحوارات ثقافية.",
-    "training": "دورات تكوينية وورشات تدريبية.",
+    "gatherings": "لقاءات",
+    "outings": "خرجات",
+    "dialogues": "حوارات",
+    "training": "تكوين",
     "gatheringsTitle": "مجالس ولقاءات",
     "gatheringsDesc": "جلسات علمية وإيمانية منتظمة تُقرّب القلوب وتبني الوعي.",
     "sportsTitle": "رياضة وترفيه",
@@ -86,7 +86,11 @@
     "learningDesc": "ورشات ومحتوى هادف يطوّر المهارات والمعرفة.",
     "categorySpiritual": "روحي",
     "categorySocial": "اجتماعي",
-    "categoryIntellectual": "فكري"
+    "categoryIntellectual": "فكري",
+    "gatheringsDescription": "لقاءات شبابية ومجالس تربوية.",
+    "outingsDescription": "خرجات ترفيهية وأنشطة رياضية.",
+    "dialoguesDescription": "نقاشات فكرية وحوارات ثقافية.",
+    "trainingDescription": "دورات تكوينية وورشات تدريبية."
   },
   "event": {
     "kicker": "الفعالية القادمة",

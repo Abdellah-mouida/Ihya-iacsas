@@ -98,27 +98,31 @@ export const ABOUT_CARDS: IconItem[] = [
   },
 ];
 
-export type Activity = { icon: LucideIcon; num: string; titleKey: string };
+export type Activity = { icon: LucideIcon; num: string; titleKey: string; descKey: string };
 export const ACTIVITIES: Activity[] = [
   {
     num: "01",
     icon: Users,
     titleKey: "activities.gatherings",
+    descKey: "activities.gatheringsDescription",
   },
   {
     num: "02",
     icon: Compass,
     titleKey: "activities.outings",
+    descKey: "activities.outingsDescription",
   },
   {
     num: "03",
     icon: MessageCircle,
     titleKey: "activities.dialogues",
+    descKey: "activities.dialoguesDescription",
   },
   {
     num: "04",
     icon: GraduationCap,
     titleKey: "activities.training",
+    descKey: "activities.trainingDescription",
   },
 ];
 
