@@ -88,10 +88,26 @@ test("ADMIN searches, filters, and pages activity logs; moderator is denied", as
     await expect(page.locator('[data-testid="admin-logs-page"]')).toContainText("Activity logs");
     await expect(page.locator('[data-testid="activity-row"]')).toHaveCount(20, { timeout: 30_000 });
     await expect(page.getByRole("link", { name: "Logs", exact: true })).toBeVisible();
+
+    let abortNextAuditAction = true;
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      if (abortNextAuditAction && request.method() === "POST") {
+        abortNextAuditAction = false;
+        await route.abort("internetdisconnected");
+        return;
+      }
+      await route.continue();
+    });
     await page.locator('[data-testid="admin-logs-user-search"]').fill(member.email!);
     await page.locator('[data-testid="admin-logs-apply"]').click();
+    await expect(page.locator('[data-testid="audit-activity-feed"]')).toContainText(
+      "A network problem interrupted loading activity logs.",
+    );
+    await page.locator('[data-testid="activity-retry"]').click();
     await expect(page.locator('[data-testid="activity-row"]')).toHaveCount(20, { timeout: 30_000 });
     await expect(page.locator('[data-testid="activity-row"]').first()).toContainText("Synthetic Logs Event 1");
+    await page.unrouteAll();
     const activeActorLink = page.locator('[data-testid="activity-row"]').first().getByRole("link", { name: member.name! });
     await expect(activeActorLink).toHaveAttribute("href", `/admin/users?search=${encodeURIComponent(member.email!)}`);
     await activeActorLink.click();

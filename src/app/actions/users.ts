@@ -1,13 +1,15 @@
 "use server";
 
 import { Prisma, Role } from "@prisma/client";
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
+import { isAuditPermissionError, logAuditFailure } from "@/lib/audit-errors";
+import { AUDIT_LOG_ACTOR_INCLUDE, buildUserAuditLogWhere, type AuditLogWithActor } from "@/lib/audit-query";
 import { logActivity } from "@/lib/audit";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { deleteUserAccount } from "@/lib/user-deletion";
-import { AUDIT_ACTION_KEYS } from "@/lib/audit-actions";
 
 export interface GetAdminUsersParams {
   page?: number;
@@ -277,45 +279,36 @@ export async function deleteOrAnonymizeUser({
 export async function getUserAuditLogs(
   userId: string,
   options: { action?: string; cursor?: string | null } = {},
-) {
-  await requirePermission("audit:view");
+): Promise<
+  | { success: true; logs: AuditLogWithActor[]; nextCursor: string | null }
+  | { success: false; kind: "permission" | "server"; digest?: string }
+> {
+  try {
+    await requirePermission("audit:view");
 
-  if (!userId || userId.length > 128) {
-    return { success: false, logs: [], nextCursor: null };
+    if (!userId || userId.length > 128) {
+      throw new Error("Invalid user activity target.");
+    }
+    const cursor = options.cursor
+      ? z.string().max(64).regex(/^[a-zA-Z0-9_-]+$/).parse(options.cursor)
+      : undefined;
+    const logs = await prisma.auditLog.findMany({
+      where: buildUserAuditLogWhere(userId, options.action),
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      take: 21,
+      include: AUDIT_LOG_ACTOR_INCLUDE,
+    });
+
+    const hasMore = logs.length > 20;
+    const page = hasMore ? logs.slice(0, 20) : logs;
+    return {
+      success: true,
+      logs: page,
+      nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
+    };
+  } catch (error) {
+    if (isAuditPermissionError(error)) return { success: false, kind: "permission" };
+    return { success: false, kind: "server", digest: logAuditFailure("user activity query", error) };
   }
-  const action = options.action && options.action !== "ALL" ? options.action : undefined;
-  if (action && !AUDIT_ACTION_KEYS.includes(action as (typeof AUDIT_ACTION_KEYS)[number])) {
-    return { success: false, logs: [], nextCursor: null };
-  }
-  const cursor = options.cursor && options.cursor.length <= 128 ? options.cursor : undefined;
-
-  const logs = await prisma.auditLog.findMany({
-    where: {
-      AND: [
-        { OR: [{ targetId: userId }, { actorId: userId }] },
-        ...(action ? [{ action }] : []),
-      ],
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    take: 21,
-    include: {
-      actor: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      },
-    },
-  });
-
-  const hasMore = logs.length > 20;
-  const page = hasMore ? logs.slice(0, 20) : logs;
-  return {
-    success: true,
-    logs: page,
-    nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
-  };
 }

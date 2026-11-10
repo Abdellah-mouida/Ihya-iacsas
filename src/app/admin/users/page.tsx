@@ -56,7 +56,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { AuditActivityFeed, type AuditActivityItem } from "@/components/admin/audit-activity-feed";
+import { AuditActivityFeed, type AuditActivityError, type AuditActivityItem } from "@/components/admin/audit-activity-feed";
 import {
   Select,
   SelectContent,
@@ -151,7 +151,7 @@ export default function AdminUsersPage() {
   const [userAuditLogs, setUserAuditLogs] = useState<AuditActivityItem[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [loadingMoreAudit, setLoadingMoreAudit] = useState(false);
-  const [auditError, setAuditError] = useState(false);
+  const [auditError, setAuditError] = useState<AuditActivityError | null>(null);
   const [auditActionFilter, setAuditActionFilter] = useState("ALL");
   const [auditCursor, setAuditCursor] = useState<string | null>(null);
   const viewHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -252,7 +252,7 @@ export default function AdminUsersPage() {
     setUserAuditLogs([]);
     setAuditCursor(null);
     setAuditActionFilter("ALL");
-    setAuditError(false);
+    setAuditError(null);
     setDetailsDialogOpen(true);
   };
 
@@ -264,16 +264,19 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
     if (append) setLoadingMoreAudit(true);
     else setLoadingAudit(true);
-    setAuditError(false);
+    setAuditError(null);
     try {
       const res = await getUserAuditLogs(selectedUser.id, { action, cursor });
-      if (!res.success) throw new Error("Unable to load user activity");
+      if (!res.success) {
+        setAuditError(res.kind);
+        return;
+      }
       setUserAuditLogs((current) => append
-        ? [...current, ...(res.logs as AuditActivityItem[])]
-        : res.logs as AuditActivityItem[]);
+        ? [...current, ...res.logs]
+        : res.logs);
       setAuditCursor(res.nextCursor);
     } catch {
-      setAuditError(true);
+      setAuditError("network");
     } finally {
       if (append) setLoadingMoreAudit(false);
       else setLoadingAudit(false);
@@ -1084,6 +1087,11 @@ export default function AdminUsersPage() {
                     loading={loadingAudit}
                     loadingMore={loadingMoreAudit}
                     error={auditError}
+                    errorLabels={{
+                      permission: t("adminUsers.activityPermissionError"),
+                      network: t("adminUsers.activityNetworkError"),
+                      server: t("adminUsers.activityServerError"),
+                    }}
                     hasMore={Boolean(auditCursor)}
                     action={auditActionFilter}
                     onActionChange={(action) => {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Activity, CalendarDays, RotateCcw, Search } from "lucide-react";
 
 import { getAdminAuditLogs, type GetAdminAuditLogsParams } from "@/app/actions/audit";
-import { AuditActivityFeed, type AuditActivityItem } from "@/components/admin/audit-activity-feed";
+import { AuditActivityFeed, type AuditActivityError, type AuditActivityItem } from "@/components/admin/audit-activity-feed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-provider";
@@ -23,20 +23,24 @@ export function AdminLogsView() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<AuditActivityError | null>(null);
 
   const loadLogs = useCallback(async (nextFilters: LogFilters, nextCursor: string | null = null, append = false) => {
     if (append) setLoadingMore(true);
     else setLoading(true);
-    setError(false);
+    setError(null);
     try {
       const result = await getAdminAuditLogs({ ...nextFilters, cursor: nextCursor });
+      if (!result.success) {
+        setError(result.kind);
+        return;
+      }
       setLogs((current) => append
-        ? [...current, ...(result.logs as AuditActivityItem[])]
-        : result.logs as AuditActivityItem[]);
+        ? [...current, ...result.logs]
+        : result.logs);
       setCursor(result.nextCursor);
     } catch {
-      setError(true);
+      setError("network");
     } finally {
       if (append) setLoadingMore(false);
       else setLoading(false);
@@ -128,11 +132,15 @@ export function AdminLogsView() {
           loading={loading}
           loadingMore={loadingMore}
           error={error}
+          errorLabels={{
+            permission: t("adminLogs.permissionError"),
+            network: t("adminLogs.networkError"),
+            server: t("adminLogs.serverError"),
+          }}
           hasMore={Boolean(cursor)}
           action={filters.action}
           showActor
           emptyLabel={t("adminLogs.empty")}
-          errorLabel={t("adminLogs.error")}
           loadingLabel={t("adminLogs.loading")}
           onActionChange={(action) => {
             const nextFilters = { ...filters, action };

@@ -36,11 +36,13 @@ export type AuditActivityItem = {
   } | null;
 };
 
+export type AuditActivityError = "permission" | "network" | "server";
+
 type AuditActivityFeedProps = {
   logs: AuditActivityItem[];
   loading: boolean;
   loadingMore: boolean;
-  error: boolean;
+  error: AuditActivityError | null;
   hasMore: boolean;
   action: string;
   onActionChange: (action: string) => void;
@@ -49,7 +51,7 @@ type AuditActivityFeedProps = {
   showActionFilter?: boolean;
   showActor?: boolean;
   emptyLabel?: string;
-  errorLabel?: string;
+  errorLabels: Record<AuditActivityError, string>;
   loadingLabel?: string;
 };
 
@@ -150,7 +152,7 @@ export function AuditActivityFeed({
   showActionFilter = true,
   showActor = false,
   emptyLabel,
-  errorLabel,
+  errorLabels,
   loadingLabel,
 }: AuditActivityFeedProps) {
   const { t, locale } = useLocale();
@@ -197,8 +199,8 @@ export function AuditActivityFeed({
           </div>
         ) : error ? (
           <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/10 p-6 text-center">
-            <p className="text-sm text-muted-foreground">{errorLabel || t("adminUsers.activityError")}</p>
-            <Button type="button" variant="outline" className="min-h-11 rounded-xl" onClick={onRetry}>
+            <p className="text-sm text-muted-foreground">{error ? errorLabels[error] : ""}</p>
+            <Button type="button" variant="outline" data-testid="activity-retry" className="min-h-11 rounded-xl" onClick={onRetry}>
               {t("adminUsers.activityRetry")}
             </Button>
           </div>

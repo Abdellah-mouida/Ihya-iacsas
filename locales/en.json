@@ -678,7 +678,9 @@
     "clear": "Clear",
     "results": "Activity log results",
     "empty": "No activity matches these filters.",
-    "error": "Activity logs could not be loaded. Try again.",
+    "permissionError": "You do not have permission to view activity logs.",
+    "networkError": "A network problem interrupted loading activity logs. Check your connection and retry.",
+    "serverError": "The server could not load activity logs. Try again.",
     "loading": "Loading activity logs…"
   },
   "adminUsers": {
@@ -739,7 +741,9 @@
     "activityAllActions": "All actions",
     "activityDeletedActor": "Deleted account",
     "activityEmpty": "No activity recorded for this user.",
-    "activityError": "Activity could not be loaded.",
+    "activityPermissionError": "You do not have permission to view this user's activity.",
+    "activityNetworkError": "A network problem interrupted loading activity. Check your connection and retry.",
+    "activityServerError": "The server could not load this activity. Try again.",
     "activityRetry": "Retry",
     "activityLoadMore": "Load more",
     "activityLoading": "Loading activity…",
