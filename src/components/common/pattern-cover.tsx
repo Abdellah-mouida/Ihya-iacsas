@@ -45,17 +45,23 @@ export function PatternCover({
           style={{
             backgroundColor: "var(--main)",
             maskImage:
-              "url(/patterns/girih.svg), linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)",
+              "url(/patterns/girih.svg), radial-gradient(ellipse at center, currentColor 0%, currentColor 60%, transparent 100%), linear-gradient(to bottom, currentColor 0%, currentColor 55%, transparent 100%)",
             WebkitMaskImage:
-              "url(/patterns/girih.svg), linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)",
-            maskComposite: "intersect",
-            WebkitMaskComposite: "source-in",
+              "url(/patterns/girih.svg), radial-gradient(ellipse at center, currentColor 0%, currentColor 60%, transparent 100%), linear-gradient(to bottom, currentColor 0%, currentColor 55%, transparent 100%)",
+            maskComposite: "intersect, intersect",
+            WebkitMaskComposite: "source-in, source-in",
             maskRepeat: "repeat",
             WebkitMaskRepeat: "repeat",
-            maskSize: thumbnail ? "48px 48px, 100% 100%" : "96px 96px, 100% 100%",
-            WebkitMaskSize: thumbnail ? "48px 48px, 100% 100%" : "96px 96px, 100% 100%",
-            opacity: 0.18,
+            maskSize: thumbnail ? "48px 48px, 100% 100%, 100% 100%" : "120px 120px, 100% 100%, 100% 100%",
+            WebkitMaskSize: thumbnail ? "48px 48px, 100% 100%, 100% 100%" : "120px 120px, 100% 100%, 100% 100%",
+            opacity: 0.22,
           }}
+          data-testid="cover-pattern-tile"
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(ellipse at center, transparent 58%, var(--background) 100%)" }}
+          aria-hidden="true"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
       </div>
@@ -71,6 +77,7 @@ export function PatternCover({
         fill
         priority={!thumbnail}
         className="object-cover"
+        data-testid="cover-upload-image"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
     </div>

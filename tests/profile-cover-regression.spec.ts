@@ -1,0 +1,96 @@
+import { expect, test } from "@playwright/test";
+import fs from "node:fs";
+
+import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
+import { createSyntheticUser, removeSyntheticUser } from "./helpers/synthetic-user";
+
+test("profile cover and settings crop match at required widths, themes, and locales", async ({ page }) => {
+  test.setTimeout(600_000);
+  assertDevBranchDatabase("Profile cover regression screenshots");
+  fs.mkdirSync("evidence/task-05/t2", { recursive: true });
+
+  const user = await createSyntheticUser("Profile cover regression screenshots");
+  const baseURL = String(test.info().project.use.baseURL || "http://localhost:3000");
+
+  try {
+    await prisma.user.update({ where: { id: user.id }, data: { onboardingCompletedAt: new Date() } });
+    await page.goto(`/login?callbackUrl=${encodeURIComponent("/profile")}`);
+    await page.locator('[data-testid="login-email-input"]').fill(user.email);
+    await page.locator('[data-testid="login-password-input"]').fill(user.password);
+    await page.locator('[data-testid="login-submit-btn"]').click();
+    await expect(page).toHaveURL(/\/profile/, { timeout: 30_000 });
+    await page.goto("/profile");
+    await expect(page.locator('[data-testid="profile-cover-frame"]')).toBeVisible();
+
+    for (const width of [360, 768, 1440] as const) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const locale of ["ar", "en"] as const) {
+        for (const theme of ["light", "sunset", "amoled", "black"] as const) {
+          await page.evaluate(({ localeValue, themeValue }) => {
+            localStorage.setItem("ihyaa-locale", localeValue);
+            localStorage.setItem("ihyaa-theme", themeValue);
+          }, { localeValue: locale, themeValue: theme });
+
+          for (const coverState of ["default", "uploaded"] as const) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { coverImage: coverState === "default" ? null : "/images/gathering.jpg" },
+            });
+
+            await page.goto("/profile");
+            const profileFrame = page.locator('[data-testid="profile-cover-frame"]');
+            await expect(profileFrame).toBeVisible();
+            const profileFrameBox = await profileFrame.boundingBox();
+            expect(profileFrameBox).toBeTruthy();
+            const profileAspect = profileFrameBox ? profileFrameBox.width / profileFrameBox.height : 0;
+            const avatarBox = await page.locator('[data-testid="profile-avatar-ring"]').boundingBox();
+            expect(avatarBox).toBeTruthy();
+            if (profileFrameBox && avatarBox) {
+              const coverBottom = profileFrameBox.y + profileFrameBox.height;
+              expect(avatarBox.y, `avatar must overlap cover at ${width}px, ${locale}, ${theme}, ${coverState}; avatar y=${avatarBox.y}, cover bottom=${coverBottom}`).toBeLessThan(coverBottom);
+              expect(avatarBox.y + avatarBox.height).toBeGreaterThan(coverBottom);
+            }
+            if (coverState === "default") {
+              await expect(page.locator('[data-testid="cover-pattern-tile"]')).toBeVisible();
+            } else {
+              await expect(page.locator('[data-testid="cover-upload-image"]')).toBeVisible();
+            }
+            for (const infoBox of ["profile-glass-name", "profile-glass-details"]) {
+              const box = page.locator(`[data-testid="${infoBox}"]`);
+              await expect(box).toBeVisible();
+              expect(await box.evaluate((element) => getComputedStyle(element).backdropFilter)).toContain("blur");
+            }
+            expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+            await page.locator('[data-testid="profile-header-card"]').screenshot({
+              path: `evidence/task-05/t2/profile-${width}-${locale}-${theme}-${coverState}.png`,
+            });
+
+            await page.goto(`${baseURL}/settings?tab=profile`);
+            const preview = page.locator('[data-testid="settings-cover-preview"]');
+            await expect(preview).toBeVisible();
+            const previewBox = await preview.boundingBox();
+            expect(previewBox).toBeTruthy();
+            if (previewBox) {
+              expect(previewBox.height).toBeCloseTo(width >= 640 ? 256 : 192, 0);
+            }
+            await page.locator('[data-testid="settings-profile-section"]').screenshot({
+              path: `evidence/task-05/t2/settings-${width}-${locale}-${theme}-${coverState}.png`,
+            });
+
+            if (coverState === "uploaded") {
+              await preview.locator('input[type="file"]').setInputFiles("public/images/gathering.jpg");
+              await expect(page.locator('[data-testid="image-cropper-dialog"]')).toBeVisible();
+              const actualAspect = Number(await page.locator('[data-testid="settings-profile-section"]').getAttribute("data-cover-crop-aspect"));
+              expect(actualAspect).toBeCloseTo(profileAspect, 3);
+            }
+          }
+        }
+      }
+    }
+  } finally {
+    assertDevBranchDatabase("Profile cover regression cleanup");
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+    await removeSyntheticUser(user.id);
+  }
+});

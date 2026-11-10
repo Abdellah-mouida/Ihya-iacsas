@@ -51,6 +51,20 @@ interface SettingsViewProps {
   availableThemes?: ThemeDto[];
 }
 
+function getCurrentProfileCoverAspectRatio(): number {
+  const main = document.querySelector("main");
+  if (!main) return 16 / 9;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const mainStyle = getComputedStyle(main);
+  const horizontalPadding =
+    Number.parseFloat(mainStyle.paddingInlineStart) + Number.parseFloat(mainStyle.paddingInlineEnd);
+  const mainContentWidth = main.getBoundingClientRect().width - horizontalPadding;
+  const profileCoverWidth = Math.max(0, Math.min(mainContentWidth, 64 * rootFontSize) - 2);
+  const profileCoverHeight = (window.matchMedia("(min-width: 640px)").matches ? 16 : 12) * rootFontSize;
+  return profileCoverWidth / profileCoverHeight;
+}
+
 export function SettingsView({
   initialData,
   initialTab = "profile",
@@ -92,6 +106,7 @@ export function SettingsView({
   const [rawAvatarSrc, setRawAvatarSrc] = useState<string | null>(null);
   const [isCoverCropOpen, setIsCoverCropOpen] = useState(false);
   const [rawCoverSrc, setRawCoverSrc] = useState<string | null>(null);
+  const [coverAspect, setCoverAspect] = useState(16 / 9);
 
   // Security Form States
   const [currentPassword, setCurrentPassword] = useState("");
@@ -144,12 +159,20 @@ export function SettingsView({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      setCoverAspect(getCurrentProfileCoverAspectRatio());
       setRawCoverSrc(reader.result as string);
       setIsCoverCropOpen(true);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
+
+  useEffect(() => {
+    if (!isCoverCropOpen) return;
+    const updateAspect = () => setCoverAspect(getCurrentProfileCoverAspectRatio());
+    window.addEventListener("resize", updateAspect);
+    return () => window.removeEventListener("resize", updateAspect);
+  }, [isCoverCropOpen]);
 
   const handleAvatarCropped = async (cropped: { file: File }) => {
     startTransition(async () => {
@@ -338,6 +361,7 @@ export function SettingsView({
             <div
               id="settings-profile-section"
               data-testid="settings-profile-section"
+              data-cover-crop-aspect={coverAspect}
               className="min-w-0 space-y-8 overflow-hidden rounded-3xl border border-border/80 bg-card/60 p-5 shadow-sm backdrop-blur-xl sm:p-10"
             >
               <div>
@@ -356,7 +380,7 @@ export function SettingsView({
                 <Label className="text-xs font-semibold text-foreground">
                   {isAr ? "غلاف الملف الشخصي" : "Profile Cover"}
                 </Label>
-                <div className="relative h-44 rounded-2xl overflow-hidden border border-border/70 bg-muted/40">
+                <div data-testid="settings-cover-preview" className="relative start-1/2 h-48 w-[min(calc(100%+2.5rem),64rem)] -translate-x-1/2 overflow-hidden rounded-2xl border border-border/70 bg-muted/40 sm:h-64 sm:w-[min(calc(100%+5rem),64rem)] rtl:translate-x-1/2">
                   <PatternCover coverUrl={coverUrl} alt="Cover" />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center gap-3 opacity-90 hover:opacity-100 transition-opacity">
                     <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card/90 backdrop-blur text-foreground text-xs font-semibold hover:bg-card">
@@ -962,13 +986,14 @@ export function SettingsView({
 
       {rawCoverSrc && (
         <ImageCropperDialog
+          key={`cover-${coverAspect}`}
           open={isCoverCropOpen}
           onOpenChange={(open) => {
             setIsCoverCropOpen(open);
             if (!open) setRawCoverSrc(null);
           }}
           imageSrc={rawCoverSrc}
-          aspect={16 / 9}
+          aspect={coverAspect}
           onCropComplete={handleCoverCropped}
         />
       )}

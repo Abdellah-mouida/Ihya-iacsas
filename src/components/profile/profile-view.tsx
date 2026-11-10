@@ -50,9 +50,9 @@ export function ProfileView({ initialData }: ProfileViewProps) {
   return (
     <div className="space-y-8" data-testid="profile-view-container">
       {/* Profile Header & Hero Banner */}
-      <div className="relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover">
+      <div data-testid="profile-header-card" className="relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover">
         {/* Cover Canvas */}
-        <div className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
+        <div data-testid="profile-cover-frame" className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
           <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} />
         </div>
 
@@ -60,7 +60,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
           <div className="relative flex min-w-0 flex-col gap-6 px-6 pb-8 pt-0 sm:flex-row sm:items-end sm:justify-between sm:px-10 -mt-16 sm:-mt-20">
           <div className="flex min-w-0 flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-start">
             {/* Centered Avatar with layout wrapper */}
-            <div className="relative rounded-full border-4 border-background bg-card shadow-profile-card hover:shadow-profile-hover transition-all duration-300 ring-2 ring-primary/30 shrink-0">
+            <div data-testid="profile-avatar-ring" className="relative rounded-full border-4 border-background bg-card shadow-profile-card hover:shadow-profile-hover transition-all duration-300 ring-2 ring-primary/30 shrink-0 sm:-translate-y-12">
               <UserAvatar
                 user={{
                   id: user.id,
@@ -73,8 +73,8 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               />
             </div>
 
-            <div className="min-w-0 max-w-full space-y-1.5">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+            <div className="min-w-0 w-full max-w-full space-y-2 sm:w-fit">
+              <div data-testid="profile-glass-name" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-2.5 rounded-2xl border border-border/70 bg-card/70 px-3 py-2 text-center shadow-profile-card backdrop-blur-xl sm:w-fit sm:justify-start sm:text-start">
                 <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">
                   {user.name || (isAr ? "مستخدم إحياء" : "Ihyaa Member")}
                 </h1>
@@ -82,7 +82,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               </div>
 
               {/* Basics: City, Age, Email stay at the top */}
-              <div className="flex min-w-0 flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground sm:justify-start sm:text-sm">
+              <div data-testid="profile-glass-details" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl border border-border/60 bg-card/65 px-3 py-2 text-xs text-muted-foreground shadow-profile-card backdrop-blur-xl sm:w-fit sm:justify-start sm:text-sm">
                 {user.email && (
                   <span className="flex min-w-0 max-w-full items-center gap-1 font-sans">
                     <Mail className="size-3.5 shrink-0 text-primary" />
