@@ -53,7 +53,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
       <div data-testid="profile-header-card" className="relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover">
         {/* Cover Canvas */}
         <div data-testid="profile-cover-frame" className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
-          <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} />
+          <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} blurDataUrl={user.coverBlurDataUrl} imageWidth={user.coverWidth} imageHeight={user.coverHeight} />
         </div>
 
         {/* Profile Card & Avatar */}

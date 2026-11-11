@@ -1,11 +1,14 @@
 import React from "react";
-import Image from "next/image";
+import { BlurImage } from "@/components/common/blur-image";
 
 export interface PatternCoverProps {
   coverUrl: string | null | undefined;
   alt?: string;
   className?: string;
   thumbnail?: boolean;
+  blurDataUrl?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 /**
@@ -22,6 +25,9 @@ export function PatternCover({
   alt = "Profile Cover",
   className = "",
   thumbnail = false,
+  blurDataUrl,
+  imageWidth,
+  imageHeight,
 }: PatternCoverProps) {
   const url = coverUrl || "/patterns/girih.svg";
 
@@ -71,10 +77,13 @@ export function PatternCover({
   // Custom uploaded photo / image
   return (
     <div className={`relative w-full h-full overflow-hidden bg-muted/40 ${className}`}>
-      <Image
+      <BlurImage
         src={url}
         alt={alt}
         fill
+        width={imageWidth ?? 1280}
+        height={imageHeight ?? 720}
+        blurDataUrl={blurDataUrl}
         priority={!thumbnail}
         className="object-cover"
         data-testid="cover-upload-image"

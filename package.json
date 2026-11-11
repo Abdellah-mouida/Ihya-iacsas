@@ -9,6 +9,7 @@
     "lint": "eslint",
     "check:i18n": "node scripts/check-i18n.js",
     "audit:cloudinary": "tsx --env-file=.env.local scripts/audit-cloudinary.ts",
+    "backfill:blur": "node --env-file-if-exists=.env.local scripts/backfill-blur.mjs",
     "postinstall": "prisma generate",
     "seed:branches": "node scripts/seed-branches.mjs"
   },

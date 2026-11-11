@@ -9,7 +9,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "@/lib/toast";
 
@@ -23,6 +22,7 @@ import { BilingualFields } from "@/components/common/bilingual-fields";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { AspectPreset, ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { Button } from "@/components/ui/button";
+import { BlurImage } from "@/components/common/blur-image";
 import { useLocale } from "@/i18n/locale-provider";
 
 type GalleryPhoto = {
@@ -31,6 +31,9 @@ type GalleryPhoto = {
   captionAr: string | null;
   captionEn: string | null;
   createdAt: Date;
+  blurDataUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
 };
 
 function isValidImageUrl(url: string | null | undefined): boolean {
@@ -263,10 +266,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
               className="glass rounded-2xl overflow-hidden border border-border/60 shadow-layered group flex flex-col justify-between min-w-0"
             >
               <div className="relative aspect-[4/3] bg-muted/40 overflow-hidden">
-                <Image
+                <BlurImage
                   src={photo.imageUrl}
                   alt={photo.captionAr || "Gallery image"}
                   fill
+                  width={photo.imageWidth}
+                  height={photo.imageHeight}
+                  blurDataUrl={photo.blurDataUrl}
                   sizes="(max-width: 768px) 100vw, 25vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -361,10 +367,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
                 {isValidImageUrl(previewUrl) && (
                   <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">
-                    <Image
+                    <BlurImage
                       src={previewUrl!}
                       alt="Preview"
                       fill
+                      width={previewUrl === editingPhoto?.imageUrl ? editingPhoto.imageWidth : null}
+                      height={previewUrl === editingPhoto?.imageUrl ? editingPhoto.imageHeight : null}
+                      blurDataUrl={previewUrl === editingPhoto?.imageUrl ? editingPhoto.blurDataUrl : null}
                       unoptimized={previewUrl!.startsWith("blob:")}
                       className="object-contain"
                     />

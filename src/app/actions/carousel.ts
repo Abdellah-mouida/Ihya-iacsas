@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
+import { createImagePlaceholder } from "@/lib/image-placeholder";
 
 export async function getCarouselPosts(onlyActive = false) {
   try {
@@ -36,6 +37,7 @@ export async function createCarouselPost(formData: FormData) {
     const file = formData.get("image") as File | null;
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
+    let imageMetadata: Awaited<ReturnType<typeof createImagePlaceholder>> | null = null;
 
     let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
 
@@ -52,6 +54,7 @@ export async function createCarouselPost(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        imageMetadata = await createImagePlaceholder(buffer);
         imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
       } catch (uploadErr) {
         if (!imageUrl) {
@@ -74,6 +77,7 @@ export async function createCarouselPost(formData: FormData) {
     const post = await prisma.carouselPost.create({
       data: {
         imageUrl,
+        ...(imageMetadata ? imageMetadata : { blurDataUrl: null, imageWidth: null, imageHeight: null }),
         order,
         active,
       },
@@ -130,6 +134,9 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       order?: number;
       active?: boolean;
       imageUrl?: string;
+      blurDataUrl?: string | null;
+      imageWidth?: number | null;
+      imageHeight?: number | null;
     } = {};
 
     if (orderStr !== null && orderStr !== undefined && orderStr !== "") {
@@ -144,10 +151,16 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        Object.assign(dataToUpdate, await createImagePlaceholder(buffer));
         dataToUpdate.imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
       } catch (uploadErr) {
         if (imageUrl) {
           dataToUpdate.imageUrl = imageUrl;
+          if (imageUrl !== existing.imageUrl) {
+            dataToUpdate.blurDataUrl = null;
+            dataToUpdate.imageWidth = null;
+            dataToUpdate.imageHeight = null;
+          }
         } else {
           return {
             success: false,
@@ -155,8 +168,11 @@ export async function updateCarouselPost(id: string, formData: FormData) {
           };
         }
       }
-    } else if (imageUrl) {
+    } else if (imageUrl && imageUrl !== existing.imageUrl) {
       dataToUpdate.imageUrl = imageUrl;
+      dataToUpdate.blurDataUrl = null;
+      dataToUpdate.imageWidth = null;
+      dataToUpdate.imageHeight = null;
     }
 
     const post = await prisma.carouselPost.update({

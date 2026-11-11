@@ -21,45 +21,54 @@ enum BranchKind {
 }
 
 model CarouselPost {
-  id        String   @id @default(cuid())
-  imageUrl  String
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  imageUrl    String
+  blurDataUrl String?
+  imageWidth  Int?
+  imageHeight Int?
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([order])
 }
 
 model GalleryPhoto {
-  id        String   @id @default(cuid())
-  imageUrl  String
-  captionAr String?
-  captionEn String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  imageUrl    String
+  blurDataUrl String?
+  imageWidth  Int?
+  imageHeight Int?
+  captionAr   String?
+  captionEn   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([createdAt])
 }
 
 model Event {
-  id            String    @id @default(cuid())
-  slug          String    @unique
-  titleAr       String
-  titleEn       String
-  descriptionAr String
-  descriptionEn String
-  date          DateTime
-  time          String
-  location      String
-  posterUrl     String
-  isNew         Boolean   @default(false)
-  bookingOpen   Boolean   @default(true)
-  capacityType  String    @default("OPEN")
-  capacity      Int?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  bookings      Booking[]
+  id                String    @id @default(cuid())
+  slug              String    @unique
+  titleAr           String
+  titleEn           String
+  descriptionAr     String
+  descriptionEn     String
+  date              DateTime
+  time              String
+  location          String
+  posterUrl         String
+  posterBlurDataUrl String?
+  posterWidth       Int?
+  posterHeight      Int?
+  isNew             Boolean   @default(false)
+  bookingOpen       Boolean   @default(true)
+  capacityType      String    @default("OPEN")
+  capacity          Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  bookings          Booking[]
 
   @@index([date])
   @@index([bookingOpen])
@@ -133,6 +142,9 @@ model User {
   imagePublicId         String?
   coverImage            String?
   coverImagePublicId    String?
+  coverBlurDataUrl      String?
+  coverWidth            Int?
+  coverHeight           Int?
   theme                 String?   @default("light")
   reduceMotion          Boolean   @default(false)
   locale                String?   @default("ar")

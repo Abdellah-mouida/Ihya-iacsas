@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, ZoomIn } from "lucide-react";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getGalleryPhotos } from "@/app/actions/gallery";
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
 import { EASE } from "@/lib/motion";
+import { BlurImage } from "@/components/common/blur-image";
 
 type PhotoItem = {
   id: string;
@@ -20,6 +20,9 @@ type PhotoItem = {
   createdAt: Date;
   dateKey: string;
   dateLabel: string;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  blurDataUrl?: string | null;
 };
 
 const LIGHTBOX_SIZES = "(max-width: 768px) 92vw, 960px";
@@ -53,6 +56,9 @@ export function GalleryPageContent() {
           return {
             id: p.id,
             src: p.imageUrl,
+            blurDataUrl: p.blurDataUrl,
+            imageWidth: p.imageWidth,
+            imageHeight: p.imageHeight,
             caption:
               locale === "ar"
                 ? p.captionAr || p.captionEn || "صورة من إحياء"
@@ -73,6 +79,8 @@ export function GalleryPageContent() {
           createdAt: fallbackDate,
           dateKey: "archive",
           dateLabel: t("gallery.archiveGroup"),
+            imageWidth: g.w,
+            imageHeight: g.h,
         }));
         setPhotos(fallback);
       }
@@ -217,10 +225,13 @@ export function GalleryPageContent() {
                           aria-label={item.caption}
                           className="relative block aspect-[4/3] w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring overflow-hidden"
                         >
-                          <Image
+                          <BlurImage
                             src={item.src}
                             alt={item.caption}
                             fill
+                            width={item.imageWidth}
+                            height={item.imageHeight}
+                            blurDataUrl={item.blurDataUrl}
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />
@@ -267,10 +278,13 @@ export function GalleryPageContent() {
                   transition={{ duration: 0.35, ease: EASE }}
                   className="absolute inset-0"
                 >
-                  <Image
+                  <BlurImage
                     src={current.src}
                     alt={current.caption}
                     fill
+                    width={current.imageWidth}
+                    height={current.imageHeight}
+                    blurDataUrl={current.blurDataUrl}
                     priority
                     sizes={LIGHTBOX_SIZES}
                     className="object-contain"

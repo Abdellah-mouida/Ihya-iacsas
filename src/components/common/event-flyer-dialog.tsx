@@ -1,7 +1,6 @@
 "use client";
 
 import { Download, ExternalLink, Maximize2, X } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
+import { BlurImage } from "@/components/common/blur-image";
 
 interface EventFlyerDialogProps {
   isOpen: boolean;
@@ -22,6 +22,9 @@ interface EventFlyerDialogProps {
   title: string;
   dateStr?: string;
   locationStr?: string;
+  blurDataUrl?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 export function EventFlyerDialog({
@@ -31,8 +34,11 @@ export function EventFlyerDialog({
   title,
   dateStr,
   locationStr,
+  blurDataUrl,
+  imageWidth,
+  imageHeight,
 }: EventFlyerDialogProps) {
-  const { t, locale } = useLocale();
+  const { locale } = useLocale();
   const [isZoomed, setIsZoomed] = useState(false);
 
   // Reset zoom on open/close
@@ -132,11 +138,12 @@ export function EventFlyerDialog({
               isZoomed ? "scale-125 sm:scale-150" : "scale-100",
             )}
           >
-            <Image
+            <BlurImage
               src={posterUrl}
               alt={title}
-              width={768}
-              height={960}
+              width={imageWidth ?? 768}
+              height={imageHeight ?? 960}
+              blurDataUrl={blurDataUrl}
               priority
               className="max-h-[68vh] w-auto rounded-2xl object-contain shadow-2xl ring-1 ring-border/50"
             />

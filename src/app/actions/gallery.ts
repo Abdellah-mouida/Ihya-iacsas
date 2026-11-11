@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
+import { createImagePlaceholder } from "@/lib/image-placeholder";
 
 export async function getGalleryPhotos() {
   try {
@@ -36,6 +37,7 @@ export async function createGalleryPhoto(formData: FormData) {
     let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
     const captionAr = (formData.get("captionAr") as string)?.trim() || null;
     const captionEn = (formData.get("captionEn") as string)?.trim() || null;
+    let imageMetadata: Awaited<ReturnType<typeof createImagePlaceholder>> | null = null;
 
     if (!captionAr || !captionEn) {
       return {
@@ -57,6 +59,7 @@ export async function createGalleryPhoto(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        imageMetadata = await createImagePlaceholder(buffer);
         imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-gallery");
       } catch (uploadErr) {
         if (!imageUrl) {
@@ -76,6 +79,7 @@ export async function createGalleryPhoto(formData: FormData) {
     const photo = await prisma.galleryPhoto.create({
       data: {
         imageUrl,
+        ...(imageMetadata ? imageMetadata : { blurDataUrl: null, imageWidth: null, imageHeight: null }),
         captionAr,
         captionEn,
       },
@@ -140,6 +144,9 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
       captionAr?: string | null;
       captionEn?: string | null;
       imageUrl?: string;
+      blurDataUrl?: string | null;
+      imageWidth?: number | null;
+      imageHeight?: number | null;
     } = {
       captionAr,
       captionEn,
@@ -149,10 +156,16 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        Object.assign(dataToUpdate, await createImagePlaceholder(buffer));
         dataToUpdate.imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-gallery");
       } catch (uploadErr) {
         if (imageUrl) {
           dataToUpdate.imageUrl = imageUrl;
+          if (imageUrl !== existing.imageUrl) {
+            dataToUpdate.blurDataUrl = null;
+            dataToUpdate.imageWidth = null;
+            dataToUpdate.imageHeight = null;
+          }
         } else {
           return {
             success: false,
@@ -160,8 +173,11 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
           };
         }
       }
-    } else if (imageUrl) {
+    } else if (imageUrl && imageUrl !== existing.imageUrl) {
       dataToUpdate.imageUrl = imageUrl;
+      dataToUpdate.blurDataUrl = null;
+      dataToUpdate.imageWidth = null;
+      dataToUpdate.imageHeight = null;
     }
 
     const photo = await prisma.galleryPhoto.update({
