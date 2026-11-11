@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
-import { validatePasswordStrength } from "@/lib/password";
+import { validatePasswordStrength } from "@/lib/password-strength";
 import { changePassword } from "@/app/actions/auth";
 
 export function ChangePasswordView() {

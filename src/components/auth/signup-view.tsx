@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
-import { validatePasswordStrength } from "@/lib/password";
+import { validatePasswordStrength } from "@/lib/password-strength";
 import { signUpWithCredentials } from "@/app/actions/auth";
 import styles from "./auth-visuals.module.css";
 
