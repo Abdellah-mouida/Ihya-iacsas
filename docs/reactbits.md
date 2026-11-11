@@ -22,3 +22,17 @@ The measured compressed sizes above are registry source estimates (gzip), not th
 - `InViewReveal` uses one shared `IntersectionObserver` and DOM attributes for a transform/opacity reveal; it does not set React state per scroll or hide server-rendered text when JavaScript is unavailable.
 
 No third-party React Bits component has been copied verbatim. Any retained adaptation uses theme tokens, keeps locale content and RTL word boundaries, honors reduced motion and touch, and avoids animation work while idle.
+
+
+## Remaining page families audited for T10
+
+| Page family | Existing behavior/surface | React Bits replacement considered | Decision |
+|---|---|---|---|
+| Events | Filtered live open events and live past events with one poster per card; in-view motion and flyer dialog already exist. | Add SpotlightCard per event or replace the page entrance with another reveal. | Dropped: list length is data-driven and pointer listeners would multiply with rows; the page already uses the shared SectionHeading/reveal approach and preserves flyer keyboard behavior. No measured speed win. |
+| Event detail and booking flow | Server-loaded event detail plus a multi-step booking form and controlled validation. | Fold/reveal or spotlight on form steps. | Dropped: motion near inputs adds work to a conversion-critical form; no semantic benefit or performance evidence. |
+| Onboarding | Three-step profile form with city lookup, image crop and required terms. | Blur/fold text effects or animated cards. | Dropped: preserve field responsiveness, validation and focus while the city/image controls already carry their own interaction. |
+| Settings | Profile/photo controls, preference toggles, language/theme selectors and tag editing. | Spotlight or CountUp on control groups. | Dropped: user actions and focus state matter more than decoration; no evidence of an interaction benefit. |
+| Terms/privacy | Long-form legal text with sticky section navigation. | Staggered card effects or masonry. | Dropped: linear reading order and anchor navigation are the useful pattern; animation would add movement to content without improving comprehension. |
+| 403/404/error | Recovery links, retry controls and a 404 illustration. | Additional registry motion or card effects. | Dropped in T10: no demonstrated usability or speed gain. The 404's existing infinite illustration motion will be assessed with T11 idle CPU measurements before deciding whether to simplify it. |
+
+T10 therefore makes no visual code changes outside the previously completed page-specific tasks. This is deliberate: the candidates either add per-row interaction work, affect forms, disrupt reading order, or lack measured benefit. T11 gathers route and idle metrics before any further performance edits.
