@@ -12,21 +12,22 @@ import { EVENTS_HREF, IMAGES } from "@/lib/content";
 import { useLowPower } from "@/hooks/use-low-power";
 
 function groupPortraitLoader({ width }: { width: number }) {
-  // Use pre-encoded AVIF widths so first-view LCP does not wait for a cold optimizer encode.
-  if (width >= 3840) return IMAGES.groupPortrait;
-  return `/images/group-portrait-hero-${width}.avif`;
+  // shortcut: serve the nearest pre-encoded AVIF; cap at 2048px to avoid a missing srcset candidate.
+  const availableWidths = [384, 640, 750, 828, 1080, 1200, 1800, 1920, 2048];
+  const selectedWidth = availableWidths.find((candidate) => candidate >= width) ?? 2048;
+  return `/images/group-portrait-hero-${selectedWidth}.avif`;
 }
 
 export function Hero() {
-  const { t, dir } = useLocale();
+  const { t, locale } = useLocale();
   const lowPower = useLowPower();
   const headline = t("hero.title");
-  const words = headline.split(/\s+/).filter(Boolean);
+  const splitByCharacter = locale === "en";
+  const pieces = headline.split(/(\s+)/).filter(Boolean);
 
   return (
     <section
       id="home"
-      dir={dir}
       className="relative z-10 mb-[-3.5rem] overflow-visible px-4 pt-24 pb-0 text-foreground sm:px-6 sm:pt-28"
     >
       <div className="mx-auto grid max-w-6xl items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
@@ -39,20 +40,69 @@ export function Hero() {
           </p>
           <h1
             aria-label={headline}
-            className="mt-3 min-h-[2.2em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.85rem,8.8vw,3rem)] font-extrabold leading-[1.08] text-foreground lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]"
+            className={`${styles.heroTitle} mt-3 min-h-[3.4em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold leading-[1.12] lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
           >
-            {words.map((word, index) => (
-              <span
-                key={`${word}-${index}`}
-                aria-hidden="true"
-                data-testid="hero-heading-word"
-                className={`${styles.word}${lowPower ? "" : ` ${styles.foldIn}`}`}
-                style={!lowPower ? { animationDelay: `${index * 90}ms` } : undefined}
-              >
-                {word}{index < words.length - 1 ? " " : null}
-              </span>
-            ))}
+            {splitByCharacter
+              ? (() => {
+                  let offset = 0;
+                  const totalCharacters = Array.from(headline).length;
+                  return pieces.map((word, wordIndex) => {
+                    if (/^\s+$/.test(word)) {
+                      offset += Array.from(word).length;
+                      return word;
+                    }
+                    const characters = Array.from(word);
+                    const renderedWord = (
+                      <span key={`word-${wordIndex}`} data-testid="hero-heading-word" className={styles.wordBox}>
+                        {characters.map((character, characterIndex) => {
+                          const index = offset + characterIndex;
+                          const endPercent = Math.round((index / Math.max(totalCharacters - 1, 1)) * 100);
+                          return (
+                            <span
+                              key={`character-${wordIndex}-${characterIndex}`}
+                              aria-hidden="true"
+                              data-testid="hero-fold-piece"
+                              data-fold-text={character}
+                              className={`${styles.word}${lowPower ? "" : ` ${styles.foldIn}`}`}
+                              style={{
+                                color: `color-mix(in oklch, var(--hero-title-start) ${100 - endPercent}%, var(--hero-title-end) ${endPercent}%)`,
+                                ...(lowPower ? {} : { "--fold-delay": `${0.18 + index * 0.045}s` }),
+                              }}
+                            >
+                              {character}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    );
+                    offset += characters.length;
+                    return renderedWord;
+                  });
+                })()
+              : pieces.map((word, index) => {
+                  if (/^\s+$/.test(word)) return word;
+                  const endPercent = Math.round((index / Math.max(pieces.length - 1, 1)) * 100);
+                  return (
+                    <span key={`word-${index}`} data-testid="hero-heading-word" className={styles.wordBox}>
+                      <span
+                        aria-hidden="true"
+                        data-testid="hero-fold-piece"
+                        data-fold-text={word}
+                        className={`${styles.word}${lowPower ? "" : ` ${styles.foldIn}`}`}
+                        style={{
+                          color: `color-mix(in oklch, var(--hero-title-start) ${100 - endPercent}%, var(--hero-title-end) ${endPercent}%)`,
+                          ...(lowPower ? {} : { "--fold-delay": `${0.18 + index * 0.045}s` }),
+                        }}
+                      >
+                        {word}
+                      </span>
+                    </span>
+                  );
+              })}
           </h1>
+          <p data-testid="hero-reference" className="mt-2 text-sm font-medium text-muted-foreground">
+            {t("hero.reference")}
+          </p>
           <p className="mt-5 min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
             {t("hero.subtitle")}
           </p>
@@ -64,7 +114,7 @@ export function Hero() {
             >
               <Link href={EVENTS_HREF} dir="ltr">
                 <CalendarDays aria-hidden className="size-5" />
-                <span dir="auto">{t("hero.ctaPrimary")}</span>
+                <span dir="auto" className="inline-block w-40 text-center">{t("hero.ctaPrimary")}</span>
               </Link>
             </Button>
             <Button
@@ -75,7 +125,7 @@ export function Hero() {
             >
               <a href="#about" dir="ltr">
                 <Info aria-hidden className="size-5" />
-                <span dir="auto">{t("hero.ctaSecondary")}</span>
+                <span dir="auto" className="inline-block w-40 text-center">{t("hero.ctaSecondary")}</span>
               </a>
             </Button>
           </div>

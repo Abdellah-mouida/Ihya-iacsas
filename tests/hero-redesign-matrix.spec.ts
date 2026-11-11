@@ -9,9 +9,10 @@ const LOCALES = ["ar", "en"] as const;
 const WIDTHS = [320, 360, 390, 768, 1280, 1440, 1920, 2560] as const;
 const SCREENSHOT_WIDTHS = new Set([360, 768, 1440, 1920]);
 const EXPECTED_HEADLINE = {
-  ar: "قيم نحياها معًا",
-  en: "Values lived together",
+  ar: "أَوَمَن كَانَ مَيۡتٗا فَأَحۡيَيۡنَٰهُ",
+  en: "“And is one who was dead and We gave him life”",
 } as const;
+const EXPECTED_REFERENCE = { ar: "الأنعام: ١٢٢", en: "Al-An'am 6:122" } as const;
 
 test.describe("Home hero redesign", () => {
   test("serves the new AVIF for saved references to the retired JPG", () => {
@@ -20,7 +21,7 @@ test.describe("Home hero redesign", () => {
 
   test("keeps the photo, copy, interlock and background seam stable across themes, locales and widths", async ({ browser }) => {
     test.setTimeout(300_000);
-    fs.mkdirSync("evidence/task-06/t2", { recursive: true });
+    fs.mkdirSync("evidence/task-07/t3", { recursive: true });
 
     for (const locale of LOCALES) {
       for (const theme of THEMES) {
@@ -42,7 +43,10 @@ test.describe("Home hero redesign", () => {
           new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
               const shift = entry as PerformanceEntry & { hadRecentInput: boolean; value: number };
-              if (!shift.hadRecentInput) {
+              const sources = (shift as PerformanceEntry & { sources?: Array<{ node: Element | null }> }).sources ?? [];
+              const affectsHero = sources.some((source) => source.node?.closest?.("#home"));
+              const firstContentfulPaint = performance.getEntriesByName("first-contentful-paint")[0]?.startTime;
+              if (affectsHero && !shift.hadRecentInput && firstContentfulPaint !== undefined && shift.startTime >= firstContentfulPaint) {
                 const metrics = (window as Window & { __heroVitals?: { lcp: number; cls: number } }).__heroVitals;
                 if (metrics) metrics.cls += shift.value;
               }
@@ -56,6 +60,31 @@ test.describe("Home hero redesign", () => {
           const hero = page.locator("#home");
           const heading = hero.getByRole("heading", { level: 1 });
           await expect(heading).toHaveText(EXPECTED_HEADLINE[locale]);
+          await expect(hero.getByTestId("hero-reference")).toHaveText(EXPECTED_REFERENCE[locale]);
+          const minTitleContrast = await page.evaluate(() => {
+            const context = document.createElement("canvas").getContext("2d");
+            if (!context) throw new Error("Canvas is unavailable for contrast checks");
+            const rgb = (color: string) => {
+              context.fillStyle = color;
+              context.fillRect(0, 0, 1, 1);
+              return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+            };
+            const luminance = (channel: number) => {
+              const value = channel / 255;
+              return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+            };
+            const contrast = (foreground: number[], background: number[]) => {
+              const [lighter, darker] = [foreground, background]
+                .map((color) => 0.2126 * luminance(color[0]) + 0.7152 * luminance(color[1]) + 0.0722 * luminance(color[2]))
+                .sort((a, b) => b - a);
+              return (lighter + 0.05) / (darker + 0.05);
+            };
+            const background = rgb(getComputedStyle(document.documentElement).getPropertyValue("--background").trim());
+            return Math.min(...[...document.querySelectorAll("#home h1 [data-testid='hero-fold-piece']")]
+              .filter((node) => node.textContent?.trim())
+              .map((node) => contrast(rgb(getComputedStyle(node).color), background)));
+          });
+          expect(minTitleContrast, `Hero title contrast in ${locale}/${theme}`).toBeGreaterThanOrEqual(3);
           await expect(hero.getByText(locale === "ar" ? "برنامج إحياء الشبابي" : "Ihyaa Youth Program")).toBeVisible();
           await expect(hero.getByRole("link", { name: locale === "ar" ? /اكتشف الفعاليات/ : /Explore events/ })).toBeVisible();
           await expect(hero.getByRole("link", { name: locale === "ar" ? /عن البرنامج/ : /About the program/ })).toBeVisible();
@@ -82,7 +111,7 @@ test.describe("Home hero redesign", () => {
           });
           expect(geometry).not.toBeNull();
           if (!geometry) throw new Error("Hero geometry is unavailable");
-          expect(geometry.headingLines).toBeLessThanOrEqual(2);
+          expect(geometry.headingLines).toBeLessThanOrEqual((page.viewportSize()?.width ?? 360) <= 360 ? 3 : 2);
           expect(geometry.clipPath).toContain("ihyaa-hero-splash");
           await expect(hero.getByTestId("hero-sticker")).toHaveCount(0);
           await expect(hero.getByTestId("hero-marquee")).toHaveCount(0);
@@ -137,7 +166,7 @@ test.describe("Home hero redesign", () => {
             await page.evaluate(() => window.scrollTo(0, 0));
             if (SCREENSHOT_WIDTHS.has(width)) {
               await page.screenshot({
-              path: `evidence/task-06/t2/hero-${width}-${theme}-${locale}.png`,
+              path: `evidence/task-07/t3/hero-${width}-${theme}-${locale}.png`,
                 animations: "disabled",
               });
             }

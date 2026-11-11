@@ -58,25 +58,89 @@
   object-position: center;
 }
 
+.wordBox {
+  position: relative;
+  display: inline-block;
+  height: 1.12em;
+  line-height: 1.12;
+  white-space: pre;
+  vertical-align: baseline;
+}
+
 .word {
+  position: relative;
   display: inline-block;
   white-space: pre;
 }
 
+.word::after {
+  content: attr(data-fold-text);
+  position: absolute;
+  inset: 0;
+  color: color-mix(in oklch, currentColor 45%, var(--background));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.heroTitle {
+  --hero-title-start: var(--main);
+  --hero-title-end: var(--gold-deep);
+}
+
+:global(html[data-theme="amoled"]) .heroTitle {
+  --hero-title-end: var(--gold);
+}
+
+:global(html[data-theme="black"]) .heroTitle {
+  --hero-title-start: var(--main);
+  --hero-title-end: var(--brand-green);
+}
+
 .foldIn {
-  transform-origin: center bottom;
-  animation: fold-in 540ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+  transform-origin: center top;
+  backface-visibility: hidden;
+  text-shadow: 0 0 0.025em color-mix(in oklch, var(--background) 35%, transparent);
+  animation: fold-in 650ms cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0s) none;
+}
+
+.foldIn::after {
+  animation: fold-crease 650ms cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0s) none;
 }
 
 @keyframes fold-in {
   from {
-    opacity: 0.78;
-    transform: perspective(32rem) rotateX(52deg) translateY(0.16em);
+    opacity: 1;
+    transform: perspective(700px) rotateX(-92deg) translateY(0.16em);
   }
 
   to {
     opacity: 1;
-    transform: perspective(32rem) rotateX(0) translateY(0);
+    transform: perspective(700px) rotateX(0) translateY(0);
+  }
+}
+
+@keyframes hover-refold {
+  50% {
+    transform: perspective(700px) rotateX(-45deg);
+  }
+}
+
+@keyframes fold-crease {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .foldIn:hover {
+    animation-name: hover-refold;
+    animation-duration: 360ms;
+    animation-delay: 0s;
+    animation-timing-function: ease-in-out;
   }
 }
 
