@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { MOROCCAN_CITIES } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
+import { branchDistanceKm, MIN_BRANCH_DISTANCE_KM, normalizeBranchNameKey } from "@/lib/branches/uniqueness";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { ensureTestUser, loginAs, TEST_ADMIN } from "./helpers/admin-auth";
 
@@ -13,13 +14,23 @@ assertDevBranchDatabase("Sixty-branch visual test");
 test("the public map remains usable with sixty real city dataset records", async ({ browser, page }) => {
   test.setTimeout(240_000);
   const testAdmin = await ensureTestUser(TEST_ADMIN);
-  const activeBranches = await prisma.branch.findMany({
-    where: { active: true },
-    select: { geoId: true, createdById: true },
+  const allBranches = await prisma.branch.findMany({
+    select: { geoId: true, createdById: true, nameArKey: true, nameEnKey: true, latitude: true, longitude: true, active: true },
   });
+  const activeBranches = allBranches.filter((branch) => branch.active);
   const needed = Math.max(0, 60 - activeBranches.length);
-  const existingGeoIds = new Set(activeBranches.map((branch) => branch.geoId).filter(Boolean));
-  const cities = MOROCCAN_CITIES.filter((city) => !existingGeoIds.has(city.id)).slice(0, needed);
+  const existingGeoIds = new Set(allBranches.map((branch) => branch.geoId).filter(Boolean));
+  const existingNameKeys = new Set(allBranches.flatMap((branch) => [branch.nameArKey, branch.nameEnKey].filter(Boolean)));
+  const reservedNameKeys = new Set(existingNameKeys);
+  const cities = MOROCCAN_CITIES.filter((city) => {
+    const nameArKey = normalizeBranchNameKey(city.nameAr);
+    const nameEnKey = normalizeBranchNameKey(city.nameEn);
+    if (existingGeoIds.has(city.id) || reservedNameKeys.has(nameArKey) || reservedNameKeys.has(nameEnKey)) return false;
+    if (allBranches.some((branch) => branchDistanceKm(city, branch) < MIN_BRANCH_DISTANCE_KM)) return false;
+    reservedNameKeys.add(nameArKey);
+    reservedNameKeys.add(nameEnKey);
+    return true;
+  }).slice(0, needed);
   expect(activeBranches.length).toBeLessThanOrEqual(60);
   expect(cities).toHaveLength(needed);
   const creatorId = activeBranches[0]?.createdById;
@@ -93,6 +104,9 @@ test("the public map remains usable with sixty real city dataset records", async
         geoId: city.id,
         nameAr: city.nameAr,
         nameEn: city.nameEn,
+        nameArKey: normalizeBranchNameKey(city.nameAr),
+        nameEnKey: normalizeBranchNameKey(city.nameEn),
+        idempotencyKey: null,
         regionId: city.regionId,
         latitude: city.latitude,
         longitude: city.longitude,

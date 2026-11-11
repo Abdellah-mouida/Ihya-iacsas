@@ -6,6 +6,7 @@ export { MOROCCO_BOUNDS } from "@/lib/branches/region-inference";
 
 const branchInputBaseSchema = z.object({
   id: z.string().min(1).optional(),
+  idempotencyKey: z.string().uuid().optional(),
   kind: z.enum(["CITY", "CUSTOM"]),
   geoId: z.string().trim().min(1).nullable().optional().or(z.literal("")),
   nameAr: z.string().trim().min(2).max(80),

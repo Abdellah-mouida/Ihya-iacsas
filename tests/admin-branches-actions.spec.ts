@@ -1,10 +1,18 @@
-import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { MOROCCAN_CITIES } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
 import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { ensureTestUser, loginAs, TEST_ADMIN, TEST_MODERATOR } from "./helpers/admin-auth";
 
 assertDevBranchDatabase("Admin branch mutation test");
+
+async function chooseCity(dialog: import("@playwright/test").Locator, cityId: string) {
+  const city = MOROCCAN_CITIES.find((candidate) => candidate.id === cityId);
+  if (!city) throw new Error(`City ${cityId} is missing from the supplied dataset`);
+  const search = dialog.getByLabel("City");
+  await search.fill(city.nameEn);
+  await dialog.getByRole("button", { name: city.nameEn, exact: true }).click();
+}
 
 test.describe("Admin branch mutations", () => {
   test.beforeAll(async () => {
@@ -20,10 +28,6 @@ test.describe("Admin branch mutations", () => {
 
   test("ADMIN creates and deletes a branch with matching audit entries", async ({ page }) => {
     test.setTimeout(120_000);
-    const suffix = randomUUID().slice(0, 8);
-    const nameAr = `فرع اختبار ${suffix}`;
-    const nameEn = `Test branch ${suffix}`;
-
     await page.addInitScript(() => {
       localStorage.setItem("ihyaa-locale", "en");
       localStorage.setItem("ihyaa-theme", "light");
@@ -35,20 +39,29 @@ test.describe("Admin branch mutations", () => {
     try {
       await page.getByRole("button", { name: "Add branch" }).click();
       const dialog = page.getByRole("dialog");
-      await dialog.getByRole("button", { name: "Custom place" }).click();
-      await dialog.getByLabel("Branch name in Arabic").fill(nameAr);
-      await dialog.getByLabel("Branch name in English").fill(nameEn);
-      await dialog.locator("[data-editor-pin]").click();
+      await chooseCity(dialog, "dakhla");
       await dialog.getByRole("button", { name: "Save branch" }).click();
       await expect(dialog).toBeHidden({ timeout: 30_000 });
 
-      const created = await prisma.branch.findFirst({ where: { nameEn } });
+      const created = await prisma.branch.findFirst({ where: { geoId: "dakhla" } });
       expect(created).not.toBeNull();
       branchId = created!.id;
       await expect(page.locator(`[data-branch-id="${branchId}"]`)).toBeVisible();
       expect(await prisma.auditLog.findFirst({ where: { targetId: branchId, action: "BRANCH_CREATE" } })).not.toBeNull();
 
+      await page.getByRole("button", { name: "Add branch" }).click();
+      const duplicateDialog = page.getByRole("dialog");
+      await chooseCity(duplicateDialog, "dakhla");
+      await duplicateDialog.getByRole("button", { name: "Save branch" }).click();
+      await expect(duplicateDialog.getByRole("alert")).toContainText("Dakhla");
+      const existingBranchLink = duplicateDialog.getByRole("link", { name: "Open the existing branch" });
+      await expect(existingBranchLink).toHaveAttribute("href", new RegExp(`branch=${branchId}`));
+      await existingBranchLink.click();
+      await expect(page.locator(`#branch-${branchId}`)).toBeVisible({ timeout: 30_000 });
+      await page.goto("/admin/branches");
+
       const row = page.locator(`[data-branch-id="${branchId}"]`);
+      await expect(row).toBeVisible();
       await row.getByRole("button", { name: "Delete" }).click();
       await page.getByTestId("confirm-dialog-confirm").click();
       await expect.poll(() => prisma.branch.findUnique({ where: { id: branchId! } })).toBeNull();
@@ -65,9 +78,6 @@ test.describe("Admin branch mutations", () => {
 
   test("MODERATOR can create a custom branch and records the actor", async ({ page }) => {
     test.setTimeout(90_000);
-    const suffix = randomUUID().slice(0, 8);
-    const nameAr = `فرع مشرف ${suffix}`;
-    const nameEn = `Moderator branch ${suffix}`;
     await page.addInitScript(() => {
       localStorage.setItem("ihyaa-locale", "en");
       localStorage.setItem("ihyaa-theme", "light");
@@ -80,16 +90,11 @@ test.describe("Admin branch mutations", () => {
       await expect(page).toHaveURL(/\/admin\/branches/);
       await page.getByRole("button", { name: "Add branch" }).click();
       const dialog = page.getByRole("dialog");
-      await expect(dialog.getByRole("button", { name: "Province or prefecture" })).toHaveCount(0);
-      await dialog.getByRole("button", { name: "Custom place" }).click();
-      await expect(dialog.getByRole("status")).toContainText("Nearest-city suggestion");
-      await dialog.getByLabel("Branch name in Arabic").fill(nameAr);
-      await dialog.getByLabel("Branch name in English").fill(nameEn);
-      await dialog.locator("[data-editor-pin]").click();
+      await chooseCity(dialog, "oujda");
       await dialog.getByRole("button", { name: "Save branch" }).click();
       await expect(dialog).toBeHidden({ timeout: 30_000 });
 
-      const created = await prisma.branch.findFirst({ where: { nameEn } });
+      const created = await prisma.branch.findFirst({ where: { geoId: "oujda" } });
       expect(created).not.toBeNull();
       branchId = created!.id;
       expect(created!.createdById).toBe((await prisma.user.findUniqueOrThrow({ where: { email: TEST_MODERATOR.email }, select: { id: true } })).id);

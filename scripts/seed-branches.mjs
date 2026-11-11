@@ -6,6 +6,14 @@ const provinces = JSON.parse(readFileSync(new URL("../src/data/morocco/provinces
 
 const prisma = new PrismaClient();
 
+// Keep the idempotent production seed aligned with src/lib/branches/uniqueness.ts.
+// shortcut: this tiny copy avoids adding a TS runtime to the existing Node seed command.
+function normalizeBranchNameKey(value) {
+  return value.normalize("NFKD").replace(/\p{M}/gu, "").replace(/\u0640/g, "")
+    .replace(/[أإآٱ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
+    .toLowerCase().trim().replace(/\s+/g, " ");
+}
+
 async function main() {
   const admin = await prisma.user.findFirst({
     where: { role: "ADMIN" },
@@ -89,8 +97,19 @@ async function main() {
     rows.map((row) =>
       prisma.branch.upsert({
         where: { id: row.id },
-        create: { ...row, createdById: admin.id },
-        update: { ...row, createdById: admin.id },
+        create: {
+          ...row,
+          nameArKey: normalizeBranchNameKey(row.nameAr),
+          nameEnKey: row.nameEn ? normalizeBranchNameKey(row.nameEn) : null,
+          idempotencyKey: null,
+          createdById: admin.id,
+        },
+        update: {
+          ...row,
+          nameArKey: normalizeBranchNameKey(row.nameAr),
+          nameEnKey: row.nameEn ? normalizeBranchNameKey(row.nameEn) : null,
+          createdById: admin.id,
+        },
       }),
     ),
   );

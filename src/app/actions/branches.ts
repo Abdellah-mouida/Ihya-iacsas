@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { branchInputSchema } from "@/lib/branches/validation";
-import { warnForDuplicateBranchGeoId } from "@/lib/branches/duplicate";
+import { createUniqueBranch, findUniqueBranchConflict, normalizeBranchNameKey } from "@/lib/branches/uniqueness";
 import { MOROCCAN_REGIONS } from "@/data/morocco";
 
 const BRANCHES_TAG = "public-home-branches";
@@ -16,6 +16,7 @@ const filterSchema = z.object({
   search: z.string().trim().max(120).optional().default(""),
   regionId: z.string().trim().optional().default("all"),
   page: z.number().int().positive().optional().default(1),
+  branchId: z.string().trim().min(1).optional(),
 });
 
 export async function getAdminBranches(input: unknown = {}) {
@@ -23,12 +24,13 @@ export async function getAdminBranches(input: unknown = {}) {
     await requirePermission("branches:manage");
     const filters = filterSchema.safeParse(input);
     if (!filters.success) return { success: false, error: "Invalid branch filters" };
-    const { search, regionId, page } = filters.data;
+    const { search, regionId, page, branchId } = filters.data;
     if (regionId !== "all" && !MOROCCAN_REGIONS.some((region) => region.id === regionId)) {
       return { success: false, error: "Unknown region" };
     }
 
     const where = {
+      ...(branchId ? { id: branchId } : {}),
       ...(regionId !== "all" ? { regionId } : {}),
       ...(search
         ? {
@@ -67,11 +69,14 @@ export async function createBranch(input: unknown) {
     const actor = await requirePermission("branches:manage");
     const parsed = branchInputSchema.safeParse(input);
     if (!parsed.success) return { success: false, error: "Please correct the branch details", issues: parsed.error.issues };
-    const branch = parsed.data;
-    await warnForDuplicateBranchGeoId(branch.geoId);
+    const { idempotencyKey, ...branch } = parsed.data;
+    if (!idempotencyKey) return { success: false, error: "An idempotency key is required" };
 
-    const created = await prisma.$transaction(async (tx) => {
-      const row = await tx.branch.create({ data: { ...branch, createdById: actor.id } });
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await createUniqueBranch(tx, branch, actor.id, idempotencyKey);
+      if ("conflict" in created) return created;
+      const row = created.branch;
+      if (!created.replayed) {
       await logActivity({
         client: tx,
         required: true,
@@ -85,10 +90,24 @@ export async function createBranch(input: unknown) {
         targetName: row.nameEn ?? row.nameAr,
         details: { kind: row.kind, geoId: row.geoId, regionId: row.regionId },
       });
-      return row;
+      }
+      return { branch: row, replayed: created.replayed };
     });
+    if ("conflict" in result) {
+      return {
+        success: false,
+        error: "A branch already represents this name or location",
+        conflict: {
+          type: result.conflict.type,
+          id: result.conflict.branch.id,
+          nameAr: result.conflict.branch.nameAr,
+          nameEn: result.conflict.branch.nameEn,
+          distanceKm: result.conflict.distanceKm,
+        },
+      };
+    }
     refreshBranchViews();
-    return { success: true, branch: created };
+    return { success: true, branch: result.branch };
   } catch (error) {
     console.error("[branches] Failed to create branch:", error);
     return { success: false, error: "Failed to create branch" };
@@ -101,11 +120,20 @@ export async function updateBranch(id: string, input: unknown) {
     if (!id || typeof id !== "string") return { success: false, error: "Invalid branch id" };
     const parsed = branchInputSchema.safeParse(input);
     if (!parsed.success) return { success: false, error: "Please correct the branch details", issues: parsed.error.issues };
-    const branch = parsed.data;
-    await warnForDuplicateBranchGeoId(branch.geoId, id);
+    const { idempotencyKey: _idempotencyKey, ...branch } = parsed.data;
+    void _idempotencyKey;
 
     const updated = await prisma.$transaction(async (tx) => {
-      const row = await tx.branch.update({ where: { id }, data: branch });
+      const conflict = await findUniqueBranchConflict(tx, branch, id);
+      if (conflict) return { conflict };
+      const row = await tx.branch.update({
+        where: { id },
+        data: {
+          ...branch,
+          nameArKey: normalizeBranchNameKey(branch.nameAr),
+          nameEnKey: branch.nameEn ? normalizeBranchNameKey(branch.nameEn) : null,
+        },
+      });
       await logActivity({
         client: tx,
         required: true,
@@ -119,10 +147,23 @@ export async function updateBranch(id: string, input: unknown) {
         targetName: row.nameEn ?? row.nameAr,
         details: { kind: row.kind, geoId: row.geoId, regionId: row.regionId },
       });
-      return row;
+      return { branch: row };
     });
+    if ("conflict" in updated && updated.conflict) {
+      return {
+        success: false,
+        error: "A branch already represents this name or location",
+        conflict: {
+          type: updated.conflict.type,
+          id: updated.conflict.branch.id,
+          nameAr: updated.conflict.branch.nameAr,
+          nameEn: updated.conflict.branch.nameEn,
+          distanceKm: updated.conflict.distanceKm,
+        },
+      };
+    }
     refreshBranchViews();
-    return { success: true, branch: updated };
+    return { success: true, branch: updated.branch };
   } catch (error) {
     console.error("[branches] Failed to update branch:", error);
     return { success: false, error: "Failed to update branch" };

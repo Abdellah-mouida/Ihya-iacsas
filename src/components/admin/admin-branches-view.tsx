@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ function localizedName(branch: Pick<PublicBranch, "nameAr" | "nameEn">, locale: 
   return locale === "ar" ? branch.nameAr : branch.nameEn || branch.nameAr;
 }
 
-export function AdminBranchesView() {
+export function AdminBranchesView({ focusBranchId }: { focusBranchId?: string }) {
   const { t, locale } = useLocale();
   const isAr = locale === "ar";
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
@@ -59,6 +60,14 @@ export function AdminBranchesView() {
   const [customRegionSelected, setCustomRegionSelected] = useState(false);
   const [regionInference, setRegionInference] = useState<RegionInference | null>(null);
   const [error, setError] = useState("");
+  const [conflict, setConflict] = useState<{
+    id: string;
+    type: "name" | "geoId" | "distance";
+    nameAr: string;
+    nameEn: string | null;
+    distanceKm?: number;
+  } | null>(null);
+  const idempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const filteredCities = useMemo(() => {
     const query = normalizeMoroccanCityValue(cityQuery);
@@ -88,19 +97,22 @@ export function AdminBranchesView() {
 
   useEffect(() => {
     let active = true;
-    getAdminBranches({ search, regionId, page }).then((result) => {
+    getAdminBranches(focusBranchId ? { branchId: focusBranchId } : { search, regionId, page }).then((result) => {
       if (!active) return;
       if (result.success && "branches" in result) {
         setBranches(result.branches as BranchRow[]);
         setTotal(result.total ?? 0);
         setPageCount(result.pageCount ?? 0);
+        if (focusBranchId) {
+          requestAnimationFrame(() => document.getElementById(`branch-${focusBranchId}`)?.scrollIntoView({ block: "center" }));
+        }
       } else {
         notify.error(t("adminBranches.loadError"));
       }
       setLoading(false);
     });
     return () => { active = false; };
-  }, [search, regionId, page, t]);
+  }, [search, regionId, page, t, focusBranchId]);
 
   const chooseCity = (id: string) => {
     const city = MOROCCAN_CITIES.find((item) => item.id === id);
@@ -127,6 +139,8 @@ export function AdminBranchesView() {
     setCityQuery(isAr ? initial.nameAr : initial.nameEn);
     setEditingId(null);
     setError("");
+    setConflict(null);
+    idempotencyRef.current = null;
     setCoordinatesConfirmed(true);
     setCustomRegionSelected(false);
     setRegionInference(null);
@@ -153,6 +167,7 @@ export function AdminBranchesView() {
     setCustomRegionSelected(branch.kind !== "CITY");
     setRegionInference(inferRegionFromCoordinate(branch.latitude, branch.longitude));
     setError("");
+    setConflict(null);
     setEditorOpen(true);
   };
 
@@ -200,11 +215,28 @@ export function AdminBranchesView() {
     }
     setSaving(true);
     setError("");
-    const result = editingId
-      ? await updateBranch(editingId, parsed.data)
-      : await createBranch(parsed.data);
+    setConflict(null);
+    let result;
+    if (editingId) {
+      result = await updateBranch(editingId, parsed.data);
+    } else {
+      const fingerprint = JSON.stringify(parsed.data);
+      const idempotencyKey = idempotencyRef.current?.fingerprint === fingerprint
+        ? idempotencyRef.current.key
+        : crypto.randomUUID();
+      idempotencyRef.current = { fingerprint, key: idempotencyKey };
+      result = await createBranch({ ...parsed.data, idempotencyKey });
+    }
     setSaving(false);
     if (!result.success) {
+      if ("conflict" in result && result.conflict) {
+        setConflict(result.conflict);
+        const name = localizedName(result.conflict, locale);
+        if (result.conflict.type === "name") setError(t("adminBranches.duplicateName", { name }));
+        else if (result.conflict.type === "geoId") setError(t("adminBranches.duplicatePlace", { name }));
+        else setError(t("adminBranches.tooClose", { name, distance: (result.conflict.distanceKm ?? 0).toFixed(1) }));
+        return;
+      }
       setError(t("adminBranches.saveError"));
       return;
     }
@@ -295,7 +327,7 @@ export function AdminBranchesView() {
       ) : (
         <div className="space-y-3">
           {branches.map((branch) => (
-            <article key={branch.id} data-branch-id={branch.id} className="glass flex min-w-0 flex-col gap-4 rounded-2xl border border-border/60 p-4 shadow-layered sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <article key={branch.id} id={`branch-${branch.id}`} data-branch-id={branch.id} className="glass flex min-w-0 flex-col gap-4 rounded-2xl border border-border/60 p-4 shadow-layered sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="min-w-0">
                 <h2 className="truncate font-heading text-lg font-bold text-foreground">{localizedName(branch, locale)}</h2>
                 {branch.nameEn && <p className="truncate text-sm text-muted-foreground" dir={locale === "ar" ? "ltr" : "rtl"}>{locale === "ar" ? branch.nameEn : branch.nameAr}</p>}
@@ -390,7 +422,7 @@ export function AdminBranchesView() {
                 <MoroccoMap editor editorInteractive={draft.kind === "CUSTOM"} pin={{ latitude: draft.latitude, longitude: draft.longitude }} onPinChange={setMapPin} />
               </div>
             </div>
-            {error && <p role="alert" className="px-5 text-sm text-destructive sm:px-6">{error}</p>}
+            {error && <p role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 text-sm text-destructive sm:px-6">{error}{conflict && <Link className="font-semibold underline underline-offset-2" href={`/admin/branches?branch=${encodeURIComponent(conflict.id)}#branch-${encodeURIComponent(conflict.id)}`}>{t("adminBranches.openExisting")}</Link>}</p>}
             <div className="flex flex-col-reverse gap-2 border-t border-border/60 p-4 sm:flex-row sm:justify-end sm:p-5">
               <Button type="button" variant="outline" onClick={() => setEditorOpen(false)} disabled={saving} className="h-11 rounded-xl sm:min-w-28">{t("adminBranches.cancel")}</Button>
               <Button type="submit" disabled={saving} className="h-11 rounded-xl bg-brass-gradient px-6 font-semibold text-night sm:min-w-36">{saving ? <LoaderCircle className="me-2 size-4 animate-spin" /> : <Check className="me-2 size-4" />}{t("adminBranches.save")}</Button>

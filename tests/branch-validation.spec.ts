@@ -3,6 +3,7 @@ import { MOROCCAN_CITIES } from "@/data/morocco";
 import { parseBranchInput } from "@/lib/branches/validation";
 import { can } from "@/lib/permissions";
 import { inferRegionFromCoordinate, isWithinMoroccoBounds } from "@/lib/branches/region-inference";
+import { branchDistanceKm, findBranchConflict, MIN_BRANCH_DISTANCE_KM, normalizeBranchNameKey } from "@/lib/branches/uniqueness";
 
 const marrakech = MOROCCAN_CITIES.find((item) => item.id === "marrakech")!;
 
@@ -118,5 +119,48 @@ test.describe("custom branch region inference", () => {
       latitude: 19.99,
       longitude: -17.5,
     }).success).toBe(false);
+  });
+});
+
+test.describe("branch duplicate keys and distance", () => {
+  test("normalizes Latin accents, Arabic tashkeel, tatweel and letter variants", () => {
+    expect(normalizeBranchNameKey("  CAFÉ   Marrakech ")).toBe("cafe marrakech");
+    expect(normalizeBranchNameKey("آلـمَدِينَةُ")).toBe("المدينه");
+    expect(normalizeBranchNameKey("المدينة")).toBe("المدينه");
+    expect(normalizeBranchNameKey("فَتَى")).toBe("فتي");
+  });
+
+  test("uses the two kilometre haversine boundary", () => {
+    const origin = { latitude: 31.6295, longitude: -7.9811 };
+    const nearby = { latitude: 31.6295, longitude: -7.9711 };
+    const distant = { latitude: 31.6295, longitude: -7.9311 };
+    expect(branchDistanceKm(origin, nearby)).toBeLessThan(MIN_BRANCH_DISTANCE_KM);
+    expect(branchDistanceKm(origin, distant)).toBeGreaterThan(MIN_BRANCH_DISTANCE_KM);
+  });
+
+  test("rejects duplicate city ids, normalized names and nearby coordinates, while excluding itself", () => {
+    const existing = {
+      id: "existing",
+      kind: "CITY" as const,
+      geoId: "marrakech",
+      nameAr: "مَرّاكِش",
+      nameEn: "Marrakech",
+      nameArKey: normalizeBranchNameKey("مَرّاكِش"),
+      nameEnKey: normalizeBranchNameKey("Marrakech"),
+      latitude: 31.6295,
+      longitude: -7.9811,
+    };
+    const candidate = {
+      kind: "CITY" as const,
+      geoId: "casablanca",
+      nameAr: "فرع الدار البيضاء",
+      nameEn: "Casablanca branch",
+      latitude: 31.6295,
+      longitude: -7.9711,
+    };
+    expect(findBranchConflict({ ...candidate, geoId: "marrakech", latitude: existing.latitude, longitude: existing.longitude }, [existing])?.type).toBe("geoId");
+    expect(findBranchConflict({ ...candidate, nameEn: " MARRAKECH " }, [existing])?.type).toBe("name");
+    expect(findBranchConflict(candidate, [existing])?.type).toBe("distance");
+    expect(findBranchConflict(existing, [existing], existing.id)).toBeNull();
   });
 });

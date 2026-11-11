@@ -165,6 +165,9 @@ model Branch {
   geoId       String?
   nameAr      String
   nameEn      String?
+  nameArKey   String     @unique
+  nameEnKey   String?    @unique
+  idempotencyKey String? @unique
   regionId    String
   provinceId  String?
   latitude    Float
