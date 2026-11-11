@@ -77,8 +77,8 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
 
       <div className="relative z-10 flex w-full flex-col lg:flex-row min-h-screen">
         {/* Desktop Sidebar */}
-        <aside data-testid="admin-sidebar" className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-sm p-3.5 xl:p-4 shrink-0 justify-between sticky top-0 h-screen overflow-y-auto no-scrollbar">
-          <div>
+        <aside data-testid="admin-sidebar" className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-sm p-5 xl:p-6 shrink-0 sticky top-0 h-screen overflow-hidden">
+          <div data-testid="admin-sidebar-header" className="shrink-0">
             {/* Header Brand */}
             <Link href="/" prefetch={false} className="flex items-center gap-2.5 px-1.5 py-2 mb-2.5">
               <Image
@@ -99,7 +99,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
             </Link>
 
             {/* User Profile Card */}
-            <div className="mb-3.5 flex items-center gap-2.5 rounded-2xl border border-border/60 bg-muted/30 p-2">
+            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
               <UserAvatar
                 name={user.name}
                 src={user.image}
@@ -128,8 +128,11 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
               </div>
             </div>
 
-            {/* Navigation Links */}
-            <nav data-testid="admin-sidebar-nav" className="flex flex-col gap-0.5">
+          </div>
+
+          {/* Only the links move; keep the account header and controls in place. */}
+          <div className="relative flex-1 min-h-0">
+            <nav data-testid="admin-sidebar-nav" className="flex h-full flex-col gap-1.5 overflow-y-auto py-2 no-scrollbar">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
@@ -138,22 +141,24 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors duration-200",
+                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors duration-200",
                       active
                         ? "bg-brass/15 text-brass dark:bg-brass/20 dark:text-amber-300 shadow-sm"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
-                    <Icon className="size-3.5 shrink-0" />
+                    <Icon className="size-4 shrink-0" />
                     <span>{item.label}</span>
                   </Link>
                 );
               })}
             </nav>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-card/70 to-transparent" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-card/70 to-transparent" />
           </div>
 
           {/* Footer Controls */}
-          <div className="pt-3 border-t border-border/50 flex flex-col gap-2">
+          <div data-testid="admin-sidebar-footer" className="shrink-0 pt-6 border-t border-border/50 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
                 {t("dashboard.theme") || (isAr ? "المظهر واللغة" : "Theme & Lang")}
@@ -221,10 +226,10 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             data-testid="admin-mobile-drawer"
-            className="lg:hidden max-h-[calc(100svh-4rem)] overflow-y-auto no-scrollbar border-b border-border/60 bg-card/90 backdrop-blur-2xl p-3 flex flex-col gap-1"
+            className="lg:hidden h-[calc(100svh-4rem)] max-h-[calc(100svh-4rem)] overflow-hidden border-b border-border/60 bg-card/90 backdrop-blur-2xl p-4 flex flex-col"
           >
             {/* User Info on Mobile */}
-            <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 p-2 mb-1">
+            <div className="shrink-0 flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 p-2.5 mb-2">
               <UserAvatar
                 name={user.name}
                 src={user.image}
@@ -243,7 +248,8 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
               </span>
             </div>
 
-            <nav data-testid="admin-mobile-nav" className="flex flex-col gap-0.5">
+            <div className="relative flex-1 min-h-0">
+            <nav data-testid="admin-mobile-nav" className="flex max-h-full flex-col gap-1.5 overflow-y-auto py-1 no-scrollbar">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
@@ -253,19 +259,22 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors",
+                    "flex items-center gap-3 rounded-xl px-4 py-2.5 text-base font-semibold transition-colors",
                     active
                       ? "bg-brass/15 text-brass"
                       : "text-muted-foreground hover:bg-muted/50",
                   )}
                 >
-                    <Icon className="size-4 shrink-0" />
+                    <Icon className="size-5 shrink-0" />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
             </nav>
-            <div className="pt-2 mt-1 border-t border-border flex items-center justify-between gap-2">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-card/90 to-transparent" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-card/90 to-transparent" />
+            </div>
+            <div className="shrink-0 pt-3 mt-2 border-t border-border flex items-center justify-between gap-2">
               <LanguageSwitcher />
               <Button asChild size="sm" variant="outline" className="rounded-xl">
                 <Link href="/" prefetch={false}>
@@ -279,7 +288,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
               size="sm"
               onClick={handleLogout}
               data-testid="admin-logout-mobile-btn"
-              className="w-full rounded-xl text-xs font-semibold justify-center text-destructive hover:bg-destructive/10"
+              className="shrink-0 w-full rounded-xl text-xs font-semibold justify-center text-destructive hover:bg-destructive/10"
             >
               <LogOut className="size-3.5 me-2" />
               {t("dashboard.logout") || (isAr ? "تسجيل الخروج" : "Log out")}
