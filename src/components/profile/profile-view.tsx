@@ -74,7 +74,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
             </div>
 
             <div className="min-w-0 w-full max-w-full space-y-2 sm:w-fit">
-              <div data-testid="profile-glass-name" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-2.5 rounded-2xl border border-border/70 bg-card/70 px-3 py-2 text-center shadow-profile-card backdrop-blur-xl sm:w-fit sm:justify-start sm:text-start">
+              <div data-testid="profile-glass-name" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-2.5 rounded-2xl bg-card/70 px-3 py-2 text-center shadow-profile-card backdrop-blur-xl sm:w-fit sm:justify-start sm:text-start">
                 <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">
                   {user.name || (isAr ? "مستخدم إحياء" : "Ihyaa Member")}
                 </h1>
@@ -82,7 +82,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               </div>
 
               {/* Basics: City, Age, Email stay at the top */}
-              <div data-testid="profile-glass-details" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl border border-border/60 bg-card/65 px-3 py-2 text-xs text-muted-foreground shadow-profile-card backdrop-blur-xl sm:w-fit sm:justify-start sm:text-sm">
+              <div data-testid="profile-glass-details" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl bg-card/65 px-3 py-2 text-xs text-muted-foreground shadow-profile-card backdrop-blur-xl sm:w-fit sm:justify-start sm:text-sm">
                 {user.email && (
                   <span className="flex min-w-0 max-w-full items-center gap-1 font-sans">
                     <Mail className="size-3.5 shrink-0 text-primary" />

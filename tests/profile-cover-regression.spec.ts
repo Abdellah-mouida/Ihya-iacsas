@@ -20,23 +20,23 @@ test("profile cover and settings crop match at required widths, themes, and loca
     await page.locator('[data-testid="login-password-input"]').fill(user.password);
     await page.locator('[data-testid="login-submit-btn"]').click();
     await expect(page).toHaveURL(/\/profile/, { timeout: 30_000 });
-    await page.goto("/profile");
-    await expect(page.locator('[data-testid="profile-cover-frame"]')).toBeVisible();
 
     for (const width of [360, 768, 1440] as const) {
       await page.setViewportSize({ width, height: 1000 });
-      for (const locale of ["ar", "en"] as const) {
-        for (const theme of ["light", "sunset", "amoled", "black"] as const) {
-          await page.evaluate(({ localeValue, themeValue }) => {
-            localStorage.setItem("ihyaa-locale", localeValue);
-            localStorage.setItem("ihyaa-theme", themeValue);
-          }, { localeValue: locale, themeValue: theme });
+      let profileAspectForWidth = 0;
 
-          for (const coverState of ["default", "uploaded"] as const) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { coverImage: coverState === "default" ? null : "/images/gathering.jpg" },
-            });
+      for (const coverState of ["default", "uploaded"] as const) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { coverImage: coverState === "default" ? null : "/images/gathering.jpg" },
+        });
+
+        for (const locale of ["ar", "en"] as const) {
+          for (const theme of ["light", "sunset", "amoled", "black"] as const) {
+            await page.evaluate(({ localeValue, themeValue }) => {
+              localStorage.setItem("ihyaa-locale", localeValue);
+              localStorage.setItem("ihyaa-theme", themeValue);
+            }, { localeValue: locale, themeValue: theme });
 
             await page.goto("/profile");
             const profileFrame = page.locator('[data-testid="profile-cover-frame"]');
@@ -44,6 +44,7 @@ test("profile cover and settings crop match at required widths, themes, and loca
             const profileFrameBox = await profileFrame.boundingBox();
             expect(profileFrameBox).toBeTruthy();
             const profileAspect = profileFrameBox ? profileFrameBox.width / profileFrameBox.height : 0;
+            profileAspectForWidth = profileAspect;
             const avatarBox = await page.locator('[data-testid="profile-avatar-ring"]').boundingBox();
             expect(avatarBox).toBeTruthy();
             if (profileFrameBox && avatarBox) {
@@ -60,31 +61,31 @@ test("profile cover and settings crop match at required widths, themes, and loca
               const box = page.locator(`[data-testid="${infoBox}"]`);
               await expect(box).toBeVisible();
               expect(await box.evaluate((element) => getComputedStyle(element).backdropFilter)).toContain("blur");
+              expect(await box.evaluate((element) => getComputedStyle(element).borderWidth)).toBe("0px");
             }
             expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
             await page.locator('[data-testid="profile-header-card"]').screenshot({
               path: `evidence/task-05/t2/profile-${width}-${locale}-${theme}-${coverState}.png`,
             });
-
-            await page.goto(`${baseURL}/settings?tab=profile`);
-            const preview = page.locator('[data-testid="settings-cover-preview"]');
-            await expect(preview).toBeVisible();
-            const previewBox = await preview.boundingBox();
-            expect(previewBox).toBeTruthy();
-            if (previewBox) {
-              expect(previewBox.height).toBeCloseTo(width >= 640 ? 256 : 192, 0);
-            }
-            await page.locator('[data-testid="settings-profile-section"]').screenshot({
-              path: `evidence/task-05/t2/settings-${width}-${locale}-${theme}-${coverState}.png`,
-            });
-
-            if (coverState === "uploaded") {
-              await preview.locator('input[type="file"]').setInputFiles("public/images/gathering.jpg");
-              await expect(page.locator('[data-testid="image-cropper-dialog"]')).toBeVisible();
-              const actualAspect = Number(await page.locator('[data-testid="settings-profile-section"]').getAttribute("data-cover-crop-aspect"));
-              expect(actualAspect).toBeCloseTo(profileAspect, 3);
-            }
           }
+        }
+
+        if (coverState === "uploaded") {
+          await page.goto(`${baseURL}/settings?tab=profile`);
+          const preview = page.locator('[data-testid="settings-cover-preview"]');
+          await expect(preview).toBeVisible();
+          const previewBox = await preview.boundingBox();
+          expect(previewBox).toBeTruthy();
+          if (previewBox) {
+            expect(previewBox.height).toBeCloseTo(width >= 640 ? 256 : 192, 0);
+          }
+          await page.locator('[data-testid="settings-profile-section"]').screenshot({
+            path: `evidence/task-05/t2/settings-${width}-en-light-uploaded.png`,
+          });
+          await preview.locator('input[type="file"]').setInputFiles("public/images/gathering.jpg");
+          await expect(page.locator('[data-testid="image-cropper-dialog"]')).toBeVisible();
+          const actualAspect = Number(await page.locator('[data-testid="settings-profile-section"]').getAttribute("data-cover-crop-aspect"));
+          expect(actualAspect).toBeCloseTo(profileAspectForWidth, 3);
         }
       }
     }
