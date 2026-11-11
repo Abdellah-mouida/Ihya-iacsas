@@ -77,10 +77,10 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
 
       <div className="relative z-10 flex w-full flex-col lg:flex-row min-h-screen">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-sm p-5 xl:p-6 shrink-0 justify-between sticky top-0 h-screen overflow-y-auto">
+        <aside data-testid="admin-sidebar" className="hidden lg:flex w-64 xl:w-72 flex-col border-e border-border/60 bg-card/40 backdrop-blur-sm p-3.5 xl:p-4 shrink-0 justify-between sticky top-0 h-screen overflow-y-auto no-scrollbar">
           <div>
             {/* Header Brand */}
-            <Link href="/" prefetch={false} className="flex items-center gap-3 px-2 py-3 mb-4">
+            <Link href="/" prefetch={false} className="flex items-center gap-2.5 px-1.5 py-2 mb-2.5">
               <Image
                 src={IMAGES.logoCircle}
                 alt="Ihyaa"
@@ -99,7 +99,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
             </Link>
 
             {/* User Profile Card */}
-            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
+            <div className="mb-3.5 flex items-center gap-2.5 rounded-2xl border border-border/60 bg-muted/30 p-2">
               <UserAvatar
                 name={user.name}
                 src={user.image}
@@ -129,7 +129,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
             </div>
 
             {/* Navigation Links */}
-            <nav className="flex flex-col gap-1.5">
+            <nav data-testid="admin-sidebar-nav" className="flex flex-col gap-0.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
@@ -138,13 +138,13 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200",
+                      "flex items-center gap-2.5 rounded-xl px-3 py-1 text-xs font-semibold transition-colors duration-200",
                       active
                         ? "bg-brass/15 text-brass dark:bg-brass/20 dark:text-amber-300 shadow-sm"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
-                    <Icon className="size-4 shrink-0" />
+                    <Icon className="size-3.5 shrink-0" />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -153,7 +153,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
           </div>
 
           {/* Footer Controls */}
-          <div className="pt-6 border-t border-border/50 flex flex-col gap-3">
+          <div className="pt-3 border-t border-border/50 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
                 {t("dashboard.theme") || (isAr ? "المظهر واللغة" : "Theme & Lang")}
@@ -220,10 +220,11 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="lg:hidden border-b border-border/60 bg-card/90 backdrop-blur-2xl p-4 flex flex-col gap-2"
+            data-testid="admin-mobile-drawer"
+            className="lg:hidden max-h-[calc(100svh-4rem)] overflow-y-auto no-scrollbar border-b border-border/60 bg-card/90 backdrop-blur-2xl p-3 flex flex-col gap-1"
           >
             {/* User Info on Mobile */}
-            <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 p-2.5 mb-2">
+            <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 p-2 mb-1">
               <UserAvatar
                 name={user.name}
                 src={user.image}
@@ -242,6 +243,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
               </span>
             </div>
 
+            <nav data-testid="admin-mobile-nav" className="flex flex-col gap-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
@@ -251,18 +253,19 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold transition-all",
+                    "flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors",
                     active
                       ? "bg-brass/15 text-brass"
                       : "text-muted-foreground hover:bg-muted/50",
                   )}
                 >
-                  <Icon className="size-5" />
+                    <Icon className="size-4 shrink-0" />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
-            <div className="pt-3 mt-2 border-t border-border flex items-center justify-between gap-2">
+            </nav>
+            <div className="pt-2 mt-1 border-t border-border flex items-center justify-between gap-2">
               <LanguageSwitcher />
               <Button asChild size="sm" variant="outline" className="rounded-xl">
                 <Link href="/" prefetch={false}>
