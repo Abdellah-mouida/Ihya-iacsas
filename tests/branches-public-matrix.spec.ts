@@ -4,14 +4,14 @@ import { assertDevBranchDatabase } from "./helpers/dev-guard";
 
 const THEMES = ["light", "sunset", "amoled", "black"] as const;
 const LOCALES = ["ar", "en"] as const;
-const WIDTHS = [320, 360, 768, 1440, 1920] as const;
+const WIDTHS = [320, 360, 768, 1280, 1440, 1920] as const;
 
 assertDevBranchDatabase("Public branch map visual test");
 
 test.describe("Public dynamic branches", () => {
   test("renders the database branches without overflow in all themes, locales and target widths", async ({ browser }) => {
     test.setTimeout(300_000);
-    fs.mkdirSync("evidence/task-06/t4", { recursive: true });
+    fs.mkdirSync("evidence/task-07/t5", { recursive: true });
     for (const locale of LOCALES) {
       for (const theme of THEMES) {
         const context = await browser.newContext({ locale: locale === "ar" ? "ar-MA" : "en-US", viewport: { width: 360, height: 850 } });
@@ -27,9 +27,13 @@ test.describe("Public dynamic branches", () => {
           await section.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
           await expect(section).toBeVisible({ timeout: 30_000 });
           const markers = section.locator('button[aria-label*="—"]');
-          const branchCount = await section.locator("li").count();
+          const items = section.locator("[data-testid=branch-inline-item]");
+          const branchCount = await items.count();
           await expect(markers).toHaveCount(branchCount, { timeout: 30_000 });
-          await expect(section.getByRole("heading", { level: 3 }).first()).toBeVisible();
+          expect(branchCount).toBeGreaterThan(0);
+          for (const coordinates of await section.getByTestId("branch-coordinates").allTextContents()) {
+            expect(coordinates.trim()).toMatch(/^-?\d+\.\d{5}, -?\d+\.\d{5}$/);
+          }
           await section.scrollIntoViewIfNeeded();
 
           for (const width of WIDTHS) {
@@ -60,7 +64,9 @@ test.describe("Public dynamic branches", () => {
               if (element) window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top, behavior: "instant" });
             });
             await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-            await page.screenshot({ path: `evidence/task-06/t4/branches-${width}-${theme}-${locale}.png` });
+            if ([360, 768, 1440, 1920].includes(width)) {
+              await section.getByTestId("branches-list").screenshot({ path: `evidence/task-07/t5/branches-${width}-${theme}-${locale}.png` });
+            }
           }
 
           const firstMarker = markers.first();

@@ -5,15 +5,12 @@ import dynamic from "next/dynamic";
 import { Search, MapPin } from "lucide-react";
 import { SectionHeading } from "@/components/common/section-heading";
 import type { MapBranch } from "@/components/common/morocco-map";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocale } from "@/i18n/locale-provider";
 import { MOROCCAN_PROVINCES, MOROCCAN_REGIONS, normalizeMoroccanCityValue } from "@/data/morocco";
 import type { PublicBranch } from "@/lib/branches/types";
 import { cn } from "@/lib/utils";
-
-const INITIAL_REGION_BRANCHES = 8;
 
 function MapSkeleton() {
   return <div className="mx-auto aspect-[1000/1065] w-full max-w-[26rem] animate-pulse rounded-3xl bg-muted/40 motion-reduce:animate-none" aria-hidden="true" />;
@@ -30,7 +27,6 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [regionId, setRegionId] = useState("all");
-  const [expandedRegions, setExpandedRegions] = useState<Record<string, boolean>>({});
 
   const regionCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -60,10 +56,7 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
     };
   }), [isAr, visibleBranches]);
 
-  const visibleGroups = useMemo(() => MOROCCAN_REGIONS.flatMap((region) => {
-    const members = visibleBranches.filter((branch) => branch.regionId === region.id);
-    return members.length ? [{ region, branches: members }] : [];
-  }), [visibleBranches]);
+
 
   return (
     <section id="branches" className="relative z-0 overflow-hidden py-24 sm:py-32">
@@ -76,8 +69,8 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
             <p>{t("branches.empty")}</p>
           </div>
         ) : (
-          <div className="mt-10 grid items-start gap-8 lg:mt-14 lg:grid-cols-2 lg:gap-12">
-            <div className="min-w-0">
+          <div className="mt-10 space-y-8 lg:mt-14 lg:space-y-10">
+            <div className="mx-auto w-full max-w-[26rem] min-w-0">
               <MoroccoMap branches={mapBranches} activeId={activeId} onActivate={setActiveId} focusRegionId={regionId === "all" ? null : regionId} />
               <p className="mt-4 flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
                 <MapPin className="size-4 shrink-0 text-brass" />{t("branches.mapHint")}
@@ -108,67 +101,41 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
               </div>
 
               {visibleBranches.length ? (
-                <div className="space-y-4" aria-label={t("branches.branchList")} data-testid="branches-list">
-                  {visibleGroups.map(({ region: groupRegion, branches: groupBranches }) => (
-                    <section key={groupRegion.id} aria-labelledby={`branch-region-${groupRegion.id}`} className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 id={`branch-region-${groupRegion.id}`} className="font-heading text-sm font-semibold text-muted-foreground">
-                          {groupRegion.name[isAr ? "ar" : "en"]}
-                        </h3>
-                        <span className="rounded-full bg-card/70 px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                          {groupBranches.length}
-                        </span>
-                      </div>
-                      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                        {groupBranches.slice(0, expandedRegions[groupRegion.id] ? undefined : INITIAL_REGION_BRANCHES).map((branch) => {
-                          const index = visibleBranches.findIndex((item) => item.id === branch.id);
-                          const active = activeId === branch.id;
-                          return (
-                            <li key={branch.id} data-branch-region={branch.regionId}>
-                              <button
-                                type="button"
-                                onMouseEnter={() => setActiveId(branch.id)}
-                                onMouseLeave={() => setActiveId(null)}
-                                onFocus={() => setActiveId(branch.id)}
-                                onBlur={() => setActiveId(null)}
-                                onClick={() => setActiveId(active ? null : branch.id)}
-                                aria-pressed={active}
-                                className={cn(
-                                  "glass flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2 text-start transition-[background-color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                  active ? "glass-strong border-brass/40" : "border-border/60 hover:border-brass/30",
-                                )}
-                              >
-                                <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", active ? "bg-brass-gradient text-night" : "bg-[var(--main)]/10 text-[var(--main)]")}>
-                                  <MapPin className="size-3.5" />
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate font-heading text-sm font-semibold text-foreground">{isAr ? branch.nameAr : branch.nameEn || branch.nameAr}</span>
-                                  <span className="block truncate text-xs text-muted-foreground">{branch.nameEn && (isAr ? branch.nameEn : branch.nameAr)}</span>
-                                </span>
-                                <span className="ms-auto text-[0.7rem] tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      {groupBranches.length > INITIAL_REGION_BRANCHES ? (
-                        <Button
+                <ul className="flex flex-wrap items-center gap-2" aria-label={t("branches.branchList")} data-testid="branches-list">
+                  {visibleBranches.map((branch) => {
+                    const active = activeId === branch.id;
+                    const currentName = isAr ? branch.nameAr : branch.nameEn || branch.nameAr;
+                    const otherName = isAr ? branch.nameEn : branch.nameAr;
+                    const region = MOROCCAN_REGIONS.find((item) => item.id === branch.regionId);
+                    const regionName = region?.name[isAr ? "ar" : "en"] ?? branch.regionId;
+                    return (
+                      <li key={branch.id} data-branch-region={branch.regionId} data-testid="branch-inline-item" className="min-w-0 max-w-full">
+                        <button
                           type="button"
-                          data-testid="branch-region-expander"
-                          data-region-id={groupRegion.id}
-                          aria-expanded={Boolean(expandedRegions[groupRegion.id])}
-                          variant="ghost"
-                          onClick={() => setExpandedRegions((current) => ({ ...current, [groupRegion.id]: !current[groupRegion.id] }))}
-                          className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground"
+                          onMouseEnter={() => setActiveId(branch.id)}
+                          onMouseLeave={() => setActiveId(null)}
+                          onFocus={() => setActiveId(branch.id)}
+                          onBlur={() => setActiveId(null)}
+                          onClick={() => setActiveId(active ? null : branch.id)}
+                          aria-pressed={active}
+                          className={cn(
+                            "glass inline-flex min-h-10 max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3 py-2 text-start transition-[background-color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            active ? "glass-strong border-brass/40" : "border-border/60 hover:border-brass/30",
+                          )}
                         >
-                          {expandedRegions[groupRegion.id]
-                            ? t("branches.showLess")
-                            : t("branches.showMore").replace("{count}", String(groupBranches.length - INITIAL_REGION_BRANCHES))}
-                        </Button>
-                      ) : null}
-                    </section>
-                  ))}
-                </div>
+                          <span className="whitespace-nowrap font-heading text-sm font-semibold text-foreground"><bdi>{currentName}</bdi></span>
+                          {otherName && otherName !== currentName && (
+                            <><span aria-hidden="true" className="text-muted-foreground/60">·</span><span className="whitespace-nowrap text-xs text-muted-foreground"><bdi>{otherName}</bdi></span></>
+                          )}
+                          <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                          <span className="whitespace-nowrap text-xs text-muted-foreground"><bdi>{regionName}</bdi></span>
+                          <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                          <span data-testid="branch-coordinates" dir="ltr" className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">{branch.latitude.toFixed(5)}, {branch.longitude.toFixed(5)}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               ) : (
                 <p className="rounded-2xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">{t("branches.noResults")}</p>
               )}

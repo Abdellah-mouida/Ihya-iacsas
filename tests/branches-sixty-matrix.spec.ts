@@ -122,11 +122,14 @@ test("the public map remains usable with sixty real city dataset records", async
           await page.goto("/", { waitUntil: "domcontentloaded" });
           const section = page.locator("#branches");
           await expect(section.locator('button[aria-label*="—"]')).toHaveCount(60, { timeout: 30_000 });
-          const collapsedGroups = section.locator('[data-testid="branch-region-expander"][aria-expanded="false"]');
-          while (await collapsedGroups.count()) await collapsedGroups.first().click();
-          await expect(section.locator("li")).toHaveCount(60);
+          const items = section.locator("[data-testid=branch-inline-item]");
+          await expect(items).toHaveCount(60);
+          await expect(section.getByTestId("branch-coordinates")).toHaveCount(60);
+          for (const coordinates of await section.getByTestId("branch-coordinates").allTextContents()) {
+            expect(coordinates.trim()).toMatch(/^-?\d+\.\d{5}, -?\d+\.\d{5}$/);
+          }
 
-          for (const width of [360, 1440]) {
+          for (const width of [320, 360, 768, 1280, 1440, 1920]) {
             await page.setViewportSize({ width, height: width < 500 ? 850 : 1000 });
             await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
             await expect.poll(() => section.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -134,7 +137,9 @@ test("the public map remains usable with sixty real city dataset records", async
               const element = document.querySelector("#branches");
               if (element) window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top, behavior: "instant" });
             });
-            await page.screenshot({ path: `evidence/task-06/t4/branches-60-${width}-${theme}-${locale}.png` });
+            if ([360, 768, 1440, 1920].includes(width)) {
+              await section.getByTestId("branches-list").screenshot({ path: `evidence/task-07/t5/branches-60-${width}-${theme}-${locale}.png` });
+            }
           }
         } finally {
           await context.close();
