@@ -8,8 +8,8 @@ The `@react-bits` registry is configured in `components.json`. The Shadcn MCP se
 |---|---|---|---|
 | `FoldText-TS-TW` | Home hero title (`src/components/sections/hero.tsx`) | Registry asks for `gsap@^3.13.0`; none added | Adapt whole-word fold motion to CSS transforms. Keep Arabic words joined, SSR title visible, static reduced-motion fallback. |
 | `SpotlightCard-TS-TW` | Home activity cards and home gallery preview | None | Adapted as a token-based radial highlight updated through CSS variables on fine-pointer events; no hard-coded colors, noise, React state updates or animation loop. `useLowPower({ pointerOnly: true })` turns it off for touch/low-power devices. |
+| `BlurText-TS-TW` | Auth side-panel heading | Registry adds `motion@^12.23.12`; dropped in favor of a static CSS glow using `--main` to provide the requested light effect without motion work by signup inputs. No added dependency or bundle cost. |
 | `Masonry-TS-TW` | Gallery candidate | Adds `@hugeicons/react` and `@hugeicons/core-free-icons` | Dropped: current responsive grid preserves reading order and reserved image size; source is about 42.8 KB (10.9 KB gzip). |
-| `BlurText-TS-TW` | Auth heading candidate | Adds `motion@^12.23.12` | Dropped: existing shared motion/CSS can provide a quiet heading treatment; avoid blur and a second motion package beside signup fields. |
 | `CountUp-TS-TW` | Admin real-stat candidate | Adds `motion@^12.23.12` | Dropped: keep live numbers immediate, without a second motion package or delayed values. |
 | `ScrollReveal-TS-TW` | Shared section reveal candidate | GSAP-based registry option | Dropped in favor of one in-view wrapper and the existing Framer Motion dependency. |
 

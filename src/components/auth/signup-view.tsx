@@ -19,6 +19,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
 import { validatePasswordStrength } from "@/lib/password";
 import { signUpWithCredentials } from "@/app/actions/auth";
+import styles from "./auth-visuals.module.css";
 
 
 type SignupTranslate = ReturnType<typeof useLocale>["t"];
@@ -56,7 +57,7 @@ function SignupPasswordFields({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t("auth.passwordPlaceholder")}
-            className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+            className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
             disabled={disabled}
           />
           <button
@@ -166,10 +167,10 @@ export function SignUpView() {
       {/* Container with max width */}
       <div
         data-testid="signup-view"
-        className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-md shadow-2xl overflow-hidden"
+        className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 items-stretch rounded-3xl border border-brass/15 bg-card/90 shadow-2xl overflow-hidden"
       >
         {/* Visual / Branding Panel (Desktop Only) */}
-        <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-primary-foreground overflow-hidden bg-primary/70">
+        <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-primary-foreground overflow-hidden bg-primary/40">
           <Image
             src="/images/gathering.jpg"
             alt="Ihyaa Gathering"
@@ -177,9 +178,9 @@ export function SignUpView() {
             sizes="(max-width: 1024px) 100vw, 42vw"
             quality={90}
             className="object-cover mix-blend-overlay opacity-40 select-none pointer-events-none"
-            priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/75 via-primary/50 to-primary/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/55 via-primary/20 to-primary/45" />
+          <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
           {/* Top Brand */}
           <div className="relative z-10">
@@ -212,7 +213,7 @@ export function SignUpView() {
               <Sparkles className="size-3.5" />
               <span>{isAr ? "انضم إلى برنامج إحياء" : "Join Ihyaa Program"}</span>
             </div>
-            <h2 className="font-heading text-2xl font-bold text-primary-foreground leading-snug mb-3">
+            <h2 className={`${styles.sideHeading} font-heading text-2xl font-bold text-primary-foreground leading-snug mb-3`}>
               {isAr
                 ? "مساحتك للتلاقي، البناء، والإحياء"
                 : "Your space for connection, growth, and revival"}
@@ -396,7 +397,7 @@ function SignUpFormPanel() {
                 type="text"
                 required
                 placeholder={t("auth.fullNamePlaceholder")}
-                className="w-full h-11 px-3.5 rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                className="w-full h-11 px-3.5 rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 disabled={isPending}
               />
             </div>

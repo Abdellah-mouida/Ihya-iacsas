@@ -15,6 +15,7 @@ import {
 import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
 import { requestPasswordReset } from "@/app/actions/auth";
+import styles from "./auth-visuals.module.css";
 
 export function ForgotPasswordView() {
   const { t, locale, dir } = useLocale();
@@ -61,24 +62,25 @@ export function ForgotPasswordView() {
       className="relative min-h-[calc(100vh-5rem)] flex items-stretch justify-center p-4 sm:p-6 lg:p-8"
       dir={dir}
     >
-      <div className="w-full max-w-5xl my-auto grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden border border-brass/20 bg-card/60 backdrop-blur-2xl shadow-2xl">
+      <div className="w-full max-w-5xl my-auto grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden border border-brass/20 bg-card/90 shadow-2xl">
         {/* Left/Right Branding Banner (Desktop) */}
-        <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/70 text-primary-foreground border-e border-brass/20">
+        <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/40 text-primary-foreground border-e border-brass/20">
           <Image
             src="/images/gathering.jpg"
             alt="Ihyaa Program"
             fill
+            sizes="(max-width: 1024px) 100vw, 42vw"
             className="object-cover opacity-40 mix-blend-overlay"
-            priority
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/75 via-primary/50 to-primary/70" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
+          <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
           <div className="relative z-10 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 text-xs font-semibold text-primary-foreground backdrop-blur-md">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "استعادة الوصول إلى الحساب" : "Account Recovery"}</span>
             </div>
-            <h2 className="font-heading text-2xl xl:text-3xl font-bold text-primary-foreground leading-tight">
+            <h2 className={`${styles.sideHeading} font-heading text-2xl xl:text-3xl font-bold text-primary-foreground leading-tight`}>
               {isAr ? "برنامج إحياء" : "Ihyaa Program"}
             </h2>
             <p className="text-sm text-primary-foreground/80 leading-relaxed">

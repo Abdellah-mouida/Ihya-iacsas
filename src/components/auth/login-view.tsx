@@ -19,6 +19,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
 import { resendAccountVerificationOtp } from "@/app/actions/auth";
 import { GoogleIcon } from "./signup-view";
+import styles from "./auth-visuals.module.css";
 
 function sanitizeCallbackUrl(url: string | null): string {
   if (!url) return "/profile";
@@ -211,20 +212,20 @@ export function LoginView() {
     <div
       dir={dir}
       data-testid="login-view"
-      className="w-full max-w-5xl mx-auto rounded-3xl border border-brass/15 bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[560px]"
+      className="w-full max-w-5xl mx-auto rounded-3xl border border-brass/15 bg-card/90 shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[560px]"
     >
       {/* Visual Side Banner (Desktop Only) */}
-      <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/70 text-primary-foreground">
+      <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/40 text-primary-foreground">
         <Image
           src="/images/gathering.jpg"
           alt="Ihyaa Program"
           fill
           sizes="(max-width: 1024px) 100vw, 42vw"
           quality={90}
-          priority
           className="object-cover opacity-40 mix-blend-overlay"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/75 via-primary/50 to-primary/70" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
+        <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
         <div className="relative z-10 flex items-center gap-3">
           <div className="size-11 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/20 flex items-center justify-center p-1.5 shadow-inner">
@@ -251,7 +252,7 @@ export function LoginView() {
             <Sparkles className="size-3.5" />
             <span>{isAr ? "مرحباً بعودتك" : "Welcome Back"}</span>
           </div>
-          <h3 className="font-heading text-2xl font-bold text-primary-foreground leading-relaxed mb-3">
+          <h3 className={`${styles.sideHeading} font-heading text-2xl font-bold text-primary-foreground leading-relaxed mb-3`}>
             {isAr
               ? "متابعة الفعاليات، إدارة الحجوزات، والتواصل مع أعضاء البرنامج"
               : "Track events, manage bookings, and stay connected with program members"}
@@ -407,7 +408,7 @@ export function LoginView() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t("auth.emailPlaceholder")}
-              className="w-full h-11 px-3.5 rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 shadow-sm"
+              className="w-full h-11 px-3.5 rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200 shadow-sm"
             />
           </div>
 
@@ -439,7 +440,7 @@ export function LoginView() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t("auth.passwordPlaceholder")}
-                className="w-full h-11 ps-3.5 pe-11 text-start rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 shadow-sm"
+                className="w-full h-11 ps-3.5 pe-11 text-start rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200 shadow-sm"
               />
               <button
                 type="button"
