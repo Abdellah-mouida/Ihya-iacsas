@@ -22,7 +22,7 @@ export default async function Home() {
         <Hero />
         {/* Content sections with subtle ambient depth */}
         <div className="relative">
-          <About />
+          <About branchCount={branches.length} />
           <div className={deferred.activities}><Activities /></div>
           <div className={deferred.branches}><Branches branches={branches} /></div>
           <div className={deferred.carousel}><CardCarousel /></div>
