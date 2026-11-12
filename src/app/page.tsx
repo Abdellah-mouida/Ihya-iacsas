@@ -29,7 +29,7 @@ export default async function Home() {
           <Contact />
         </div>
       </main>
-      <Footer branches={branches} />
+      <Footer />
     </PageBackground>
   );
 }

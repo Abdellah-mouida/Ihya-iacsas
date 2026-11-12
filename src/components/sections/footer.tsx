@@ -8,10 +8,9 @@ import { SocialIcon } from "@/components/common/social-icons";
 import { useLocale } from "@/i18n/locale-provider";
 import { SOCIAL_LINKS } from "@/config/social";
 import { EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
-import type { PublicBranch } from "@/lib/branches/types";
 
-export function Footer({ branches = [] }: { branches?: PublicBranch[] }) {
-  const { t, locale } = useLocale();
+export function Footer() {
+  const { t } = useLocale();
   const year = new Date().getFullYear();
 
   return (
@@ -55,23 +54,6 @@ export function Footer({ branches = [] }: { branches?: PublicBranch[] }) {
               ))}
             </ul>
           </div>
-
-          {/* Public branch names are supplied by Home from the shared public branch cache. */}
-          {branches.length > 0 && <div className="flex flex-col gap-3">
-            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
-              {t("footer.branchesTitle")}
-            </h3>
-            <ul className="flex flex-col gap-2">
-              {branches.map((branch) => (
-                <li
-                  key={branch.id}
-                  className="text-sm text-muted-foreground"
-                >
-                  {locale === "ar" ? branch.nameAr : branch.nameEn || branch.nameAr}
-                </li>
-              ))}
-            </ul>
-          </div>}
 
           {/* Contact */}
           <div className="flex flex-col gap-3">

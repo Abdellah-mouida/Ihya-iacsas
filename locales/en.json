@@ -14,7 +14,6 @@
     "event": "Event",
     "events": "Events",
     "newEvent": "New event available",
-    "branches": "Branches",
     "gallery": "Gallery",
     "contact": "Contact",
     "book": "Book now",
@@ -218,7 +217,6 @@
   "footer": {
     "desc": "The Ihyaa youth program — reviving values and building a conscious generation across Morocco.",
     "quickLinks": "Quick links",
-    "branchesTitle": "Our branches",
     "contactTitle": "Contact",
     "rights": "All rights reserved.",
     "made": "Made with care to serve the program."

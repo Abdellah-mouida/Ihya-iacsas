@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import { expect, test } from "@playwright/test";
 import { MOROCCAN_CITIES } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +13,8 @@ const LOCALES = ["ar", "en"] as const;
 assertDevBranchDatabase("Sixty-branch visual test");
 
 test("the public map remains usable with sixty real city dataset records", async ({ browser, page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(300_000);
+  fs.mkdirSync("evidence/task-08/t4", { recursive: true });
   const testAdmin = await ensureTestUser(TEST_ADMIN);
   const allBranches = await prisma.branch.findMany({
     select: { geoId: true, createdById: true, nameArKey: true, nameEnKey: true, latitude: true, longitude: true, active: true },
@@ -138,21 +140,47 @@ test("the public map remains usable with sixty real city dataset records", async
           await expect(section.locator('button[aria-label*="—"]')).toHaveCount(60, { timeout: 30_000 });
           const items = section.locator("[data-testid=branch-inline-item]");
           await expect(items).toHaveCount(60);
-          await expect(section.getByTestId("branch-coordinates")).toHaveCount(60);
-          for (const coordinates of await section.getByTestId("branch-coordinates").allTextContents()) {
-            expect(coordinates.trim()).toMatch(/^-?\d+\.\d{5}, -?\d+\.\d{5}$/);
+          for (const item of await items.all()) {
+            const chip = item.getByRole("button");
+            await expect(chip.getByTestId("branch-chip-name")).toHaveCount(1);
+            const onlyName = (await chip.getByTestId("branch-chip-name").textContent())?.trim() ?? "";
+            expect(onlyName).not.toBe("");
+            await expect(chip).toHaveText(onlyName);
           }
+          await expect(page.locator("footer")).not.toContainText(locale === "ar" ? "فروعنا" : "Our branches");
 
           for (const width of [320, 360, 768, 1280, 1440, 1920]) {
             await page.setViewportSize({ width, height: width < 500 ? 850 : 1000 });
             await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
             await expect.poll(() => section.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+            await section.scrollIntoViewIfNeeded();
+            for (const index of [0, 29, 59]) {
+              const marker = section.locator('button[aria-label*="—"]').nth(index);
+              await marker.evaluate((element: HTMLElement) => element.focus({ preventScroll: true }));
+              const tooltip = page.getByTestId("branch-map-tooltip");
+              await expect(tooltip).toBeVisible();
+              const bounds = await page.evaluate(() => {
+                const label = document.querySelector<HTMLElement>("[data-testid='branch-map-tooltip']")!;
+                const section = document.querySelector<HTMLElement>("#branches")!;
+                const labelRect = label.getBoundingClientRect();
+                const sectionRect = section.getBoundingClientRect();
+                return { lx: labelRect.left, ly: labelRect.top, lr: labelRect.right, lb: labelRect.bottom, sx: sectionRect.left, sy: sectionRect.top, sr: sectionRect.right, sb: sectionRect.bottom };
+              });
+              expect(bounds.lx).toBeGreaterThanOrEqual(bounds.sx + 7);
+              expect(bounds.lr).toBeLessThanOrEqual(bounds.sr - 7);
+              expect(bounds.ly).toBeGreaterThanOrEqual(bounds.sy + 7);
+              expect(bounds.lb).toBeLessThanOrEqual(bounds.sb - 7);
+              if (index === 29 && [360, 768, 1440, 1920].includes(width)) {
+                await page.screenshot({ path: `evidence/task-08/t4/map-tooltip-60-${width}-${theme}-${locale}.png` });
+              }
+              await marker.evaluate((element: HTMLElement) => element.blur());
+            }
             await page.evaluate(() => {
               const element = document.querySelector("#branches");
               if (element) window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top, behavior: "instant" });
             });
             if ([360, 768, 1440, 1920].includes(width)) {
-              await section.getByTestId("branches-list").screenshot({ path: `evidence/task-07/t5/branches-60-${width}-${theme}-${locale}.png` });
+              await section.getByTestId("branches-list").screenshot({ path: `evidence/task-08/t4/branches-60-${width}-${theme}-${locale}.png` });
             }
           }
         } finally {

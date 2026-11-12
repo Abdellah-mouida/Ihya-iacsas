@@ -59,7 +59,7 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
 
 
   return (
-    <section id="branches" className="relative z-0 overflow-hidden py-24 sm:py-32">
+    <section id="branches" className="relative z-0 overflow-visible py-24 sm:py-32">
       <div className="relative z-10 mx-auto max-w-6xl px-5">
         <SectionHeading kicker={t("branches.kicker")} title={t("branches.title")} desc={t("branches.desc")} />
 
@@ -105,9 +105,6 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
                   {visibleBranches.map((branch) => {
                     const active = activeId === branch.id;
                     const currentName = isAr ? branch.nameAr : branch.nameEn || branch.nameAr;
-                    const otherName = isAr ? branch.nameEn : branch.nameAr;
-                    const region = MOROCCAN_REGIONS.find((item) => item.id === branch.regionId);
-                    const regionName = region?.name[isAr ? "ar" : "en"] ?? branch.regionId;
                     return (
                       <li key={branch.id} data-branch-region={branch.regionId} data-testid="branch-inline-item" className="min-w-0 max-w-full">
                         <button
@@ -119,18 +116,11 @@ export function Branches({ branches }: { branches: PublicBranch[] }) {
                           onClick={() => setActiveId(active ? null : branch.id)}
                           aria-pressed={active}
                           className={cn(
-                            "glass inline-flex min-h-10 max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3 py-2 text-start transition-[background-color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "glass inline-flex min-h-9 max-w-full flex-wrap items-center rounded-xl border px-3 py-1.5 text-start transition-[background-color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                             active ? "glass-strong border-brass/40" : "border-border/60 hover:border-brass/30",
                           )}
                         >
-                          <span className="whitespace-nowrap font-heading text-sm font-semibold text-foreground"><bdi>{currentName}</bdi></span>
-                          {otherName && otherName !== currentName && (
-                            <><span aria-hidden="true" className="text-muted-foreground/60">·</span><span className="whitespace-nowrap text-xs text-muted-foreground"><bdi>{otherName}</bdi></span></>
-                          )}
-                          <span aria-hidden="true" className="text-muted-foreground/60">·</span>
-                          <span className="whitespace-nowrap text-xs text-muted-foreground"><bdi>{regionName}</bdi></span>
-                          <span aria-hidden="true" className="text-muted-foreground/60">·</span>
-                          <span data-testid="branch-coordinates" dir="ltr" className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">{branch.latitude.toFixed(5)}, {branch.longitude.toFixed(5)}</span>
+                          <span data-testid="branch-chip-name" className="whitespace-nowrap font-heading text-sm font-semibold text-foreground"><bdi>{currentName}</bdi></span>
                         </button>
                       </li>
                     );

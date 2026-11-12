@@ -1,7 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { createPortal } from "react-dom";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/i18n/locale-provider";
 import { MOROCCO_MAP } from "@/lib/morocco-map";
 import { MOROCCO_MAP_BOUNDS, project, unproject } from "@/lib/morocco-projection";
@@ -45,6 +46,7 @@ export function MoroccoMap({
   const { t } = useLocale();
   const reducedMotion = useReducedMotion();
   const mapRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
   const [dragging, setDragging] = useState(false);
   const markers = useMemo(() => spreadBranchMarkers(branches), [branches]);
 
@@ -61,6 +63,49 @@ export function MoroccoMap({
   const spreadY = focusPoints.length ? Math.max(150, Math.max(...focusPoints.map((point) => point.y)) - Math.min(...focusPoints.map((point) => point.y))) : H;
   const zoom = focusPoints.length ? Math.max(1, Math.min(3.2, W / (spreadX + 180), H / (spreadY + 220))) : 1;
   const transformOrigin = `${(focusCenter.x / W) * 100}% ${(focusCenter.y / H) * 100}%`;
+  const activeBranch = !editor && activeId ? markers.find(({ branch }) => branch.id === activeId) ?? null : null;
+
+  useLayoutEffect(() => {
+    const placeTooltip = () => {
+      const tooltip = tooltipRef.current;
+      const map = mapRef.current;
+      const section = map?.closest<HTMLElement>("#branches");
+      const marker = activeId && map
+        ? [...map.querySelectorAll<HTMLButtonElement>("[data-branch-marker]")].find((node) => node.dataset.branchMarker === activeId)
+        : null;
+      if (!tooltip || !marker || !section) return;
+      const markerRect = marker.getBoundingClientRect();
+      const sectionRect = section.getBoundingClientRect();
+      const tooltipWidth = tooltip.offsetWidth;
+      const tooltipHeight = tooltip.offsetHeight;
+      const inset = 8;
+      const minLeft = sectionRect.left + inset;
+      const maxLeft = Math.max(minLeft, sectionRect.right - tooltipWidth - inset);
+      const left = Math.min(maxLeft, Math.max(minLeft, markerRect.left + markerRect.width / 2 - tooltipWidth / 2));
+      let top = markerRect.top - tooltipHeight - 10;
+      if (top < sectionRect.top + inset) top = markerRect.bottom + 10;
+      const minTop = sectionRect.top + inset;
+      const maxTop = Math.max(minTop, sectionRect.bottom - tooltipHeight - inset);
+      top = Math.min(maxTop, Math.max(minTop, top));
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    };
+
+    placeTooltip();
+    window.addEventListener("resize", placeTooltip);
+    window.addEventListener("scroll", placeTooltip, true);
+    const section = mapRef.current?.closest<HTMLElement>("#branches");
+    const zoomLayer = mapRef.current?.firstElementChild;
+    zoomLayer?.addEventListener("transitionend", placeTooltip);
+    const observer = section && typeof ResizeObserver !== "undefined" ? new ResizeObserver(placeTooltip) : null;
+    if (section) observer?.observe(section);
+    return () => {
+      window.removeEventListener("resize", placeTooltip);
+      window.removeEventListener("scroll", placeTooltip, true);
+      zoomLayer?.removeEventListener("transitionend", placeTooltip);
+      observer?.disconnect();
+    };
+  }, [activeId, activeBranch?.branch.id, activeBranch?.branch.name, activeBranch?.branch.regionName]);
 
   const placePin = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!editor || !onPinChange || !mapRef.current) return;
@@ -72,6 +117,7 @@ export function MoroccoMap({
   };
 
   return (
+    <>
     <div
       ref={mapRef}
       className={cn("relative mx-auto w-full max-w-[26rem] touch-none", editor && "max-w-none", editor && editorInteractive && "cursor-crosshair", className)}
@@ -85,7 +131,7 @@ export function MoroccoMap({
       onPointerUp={() => setDragging(false)}
       onPointerCancel={() => setDragging(false)}
     >
-      <div className="relative aspect-[1000/1065] w-full overflow-hidden">
+      <div className="relative aspect-[1000/1065] w-full overflow-visible">
         <div
           className="absolute inset-0 transition-transform duration-700 ease-out motion-reduce:transition-none"
           style={{ transform: `scale(${focusPoints.length && !editor ? zoom : 1})`, transformOrigin }}
@@ -144,32 +190,36 @@ export function MoroccoMap({
                 onClick={() => onActivate(active ? null : branch.id)}
                 aria-label={`${branch.name} — ${branch.regionName}`}
                 aria-pressed={active}
+                data-branch-marker={branch.id}
                 style={{ left: `${(point.x / W) * 100}%`, top: `${(point.y / H) * 100}%` }}
                 className={cn("absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none", "focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-transparent", active ? "z-30" : "z-10")}
               >
-                <span aria-hidden className={cn("absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--main)]/30", !reducedMotion && "animate-pulse-ring")} />
-                <span aria-hidden className={cn("relative block size-2.5 rounded-full ring-2 ring-background bg-[var(--main)]", active && "shadow-[0_0_0_4px_color-mix(in_oklch,var(--main)_40%,transparent),0_6px_16px_color-mix(in_oklch,var(--main)_50%,transparent)]")} />
-                <AnimatePresence>
-                  {active && (
-                    <motion.span
-                      initial={reducedMotion ? false : { opacity: 0, y: 6, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.92 }}
-                      transition={{ duration: reducedMotion ? 0 : 0.2, ease: EASE }}
-                      data-testid="branch-map-tooltip"
-                      className="glass-strong pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-40 flex -translate-x-1/2 flex-col items-center whitespace-nowrap rounded-xl px-3 py-2 shadow-layered"
-                    >
-                      <span className="font-heading text-sm font-semibold leading-tight text-foreground">{branch.name}</span>
-                      <span className="text-[0.7rem] leading-tight text-muted-foreground">{branch.regionName}</span>
-                      <span aria-hidden className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 rounded-[1px] bg-[var(--card)]" />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {active && <span aria-hidden data-testid="branch-marker-pulse" className={cn("absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color-mix(in_oklch,var(--foreground)_26%,transparent)]", !reducedMotion && "animate-pulse-ring")} />}
+                <span aria-hidden data-testid="branch-marker-dot" className={cn("relative block size-2.5 rounded-full ring-2 ring-background transition-transform duration-200", active ? "scale-125 bg-[var(--foreground)]" : "bg-[var(--main)]")} />
+
               </motion.button>
             );
           })}
         </div>
       </div>
     </div>
+    {activeBranch && typeof document !== "undefined" && createPortal(
+      <motion.span
+        ref={tooltipRef}
+        initial={reducedMotion ? false : { opacity: 0, y: 6, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: reducedMotion ? 0 : 0.2, ease: EASE }}
+        data-testid="branch-map-tooltip"
+        aria-hidden="true"
+        className="glass-strong pointer-events-none fixed z-[100] flex -translate-x-1/2 flex-col items-center whitespace-nowrap rounded-xl px-3 py-2 shadow-layered"
+        style={{ left: 0, top: 0 }}
+      >
+        <span className="font-heading text-sm font-semibold leading-tight text-foreground">{activeBranch.branch.name}</span>
+        <span className="text-[0.7rem] leading-tight text-muted-foreground">{activeBranch.branch.regionName}</span>
+        <span aria-hidden className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 rounded-[1px] bg-[var(--card)]" />
+      </motion.span>,
+      document.body,
+    )}
+    </>
   );
 }
