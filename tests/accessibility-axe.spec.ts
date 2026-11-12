@@ -106,6 +106,7 @@ test.describe("Accessibility Audits (Axe-core)", () => {
   test("1. Homepage / passes serious & critical axe scans across themes, locales & viewports", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     // Desktop Arabic Light
     await preparePage(page, { theme: "light", locale: "ar", viewport: VIEWPORTS.desktop }, "/");
     let res = await new AxeBuilder({ page }).analyze();

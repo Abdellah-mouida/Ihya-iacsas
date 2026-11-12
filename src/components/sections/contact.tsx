@@ -72,7 +72,7 @@ export function Contact() {
           <InViewReveal className="flex flex-col gap-5">
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-3">
-              <span className="inline-flex w-max items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass">
+              <span className="inline-flex w-max items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-foreground">
                 <span className="size-1.5 rounded-full bg-brass" />
                 {t("contact.kicker")}
               </span>

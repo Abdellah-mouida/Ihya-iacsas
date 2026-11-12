@@ -7,7 +7,7 @@ const WIDTHS = [360, 768, 1440] as const;
 
 test("the gallery archive keeps its images, dates, modal and layout across themes and locales", async ({ browser }) => {
   test.setTimeout(240_000);
-  fs.mkdirSync("evidence/task-06/t6", { recursive: true });
+  fs.mkdirSync("evidence/task-07/t8/gallery", { recursive: true });
 
   for (const locale of LOCALES) {
     for (const theme of THEMES) {
@@ -49,7 +49,7 @@ test("the gallery archive keeps its images, dates, modal and layout across theme
               });
             return visibleImages.length > 0 && visibleImages.every((item) => item.complete && item.naturalWidth > 0);
           }), { timeout: 20_000, intervals: [250, 500, 1000] }).toBe(true);
-          await page.screenshot({ path: `evidence/task-06/t6/gallery-${width}-${theme}-${locale}.png` });
+          await page.screenshot({ path: `evidence/task-07/t8/gallery/gallery-${width}-${theme}-${locale}.png` });
         }
 
         await firstCard.locator("button").click();

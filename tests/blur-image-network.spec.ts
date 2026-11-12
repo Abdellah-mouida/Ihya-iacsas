@@ -39,7 +39,7 @@ test("gallery placeholder remains while the image is throttled, then swaps witho
       await route.continue();
     });
 
-    await page.goto("/gallery");
+    await page.goto("/gallery", { waitUntil: "domcontentloaded" });
     const tile = page.getByRole("button", { name: marker }).first();
     await expect(tile).toBeVisible({ timeout: 20_000 });
     await tile.scrollIntoViewIfNeeded();

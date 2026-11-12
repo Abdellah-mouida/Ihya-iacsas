@@ -18,7 +18,7 @@ export function About({ branchCount }: { branchCount: number }) {
     <section id="about" className="relative z-0 overflow-hidden py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <InViewReveal className="mx-auto mb-10 flex max-w-3xl flex-col items-center gap-4 text-center sm:mb-14">
-          <span className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass">
+          <span className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-foreground">
             <span className="size-1.5 rounded-full bg-brass" />
             {t("about.kicker")}
           </span>

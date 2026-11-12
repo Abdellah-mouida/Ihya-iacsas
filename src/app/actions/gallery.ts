@@ -30,6 +30,44 @@ export async function getGalleryPhotos() {
   }
 }
 
+export async function getPublicGalleryPhotos(skip = 0, take = 12) {
+  const offset = Number.isFinite(skip) ? Math.max(0, Math.trunc(skip)) : 0;
+  const limit = Number.isFinite(take) ? Math.min(24, Math.max(1, Math.trunc(take))) : 12;
+
+  try {
+    const [photos, total] = await Promise.all([
+      prisma.galleryPhoto.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          imageUrl: true,
+          blurDataUrl: true,
+          imageWidth: true,
+          imageHeight: true,
+          captionAr: true,
+          captionEn: true,
+          createdAt: true,
+        },
+      }),
+      prisma.galleryPhoto.count(),
+    ]);
+
+    return {
+      success: true,
+      photos: photos.map((photo) => ({
+        ...photo,
+        imageUrl: resolveImageUrl(photo.imageUrl) ?? photo.imageUrl,
+      })),
+      hasMore: offset + photos.length < total,
+    };
+  } catch (error) {
+    console.error("Error fetching public gallery photos:", error);
+    return { success: false, photos: [], hasMore: false };
+  }
+}
+
 export async function createGalleryPhoto(formData: FormData) {
   try {
     const user = await requirePermission("gallery:manage");

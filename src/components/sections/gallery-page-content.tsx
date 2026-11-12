@@ -1,10 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, ZoomIn } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getGalleryPhotos } from "@/app/actions/gallery";
+import { getPublicGalleryPhotos } from "@/app/actions/gallery";
 import { SectionHeading } from "@/components/common/section-heading";
 import { InViewReveal } from "@/components/common/in-view-reveal";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -12,6 +12,18 @@ import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
 import { EASE } from "@/lib/motion";
 import { BlurImage } from "@/components/common/blur-image";
+import { Button } from "@/components/ui/button";
+
+type InitialGalleryPhoto = {
+  id: string;
+  imageUrl: string;
+  blurDataUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  captionAr: string | null;
+  captionEn: string | null;
+  createdAt: Date;
+};
 
 type PhotoItem = {
   id: string;
@@ -33,60 +45,75 @@ const slideVariants = {
   exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? "-8%" : "8%", scale: 0.98 }),
 };
 
-export function GalleryPageContent() {
+export function GalleryPageContent({
+  initialPhotos,
+  initialHasMore,
+}: {
+  initialPhotos: InitialGalleryPhoto[];
+  initialHasMore: boolean;
+}) {
   const { t, locale, dir } = useLocale();
-  const [loading, setLoading] = useState(true);
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [photoRows, setPhotoRows] = useState(initialPhotos);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
 
   // Lightbox state
   const [open, setOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  useEffect(() => {
-    getGalleryPhotos().then((res) => {
-      if (res.success && res.photos && res.photos.length > 0) {
-        const formatted = res.photos.map((p) => {
-          const date = new Date(p.createdAt);
-          const dateLabel = date.toLocaleDateString(
-            locale === "ar" ? "ar-MA" : "en-US",
-            { year: "numeric", month: "long" },
-          );
-          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-          return {
-            id: p.id,
-            src: p.imageUrl,
-            blurDataUrl: p.blurDataUrl,
-            imageWidth: p.imageWidth,
-            imageHeight: p.imageHeight,
-            caption:
-              locale === "ar"
-                ? p.captionAr || p.captionEn || "صورة من إحياء"
-                : p.captionEn || p.captionAr || "Ihyaa moment",
-            createdAt: date,
-            dateKey,
-            dateLabel,
-          };
-        });
-        setPhotos(formatted);
+  const photos = useMemo<PhotoItem[]>(() => {
+    if (photoRows.length > 0) {
+      return photoRows.map((photo) => {
+        const date = new Date(photo.createdAt);
+        return {
+          id: photo.id,
+          src: photo.imageUrl,
+          blurDataUrl: photo.blurDataUrl,
+          imageWidth: photo.imageWidth,
+          imageHeight: photo.imageHeight,
+          caption: locale === "ar"
+            ? photo.captionAr || photo.captionEn || "صورة من إحياء"
+            : photo.captionEn || photo.captionAr || "Ihyaa moment",
+          createdAt: date,
+          dateKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+          dateLabel: date.toLocaleDateString(locale === "ar" ? "ar-MA" : "en-US", { year: "numeric", month: "long" }),
+        };
+      });
+    }
+
+    const fallbackDate = new Date();
+    return GALLERY.map((item, index) => ({
+      id: `static-${index}`,
+      src: item.src,
+      caption: t(item.altKey),
+      createdAt: fallbackDate,
+      dateKey: "archive",
+      dateLabel: t("gallery.archiveGroup"),
+      imageWidth: item.w,
+      imageHeight: item.h,
+    }));
+  }, [locale, photoRows, t]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreFailed(false);
+    try {
+      const result = await getPublicGalleryPhotos(photoRows.length, 12);
+      if (result.success) {
+        setPhotoRows((current) => [...current, ...result.photos]);
+        setHasMore(result.hasMore);
       } else {
-        // Fallback to static gallery
-        const fallbackDate = new Date();
-        const fallback = GALLERY.map((g, idx) => ({
-          id: `static-${idx}`,
-          src: g.src,
-          caption: t(g.altKey),
-          createdAt: fallbackDate,
-          dateKey: "archive",
-          dateLabel: t("gallery.archiveGroup"),
-            imageWidth: g.w,
-            imageHeight: g.h,
-        }));
-        setPhotos(fallback);
+        setLoadMoreFailed(true);
       }
-      setLoading(false);
-    });
-  }, [locale, t]);
+    } catch {
+      setLoadMoreFailed(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, photoRows.length]);
 
   // Group photos by dateKey
   const groupedPhotos = useMemo(() => {
@@ -158,23 +185,7 @@ export function GalleryPageContent() {
           desc={t("gallery.pageDesc")}
         />
 
-        {loading ? (
-          <div className="mt-16 space-y-12">
-            {[1, 2].map((group) => (
-              <div key={group} className="space-y-6">
-                <div className="h-8 w-48 animate-pulse rounded-lg bg-muted/60" />
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {[1, 2, 3].map((item) => (
-                    <div
-                      key={item}
-                      className="aspect-[4/3] animate-pulse rounded-2xl bg-muted/50"
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : flatPhotos.length === 0 ? (
+        {flatPhotos.length === 0 ? (
           <div className="mt-16 flex flex-col items-center justify-center rounded-3xl glass p-12 text-center">
             <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25">
               <ImageIcon className="size-7" />
@@ -232,7 +243,8 @@ export function GalleryPageContent() {
                             width={item.imageWidth}
                             height={item.imageHeight}
                             blurDataUrl={item.blurDataUrl}
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            priority={globalIdx === 0}
+                            sizes="(max-width: 639px) calc(100vw - 2.5rem), (max-width: 1023px) calc((100vw - 4rem) / 2), calc((min(100vw, 72rem) - 7rem) / 3)"
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                           {/* Inner gold border */}
@@ -256,6 +268,18 @@ export function GalleryPageContent() {
             ))}
           </div>
         )}
+
+        {hasMore ? (
+          <div className="mt-10 flex justify-center">
+            <div className="flex flex-col items-center gap-3">
+              {loadMoreFailed ? <p role="alert" className="text-sm text-destructive">{t("gallery.loadMoreError")}</p> : null}
+              <Button type="button" variant="outline" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" /> : null}
+                {t(loadingMore ? "gallery.loadingMore" : "gallery.loadMore")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Lightbox Dialog */}

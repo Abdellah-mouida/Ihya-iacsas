@@ -128,7 +128,7 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
         >
           <motion.span
             variants={fadeUp}
-            className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass"
+            className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-foreground"
           >
             <span className="size-1.5 rounded-full bg-brass" />
             {t("event.kicker")}
