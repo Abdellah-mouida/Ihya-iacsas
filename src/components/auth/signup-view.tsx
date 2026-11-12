@@ -20,6 +20,7 @@ import { toast } from "@/lib/toast";
 import { validatePasswordStrength } from "@/lib/password-strength";
 import { signUpWithCredentials } from "@/app/actions/auth";
 import styles from "./auth-visuals.module.css";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 
 type SignupTranslate = ReturnType<typeof useLocale>["t"];
@@ -372,7 +373,7 @@ function SignUpFormPanel() {
               </Link>
             </div>
 
-            <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+            <h1 data-rb="ShinyText" className={`${rbStyles.shinyText} font-heading text-2xl sm:text-3xl font-bold tracking-tight`}>
               {t("auth.signupTitle")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1.5 font-sans">

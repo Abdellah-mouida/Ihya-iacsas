@@ -1,0 +1,98 @@
+.tiltedCard {
+  transition: transform 260ms cubic-bezier(.2,.75,.25,1), box-shadow 260ms ease;
+  transform: perspective(900px) rotateX(0deg) rotateY(0deg);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .tiltedCard:hover,
+  .tiltedCard:focus-within {
+    transform: perspective(900px) rotateX(1deg) rotateY(-1deg) translateY(-2px);
+    box-shadow: 0 14px 32px color-mix(in oklch, var(--main) 12%, transparent);
+  }
+
+  .spotlightSurface:hover,
+  .spotlightSurface:focus-within {
+    background-image: radial-gradient(circle at 50% 0%, color-mix(in oklch, var(--main) 10%, transparent), transparent 55%);
+  }
+}
+
+.blurText {
+  animation: rb-text-rise 480ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.shinyText {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+}
+
+.shinyText::after {
+  content: "";
+  position: absolute;
+  inset-block: -0.08em;
+  inset-inline-start: -35%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent, color-mix(in oklch, var(--main) 42%, var(--foreground)), transparent);
+  opacity: 0;
+  transform: translateX(-140%);
+  animation: rb-shine 5s ease-in-out infinite;
+}
+
+:global([dir="rtl"]) .shinyText::after {
+  animation-name: rb-shine-rtl;
+}
+
+.magicBento > * {
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.profileCard {
+  transition: box-shadow 240ms ease, border-color 240ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .profileCard:hover {
+    border-color: color-mix(in oklch, var(--main) 30%, var(--border));
+    box-shadow: 0 18px 42px color-mix(in oklch, var(--main) 10%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .magicBento > *:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklch, var(--main) 42%, var(--border));
+    box-shadow: 0 12px 28px color-mix(in oklch, var(--main) 10%, transparent);
+  }
+}
+
+.animatedContent {
+  animation: rb-content-rise 420ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+@keyframes rb-text-rise {
+  from { opacity: .75; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rb-content-rise {
+  from { opacity: .82; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rb-shine {
+  0%, 72%, 100% { opacity: 0; transform: translateX(-140%); }
+  78% { opacity: .2; transform: translateX(0); }
+  84% { opacity: 0; transform: translateX(140%); }
+}
+
+@keyframes rb-shine-rtl {
+  0%, 72%, 100% { opacity: 0; transform: translateX(140%); }
+  78% { opacity: .2; transform: translateX(0); }
+  84% { opacity: 0; transform: translateX(-140%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiltedCard, .magicBento > *, .profileCard, .blurText, .shinyText, .animatedContent { animation: none; transition: none; transform: none; }
+  .shinyText::after { animation: none; }
+}

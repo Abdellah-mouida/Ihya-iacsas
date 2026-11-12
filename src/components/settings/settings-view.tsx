@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { ThemeDto } from "@/lib/theme-constants";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 interface SettingsViewProps {
   initialData: UserAccountData;
@@ -305,7 +306,7 @@ export function SettingsView({
   }, []);
 
   return (
-    <div className="space-y-8" data-testid="settings-view-container">
+    <div className={`${rbStyles.animatedContent} space-y-8`} data-testid="settings-view-container" data-rb="AnimatedContent">
       {/* Back Link to Last Non-Settings Page */}
       <div>
         <Link

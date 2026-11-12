@@ -1,13 +1,17 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useId } from "react";
 
 import { InViewReveal } from "@/components/common/in-view-reveal";
 import { MotionCard } from "@/components/common/motion-card";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { InViewMount } from "@/components/common/in-view-mount";
 import { useLocale } from "@/i18n/locale-provider";
 import { ABOUT_CARDS, IMAGES } from "@/lib/content";
+
+const CountUp = dynamic(() => import("@/components/common/count-up").then((module) => module.CountUp), { ssr: false });
 
 export function About({ branchCount }: { branchCount: number }) {
   const { t, locale } = useLocale();
@@ -72,7 +76,13 @@ export function About({ branchCount }: { branchCount: number }) {
               />
             </div>
             <div className="mx-auto mt-4 flex w-fit items-center gap-3 rounded-2xl glass-strong px-4 py-3 shadow-layered">
-              <span className="text-gradient-brass font-heading text-2xl font-bold tabular-nums">{formattedBranchCount}</span>
+              <InViewMount
+                className="text-gradient-brass font-heading text-2xl font-bold tabular-nums"
+                minHeight="2rem"
+                placeholder={<span aria-hidden="true">{formattedBranchCount}</span>}
+              >
+                <CountUp value={branchCount} locale={locale} />
+              </InViewMount>
               <span className="max-w-32 text-xs text-muted-foreground">{t("hero.statBranchesLabel")}</span>
             </div>
           </div>

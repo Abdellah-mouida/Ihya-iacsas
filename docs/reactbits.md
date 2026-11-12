@@ -9,6 +9,25 @@ The `@react-bits` registry is configured in `components.json`. The Shadcn MCP se
 - At verification, `vercel ls --environment=preview` showed latest Ready Preview `https://ihya-iacsas-ghf2m0hn2-abdellah-projects.vercel.app` with branch alias `ihya-iacsas-git-dev-abdellah-projects.vercel.app`. `vercel inspect` also listed `ihyaa.is-cool.dev` as an alias on that Preview. `vercel curl` bypassed Deployment Protection for read-only inspection: Home HTML contained four `data-react-bits="SpotlightCard"` markers, four hero fold pieces/words, and the reference-line test marker; `/gallery` contained five gallery-card nodes but no React Bits marker. Plain unauthenticated `curl` gets Vercel protection/404, so these findings use authenticated CLI access.
 - The Vercel MCP connection is not authorized for team `abdellah-projects` (403); the installed Vercel CLI is authenticated and provides the required read-only deployment inspection, so no reauthorization was needed.
 
+## T1 visible adoption and proof (2026-11-12)
+
+All entries below are custom adaptations of the named public registry item. Registry source code and new animation packages were not copied or added. The existing shared tokens, locale direction, touch behavior, reduced-motion rules, and existing page interactions remain in use. `tests/reactbits.spec.ts` visits each listed route and asserts its markers; it passed on the local production build.
+
+| React Bits item / adaptation | File | Route | `data-rb` | Extra dependencies | Added JS cost |
+|---|---|---|---|---|---|
+| `FoldText-TS-TW` — paper fold with whole-word Arabic/English spans | `src/components/sections/hero.tsx` | `/` | `FoldText` | `gsap@3.13.0` pinned; dynamic import starts only when the hero intersects | 27,119 bytes gzip in the deferred GSAP chunk; not part of route First Load JS |
+| `SpotlightCard-TS-TW` — existing token radial hover, now with proof marker | `src/components/common/spotlight-card.tsx` | `/` | `SpotlightCard` | None | Existing component; marker only |
+| `TiltedCard-TS-TW` — pointer-capability CSS tilt on grouped database photo cards | `src/components/sections/gallery-page-content.tsx` | `/gallery` | `TiltedCard` | None; non-touch and reduced-motion fallback is the existing grid | 0 JS; CSS only |
+| `CountUp-TS-TW` — in-view active-branch count updated through one DOM ref, not React state | `src/components/common/count-up.tsx` | `/` (lazy-loaded inside About) | `CountUp` | None | 622 bytes gzip for the module source; route chunk is deferred until the About counter enters view |
+| `SpotlightCard-TS-TW` — token radial highlight on event content | `src/components/sections/events-client-view.tsx` | `/events` | `SpotlightCard` | None | Shared CSS only |
+| `AnimatedContent-TS-TW` — short transform/opacity entrance on event/settings content | `src/components/sections/events-client-view.tsx`, `src/components/settings/settings-view.tsx` | `/events`, `/settings` | `AnimatedContent` | None | Shared CSS only |
+| `BlurText-TS-TW` — transform/opacity title reveal; no blur filter or form animation | `src/components/auth/login-view.tsx` | `/login` | `BlurText` | None | Shared CSS only |
+| `ShinyText-TS-TW` — token-based moving sheen on the signup side-panel heading | `src/components/auth/signup-view.tsx` | `/signup` | `ShinyText` | None | Shared CSS only |
+| `ProfileCard-TS-TW` — restrained token hover response on the existing cover/avatar card | `src/components/profile/profile-view.tsx` | `/profile` | `ProfileCard` | None | Shared CSS only |
+| `MagicBento-TS-TW` — transform-only dashboard metric-card hover | `src/app/admin/page.tsx` | `/admin` | `MagicBento` | None; no canvas | Shared CSS only |
+
+The custom adaptation stylesheet is 2,975 bytes raw (925 bytes gzip); GSAP is the only new dependency. The CountUp source is 622 bytes gzip and is dynamically imported inside an in-view mount. Comparing clean production builds at T0 `0d9f879` and the current T1 output, First Load JS changed by `/` +538 bytes, `/gallery` +168, `/events` +220, `/login` +2,325, `/signup` +211, `/profile` +211, `/settings` +208, and `/admin` +207 gzip bytes. Maximum increase is 2,325 bytes, below the 25KB gate; the 27,119-byte GSAP chunk remains deferred. The Playwright marker/pause test passed across `/`, `/gallery`, `/events`, `/login`, `/signup`, `/profile`, `/settings`, and `/admin`. A cold local 360px production run under 4× CPU throttling recorded LCP 2.340s, CLS 0.00, and TTFB 672ms; this meets the local hero threshold with little margin. This local result does not substitute for field data.
+
 ## Components
 
 | Registry component | Site use | Dependency | Decision |

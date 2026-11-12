@@ -13,6 +13,7 @@ import { GALLERY } from "@/lib/content";
 import { EASE } from "@/lib/motion";
 import { BlurImage } from "@/components/common/blur-image";
 import { Button } from "@/components/ui/button";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 type InitialGalleryPhoto = {
   id: string;
@@ -224,7 +225,8 @@ export function GalleryPageContent({
                       <div
                         key={item.id}
                         data-gallery-card
-                        className="group glass relative overflow-hidden rounded-2xl shadow-layered transition-[transform,box-shadow] duration-300 hover:-translate-y-1.5 hover:shadow-layered hover:ring-2 hover:ring-brass/35"
+                        data-rb="TiltedCard"
+                        className={`${rbStyles.tiltedCard} group glass relative overflow-hidden rounded-2xl shadow-layered hover:ring-2 hover:ring-brass/35`}
                       >
                         <button
                           type="button"

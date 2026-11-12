@@ -20,6 +20,7 @@ import { toast } from "@/lib/toast";
 import { resendAccountVerificationOtp } from "@/app/actions/auth";
 import { GoogleIcon } from "./signup-view";
 import styles from "./auth-visuals.module.css";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 function sanitizeCallbackUrl(url: string | null): string {
   if (!url) return "/profile";
@@ -292,7 +293,8 @@ export function LoginView() {
           </div>
           <h1
             data-testid="login-title"
-            className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-1.5"
+            data-rb="BlurText"
+            className={`${rbStyles.blurText} font-heading text-2xl sm:text-3xl font-bold text-foreground mb-1.5`}
           >
             {t("auth.loginTitle")}
           </h1>

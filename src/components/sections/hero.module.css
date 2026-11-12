@@ -73,15 +73,6 @@
   white-space: pre;
 }
 
-.word::after {
-  content: attr(data-fold-text);
-  position: absolute;
-  inset: 0;
-  color: color-mix(in oklch, currentColor 45%, var(--background));
-  opacity: 0;
-  pointer-events: none;
-}
-
 .heroTitle {
   --hero-title-start: var(--main);
   --hero-title-end: var(--gold-deep);
@@ -96,54 +87,6 @@
   --hero-title-end: var(--brand-green);
 }
 
-.foldIn {
-  transform-origin: center top;
-  backface-visibility: hidden;
-  text-shadow: 0 0 0.025em color-mix(in oklch, var(--background) 35%, transparent);
-  animation: fold-in 650ms cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0s) none;
-}
-
-.foldIn::after {
-  animation: fold-crease 650ms cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0s) none;
-}
-
-@keyframes fold-in {
-  from {
-    opacity: 1;
-    transform: perspective(700px) rotateX(-92deg) translateY(0.16em);
-  }
-
-  to {
-    opacity: 1;
-    transform: perspective(700px) rotateX(0) translateY(0);
-  }
-}
-
-@keyframes hover-refold {
-  50% {
-    transform: perspective(700px) rotateX(-45deg);
-  }
-}
-
-@keyframes fold-crease {
-  from {
-    opacity: 0.55;
-  }
-
-  to {
-    opacity: 0;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .foldIn:hover {
-    animation-name: hover-refold;
-    animation-duration: 360ms;
-    animation-delay: 0s;
-    animation-timing-function: ease-in-out;
-  }
-}
-
 @keyframes outline-drift {
   from {
     transform: translate(0.3%, 0.4%);
@@ -155,10 +98,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .foldIn {
-    animation: none;
-  }
-
   .splashOrnaments {
     animation: none;
     transform: none;

@@ -32,6 +32,7 @@ export function SpotlightCard({
       onPointerLeave={clearPointer}
       className={`${styles.spotlight} ${className ?? ""}`}
       data-react-bits="SpotlightCard"
+      data-rb="SpotlightCard"
     >
       <div className={styles.content}>{children}</div>
     </div>

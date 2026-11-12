@@ -8,6 +8,7 @@ import { StatusNotice } from "@/components/common/status-notice";
 import { PatternCover } from "@/components/common/pattern-cover";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 import {
   Calendar,
   Clock,
@@ -50,7 +51,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
   return (
     <div className="space-y-8" data-testid="profile-view-container">
       {/* Profile Header & Hero Banner */}
-      <div data-testid="profile-header-card" className="relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover">
+      <div data-testid="profile-header-card" data-rb="ProfileCard" className={`${rbStyles.profileCard} relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-[box-shadow,border-color] duration-300 hover:shadow-profile-hover`}>
         {/* Cover Canvas */}
         <div data-testid="profile-cover-frame" className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
           <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} blurDataUrl={user.coverBlurDataUrl} imageWidth={user.coverWidth} imageHeight={user.coverHeight} />

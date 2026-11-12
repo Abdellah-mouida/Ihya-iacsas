@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef, type PointerEvent } from "react";
 import { CalendarDays, Info } from "lucide-react";
 
 import styles from "./hero.module.css";
@@ -19,14 +20,108 @@ function groupPortraitLoader({ width }: { width: number }) {
 }
 
 export function Hero() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const lowPower = useLowPower();
+  const sectionRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const timelineRef = useRef<{ pause: () => void; resume: () => void; kill: () => void } | null>(null);
   const headline = t("hero.title");
-  const splitByCharacter = locale === "en";
   const pieces = headline.split(/(\s+)/).filter(Boolean);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const title = titleRef.current;
+    if (!section || !title || lowPower) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches) return;
+
+    let visible = false;
+    let disposed = false;
+    let gsapModule: typeof import("gsap") | null = null;
+    const clearFoldTransforms = () => {
+      if (!gsapModule) return;
+      gsapModule.gsap.set(title.querySelectorAll<HTMLElement>("[data-fold-word]"), { clearProps: "transform" });
+    };
+    const animate = async () => {
+      if (!visible || disposed || timelineRef.current) return;
+      section.dataset.foldState = "loading";
+      try {
+        gsapModule ??= await import("gsap");
+        if (disposed || !visible || reducedMotion.matches) {
+          section.dataset.foldState = "static";
+          return;
+        }
+        const words = title.querySelectorAll<HTMLElement>("[data-fold-word]");
+        const timeline = gsapModule.gsap.fromTo(
+          words,
+          { transformPerspective: 700, rotationX: -92, y: 2, transformOrigin: "50% 0%" },
+          { rotationX: 0, y: 0, duration: 0.65, stagger: 0.045, ease: "power3.out", paused: true },
+        );
+        timelineRef.current = timeline;
+        section.dataset.foldState = "ready";
+        timeline.play();
+      } catch {
+        section.dataset.foldState = "static";
+        // The complete server-rendered title remains visible if the optional animation chunk fails.
+      }
+    };
+
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      section.dataset.foldVisible = String(visible);
+      if (visible) {
+        section.dataset.foldPaused = "false";
+        if (timelineRef.current) timelineRef.current.resume();
+        else void animate();
+      } else {
+        section.dataset.foldPaused = "true";
+        timelineRef.current?.pause();
+      }
+    }, { threshold: 0.1 });
+    const onMotionChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        timelineRef.current?.kill();
+        timelineRef.current = null;
+        clearFoldTransforms();
+        section.dataset.foldState = "static";
+      } else if (visible) {
+        void animate();
+      }
+    };
+    reducedMotion.addEventListener("change", onMotionChange);
+    observer.observe(section);
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      reducedMotion.removeEventListener("change", onMotionChange);
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+      clearFoldTransforms();
+      delete section.dataset.foldVisible;
+      delete section.dataset.foldState;
+      delete section.dataset.foldPaused;
+    };
+  }, [lowPower]);
+
+  const refoldWord = async (event: PointerEvent<HTMLSpanElement>) => {
+    if (
+      lowPower ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      event.pointerType !== "mouse" ||
+      !window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    ) return;
+    const word = event.currentTarget;
+    try {
+      const { gsap } = await import("gsap");
+      gsap.to(word, { rotationX: -45, transformPerspective: 700, transformOrigin: "50% 0%", duration: 0.18, yoyo: true, repeat: 1, ease: "power2.inOut" });
+    } catch {
+      // Keep the static title if the optional animation chunk is unavailable.
+    }
+  };
 
   return (
     <section
+      ref={sectionRef}
       id="home"
       className="relative z-10 mb-[-3.5rem] overflow-visible px-4 pt-24 pb-0 text-foreground sm:px-6 sm:pt-28"
     >
@@ -39,66 +134,31 @@ export function Hero() {
             {t("hero.programName")}
           </p>
           <h1
+            ref={titleRef}
             aria-label={headline}
+            data-rb="FoldText"
             className={`${styles.heroTitle} mt-3 min-h-[3.4em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold leading-[1.12] lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
           >
-            {splitByCharacter
-              ? (() => {
-                  let offset = 0;
-                  const totalCharacters = Array.from(headline).length;
-                  return pieces.map((word, wordIndex) => {
-                    if (/^\s+$/.test(word)) {
-                      offset += Array.from(word).length;
-                      return word;
-                    }
-                    const characters = Array.from(word);
-                    const renderedWord = (
-                      <span key={`word-${wordIndex}`} data-testid="hero-heading-word" className={styles.wordBox}>
-                        {characters.map((character, characterIndex) => {
-                          const index = offset + characterIndex;
-                          const endPercent = Math.round((index / Math.max(totalCharacters - 1, 1)) * 100);
-                          return (
-                            <span
-                              key={`character-${wordIndex}-${characterIndex}`}
-                              aria-hidden="true"
-                              data-testid="hero-fold-piece"
-                              data-fold-text={character}
-                              className={`${styles.word}${lowPower ? "" : ` ${styles.foldIn}`}`}
-                              style={{
-                                color: `color-mix(in oklch, var(--hero-title-start) ${100 - endPercent}%, var(--hero-title-end) ${endPercent}%)`,
-                                ...(lowPower ? {} : { "--fold-delay": `${0.18 + index * 0.045}s` }),
-                              }}
-                            >
-                              {character}
-                            </span>
-                          );
-                        })}
-                      </span>
-                    );
-                    offset += characters.length;
-                    return renderedWord;
-                  });
-                })()
-              : pieces.map((word, index) => {
-                  if (/^\s+$/.test(word)) return word;
-                  const endPercent = Math.round((index / Math.max(pieces.length - 1, 1)) * 100);
-                  return (
-                    <span key={`word-${index}`} data-testid="hero-heading-word" className={styles.wordBox}>
-                      <span
-                        aria-hidden="true"
-                        data-testid="hero-fold-piece"
-                        data-fold-text={word}
-                        className={`${styles.word}${lowPower ? "" : ` ${styles.foldIn}`}`}
-                        style={{
-                          color: `color-mix(in oklch, var(--hero-title-start) ${100 - endPercent}%, var(--hero-title-end) ${endPercent}%)`,
-                          ...(lowPower ? {} : { "--fold-delay": `${0.18 + index * 0.045}s` }),
-                        }}
-                      >
-                        {word}
-                      </span>
-                    </span>
-                  );
-              })}
+            {pieces.map((word, index) => {
+              if (/^\s+$/.test(word)) return word;
+              const endPercent = Math.round((index / Math.max(pieces.length - 1, 1)) * 100);
+              return (
+                <span key={`word-${index}`} data-testid="hero-heading-word" className={styles.wordBox}>
+                  <span
+                    aria-hidden="true"
+                    data-testid="hero-fold-piece"
+                    data-fold-word
+                    className={styles.word}
+                    onPointerEnter={refoldWord}
+                    style={{
+                      color: `color-mix(in oklch, var(--hero-title-start) ${100 - endPercent}%, var(--hero-title-end) ${endPercent}%)`,
+                    }}
+                  >
+                    {word}
+                  </span>
+                </span>
+              );
+            })}
           </h1>
           <p data-testid="hero-reference" className="mt-2 text-sm font-medium text-muted-foreground">
             {t("hero.reference")}
