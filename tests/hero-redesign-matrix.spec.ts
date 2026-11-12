@@ -12,7 +12,6 @@ const EXPECTED_HEADLINE = {
   ar: "أَوَمَن كَانَ مَيۡتٗا فَأَحۡيَيۡنَٰهُ",
   en: "“And is one who was dead and We gave him life”",
 } as const;
-const EXPECTED_REFERENCE = { ar: "الأنعام: ١٢٢", en: "Al-An'am 6:122" } as const;
 
 test.describe("Home hero redesign", () => {
   test("serves the new AVIF for saved references to the retired JPG", () => {
@@ -60,7 +59,7 @@ test.describe("Home hero redesign", () => {
           const hero = page.locator("#home");
           const heading = hero.getByRole("heading", { level: 1 });
           await expect(heading).toHaveText(EXPECTED_HEADLINE[locale]);
-          await expect(hero.getByTestId("hero-reference")).toHaveText(EXPECTED_REFERENCE[locale]);
+          await expect(hero.getByTestId("hero-reference")).toHaveCount(0);
           const minTitleContrast = await page.evaluate(() => {
             const context = document.createElement("canvas").getContext("2d");
             if (!context) throw new Error("Canvas is unavailable for contrast checks");

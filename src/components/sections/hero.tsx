@@ -160,9 +160,6 @@ export function Hero() {
               );
             })}
           </h1>
-          <p data-testid="hero-reference" className="mt-2 text-sm font-medium text-muted-foreground">
-            {t("hero.reference")}
-          </p>
           <p className="mt-5 min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
             {t("hero.subtitle")}
           </p>
