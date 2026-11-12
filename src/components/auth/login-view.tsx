@@ -224,10 +224,10 @@ export function LoginView() {
           quality={90}
           className="object-cover opacity-40 mix-blend-overlay"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
         <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="relative z-20 flex items-center gap-3">
           <div className="size-11 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/20 flex items-center justify-center p-1.5 shadow-inner">
             <SmoothImage
               src="/images/logo-circle.png"
@@ -247,7 +247,7 @@ export function LoginView() {
           </div>
         </div>
 
-        <div className="relative z-10 my-auto py-8">
+        <div className="relative z-20 my-auto py-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/15 text-xs text-primary-foreground mb-4">
             <Sparkles className="size-3.5" />
             <span>{isAr ? "مرحباً بعودتك" : "Welcome Back"}</span>
@@ -264,7 +264,7 @@ export function LoginView() {
           </p>
         </div>
 
-        <div className="relative z-10 text-[11px] text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/10 pt-4">
+        <div className="relative z-20 text-[11px] text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/10 pt-4">
           <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
           <span>{isAr ? "المملكة المغربية" : "Kingdom of Morocco"}</span>
         </div>

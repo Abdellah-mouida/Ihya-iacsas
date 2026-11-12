@@ -180,11 +180,11 @@ export function SignUpView() {
             quality={90}
             className="object-cover mix-blend-overlay opacity-40 select-none pointer-events-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/55 via-primary/20 to-primary/45" />
+          <div className="absolute inset-0 z-10 bg-gradient-to-b from-primary/55 via-primary/20 to-primary/45" />
           <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
           {/* Top Brand */}
-          <div className="relative z-10">
+          <div className="relative z-20">
             <Link
               href="/"
               className="inline-flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brass"
@@ -209,7 +209,7 @@ export function SignUpView() {
           </div>
 
           {/* Center Quote / Pitch */}
-          <div className="relative z-10 my-auto py-8">
+          <div className="relative z-20 my-auto py-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-xs font-semibold text-primary-foreground mb-4">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "انضم إلى برنامج إحياء" : "Join Ihyaa Program"}</span>
@@ -227,7 +227,7 @@ export function SignUpView() {
           </div>
 
           {/* Bottom Back Link */}
-          <div className="relative z-10 pt-4 border-t border-primary-foreground/10">
+          <div className="relative z-20 pt-4 border-t border-primary-foreground/10">
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors"

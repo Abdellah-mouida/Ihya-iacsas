@@ -152,9 +152,9 @@ export function ChangePasswordView() {
             className="object-cover opacity-20 mix-blend-overlay"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
+          <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
 
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-20 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs font-semibold text-brass-light backdrop-blur-md">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "أمان الحساب" : "Account Security"}</span>
@@ -169,7 +169,7 @@ export function ChangePasswordView() {
             </p>
           </div>
 
-          <div className="relative z-10 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
+          <div className="relative z-20 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
             <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
             <div className="size-6 rounded-full border border-white/30 flex items-center justify-center text-brass-light font-heading font-bold text-xs">
               ۞

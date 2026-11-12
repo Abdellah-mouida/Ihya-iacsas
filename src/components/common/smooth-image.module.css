@@ -45,6 +45,7 @@
 
 .skeletonLeaving {
   opacity: 0;
+  background: transparent;
 }
 
 .errorTile {

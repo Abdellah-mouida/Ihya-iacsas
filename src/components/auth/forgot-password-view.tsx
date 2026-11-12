@@ -72,10 +72,10 @@ export function ForgotPasswordView() {
             sizes="(max-width: 1024px) 100vw, 42vw"
             className="object-cover opacity-40 mix-blend-overlay"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
+          <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
           <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-20 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 text-xs font-semibold text-primary-foreground backdrop-blur-md">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "استعادة الوصول إلى الحساب" : "Account Recovery"}</span>
@@ -90,7 +90,7 @@ export function ForgotPasswordView() {
             </p>
           </div>
 
-          <div className="relative z-10 pt-8 border-t border-primary-foreground/10 flex items-center justify-between text-xs text-primary-foreground/70">
+          <div className="relative z-20 pt-8 border-t border-primary-foreground/10 flex items-center justify-between text-xs text-primary-foreground/70">
             <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
             <div className="size-6 rounded-full border border-primary-foreground/30 flex items-center justify-center text-primary-foreground font-heading font-bold text-xs">
               ۞
