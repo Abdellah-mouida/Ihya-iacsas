@@ -20,11 +20,11 @@ test.describe("Task 5: Next.js Image sizes fix on hero and about", () => {
     expect(heroSizes).toContain("607px");
 
     // Check About Image
-    const aboutImg = page.locator("#about img[src*='gathering']");
+    const aboutImg = page.locator("#about img[src*='logo-circle']");
     await expect(aboutImg).toBeVisible();
     const aboutSizes = await aboutImg.getAttribute("sizes");
-    expect(aboutSizes).toContain("520px");
-    expect(aboutSizes).toContain("(max-width: 640px) 100vw");
+    expect(aboutSizes).toContain("240px");
+    expect(aboutSizes).toContain("176px");
 
     // Ensure no Next.js Image sizes mismatch warning occurred
     const sizesWarnings = warnings.filter(

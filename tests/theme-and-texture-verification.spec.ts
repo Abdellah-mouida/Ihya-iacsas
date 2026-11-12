@@ -32,18 +32,13 @@ test.describe("Theme main color & pattern texture layer verification", () => {
     const mapExists = await page.locator("#branches svg").count();
     expect(mapExists).toBeGreaterThanOrEqual(1);
 
-    // Verify activities section card titles in Arabic have no Latin characters
-    const activitiesSection = page.locator("#activities");
-    await expect(activitiesSection).toBeAttached();
-
-    const activityCards = activitiesSection.locator("h3");
-    const count = await activityCards.count();
-    expect(count).toBeGreaterThanOrEqual(3);
-
-    // Check first card text
-    const text = await activitiesSection.textContent();
-    expect(text).toContain("01");
-    // In Arabic locale, ensure no Latin "FIELD" word
+    // The merged About section owns all four localized activity cards.
+    const aboutSection = page.locator("#about");
+    await expect(aboutSection).toBeAttached();
+    await expect(page.locator("#activities")).toHaveCount(0);
+    await expect(aboutSection.locator("[data-testid=home-activity-card]")).toHaveCount(4);
+    const text = await aboutSection.textContent();
+    expect(text).toContain("لقاءات");
     expect(text).not.toContain("FIELD");
     expect(text).not.toContain("MIND");
     expect(text).not.toContain("IMPACT");

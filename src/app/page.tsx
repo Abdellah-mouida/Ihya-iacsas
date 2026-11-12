@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { PageBackground } from "@/components/common/page-background";
 import { About } from "@/components/sections/about";
-import { Activities } from "@/components/sections/activities";
 import { Branches } from "@/components/sections/branches";
 import { CardCarousel } from "@/components/sections/card-carousel";
 import { Contact } from "@/components/sections/contact";
@@ -23,7 +22,6 @@ export default async function Home() {
         {/* Content sections with subtle ambient depth */}
         <div className="relative">
           <About branchCount={branches.length} />
-          <div className={deferred.activities}><Activities /></div>
           <div className={deferred.branches}><Branches branches={branches} /></div>
           <div className={deferred.carousel}><CardCarousel /></div>
           <div className={deferred.gallery}><Gallery /></div>

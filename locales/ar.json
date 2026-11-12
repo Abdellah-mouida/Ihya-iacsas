@@ -11,7 +11,6 @@
   "nav": {
     "home": "الرئيسية",
     "about": "عن إحياء",
-    "activities": "الأنشطة",
     "event": "الفعالية",
     "events": "الفعاليات",
     "newEvent": "فعالية جديدة متاحة",
@@ -58,7 +57,6 @@
     "statEventsLabel": "لقاءً ونشاطاً",
     "programName": "برنامج إحياء الشبابي",
     "photoAlt": "شباب إحياء مجتمعون في قاعة مغربية مزينة بالزليج",
-    "activitiesMarquee": "أنشطة إحياء",
     "stickerValues": "قيم",
     "stickerCompanionship": "صحبة",
     "stickerGiving": "عطاء"
@@ -69,34 +67,16 @@
     "p1": "إحياء مبادرة شبابية تسعى لإحياء القيم الإسلامية في نفوس الشباب عبر لقاءات ملهمة، وأنشطة متنوّعة، ومحتوى هادف.",
     "p2": "نؤمن أنّ الجيل الجديد قادرٌ على التغيير حين يجد بيئةً حاضنة تجمع بين الروح والعقل والعمل.",
     "quote": "«خيرُ الناس أنفعهم للناس»",
-    "cardGatheringsTitle": "لقاءات",
-    "cardGatheringsDesc": "مجالس ودروس تجمع القلوب على العلم والذكر.",
-    "cardActivitiesTitle": "أنشطة",
-    "cardActivitiesDesc": "رياضة ورحلات ومبادرات تطوعية تبني الأخوّة.",
-    "cardContentTitle": "محتوى",
-    "cardContentDesc": "مقالات ووسائط هادفة تُلهم وتُثري."
-  },
-  "activities": {
-    "kicker": "ماذا نقدّم",
-    "title": "أنشطة تُحيي الهمم",
-    "desc": "برامج متكاملة تجمع بين البناء الروحي والاجتماعي والمعرفي.",
-    "gatherings": "لقاءات",
-    "outings": "خرجات",
-    "dialogues": "حوارات",
-    "training": "تكوين",
-    "gatheringsTitle": "مجالس ولقاءات",
-    "gatheringsDesc": "جلسات علمية وإيمانية منتظمة تُقرّب القلوب وتبني الوعي.",
-    "sportsTitle": "رياضة وترفيه",
-    "sportsDesc": "دوريات كرة القدم والرحلات التي تعزّز الأخوّة والنشاط.",
-    "learningTitle": "تعلّم ومحتوى",
-    "learningDesc": "ورشات ومحتوى هادف يطوّر المهارات والمعرفة.",
-    "categorySpiritual": "روحي",
-    "categorySocial": "اجتماعي",
-    "categoryIntellectual": "فكري",
-    "gatheringsDescription": "لقاءات شبابية ومجالس تربوية.",
-    "outingsDescription": "خرجات ترفيهية وأنشطة رياضية.",
-    "dialoguesDescription": "نقاشات فكرية وحوارات ثقافية.",
-    "trainingDescription": "دورات تكوينية وورشات تدريبية."
+    "activities": {
+      "gatherings": "لقاءات",
+      "outings": "خرجات",
+      "dialogues": "حوارات",
+      "training": "تكوين",
+      "gatheringsDescription": "لقاءات شبابية ومجالس تربوية.",
+      "outingsDescription": "خرجات ترفيهية وأنشطة رياضية.",
+      "dialoguesDescription": "نقاشات فكرية وحوارات ثقافية.",
+      "trainingDescription": "دورات تكوينية وورشات تدريبية."
+    }
   },
   "event": {
     "kicker": "الفعالية القادمة",

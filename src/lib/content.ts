@@ -1,8 +1,6 @@
 import {
-  BookOpen,
   Compass,
   GraduationCap,
-  HandHeart,
   MessageCircle,
   Users,
   type LucideIcon,
@@ -74,34 +72,9 @@ export const NAV_LINKS: NavLink[] = [
 export const FOOTER_LINKS: NavLink[] = [
   { key: "nav.home", href: "/" },
   { key: "nav.about", href: "/#about" },
-  { key: "nav.activities", href: "/#activities" },
   { key: "nav.gallery", href: "/gallery" },
   { key: "nav.events", href: "/events" },
   { key: "nav.contact", href: "/#contact" },
-];
-
-export type IconItem = {
-  icon: LucideIcon;
-  titleKey: string;
-  descKey: string;
-};
-
-export const ABOUT_CARDS: IconItem[] = [
-  {
-    icon: Users,
-    titleKey: "about.cardGatheringsTitle",
-    descKey: "about.cardGatheringsDesc",
-  },
-  {
-    icon: HandHeart,
-    titleKey: "about.cardActivitiesTitle",
-    descKey: "about.cardActivitiesDesc",
-  },
-  {
-    icon: BookOpen,
-    titleKey: "about.cardContentTitle",
-    descKey: "about.cardContentDesc",
-  },
 ];
 
 export type Activity = { icon: LucideIcon; num: string; titleKey: string; descKey: string };
@@ -109,26 +82,26 @@ export const ACTIVITIES: Activity[] = [
   {
     num: "01",
     icon: Users,
-    titleKey: "activities.gatherings",
-    descKey: "activities.gatheringsDescription",
+    titleKey: "about.activities.gatherings",
+    descKey: "about.activities.gatheringsDescription",
   },
   {
     num: "02",
     icon: Compass,
-    titleKey: "activities.outings",
-    descKey: "activities.outingsDescription",
+    titleKey: "about.activities.outings",
+    descKey: "about.activities.outingsDescription",
   },
   {
     num: "03",
     icon: MessageCircle,
-    titleKey: "activities.dialogues",
-    descKey: "activities.dialoguesDescription",
+    titleKey: "about.activities.dialogues",
+    descKey: "about.activities.dialoguesDescription",
   },
   {
     num: "04",
     icon: GraduationCap,
-    titleKey: "activities.training",
-    descKey: "activities.trainingDescription",
+    titleKey: "about.activities.training",
+    descKey: "about.activities.trainingDescription",
   },
 ];
 

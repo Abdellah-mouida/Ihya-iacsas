@@ -11,7 +11,6 @@
   "nav": {
     "home": "Home",
     "about": "About",
-    "activities": "Activities",
     "event": "Event",
     "events": "Events",
     "newEvent": "New event available",
@@ -58,7 +57,6 @@
     "statEventsLabel": "gatherings & activities",
     "programName": "Ihyaa Youth Program",
     "photoAlt": "The Ihyaa youth group gathered in a Moroccan tile-lined room",
-    "activitiesMarquee": "Ihyaa activities",
     "stickerValues": "Values",
     "stickerCompanionship": "Friends",
     "stickerGiving": "Giving"
@@ -68,35 +66,17 @@
     "title": "A program that revives meaning",
     "p1": "Ihyaa is a youth initiative that revives Islamic values in the hearts of young people through inspiring gatherings, diverse activities, and meaningful content.",
     "p2": "We believe the new generation can drive change when it finds a nurturing space that unites spirit, mind, and action.",
-    "quote": "\u201cThe best of people are those most beneficial to others.\u201d",
-    "cardGatheringsTitle": "Gatherings",
-    "cardGatheringsDesc": "Circles and lessons that unite hearts around knowledge.",
-    "cardActivitiesTitle": "Activities",
-    "cardActivitiesDesc": "Sports, trips and volunteering that build brotherhood.",
-    "cardContentTitle": "Content",
-    "cardContentDesc": "Articles and media that inspire and enrich."
-  },
-  "activities": {
-    "kicker": "What we offer",
-    "title": "Activities that revive ambition",
-    "desc": "Integrated programs blending spiritual, social, and intellectual growth.",
-    "gatherings": "Gatherings",
-    "outings": "Outings",
-    "dialogues": "Dialogues",
-    "training": "Training",
-    "gatheringsTitle": "Circles & gatherings",
-    "gatheringsDesc": "Regular knowledge and faith sessions that build awareness.",
-    "sportsTitle": "Sports & leisure",
-    "sportsDesc": "Football tournaments and trips that boost brotherhood and energy.",
-    "learningTitle": "Learning & content",
-    "learningDesc": "Workshops and meaningful content that grow skills and knowledge.",
-    "categorySpiritual": "Spiritual",
-    "categorySocial": "Social",
-    "categoryIntellectual": "Intellectual",
-    "gatheringsDescription": "Youth gatherings and educational circles.",
-    "outingsDescription": "Recreational outings and sports activities.",
-    "dialoguesDescription": "Intellectual discussions and cultural dialogues.",
-    "trainingDescription": "Training courses and workshops."
+    "quote": "“The best of people are those most beneficial to others.”",
+    "activities": {
+      "gatherings": "Gatherings",
+      "outings": "Outings",
+      "dialogues": "Dialogues",
+      "training": "Training",
+      "gatheringsDescription": "Youth gatherings and educational circles.",
+      "outingsDescription": "Recreational outings and sports activities.",
+      "dialoguesDescription": "Intellectual discussions and cultural dialogues.",
+      "trainingDescription": "Training courses and workshops."
+    }
   },
   "event": {
     "kicker": "Upcoming event",
