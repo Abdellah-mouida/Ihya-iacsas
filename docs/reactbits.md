@@ -2,6 +2,13 @@
 
 The `@react-bits` registry is configured in `components.json`. The Shadcn MCP server is not exposed in this Codex runtime; the configured registry was reachable through `npx shadcn@latest search` and `view`.
 
+## T0 deployment/source verification (2026-11-12)
+
+- `FoldText-TS-TW` is the correct public-registry name. `https://reactbits.dev/r/FoldText-TS-TW.json` returned 200; `npx shadcn@latest view @react-bits/FoldText-TS-TW` resolved the same item. Its public source declares `foldStyle`, `hinge`, and `creaseShading`, and asks for `gsap@^3.13.0`. It appears in the public React Bits catalog; the fetched registry metadata has no license field. There is no evidence that this item is Pro-only. The site adaptation is custom CSS and does not copy or bundle GSAP.
+- Current implementation: `src/components/sections/hero.tsx` renders local per-word Arabic/per-character English fold spans, but imports no React Bits source and emits no component marker. `src/components/common/spotlight-card.tsx` is the custom SpotlightCard adaptation used in Home activities and the Home gallery preview; its marker is `data-react-bits="SpotlightCard"`, not the requested `data-rb` proof marker. The dedicated `/gallery` page uses a normal image grid and has no React Bits effect. The older table below records previous candidate decisions; task set 08 now makes visible adoption mandatory and overrides those drops.
+- At verification, `vercel ls --environment=preview` showed latest Ready Preview `https://ihya-iacsas-ghf2m0hn2-abdellah-projects.vercel.app` with branch alias `ihya-iacsas-git-dev-abdellah-projects.vercel.app`. `vercel inspect` also listed `ihyaa.is-cool.dev` as an alias on that Preview. `vercel curl` bypassed Deployment Protection for read-only inspection: Home HTML contained four `data-react-bits="SpotlightCard"` markers, four hero fold pieces/words, and the reference-line test marker; `/gallery` contained five gallery-card nodes but no React Bits marker. Plain unauthenticated `curl` gets Vercel protection/404, so these findings use authenticated CLI access.
+- The Vercel MCP connection is not authorized for team `abdellah-projects` (403); the installed Vercel CLI is authenticated and provides the required read-only deployment inspection, so no reauthorization was needed.
+
 ## Components
 
 | Registry component | Site use | Dependency | Decision |
