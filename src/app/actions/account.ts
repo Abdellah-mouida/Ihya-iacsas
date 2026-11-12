@@ -30,7 +30,6 @@ export interface AccountBookingItem {
     time: string;
     location: string;
     posterUrl: string | null;
-    posterBlurDataUrl: string | null;
     posterWidth: number | null;
     posterHeight: number | null;
     capacityType: string;
@@ -48,7 +47,6 @@ export interface UserAccountData {
     age: number | null;
     image: string | null;
     coverImage: string | null;
-    coverBlurDataUrl: string | null;
     coverWidth: number | null;
     coverHeight: number | null;
     theme: string | null;
@@ -165,7 +163,6 @@ export async function getUserAccountData(): Promise<{
         emailVerified: true,
         passwordHash: true,
         coverImage: true,
-        coverBlurDataUrl: true,
         coverWidth: true,
         coverHeight: true,
         theme: true,
@@ -236,7 +233,6 @@ export async function getUserAccountData(): Promise<{
         time: b.event.time,
         location: b.event.location,
         posterUrl: b.event.posterUrl,
-        posterBlurDataUrl: b.event.posterBlurDataUrl,
         posterWidth: b.event.posterWidth,
         posterHeight: b.event.posterHeight,
         capacityType: b.event.capacityType,
@@ -260,7 +256,6 @@ export async function getUserAccountData(): Promise<{
           termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
           createdAt: user.createdAt.toISOString(),
           coverImage: user.coverImage || null,
-          coverBlurDataUrl: user.coverBlurDataUrl,
           coverWidth: user.coverWidth,
           coverHeight: user.coverHeight,
           theme: user.theme || "oasis",

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 
 interface EventFlyerDialogProps {
   isOpen: boolean;
@@ -22,7 +22,6 @@ interface EventFlyerDialogProps {
   title: string;
   dateStr?: string;
   locationStr?: string;
-  blurDataUrl?: string | null;
   imageWidth?: number | null;
   imageHeight?: number | null;
 }
@@ -34,7 +33,6 @@ export function EventFlyerDialog({
   title,
   dateStr,
   locationStr,
-  blurDataUrl,
   imageWidth,
   imageHeight,
 }: EventFlyerDialogProps) {
@@ -138,12 +136,11 @@ export function EventFlyerDialog({
               isZoomed ? "scale-125 sm:scale-150" : "scale-100",
             )}
           >
-            <BlurImage
+            <SmoothImage
               src={posterUrl}
               alt={title}
               width={imageWidth ?? 768}
               height={imageHeight ?? 960}
-              blurDataUrl={blurDataUrl}
               priority
               className="max-h-[68vh] w-auto rounded-2xl object-contain shadow-2xl ring-1 ring-border/50"
             />

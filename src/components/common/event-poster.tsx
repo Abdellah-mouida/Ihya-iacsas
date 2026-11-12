@@ -11,7 +11,7 @@ import { Maximize2 } from "lucide-react";
 import { useRef, useState, type PointerEvent } from "react";
 
 import { EventFlyerDialog } from "@/components/common/event-flyer-dialog";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { cn } from "@/lib/utils";
 
 export function EventPoster({
@@ -22,7 +22,6 @@ export function EventPoster({
   title,
   dateStr,
   locationStr,
-  blurDataUrl,
   imageWidth,
   imageHeight,
 }: {
@@ -33,7 +32,6 @@ export function EventPoster({
   title?: string;
   dateStr?: string;
   locationStr?: string;
-  blurDataUrl?: string | null;
   imageWidth?: number | null;
   imageHeight?: number | null;
 }) {
@@ -95,12 +93,11 @@ export function EventPoster({
           className="relative cursor-pointer overflow-hidden rounded-[1.75rem] shadow-layered ring-1 ring-brass/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
           style={{ transform: "translateZ(0)" }}
         >
-          <BlurImage
+          <SmoothImage
             src={src}
             alt={alt}
             width={imageWidth ?? 512}
             height={imageHeight ?? 640}
-            blurDataUrl={blurDataUrl}
             sizes="(max-width: 640px) 90vw, 384px"
             className="h-auto w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />
@@ -143,7 +140,6 @@ export function EventPoster({
         title={title || alt}
         dateStr={dateStr}
         locationStr={locationStr}
-        blurDataUrl={blurDataUrl}
         imageWidth={imageWidth}
         imageHeight={imageHeight}
       />

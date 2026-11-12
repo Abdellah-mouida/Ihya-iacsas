@@ -105,7 +105,6 @@ export function SettingsView({
   // Avatar & Cover States
   const [avatarUrl, setAvatarUrl] = useState(userData.image || "");
   const [coverUrl, setCoverUrl] = useState(userData.coverImage || "/patterns/girih.svg");
-  const [coverBlurDataUrl, setCoverBlurDataUrl] = useState(userData.coverBlurDataUrl);
   const [coverImageWidth, setCoverImageWidth] = useState(userData.coverWidth);
   const [coverImageHeight, setCoverImageHeight] = useState(userData.coverHeight);
   const [isAvatarCropOpen, setIsAvatarCropOpen] = useState(false);
@@ -214,7 +213,6 @@ export function SettingsView({
         const data = await res.json();
         if (data.url) {
           setCoverUrl(data.url);
-          setCoverBlurDataUrl(data.blurDataUrl ?? null);
           setCoverImageWidth(data.imageWidth ?? null);
           setCoverImageHeight(data.imageHeight ?? null);
           await fetch("/api/user/preferences", {
@@ -223,7 +221,6 @@ export function SettingsView({
             body: JSON.stringify({
               coverImage: data.url,
               coverImagePublicId: data.publicId,
-              coverBlurDataUrl: data.blurDataUrl,
               coverWidth: data.imageWidth,
               coverHeight: data.imageHeight,
             }),
@@ -238,13 +235,12 @@ export function SettingsView({
 
   const handleSelectDefaultCover = async (path: string) => {
     setCoverUrl(path);
-    setCoverBlurDataUrl(null);
     setCoverImageWidth(null);
     setCoverImageHeight(null);
     await fetch("/api/user/preferences", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coverImage: path, coverImagePublicId: null, coverBlurDataUrl: null, coverWidth: null, coverHeight: null }),
+      body: JSON.stringify({ coverImage: path, coverImagePublicId: null, coverWidth: null, coverHeight: null }),
     });
     notify.success(isAr ? "تم تعيين الغلاف الافتراضي" : "Default cover set");
   };
@@ -399,7 +395,7 @@ export function SettingsView({
                   {isAr ? "غلاف الملف الشخصي" : "Profile Cover"}
                 </Label>
                 <div data-testid="settings-cover-preview" className="relative start-1/2 h-48 w-[min(calc(100%+2.5rem),64rem)] -translate-x-1/2 overflow-hidden rounded-2xl border border-border/70 bg-muted/40 sm:h-64 sm:w-[min(calc(100%+5rem),64rem)] rtl:translate-x-1/2">
-                  <PatternCover coverUrl={coverUrl} alt="Cover" blurDataUrl={coverBlurDataUrl} imageWidth={coverImageWidth} imageHeight={coverImageHeight} />
+                  <PatternCover coverUrl={coverUrl} alt="Cover" imageWidth={coverImageWidth} imageHeight={coverImageHeight} />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center gap-3 opacity-90 hover:opacity-100 transition-opacity">
                     <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card/90 backdrop-blur text-foreground text-xs font-semibold hover:bg-card">
                       <Upload className="size-3.5 text-primary" />

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { cn } from "@/lib/utils";
 
 export interface UserAvatarProps {
@@ -161,7 +161,7 @@ export function UserAvatar({
       )}
     >
       {hasImage ? (
-        <Image
+        <SmoothImage
           src={imageSrc!}
           alt={alt || displayName || "User avatar"}
           fill

@@ -23,7 +23,6 @@ enum BranchKind {
 model CarouselPost {
   id          String   @id @default(cuid())
   imageUrl    String
-  blurDataUrl String?
   imageWidth  Int?
   imageHeight Int?
   order       Int      @default(0)
@@ -37,7 +36,6 @@ model CarouselPost {
 model GalleryPhoto {
   id          String   @id @default(cuid())
   imageUrl    String
-  blurDataUrl String?
   imageWidth  Int?
   imageHeight Int?
   captionAr   String?
@@ -59,7 +57,6 @@ model Event {
   time              String
   location          String
   posterUrl         String
-  posterBlurDataUrl String?
   posterWidth       Int?
   posterHeight      Int?
   isNew             Boolean   @default(false)
@@ -142,7 +139,6 @@ model User {
   imagePublicId         String?
   coverImage            String?
   coverImagePublicId    String?
-  coverBlurDataUrl      String?
   coverWidth            Int?
   coverHeight           Int?
   theme                 String?   @default("light")

@@ -24,7 +24,7 @@ import {
   updateEvent,
 } from "@/app/actions/events";
 import { BilingualFields } from "@/components/common/bilingual-fields";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { DateTimePicker } from "@/components/common/date-time-picker";
 import { ImageCropperDialog, AspectPreset } from "@/components/common/image-cropper-dialog";
@@ -49,7 +49,6 @@ type EventItem = {
   time: string;
   location: string;
   posterUrl: string;
-  posterBlurDataUrl: string | null;
   posterWidth: number | null;
   posterHeight: number | null;
   isNew: boolean;
@@ -338,13 +337,12 @@ export default function AdminEventsPage() {
               {/* Event Poster Thumbnail & Info */}
               <div className="flex items-start md:items-center gap-4 min-w-0">
                 <div className="relative size-20 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
-                  <BlurImage
+                  <SmoothImage
                     src={evt.posterUrl || "/images/gathering.jpg"}
                     alt={evt.titleAr}
                     fill
                     width={evt.posterWidth}
                     height={evt.posterHeight}
-                    blurDataUrl={evt.posterBlurDataUrl}
                     sizes="80px"
                     className="object-cover"
                   />
@@ -591,13 +589,12 @@ export default function AdminEventsPage() {
 
                 {isValidImageUrl(posterPreview) && (
                   <div className="relative aspect-[16/9] max-h-40 rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">
-                    <BlurImage
+                    <SmoothImage
                       src={posterPreview!}
                       alt="Preview"
                       fill
                       width={posterPreview === editingEvent?.posterUrl ? editingEvent.posterWidth : null}
                       height={posterPreview === editingEvent?.posterUrl ? editingEvent.posterHeight : null}
-                      blurDataUrl={posterPreview === editingEvent?.posterUrl ? editingEvent.posterBlurDataUrl : null}
                       sizes="(max-width: 768px) 100vw, 50vw"
                       data-testid="poster-preview-img"
                       unoptimized={posterPreview!.startsWith("blob:")}

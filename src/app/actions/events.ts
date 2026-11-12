@@ -9,7 +9,7 @@ import { generateUniqueEventSlug } from "@/lib/slug";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
-import { createImagePlaceholder } from "@/lib/image-placeholder";
+import { readImageDimensions } from "@/lib/image-dimensions";
 
 export async function getEvents() {
   await requirePermission("events:view");
@@ -38,7 +38,6 @@ export async function getEvents() {
       return {
         ...ev,
         posterUrl: resolveImageUrl(ev.posterUrl) ?? ev.posterUrl,
-        posterBlurDataUrl: ev.posterBlurDataUrl,
         posterWidth: ev.posterWidth,
         posterHeight: ev.posterHeight,
         isEnded: isEventEnded(ev.date, ev.time),
@@ -110,7 +109,6 @@ export async function getPublicEvents() {
         time: ev.time,
         location: ev.location,
         posterUrl: resolveImageUrl(ev.posterUrl) ?? ev.posterUrl,
-        posterBlurDataUrl: ev.posterBlurDataUrl,
         posterWidth: ev.posterWidth,
         posterHeight: ev.posterHeight,
         isNew: ev.isNew,
@@ -213,7 +211,6 @@ export async function getEventById(id: string) {
         time: event.time,
         location: event.location,
         posterUrl: resolveImageUrl(event.posterUrl),
-        posterBlurDataUrl: event.posterBlurDataUrl,
         posterWidth: event.posterWidth,
         posterHeight: event.posterHeight,
         bookingOpen: event.bookingOpen,
@@ -264,7 +261,7 @@ export async function createEvent(formData: FormData) {
 
     const file = formData.get("image") as File | null;
     let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
-    let posterMetadata: Awaited<ReturnType<typeof createImagePlaceholder>> | null = null;
+    let posterMetadata: Awaited<ReturnType<typeof readImageDimensions>> | null = null;
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
@@ -279,7 +276,7 @@ export async function createEvent(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        posterMetadata = await createImagePlaceholder(buffer);
+        posterMetadata = await readImageDimensions(buffer);
         posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
       } catch (uploadErr) {
         if (!posterUrl) {
@@ -316,8 +313,8 @@ export async function createEvent(formData: FormData) {
         location,
         posterUrl,
         ...(posterMetadata
-          ? { posterBlurDataUrl: posterMetadata.blurDataUrl, posterWidth: posterMetadata.imageWidth, posterHeight: posterMetadata.imageHeight }
-          : { posterBlurDataUrl: null, posterWidth: null, posterHeight: null }),
+          ? { posterWidth: posterMetadata.imageWidth, posterHeight: posterMetadata.imageHeight }
+          : { posterWidth: null, posterHeight: null }),
         isNew,
         bookingOpen,
         capacityType,
@@ -416,16 +413,14 @@ export async function updateEvent(id: string, formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const posterMetadata = await createImagePlaceholder(buffer);
+        const posterMetadata = await readImageDimensions(buffer);
         dataToUpdate.posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
-        dataToUpdate.posterBlurDataUrl = posterMetadata.blurDataUrl;
         dataToUpdate.posterWidth = posterMetadata.imageWidth;
         dataToUpdate.posterHeight = posterMetadata.imageHeight;
       } catch (uploadErr) {
         if (posterUrl) {
           dataToUpdate.posterUrl = posterUrl;
           if (posterUrl !== existing.posterUrl) {
-            dataToUpdate.posterBlurDataUrl = null;
             dataToUpdate.posterWidth = null;
             dataToUpdate.posterHeight = null;
           }
@@ -438,7 +433,6 @@ export async function updateEvent(id: string, formData: FormData) {
       }
     } else if (posterUrl && posterUrl !== existing.posterUrl) {
       dataToUpdate.posterUrl = posterUrl;
-      dataToUpdate.posterBlurDataUrl = null;
       dataToUpdate.posterWidth = null;
       dataToUpdate.posterHeight = null;
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useEffect, useRef, type PointerEvent } from "react";
 import { CalendarDays, Info } from "lucide-react";
@@ -208,12 +208,13 @@ export function Hero() {
             data-testid="hero-photo-frame"
             className={`${styles.photoFrame} relative mx-auto aspect-[1.351/1] w-full max-w-[760px]`}
           >
-            <Image
+            <SmoothImage
               src={IMAGES.groupPortraitHero}
               loader={groupPortraitLoader}
               alt={t("hero.photoAlt")}
               fill
               priority
+              fadeDurationMs={250}
               fetchPriority="high"
               sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"
               className="object-cover object-center"

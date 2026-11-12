@@ -1,0 +1,4 @@
+ALTER TABLE "GalleryPhoto" DROP COLUMN IF EXISTS "blurDataUrl";
+ALTER TABLE "CarouselPost" DROP COLUMN IF EXISTS "blurDataUrl";
+ALTER TABLE "Event" DROP COLUMN IF EXISTS "posterBlurDataUrl";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "coverBlurDataUrl";

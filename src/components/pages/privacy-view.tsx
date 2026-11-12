@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, FileText, Phone, ShieldCheck } from "lucide-react";
 
@@ -55,7 +55,7 @@ export function PrivacyView() {
 
         <div className="mb-10 text-center sm:text-start">
           <div className="inline-flex items-center gap-2.5 mb-3">
-            <Image
+            <SmoothImage
               src={IMAGES.logoCircle}
               alt="Ihyaa"
               width={36}

@@ -16,7 +16,6 @@ export async function GET() {
       locale: true,
       reduceMotion: true,
       coverImage: true,
-      coverBlurDataUrl: true,
       coverWidth: true,
       coverHeight: true,
     },
@@ -33,7 +32,7 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
-    const { theme, locale, reduceMotion, coverImage, coverImagePublicId, coverBlurDataUrl, coverWidth, coverHeight } = body;
+    const { theme, locale, reduceMotion, coverImage, coverImagePublicId, coverWidth, coverHeight } = body;
 
     const data: {
       theme?: string;
@@ -41,7 +40,6 @@ export async function PATCH(req: Request) {
       reduceMotion?: boolean;
       coverImage?: string | null;
       coverImagePublicId?: string | null;
-      coverBlurDataUrl?: string | null;
       coverWidth?: number | null;
       coverHeight?: number | null;
     } = {};
@@ -70,13 +68,6 @@ export async function PATCH(req: Request) {
       data.coverImagePublicId = typeof coverImagePublicId === "string" ? coverImagePublicId : null;
     }
 
-    if (coverBlurDataUrl !== undefined) {
-      data.coverBlurDataUrl = typeof coverBlurDataUrl === "string"
-        && coverBlurDataUrl.length <= 1024
-        && /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/.test(coverBlurDataUrl)
-        ? coverBlurDataUrl
-        : null;
-    }
     if (coverWidth !== undefined) data.coverWidth = Number.isInteger(coverWidth) && coverWidth > 0 ? coverWidth : null;
     if (coverHeight !== undefined) data.coverHeight = Number.isInteger(coverHeight) && coverHeight > 0 ? coverHeight : null;
 
@@ -88,7 +79,6 @@ export async function PATCH(req: Request) {
         locale: true,
         reduceMotion: true,
         coverImage: true,
-        coverBlurDataUrl: true,
         coverWidth: true,
         coverHeight: true,
       },

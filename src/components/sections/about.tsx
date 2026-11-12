@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import dynamic from "next/dynamic";
 
 import { InViewReveal } from "@/components/common/in-view-reveal";
@@ -52,7 +52,7 @@ export function About({ branchCount }: { branchCount: number }) {
 
           <div className="order-0 flex flex-col items-center justify-center gap-4 sm:col-span-2 lg:order-2 lg:col-span-1">
             <div className="relative size-44 sm:size-52 lg:size-60">
-              <Image
+              <SmoothImage
                 src={IMAGES.logoCircle}
                 alt={locale === "ar" ? "شعار برنامج إحياء" : "Ihyaa program logo"}
                 fill

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { uploadImageToCloudinaryDetailed } from "@/lib/cloudinary";
-import { createImagePlaceholder } from "@/lib/image-placeholder";
+import { readImageDimensions } from "@/lib/image-dimensions";
 
 const FOLDERS = new Set(["avatars", "covers"]);
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
@@ -23,11 +23,11 @@ export async function POST(request: Request) {
     if (typeof folder !== "string" || !FOLDERS.has(folder)) return NextResponse.json({ error: "Unsupported upload folder." }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const [upload, placeholder] = await Promise.all([
+    const [upload, dimensions] = await Promise.all([
       uploadImageToCloudinaryDetailed(buffer, folder === "avatars" ? "ihyaa-profiles" : "ihyaa-covers"),
-      createImagePlaceholder(buffer),
+      readImageDimensions(buffer),
     ]);
-    return NextResponse.json({ url: upload.secure_url, publicId: upload.public_id, ...placeholder });
+    return NextResponse.json({ url: upload.secure_url, publicId: upload.public_id, ...dimensions });
   } catch (error) {
     console.error("[upload] Image upload failed:", error);
     return NextResponse.json({ error: "Image upload failed." }, { status: 500 });

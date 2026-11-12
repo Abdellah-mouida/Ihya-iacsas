@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { getPublicEvents } from "@/app/actions/events";
 import { EventFlyerDialog } from "@/components/common/event-flyer-dialog";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { SectionHeading } from "@/components/common/section-heading";
 import { useLocale } from "@/i18n/locale-provider";
 import { IMAGES } from "@/lib/content";
@@ -18,7 +18,6 @@ type DisplayPastEvent = {
   dateStr: string;
   locationStr: string;
   poster: string;
-  blurDataUrl?: string | null;
   imageWidth?: number | null;
   imageHeight?: number | null;
 };
@@ -43,9 +42,8 @@ export function PastEvents() {
             ),
             locationStr: pe.location,
             poster: pe.posterUrl || IMAGES.eventPoster,
-            blurDataUrl: pe.posterBlurDataUrl,
             imageWidth: pe.posterWidth,
-            imageHeight: pe.posterHeight,
+        imageHeight: pe.posterHeight,
           })),
         );
       } else {
@@ -96,13 +94,12 @@ export function PastEvents() {
                 }}
                 className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
               >
-                <BlurImage
+                <SmoothImage
                   src={ev.poster}
                   alt={ev.title}
                   fill
                   width={ev.imageWidth ?? 512}
                   height={ev.imageHeight ?? 384}
-                  blurDataUrl={ev.blurDataUrl}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-contain transition-transform duration-700 group-hover:scale-105"
                 />
@@ -152,7 +149,6 @@ export function PastEvents() {
           title={activeFlyer.title}
           dateStr={activeFlyer.dateStr}
           locationStr={activeFlyer.locationStr}
-          blurDataUrl={activeFlyer.blurDataUrl}
           imageWidth={activeFlyer.imageWidth}
           imageHeight={activeFlyer.imageHeight}
         />

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -145,7 +145,7 @@ export function ChangePasswordView() {
       <div className="w-full max-w-5xl my-auto grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden border border-brass/20 bg-card/60 backdrop-blur-2xl shadow-2xl">
         {/* Left/Right Branding Banner (Desktop) */}
         <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/95 text-white border-e border-brass/20">
-          <Image
+          <SmoothImage
             src="/images/gathering.jpg"
             alt="Ihyaa Program"
             fill

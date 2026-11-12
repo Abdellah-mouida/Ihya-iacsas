@@ -24,7 +24,7 @@ import {
   updateCarouselPost,
 } from "@/app/actions/carousel";
 import { Button } from "@/components/ui/button";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { AspectPreset, ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { IslamicLoader } from "@/components/common/islamic-loader";
@@ -36,7 +36,6 @@ type CarouselItem = {
   order: number;
   active: boolean;
   createdAt: Date;
-  blurDataUrl: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
 };
@@ -293,13 +292,12 @@ export default function AdminCarouselPage() {
               className="glass rounded-2xl overflow-hidden border border-border/60 shadow-layered group flex flex-col justify-between min-w-0"
             >
               <div className="relative aspect-[4/5] bg-muted/40 overflow-hidden">
-                <BlurImage
+                <SmoothImage
                   src={post.imageUrl}
                   alt={`Carousel item ${post.order}`}
                   fill
                   width={post.imageWidth}
                   height={post.imageHeight}
-                  blurDataUrl={post.blurDataUrl}
                   sizes="(max-width: 768px) 100vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -421,13 +419,12 @@ export default function AdminCarouselPage() {
 
                 {isValidImageUrl(previewUrl) && (
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border/60 bg-muted mb-2">
-                    <BlurImage
+                    <SmoothImage
                       src={previewUrl!}
                       alt="Preview"
                       fill
                       width={previewUrl === editingPost?.imageUrl ? editingPost.imageWidth : null}
                       height={previewUrl === editingPost?.imageUrl ? editingPost.imageHeight : null}
-                      blurDataUrl={previewUrl === editingPost?.imageUrl ? editingPost.blurDataUrl : null}
                       unoptimized={previewUrl!.startsWith("blob:")}
                       className="object-contain"
                     />

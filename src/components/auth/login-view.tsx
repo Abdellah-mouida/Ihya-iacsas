@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -65,7 +65,6 @@ export function LoginView() {
       toast.error(t("auth.oauthCancelled"));
     } else {
       // Mirror the URL-provided OAuth result into the localized form state.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(t("auth.oauthError"));
       toast.error(t("auth.oauthError"));
     }
@@ -217,7 +216,7 @@ export function LoginView() {
     >
       {/* Visual Side Banner (Desktop Only) */}
       <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/40 text-primary-foreground">
-        <Image
+        <SmoothImage
           src="/images/gathering.jpg"
           alt="Ihyaa Program"
           fill
@@ -230,7 +229,7 @@ export function LoginView() {
 
         <div className="relative z-10 flex items-center gap-3">
           <div className="size-11 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/20 flex items-center justify-center p-1.5 shadow-inner">
-            <Image
+            <SmoothImage
               src="/images/logo-circle.png"
               alt="Ihyaa Logo"
               width={36}

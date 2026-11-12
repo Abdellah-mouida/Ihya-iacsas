@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -172,7 +172,7 @@ export function SignUpView() {
       >
         {/* Visual / Branding Panel (Desktop Only) */}
         <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-primary-foreground overflow-hidden bg-primary/40">
-          <Image
+          <SmoothImage
             src="/images/gathering.jpg"
             alt="Ihyaa Gathering"
             fill
@@ -190,7 +190,7 @@ export function SignUpView() {
               className="inline-flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brass"
             >
               <div className="relative size-12 rounded-full overflow-hidden border-2 border-brass/40 shadow-lg">
-                <Image
+                <SmoothImage
                   src="/images/logo-circle.png"
                   alt="Ihyaa Program Logo"
                   fill
@@ -353,7 +353,7 @@ function SignUpFormPanel() {
           <div className="mb-6">
             <div className="flex items-center justify-between lg:hidden mb-4">
               <Link href="/" className="inline-flex items-center gap-2.5">
-                <Image
+                <SmoothImage
                   src="/images/logo-circle.png"
                   alt="Ihyaa Program Logo"
                   width={38}

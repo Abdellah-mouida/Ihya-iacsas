@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -401,7 +401,7 @@ export function OnboardingView({ initialProfile }: OnboardingViewProps) {
                 >
                   {imagePreview ? (
                     <div className="relative size-full rounded-full overflow-hidden">
-                      <Image
+                      <SmoothImage
                         src={imagePreview}
                         alt="Profile preview"
                         fill

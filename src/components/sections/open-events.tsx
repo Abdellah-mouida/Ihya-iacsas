@@ -24,7 +24,6 @@ type DisplayEvent = {
   location?: string;
   locationKey?: string;
   posterUrl?: string;
-  posterBlurDataUrl?: string | null;
   posterWidth?: number | null;
   posterHeight?: number | null;
   poster?: string;

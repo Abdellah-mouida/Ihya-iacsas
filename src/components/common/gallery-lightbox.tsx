@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { useCallback, useEffect, useState } from "react";
 
 import { getGalleryPhotos } from "@/app/actions/gallery";
@@ -26,7 +26,6 @@ export type LightboxItem = {
   caption: string;
   w?: number;
   h?: number;
-  blurDataUrl?: string | null;
 };
 
 export function GalleryLightbox({
@@ -40,8 +39,7 @@ export function GalleryLightbox({
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-
-  const [dbItems, setDbItems] = useState<{ src: string; caption: string; w: number; h: number; blurDataUrl?: string | null }[]>([]);
+  const [dbItems, setDbItems] = useState<LightboxItem[]>([]);
 
   useEffect(() => {
     if (initialItems && initialItems.length > 0) return;
@@ -56,7 +54,6 @@ export function GalleryLightbox({
                 : p.captionEn || p.captionAr || "Ihyaa moment",
             w: p.imageWidth ?? 1280,
             h: p.imageHeight ?? 960,
-            blurDataUrl: p.blurDataUrl,
           })),
         );
       }
@@ -70,7 +67,6 @@ export function GalleryLightbox({
           caption: i.caption,
           w: i.w || 1280,
           h: i.h || 960,
-          blurDataUrl: i.blurDataUrl,
         }))
       : dbItems.length > 0
         ? dbItems
@@ -79,7 +75,6 @@ export function GalleryLightbox({
             caption: t(g.altKey),
             w: g.w,
             h: g.h,
-            blurDataUrl: null,
           }));
 
   const items = limit ? rawItems.slice(0, limit) : rawItems;
@@ -126,12 +121,11 @@ export function GalleryLightbox({
               aria-label={t("gallery.view")}
               className="relative block w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <BlurImage
+              <SmoothImage
                 src={item.src}
                 alt={item.caption}
                 width={item.w}
                 height={item.h}
-                blurDataUrl={item.blurDataUrl}
                 sizes="(max-width: 768px) 50vw, 33vw"
                 className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
@@ -166,13 +160,12 @@ export function GalleryLightbox({
                   transition={{ duration: 0.35, ease: EASE }}
                   className="absolute inset-0"
                 >
-                  <BlurImage
+                  <SmoothImage
                     src={current.src}
                     alt={current.caption}
                     fill
                     width={current.w}
                     height={current.h}
-                    blurDataUrl={current.blurDataUrl}
                     priority
                     sizes={LIGHTBOX_SIZES}
                     className="object-contain"
@@ -186,14 +179,13 @@ export function GalleryLightbox({
               <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-0">
                 {items.map((item, i) =>
                   i === index ? null : (
-                    <BlurImage
+                    <SmoothImage
                       key={item.src}
                       src={item.src}
                       alt=""
                       fill
                       width={item.w}
                       height={item.h}
-                      blurDataUrl={item.blurDataUrl}
                       loading="eager"
                       sizes={LIGHTBOX_SIZES}
                       className="object-contain"

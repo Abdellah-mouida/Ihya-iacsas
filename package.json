@@ -9,9 +9,9 @@
     "lint": "eslint",
     "check:i18n": "node scripts/check-i18n.js",
     "audit:cloudinary": "tsx --env-file=.env.local scripts/audit-cloudinary.ts",
-    "backfill:blur": "node --env-file-if-exists=.env.local scripts/backfill-blur.mjs",
     "postinstall": "prisma generate",
-    "seed:branches": "node scripts/seed-branches.mjs"
+    "seed:branches": "node scripts/seed-branches.mjs",
+    "backfill:image-size": "node --env-file-if-exists=.env.local scripts/backfill-image-size.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

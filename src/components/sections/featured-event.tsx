@@ -25,7 +25,6 @@ type FeaturedEventProps = {
     time?: string;
     location?: string;
     posterUrl?: string;
-    posterBlurDataUrl?: string | null;
     posterWidth?: number | null;
     posterHeight?: number | null;
     capacityType?: string;
@@ -111,7 +110,6 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
             title={title}
             dateStr={dateStr}
             locationStr={locationStr}
-            blurDataUrl={event?.posterBlurDataUrl}
             imageWidth={event?.posterWidth}
             imageHeight={event?.posterHeight}
           />

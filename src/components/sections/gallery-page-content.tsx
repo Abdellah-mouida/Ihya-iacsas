@@ -11,14 +11,13 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
 import { EASE } from "@/lib/motion";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { Button } from "@/components/ui/button";
 import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 type InitialGalleryPhoto = {
   id: string;
   imageUrl: string;
-  blurDataUrl: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
   captionAr: string | null;
@@ -35,7 +34,6 @@ type PhotoItem = {
   dateLabel: string;
   imageWidth: number | null;
   imageHeight: number | null;
-  blurDataUrl?: string | null;
 };
 
 const LIGHTBOX_SIZES = "(max-width: 768px) 92vw, 960px";
@@ -71,9 +69,8 @@ export function GalleryPageContent({
         return {
           id: photo.id,
           src: photo.imageUrl,
-          blurDataUrl: photo.blurDataUrl,
           imageWidth: photo.imageWidth,
-          imageHeight: photo.imageHeight,
+        imageHeight: photo.imageHeight,
           caption: locale === "ar"
             ? photo.captionAr || photo.captionEn || "صورة من إحياء"
             : photo.captionEn || photo.captionAr || "Ihyaa moment",
@@ -238,13 +235,12 @@ export function GalleryPageContent({
                           aria-label={item.caption}
                           className="relative block aspect-[4/3] w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring overflow-hidden"
                         >
-                          <BlurImage
+                          <SmoothImage
                             src={item.src}
                             alt={item.caption}
                             fill
                             width={item.imageWidth}
                             height={item.imageHeight}
-                            blurDataUrl={item.blurDataUrl}
                             priority={globalIdx === 0}
                             sizes="(max-width: 639px) calc(100vw - 2.5rem), (max-width: 1023px) calc((100vw - 4rem) / 2), calc((min(100vw, 72rem) - 7rem) / 3)"
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -304,13 +300,12 @@ export function GalleryPageContent({
                   transition={{ duration: 0.35, ease: EASE }}
                   className="absolute inset-0"
                 >
-                  <BlurImage
+                  <SmoothImage
                     src={current.src}
                     alt={current.caption}
                     fill
                     width={current.imageWidth}
                     height={current.imageHeight}
-                    blurDataUrl={current.blurDataUrl}
                     priority
                     sizes={LIGHTBOX_SIZES}
                     className="object-contain"

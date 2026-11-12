@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import {
   useCallback,
   useEffect,
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 const GAP = 26; // px between posters
 const AUTOPLAY_MS = 4500;
 const TRANSITION = { duration: 0.7, ease: EASE };
+type CarouselItem = { src: string; altKey: string; w: number; h: number };
 
 /**
  * Card poster carousel — a center-mode, infinitely looping showcase.
@@ -39,8 +40,7 @@ const TRANSITION = { duration: 0.7, ease: EASE };
 export function CardCarousel() {
   const { t } = useLocale();
   const reduceMotion = useReducedMotion();
-
-  const [dbItems, setDbItems] = useState<{ src: string; altKey: string; w: number; h: number; blurDataUrl?: string | null }[]>([]);
+  const [dbItems, setDbItems] = useState<CarouselItem[]>([]);
 
   useEffect(() => {
     getCarouselPosts(true).then((res) => {
@@ -51,7 +51,6 @@ export function CardCarousel() {
             altKey: "cards.altNight",
             w: p.imageWidth ?? 512,
             h: p.imageHeight ?? 640,
-            blurDataUrl: p.blurDataUrl,
           })),
         );
       }
@@ -230,13 +229,12 @@ export function CardCarousel() {
                           : "ring-border/60",
                       )}
                     >
-                      <BlurImage
+                      <SmoothImage
                         src={item.src}
                         alt={t(item.altKey)}
                         fill
                         width={item.w}
                         height={item.h}
-                        blurDataUrl={item.blurDataUrl}
                         draggable={false}
                         loading="eager"
                         sizes="(max-width: 640px) 66vw, 360px"

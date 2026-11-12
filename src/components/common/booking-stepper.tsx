@@ -26,7 +26,7 @@ import { getEventById } from "@/app/actions/events";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { BlurImage } from "@/components/common/blur-image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,7 +70,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     time?: string;
     location?: string;
     posterUrl?: string | null;
-    posterBlurDataUrl?: string | null;
     posterWidth?: number | null;
     posterHeight?: number | null;
     capacityType?: string;
@@ -627,13 +626,12 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
 
             {/* Poster image 16:9 ratio */}
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-brass/15 bg-muted/40 shadow-inner">
-              <BlurImage
+              <SmoothImage
                 src={summaryPoster}
                 alt={summaryTitle}
                 fill
                 width={eventInfo?.posterWidth ?? 512}
                 height={eventInfo?.posterHeight ?? 288}
-                blurDataUrl={eventInfo?.posterBlurDataUrl}
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 400px"
               />
