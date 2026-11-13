@@ -75,7 +75,10 @@ test("the gallery archive keeps its images, dates, modal and layout across theme
 
 test("the home gallery preview uses localized MorphSlider controls without a legacy dialog", async ({ browser }) => {
   for (const locale of LOCALES) {
-    const context = await browser.newContext({ locale: locale === "ar" ? "ar-MA" : "en-US" });
+    const context = await browser.newContext({
+      locale: locale === "ar" ? "ar-MA" : "en-US",
+      viewport: { width: 360, height: 900 },
+    });
     await context.addInitScript((localeValue) => {
       localStorage.setItem("ihyaa-locale", localeValue);
       localStorage.setItem("ihyaa-theme", "light");
@@ -89,6 +92,9 @@ test("the home gallery preview uses localized MorphSlider controls without a leg
       await gallery.evaluate((element) => window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top, behavior: "instant" }));
       const slider = gallery.locator('[data-rb="MorphSlider"]');
       await expect(slider).toBeVisible({ timeout: 30_000 });
+      await expect(slider.locator(".morph-slider-caption")).toBeHidden();
+      await page.setViewportSize({ width: 768, height: 900 });
+      await expect(slider.locator(".morph-slider-caption")).toBeVisible();
       const prevBtn = slider.getByRole("button", { name: locale === "ar" ? "الشريحة السابقة" : "Previous slide" });
       const nextBtn = slider.getByRole("button", { name: locale === "ar" ? "الشريحة التالية" : "Next slide" });
       await expect(prevBtn).toBeVisible();

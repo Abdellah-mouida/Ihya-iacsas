@@ -220,19 +220,9 @@
     outline-offset: 2px;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     .morph-slider-caption {
-      inset-inline-start: 0.75rem;
-      inset-block-end: 2.4rem;
-      max-width: calc(100% - 1.5rem);
-    }
-
-    .morph-slider-caption-text {
-      padding: 0.4rem 0.7rem;
-    }
-
-    .morph-slider-caption-main {
-      font-size: 0.8125rem;
+      display: none;
     }
 
     .morph-slider-btn {

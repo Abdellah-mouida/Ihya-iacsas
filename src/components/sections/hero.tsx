@@ -68,7 +68,7 @@ export function Hero() {
       id="home"
       className={`${styles.heroSection} relative z-10 mb-[-3.5rem] overflow-visible px-4 pb-0 text-foreground sm:px-6`}
     >
-      <div className={`${styles.heroInner} mx-auto grid max-w-6xl items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12`}>
+      <div className={`${styles.heroInner} mx-auto grid max-w-6xl items-center gap-4 sm:gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12`}>
         <div
           data-testid="hero-copy"
           className="relative z-10 order-2 flex flex-col items-start text-start lg:order-1"
@@ -104,13 +104,13 @@ export function Hero() {
             onStateChange={handleFoldStateChange}
             wordTestId="hero-heading-word"
             pieceTestId="hero-fold-piece"
-            className={`${styles.heroTitle} mt-3 block min-h-[3.4em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold ${locale === "ar" ? "leading-[1.28]" : "leading-[1.12]"} lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
+            className={`${styles.heroTitle} mt-1.5 sm:mt-3 block w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold ${locale === "ar" ? "min-h-[2.6em] leading-[1.28]" : "min-h-[3.4em] leading-[1.12]"} lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
           />
 
-          <p className="mt-5 min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
+          <p className="mt-2.5 sm:mt-5 min-h-[2.5em] sm:min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
             {t("hero.subtitle")}
           </p>
-          <div className="mt-7 flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+          <div className="mt-4 sm:mt-7 flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <Button
               asChild
               size="lg"
