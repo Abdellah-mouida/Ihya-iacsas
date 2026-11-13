@@ -73,7 +73,7 @@ test("the gallery archive keeps its images, dates, modal and layout across theme
   }
 });
 
-test("the home gallery preview uses localized lightbox controls", async ({ browser }) => {
+test("the home gallery preview uses localized MorphSlider controls without a legacy dialog", async ({ browser }) => {
   for (const locale of LOCALES) {
     const context = await browser.newContext({ locale: locale === "ar" ? "ar-MA" : "en-US" });
     await context.addInitScript((localeValue) => {
@@ -84,16 +84,21 @@ test("the home gallery preview uses localized lightbox controls", async ({ brows
     const page = await context.newPage();
     try {
       await page.goto("/", { waitUntil: "domcontentloaded" });
-      const gallery = page.locator("#gallery");
+      const gallery = page.locator("main #gallery");
+      await expect(gallery).toBeVisible({ timeout: 30_000 });
       await gallery.evaluate((element) => window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top, behavior: "instant" }));
-      const firstPhoto = gallery.locator('[data-react-bits="SpotlightCard"] button').first();
-      await expect(firstPhoto).toBeVisible({ timeout: 30_000 });
-      await firstPhoto.click();
-      const dialog = page.getByRole("dialog");
-      await expect(dialog.getByRole("button", { name: locale === "ar" ? "إغلاق" : "Close" })).toBeVisible();
-      await expect(dialog.getByRole("button", { name: locale === "ar" ? "الصورة التالية" : "Next image" })).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expect(dialog).toBeHidden();
+      const slider = gallery.locator('[data-rb="MorphSlider"]');
+      await expect(slider).toBeVisible({ timeout: 30_000 });
+      const prevBtn = slider.getByRole("button", { name: locale === "ar" ? "الشريحة السابقة" : "Previous slide" });
+      const nextBtn = slider.getByRole("button", { name: locale === "ar" ? "الشريحة التالية" : "Next slide" });
+      await expect(prevBtn).toBeVisible();
+      await expect(nextBtn).toBeVisible();
+      const secondDot = slider.getByRole("tab").nth(1);
+      await expect(slider.getByRole("tab").nth(0)).toHaveAttribute("aria-selected", "true");
+      await nextBtn.click();
+      await expect(secondDot).toHaveAttribute("aria-selected", "true");
+      await slider.locator(".morph-slider-stage").click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
     } finally {
       await context.close();
     }
