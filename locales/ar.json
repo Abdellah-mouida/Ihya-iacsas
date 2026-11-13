@@ -870,5 +870,22 @@
     "showFriendCountHint": "عدد أصدقائك يظل ظاهراً لك وحدك في ملفك الشخصي.",
     "saved": "تم حفظ إعدادات الخصوصية",
     "saveFailed": "تعذر حفظ إعدادات الخصوصية"
+  },
+  "chatInvite": {
+    "badge": "دعوة إلى غرفة خاصة",
+    "invitedBy": "دعوة من {name}",
+    "unknownInviter": "أحد الأصدقاء",
+    "expiresLabel": "تنتهي في {date}",
+    "acceptBtn": "قبول والانضمام للغرفة",
+    "declineBtn": "رفض",
+    "openRoomBtn": "فتح الغرفة",
+    "alreadyMember": "أنت عضو بالفعل في هذه الغرفة.",
+    "unavailableTitle": "الدعوة غير متاحة",
+    "unavailableDesc": "رابط الدعوة غير صالح أو منتهي الصلاحية أو ملغى أو مقتصر على أصدقاء المرسِل.",
+    "backToHome": "العودة للرئيسية",
+    "acceptedToast": "تم الانضمام إلى الغرفة",
+    "declinedTitle": "تم رفض الدعوة",
+    "declinedDesc": "لقد رفضت دعوة الانضمام إلى هذه الغرفة.",
+    "actionFailed": "تعذر معالجة هذه الدعوة"
   }
 }

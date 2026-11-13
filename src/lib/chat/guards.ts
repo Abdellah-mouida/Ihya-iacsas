@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { touchUserActive } from "@/lib/activity";
+import { ChatServiceError } from "./friends";
 
 export async function isChatEnabled(): Promise<boolean> {
   const row = await prisma.systemSetting.findUnique({
@@ -107,6 +108,16 @@ export async function requireChatActor(options?: {
   touchUserActive(user.id).catch(() => {});
 
   return { ok: true, user };
+}
+
+export function chatErrorResponse(err: unknown, fallbackMessage: string) {
+  if (err instanceof ChatServiceError) {
+    return NextResponse.json(
+      { error: err.message, code: err.code },
+      { status: err.status },
+    );
+  }
+  return NextResponse.json({ error: fallbackMessage }, { status: 500 });
 }
 
 export { canonicalPairKey } from "./friends";

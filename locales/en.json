@@ -870,5 +870,22 @@
     "showFriendCountHint": "Your friend count always remains visible to you on your own profile.",
     "saved": "Privacy settings saved",
     "saveFailed": "Could not save privacy settings"
+  },
+  "chatInvite": {
+    "badge": "Private Room Invitation",
+    "invitedBy": "Invited by {name}",
+    "unknownInviter": "A friend",
+    "expiresLabel": "Expires {date}",
+    "acceptBtn": "Accept & join room",
+    "declineBtn": "Decline",
+    "openRoomBtn": "Open room",
+    "alreadyMember": "You are already a member of this room.",
+    "unavailableTitle": "Invitation unavailable",
+    "unavailableDesc": "This invitation link is invalid, expired, revoked, or only open to the inviter's friends.",
+    "backToHome": "Back to home",
+    "acceptedToast": "Joined the room",
+    "declinedTitle": "Invitation declined",
+    "declinedDesc": "You declined this room invitation.",
+    "actionFailed": "Could not process this invitation"
   }
 }

@@ -59,6 +59,12 @@ export type RealtimeEvent =
       inviterId: string;
     }
   | {
+      type: "invite.updated";
+      inviteId: string;
+      conversationId: string;
+      status: "ACCEPTED" | "DECLINED" | "REVOKED" | "EXPIRED";
+    }
+  | {
       type: "unread.sync";
       conversationId?: string;
     }
