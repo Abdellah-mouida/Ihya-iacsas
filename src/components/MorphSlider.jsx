@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Renderer, Triangle, Program, Mesh, Texture } from 'ogl';
 import { gsap } from 'gsap';
-import { SmoothImage } from '@/components/common/smooth-image';
+import { MorphCrossfade } from '@/components/morph-crossfade';
 
 import './MorphSlider.css';
 
@@ -908,12 +908,30 @@ export default function MorphSlider({
   const effectiveDuration = reducedMotion || lowPower ? Math.min(duration, 0.45) : duration;
   const firstItem = items[startIndex] ?? items[0];
 
+  if (useCrossfadeFallback) {
+    return (
+      <MorphCrossfade
+        items={items}
+        startIndex={safeIndex}
+        duration={effectiveDuration}
+        loop={loop}
+        showCaptions={showCaptions}
+        showControls={showControls}
+        showIndicators={showIndicators}
+        dir={dir}
+        labels={labels}
+        reducedMotion={reducedMotion}
+        className={className}
+      />
+    );
+  }
+
   return (
     <div
       ref={rootRef}
       data-rb="MorphSlider"
-      data-morph-mode={useCrossfadeFallback ? 'crossfade' : 'webgl'}
-      data-morph-rendering={String(isRendering && !useCrossfadeFallback)}
+      data-morph-mode="webgl"
+      data-morph-rendering={String(isRendering)}
       className={`morph-slider ${className}`.trim()}
       style={{
         '--ms-swap': `${(effectiveDuration * 0.66).toFixed(3)}s`,
@@ -930,14 +948,13 @@ export default function MorphSlider({
       <div
         ref={stageRef}
         className="morph-slider-stage"
-        data-static={useCrossfadeFallback ? 'true' : undefined}
         role="group"
         aria-roledescription="carousel"
         aria-label={labels.sliderLabel}
         tabIndex={0}
         onKeyDown={onKeyDown}
       >
-        {!useCrossfadeFallback && firstItem && (
+        {firstItem && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={firstItem.image}
@@ -945,27 +962,6 @@ export default function MorphSlider({
             className={`morph-slider-poster ${firstFrameReady ? 'is-hidden' : ''}`}
             decoding="async"
           />
-        )}
-
-        {useCrossfadeFallback && (
-          <div className="morph-slider-fallback">
-            {items.map((item, i) => (
-              <div
-                key={`${item.image}-${i}`}
-                aria-hidden={i === safeIndex ? undefined : true}
-                className={`morph-slider-fallback-slide ${i === safeIndex ? 'is-active' : ''}`}
-              >
-                <SmoothImage
-                  src={item.image}
-                  alt={item.alt || item.caption || ''}
-                  fill
-                  sizes="(max-width: 640px) 100vw, 1152px"
-                  className="object-cover"
-                  fadeDurationMs={reducedMotion ? 0 : 400}
-                />
-              </div>
-            ))}
-          </div>
         )}
       </div>
 

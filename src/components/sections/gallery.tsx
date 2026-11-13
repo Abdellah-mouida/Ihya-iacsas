@@ -37,7 +37,7 @@ export function Gallery() {
           desc={t("gallery.desc")}
         />
         <SpotlightCard className="glass relative mt-14 overflow-hidden rounded-3xl border border-brass/25 p-2 shadow-layered sm:p-4">
-          <InViewMount minHeight={260} placeholder={<GallerySkeleton />}>
+          <InViewMount once minHeight={260} placeholder={<GallerySkeleton />}>
             <HomeGallerySlider limit={10} />
           </InViewMount>
         </SpotlightCard>

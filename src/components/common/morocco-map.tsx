@@ -66,6 +66,7 @@ export function MoroccoMap({
   const activeBranch = !editor && activeId ? markers.find(({ branch }) => branch.id === activeId) ?? null : null;
 
   useLayoutEffect(() => {
+    if (!activeBranch) return;
     const placeTooltip = () => {
       const tooltip = tooltipRef.current;
       const map = mapRef.current;
@@ -105,7 +106,7 @@ export function MoroccoMap({
       zoomLayer?.removeEventListener("transitionend", placeTooltip);
       observer?.disconnect();
     };
-  }, [activeId, activeBranch?.branch.id, activeBranch?.branch.name, activeBranch?.branch.regionName]);
+  }, [activeBranch, activeId]);
 
   const placePin = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!editor || !onPinChange || !mapRef.current) return;
@@ -120,7 +121,7 @@ export function MoroccoMap({
     <>
     <div
       ref={mapRef}
-      className={cn("relative mx-auto w-full max-w-[26rem] touch-none", editor && "max-w-none", editor && editorInteractive && "cursor-crosshair", className)}
+      className={cn("relative mx-auto w-full max-w-[26rem] [contain:layout_style]", editor && "max-w-none touch-none", editor && editorInteractive && "cursor-crosshair", className)}
       onPointerDown={(event) => {
         if (!editor || !editorInteractive) return;
         setDragging(true);
@@ -155,8 +156,8 @@ export function MoroccoMap({
               <filter id="mm-soft" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="10" /></filter>
               <filter id="mm-rimglow" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="2.4" /></filter>
             </defs>
-            <g filter="url(#mm-soft)" opacity="0.45">{MOROCCO_MAP.paths.map((path, index) => <path key={`soft-${index}`} d={path} fill="url(#mm-rim)" />)}</g>
-            <g filter="url(#mm-rimglow)" opacity="0.85">{MOROCCO_MAP.paths.map((path, index) => <path key={`rim-${index}`} d={path} fill="url(#mm-rim)" />)}</g>
+            <g className="mm-glow-layer" filter="url(#mm-soft)" opacity="0.45">{MOROCCO_MAP.paths.map((path, index) => <path key={`soft-${index}`} d={path} fill="url(#mm-rim)" />)}</g>
+            <g className="mm-glow-layer" filter="url(#mm-rimglow)" opacity="0.85">{MOROCCO_MAP.paths.map((path, index) => <path key={`rim-${index}`} d={path} fill="url(#mm-rim)" />)}</g>
             <g>{MOROCCO_MAP.paths.map((path, index) => <path key={`land-${index}`} d={path} fill="url(#mm-land)" />)}</g>
           </svg>
 
@@ -173,16 +174,12 @@ export function MoroccoMap({
             </button>
           )}
 
-          {!editor && markers.map(({ branch, point }, index) => {
+          {!editor && markers.map(({ branch, point }) => {
             const active = activeId === branch.id;
             return (
-              <motion.button
+              <button
                 key={branch.id}
                 type="button"
-                initial={reducedMotion ? false : { opacity: 0, scale: 0, y: -12 }}
-                whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={reducedMotion ? { duration: 0 } : { delay: 0.1 + Math.min(index, 12) * 0.03, type: "spring", stiffness: 260, damping: 16 }}
                 onMouseEnter={() => onActivate(branch.id)}
                 onMouseLeave={() => onActivate(null)}
                 onFocus={() => onActivate(branch.id)}
@@ -197,7 +194,7 @@ export function MoroccoMap({
                 {active && <span aria-hidden data-testid="branch-marker-pulse" className={cn("absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color-mix(in_oklch,var(--foreground)_26%,transparent)]", !reducedMotion && "animate-pulse-ring")} />}
                 <span aria-hidden data-testid="branch-marker-dot" className={cn("relative block size-2.5 rounded-full ring-2 ring-background transition-transform duration-200", active ? "scale-125 bg-[var(--foreground)]" : "bg-[var(--main)]")} />
 
-              </motion.button>
+              </button>
             );
           })}
         </div>

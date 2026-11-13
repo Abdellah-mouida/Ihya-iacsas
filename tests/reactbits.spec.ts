@@ -145,4 +145,36 @@ test.describe("React Bits visible proof", () => {
       }
     }
   });
+
+  test("adaptive low-perf disables expensive glass, map blur, and WebGL slider on constrained devices", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, "hardwareConcurrency", { configurable: true, get: () => 4 });
+      Object.defineProperty(navigator, "deviceMemory", { configurable: true, get: () => 4 });
+    });
+    try {
+      const page = await context.newPage();
+      await page.goto("/", { waitUntil: "load" });
+      await expect(page.locator("html")).toHaveAttribute("data-perf", "low");
+      await page.locator("#gallery").scrollIntoViewIfNeeded();
+      await expect(page.locator('[data-rb="MorphSlider"]')).toHaveAttribute("data-morph-mode", "crossfade", { timeout: 15_000 });
+      await page.locator("#branches").scrollIntoViewIfNeeded();
+      await expect(page.locator("#branches svg").first()).toBeVisible({ timeout: 15_000 });
+      const perfChecks = await page.evaluate(() => {
+        const glassEl = document.querySelector("#branches .glass");
+        const glowEl = document.querySelector("#branches .mm-glow-layer");
+        const pulseEl = document.querySelector('#branches [data-testid="branch-marker-pulse"]');
+        return {
+          glassBackdrop: glassEl ? getComputedStyle(glassEl).backdropFilter : null,
+          glowDisplay: glowEl ? getComputedStyle(glowEl).display : null,
+          pulseDisplay: pulseEl ? getComputedStyle(pulseEl).display : null,
+        };
+      });
+      expect(perfChecks.glassBackdrop).toBe("none");
+      if (perfChecks.glowDisplay) expect(perfChecks.glowDisplay).toBe("none");
+      if (perfChecks.pulseDisplay) expect(perfChecks.pulseDisplay).toBe("none");
+    } finally {
+      await context.close();
+    }
+  });
 });

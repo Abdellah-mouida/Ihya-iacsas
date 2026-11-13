@@ -127,3 +127,15 @@ html[data-theme="dark"],
   .site-atmosphere-glow { animation: none; }
   .site-pointer-glow { display: none; }
 }
+
+html[data-perf="low"] .site-atmosphere-glow {
+  animation: none !important;
+}
+
+html[data-perf="low"] .site-atmosphere-pattern rect {
+  mask: none;
+}
+
+html[data-perf="low"] .site-pointer-glow {
+  display: none;
+}

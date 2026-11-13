@@ -1,12 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { getGalleryPhotos } from "@/app/actions/gallery";
-import MorphSlider from "@/components/MorphSlider";
+import { MorphCrossfade } from "@/components/morph-crossfade";
 import { useLowPower } from "@/hooks/use-low-power";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
+
+const MorphSlider = dynamic(() => import("@/components/MorphSlider"), { ssr: false });
 
 type RawPhoto = {
   imageUrl: string;
@@ -22,19 +25,6 @@ function subscribeViewport(cb: () => void) {
 
 function getIsMobileSnapshot() {
   return window.innerWidth <= 640;
-}
-
-function subscribePerfAttr(cb: () => void) {
-  const observer = new MutationObserver(cb);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["data-perf"],
-  });
-  return () => observer.disconnect();
-}
-
-function getPerfLowSnapshot() {
-  return document.documentElement.getAttribute("data-perf") === "low";
 }
 
 function toSliderImageUrl(src: string, mobile: boolean): string {
@@ -59,7 +49,6 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
   const { t, locale, dir } = useLocale();
   const lowPower = useLowPower();
   const isMobile = useSyncExternalStore(subscribeViewport, getIsMobileSnapshot, () => false);
-  const forceFallback = useSyncExternalStore(subscribePerfAttr, getPerfLowSnapshot, () => false);
   const [dbPhotos, setDbPhotos] = useState<RawPhoto[]>([]);
 
   useEffect(() => {
@@ -123,21 +112,24 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
 
   return (
     <div className="relative aspect-square max-h-[80svh] w-full sm:aspect-video">
-      <MorphSlider
-        items={items}
-        transition="melt"
-        duration={1.0}
-        intensity={0.38}
-        scale={2.2}
-        aberration={0.22}
-        drift={0.25}
-        autoplay
-        autoplayDelay={3}
-        lowPower={lowPower}
-        forceFallback={forceFallback}
-        dir={dir}
-        labels={labels}
-      />
+      {lowPower ? (
+        <MorphCrossfade items={items} dir={dir} labels={labels} />
+      ) : (
+        <MorphSlider
+          items={items}
+          transition="melt"
+          duration={1.0}
+          intensity={0.38}
+          scale={2.2}
+          aberration={0.22}
+          drift={0.25}
+          autoplay
+          autoplayDelay={3}
+          lowPower={lowPower}
+          dir={dir}
+          labels={labels}
+        />
+      )}
     </div>
   );
 }
