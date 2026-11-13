@@ -24,18 +24,23 @@ export function Hero() {
   const { t, locale } = useLocale();
   const lowPower = useLowPower();
   const sectionRef = useRef<HTMLElement>(null);
+  const foldStateRef = useRef<string | null>(null);
   const [foldPaused, setFoldPaused] = useState(false);
   const headline = t("hero.title");
 
   const handleFoldStateChange = useCallback((state: string) => {
+    foldStateRef.current = state;
     const section = sectionRef.current;
-    if (!section || lowPower) return;
+    if (!section) return;
     section.dataset.foldState = state;
-  }, [lowPower]);
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
-    if (!section || lowPower) return;
+    if (!section) return;
+    if (foldStateRef.current) {
+      section.dataset.foldState = foldStateRef.current;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -53,7 +58,7 @@ export function Hero() {
       delete section.dataset.foldState;
       delete section.dataset.foldPaused;
     };
-  }, [lowPower]);
+  }, []);
 
   return (
     <section
@@ -93,7 +98,6 @@ export function Hero() {
             fontSize="inherit"
             fontWeight={800}
             gradient={["var(--hero-title-start)", "var(--hero-title-end)"]}
-            disabled={lowPower}
             paused={foldPaused}
             onStateChange={handleFoldStateChange}
             wordTestId="hero-heading-word"

@@ -69,6 +69,14 @@ var c=colors[t]||'#faf8f2';
 var m=document.querySelector('meta[name="theme-color"]');
 if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}
 m.setAttribute('content',c);
+var rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!rm){
+  document.documentElement.setAttribute('data-motion','on');
+  setTimeout(function(){
+    var els=document.querySelectorAll('[data-fold-initial="folded"]:not([data-fold-started="true"])');
+    for(var i=0;i<els.length;i++){els[i].setAttribute('data-fold-initial','static');}
+  },2000);
+}
 }catch(e){}})();`,
           }}
         />

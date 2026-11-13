@@ -148,13 +148,10 @@ const FoldText = ({
     const renderPiece = (content, key, isLine = false) => {
       const index = pieceCursor++;
       const endPercent = Math.round((index / Math.max(totalPieces - 1, 1)) * 100);
-      const pieceStyle = {
-        ...(startsFolded ? { opacity: 0 } : null),
-        ...(gradientStart && gradientEnd
+      const pieceStyle =
+        gradientStart && gradientEnd
           ? { color: `color-mix(in oklch, ${gradientStart} ${100 - endPercent}%, ${gradientEnd} ${endPercent}%)` }
-          : null)
-      };
-      const hasPieceStyle = Object.keys(pieceStyle).length > 0;
+          : undefined;
 
       return (
         <span className="fold-text-segment" data-fold-split={isLine ? 'line' : undefined} key={key}>
@@ -165,7 +162,7 @@ const FoldText = ({
               data-fold-style="blinds"
               data-fold-word=""
               data-testid={pieceTestId}
-              style={hasPieceStyle ? pieceStyle : undefined}
+              style={pieceStyle}
             >
               <span className="fold-text-slat" data-fold-text={content}>
                 {content}
@@ -182,7 +179,7 @@ const FoldText = ({
               data-fold-text={content}
               data-fold-word=""
               data-testid={pieceTestId}
-              style={hasPieceStyle ? pieceStyle : undefined}
+              style={pieceStyle}
             >
               {content}
             </span>
@@ -207,7 +204,7 @@ const FoldText = ({
         </span>
       ];
     });
-  }, [text, splitBy, safeHinge, safeStyle, startsFolded, gradientStart, gradientEnd, wordTestId, pieceTestId]);
+  }, [text, splitBy, safeHinge, safeStyle, gradientStart, gradientEnd, wordTestId, pieceTestId]);
 
   useIsomorphicLayoutEffect(() => {
     const root = rootRef.current;
@@ -217,6 +214,7 @@ const FoldText = ({
     if (!elements.length) return undefined;
 
     const clearToStatic = () => {
+      root.removeAttribute('data-fold-initial');
       elements.forEach(element => {
         element.style.transform = '';
         element.style.opacity = '1';
@@ -226,6 +224,7 @@ const FoldText = ({
 
     if (disabled) {
       clearToStatic();
+      onStateChangeRef.current?.('static');
       return undefined;
     }
 
@@ -292,6 +291,12 @@ const FoldText = ({
         }
 
         const progress = unfoldEase(piece.t) * (1 - foldEase(piece.f));
+        if (Math.abs(1 - progress) < 0.0005 && Math.abs(tilt) < 0.0005) {
+          piece.element.style.transform = '';
+          piece.element.style.opacity = '1';
+          piece.element.style.setProperty('--fold-crease', '0');
+          return;
+        }
         const rise = lift * Math.sin(Math.PI * clamp(progress, 0, 1));
         const turn = `${axis}(${sign * ((1 - progress) * angle + tilt)}deg)`;
         piece.element.style.transform = rise > 0.001 ? `translateZ(${rise}em) ${turn}` : turn;
@@ -302,6 +307,9 @@ const FoldText = ({
 
     let timeline = null;
     let scrollTrigger = null;
+    let cancelled = false;
+    let fontFallbackTimer = null;
+    let failsafeTimer = null;
 
     const play = loop => {
       timeline?.kill();
@@ -330,10 +338,14 @@ const FoldText = ({
     const handleEnter = () => play(false);
 
     if (trigger === 'hover') {
+      root.setAttribute('data-fold-started', 'true');
+      root.removeAttribute('data-fold-initial');
       render();
       onStateChangeRef.current?.('ready');
       root.addEventListener('mouseenter', handleEnter);
     } else if (trigger === 'scroll') {
+      root.setAttribute('data-fold-started', 'true');
+      root.removeAttribute('data-fold-initial');
       render();
       scrollTrigger = ScrollTrigger.create({
         trigger: root,
@@ -342,7 +354,31 @@ const FoldText = ({
         onEnter: handleEnter
       });
     } else {
-      play(trigger === 'loop');
+      let started = false;
+      const startFold = () => {
+        if (started || cancelled) return;
+        started = true;
+        if (fontFallbackTimer) window.clearTimeout(fontFallbackTimer);
+        if (failsafeTimer) window.clearTimeout(failsafeTimer);
+        root.setAttribute('data-fold-started', 'true');
+        play(trigger === 'loop');
+        root.removeAttribute('data-fold-initial');
+      };
+
+      failsafeTimer = window.setTimeout(() => {
+        if (!started && !cancelled) {
+          clearToStatic();
+          onStateChangeRef.current?.('static');
+        }
+      }, 2000);
+
+      const fontsReady = document.fonts?.ready;
+      if (fontsReady && typeof fontsReady.then === 'function') {
+        fontFallbackTimer = window.setTimeout(startFold, 600);
+        fontsReady.then(startFold, startFold);
+      } else {
+        startFold();
+      }
     }
 
     let pointer = null;
@@ -435,6 +471,9 @@ const FoldText = ({
     motionQuery?.addEventListener?.('change', handleMotionChange);
 
     return () => {
+      cancelled = true;
+      if (fontFallbackTimer) window.clearTimeout(fontFallbackTimer);
+      if (failsafeTimer) window.clearTimeout(failsafeTimer);
       root.removeEventListener('mouseenter', handleEnter);
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('scroll', handleScroll, { capture: true });
@@ -486,6 +525,7 @@ const FoldText = ({
     <Component
       ref={rootRef}
       aria-label={ariaLabel}
+      data-fold-initial={startsFolded ? 'folded' : undefined}
       className={`fold-text ${className}`.trim()}
       style={rootStyle}
       {...rest}
