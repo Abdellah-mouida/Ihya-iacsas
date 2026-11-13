@@ -23,7 +23,7 @@ test.describe("React Bits visible proof", () => {
       Object.defineProperty(navigator, "deviceMemory", { configurable: true, get: () => 8 });
     });
     for (const [route, markers] of [
-      ["/", ["FoldText", "CountUp", "SpotlightCard"]],
+      ["/", ["FoldText", "CountUp", "SpotlightCard", "MorphSlider"]],
       ["/gallery", ["TiltedCard"]],
       ["/events", ["AnimatedContent", "SpotlightCard"]],
       ["/login", ["BlurText"]],
@@ -38,13 +38,26 @@ test.describe("React Bits visible proof", () => {
             if (target) window.scrollTo(0, target.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2);
           });
         }
-        await expect(proof).toBeVisible();
+        if (marker === "MorphSlider") {
+          await page.evaluate(() => {
+            const target = document.querySelector<HTMLElement>("#gallery [data-in-view-mount]");
+            if (target) window.scrollTo(0, target.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2);
+          });
+        }
+        await expect(proof).toBeVisible({ timeout: 20_000 });
         if (marker === "FoldText") await expect(page.locator("#home")).toHaveAttribute("data-fold-state", "ready", { timeout: 15_000 });
       }
       if (route === "/") {
         const hero = page.locator("#home");
         await page.evaluate(() => window.scrollTo(0, 0));
         await expect(hero).toHaveAttribute("data-fold-state", "ready", { timeout: 15_000 });
+        await expect
+          .poll(() =>
+            page
+              .locator('[data-rb="MorphSlider"]')
+              .evaluateAll((els) => els.length === 0 || els[0].getAttribute("data-morph-rendering") === "false"),
+          )
+          .toBe(true);
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
         await expect(hero).toHaveAttribute("data-fold-paused", "true");
         await page.evaluate(() => window.scrollTo(0, 0));

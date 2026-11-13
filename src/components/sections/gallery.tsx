@@ -12,15 +12,15 @@ import { useLocale } from "@/i18n/locale-provider";
 
 function GallerySkeleton() {
   return (
-    <div className="h-[260px] w-full animate-pulse rounded-2xl bg-muted/60 sm:h-[360px] md:h-[440px] lg:h-[520px]" />
+    <div className="aspect-square max-h-[80svh] w-full animate-pulse rounded-2xl bg-muted/60 sm:aspect-video" />
   );
 }
 
-// Below the fold + heavy (7 images, dialog, motion): load as its own chunk.
-const GalleryLightbox = dynamic(
+// Below the fold + heavy (ogl + gsap slider): load as its own chunk.
+const HomeGallerySlider = dynamic(
   () =>
-    import("@/components/common/gallery-lightbox").then(
-      (m) => m.GalleryLightbox,
+    import("@/components/sections/home-gallery-slider").then(
+      (m) => m.HomeGallerySlider,
     ),
   { ssr: false, loading: () => <GallerySkeleton /> },
 );
@@ -38,7 +38,7 @@ export function Gallery() {
         />
         <SpotlightCard className="glass relative mt-14 overflow-hidden rounded-3xl border border-brass/25 p-2 shadow-layered sm:p-4">
           <InViewMount minHeight={260} placeholder={<GallerySkeleton />}>
-            <GalleryLightbox limit={8} />
+            <HomeGallerySlider limit={10} />
           </InViewMount>
         </SpotlightCard>
 
