@@ -16,7 +16,7 @@ test("image skeleton reserves its frame and reveals after the image decodes with
     }).observe({ type: "layout-shift", buffered: true });
   });
   await page.route("**/_next/image**", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    await new Promise((resolve) => setTimeout(resolve, 1800));
     await route.continue();
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -25,9 +25,16 @@ test("image skeleton reserves its frame and reveals after the image decodes with
   const skeleton = frame.locator('[data-testid="smooth-image-skeleton"]');
   const image = frame.locator('[data-testid="smooth-image"]');
   await expect(skeleton).toBeVisible({ timeout: 15_000 });
-  const icon = skeleton.locator("span").first();
-  await expect(icon).toBeVisible();
-  expect(await icon.evaluate((node) => getComputedStyle(node).animationName)).toContain("smooth-image-icon-float");
+  const animNames = await skeleton.evaluate((el) => {
+    const iconEl = el.querySelector("span");
+    const arcEl = el.querySelector("[data-spinner-arc='true']");
+    return {
+      icon: iconEl ? getComputedStyle(iconEl).animationName : "",
+      arc: arcEl ? getComputedStyle(arcEl).animationName : "",
+    };
+  });
+  expect(animNames.icon).toContain("smooth-image-icon-pulse");
+  expect(animNames.arc).toContain("smooth-image-icon-spin");
 
   const tileMeasurements = await page.evaluate((sizes) => {
     const sourceFrame = document.querySelector('#about [data-testid="smooth-image-frame"]');
@@ -96,11 +103,16 @@ test("image skeleton reserves its frame and reveals after the image decodes with
 
 test("skeleton icon is static when reduced motion is requested", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.route(/logo-circle\.png/, (route) => route.abort());
+  await page.route(/logo-circle\.png/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    await route.abort();
+  });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.locator("#about").scrollIntoViewIfNeeded();
   const skeleton = page.locator('#about [data-testid="smooth-image-skeleton"]').first();
   await expect(skeleton).toBeVisible({ timeout: 15_000 });
   const animationName = await skeleton.locator("span").first().evaluate((node) => getComputedStyle(node).animationName);
   expect(animationName).toBe("none");
+  const spinnerAnimationName = await skeleton.locator("[data-spinner-arc='true']").evaluate((node) => getComputedStyle(node).animationName);
+  expect(spinnerAnimationName).toBe("none");
 });

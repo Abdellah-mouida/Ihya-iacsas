@@ -9,6 +9,7 @@ type InViewMountProps = {
   /** Keeps layout space while effects below the fold are not mounted. */
   minHeight?: CSSProperties["minHeight"];
   rootMargin?: string;
+  once?: boolean;
 };
 
 /** Mounts optional, expensive effects only while their reserved region is visible. */
@@ -18,6 +19,7 @@ export function InViewMount({
   className,
   minHeight,
   rootMargin = "160px 0px",
+  once = false,
 }: InViewMountProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
@@ -28,20 +30,27 @@ export function InViewMount({
     if (!host) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => setIntersecting(entry.isIntersecting),
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          if (!once) setIntersecting(false);
+          return;
+        }
+        setIntersecting(true);
+        if (once) observer.disconnect();
+      },
       { rootMargin },
     );
     observer.observe(host);
 
     return () => observer.disconnect();
-  }, [rootMargin]);
+  }, [once, rootMargin]);
 
   useEffect(() => {
-    const update = () => setActive(intersecting && document.visibilityState === "visible");
+    const update = () => setActive((prev) => (once && prev) || (intersecting && document.visibilityState === "visible"));
     update();
     document.addEventListener("visibilitychange", update);
     return () => document.removeEventListener("visibilitychange", update);
-  }, [intersecting]);
+  }, [intersecting, once]);
 
   return (
     <div

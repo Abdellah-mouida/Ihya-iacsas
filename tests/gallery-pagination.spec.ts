@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
@@ -6,9 +5,9 @@ import { assertDevBranchDatabase } from "./helpers/dev-guard";
 
 const prisma = new PrismaClient();
 
-test("gallery initially renders twelve database photos and loads the next page", async ({ page }) => {
+test("gallery renders database photos randomly in DriftWall without borders", async ({ page }) => {
   test.setTimeout(60_000);
-  assertDevBranchDatabase("Gallery pagination integration test");
+  assertDevBranchDatabase("Gallery DriftWall integration test");
 
   const marker = `gallery-pagination-${Date.now()}`;
   await prisma.galleryPhoto.createMany({
@@ -23,7 +22,6 @@ test("gallery initially renders twelve database photos and loads the next page",
   });
 
   try {
-    fs.mkdirSync("evidence/task-07/t8/gallery", { recursive: true });
     await page.addInitScript(() => {
       localStorage.setItem("ihyaa-locale", "en");
       localStorage.setItem("ihyaa-theme", "light");
@@ -31,17 +29,11 @@ test("gallery initially renders twelve database photos and loads the next page",
       document.cookie = "ihyaa-theme=light; path=/";
     });
     await page.goto("/gallery");
-    const cards = page.locator("[data-gallery-card]");
-    await expect(cards).toHaveCount(12);
-    await page.screenshot({ path: "evidence/task-07/t8/gallery/gallery-pagination-first-page.png", fullPage: true });
-
-    const loadMore = page.getByRole("button", { name: "Load more photos" });
-    await expect(loadMore).toBeVisible();
-    await loadMore.click();
-
-    await expect(page.getByRole("button", { name: `${marker}-0` })).toBeVisible({ timeout: 20_000 });
-    expect(await cards.count()).toBeGreaterThanOrEqual(13);
-    await page.screenshot({ path: "evidence/task-07/t8/gallery/gallery-pagination-after-load-more.png", fullPage: true });
+    const wall = page.locator('[data-rb="DriftWall"]');
+    await expect(wall).toBeVisible();
+    await expect(page.getByRole("button", { name: `${marker}-0` }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: `${marker}-12` }).first()).toBeVisible({ timeout: 20_000 });
+    expect(await wall.locator("[data-gallery-card]").count()).toBeGreaterThanOrEqual(13);
   } finally {
     await prisma.galleryPhoto.deleteMany({
       where: { captionEn: { startsWith: marker } },
