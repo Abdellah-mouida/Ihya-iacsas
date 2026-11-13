@@ -11,10 +11,10 @@ export default defineConfig({
   timeout: 30_000,
   workers: 1,
   use: {
-    baseURL: "http://localhost:3000",
+  baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3000",
     headless: true,
   },
-  webServer: {
+  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL ? undefined : {
     command: "npm run start",
     port: 3000,
     reuseExistingServer: !process.env.CI,

@@ -1,12 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 import './FoldText.css';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -243,6 +239,15 @@ const FoldText = ({
       };
     }
 
+    let cancelled = false;
+    let cleanupAnimation = () => {};
+    const setupAnimation = async () => {
+      const { gsap } = await import('gsap');
+      const scrollTriggerModule = trigger === 'scroll' ? await import('gsap/ScrollTrigger') : null;
+      if (cancelled) return undefined;
+      const ScrollTrigger = scrollTriggerModule?.ScrollTrigger;
+      if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+
     const { axis, sign, origin } = hingeConfig;
     const slats = SLATS[axis];
     const unfoldEase = gsap.parseEase(ease) || gsap.parseEase('power3.out');
@@ -445,6 +450,32 @@ const FoldText = ({
       timeline?.kill();
       timelineRef.current = null;
       gsap.killTweensOf(pieces);
+    };
+    };
+
+    const startAnimation = () => void setupAnimation()
+      .then((cleanup) => {
+        if (cancelled) cleanup?.();
+        else if (cleanup) cleanupAnimation = cleanup;
+      })
+      .catch(() => {
+        clearToStatic();
+        onStateChangeRef.current?.('static');
+      });
+
+    let idleCallbackId;
+    let fallbackTimerId;
+    if (typeof window.requestIdleCallback === 'function') {
+      idleCallbackId = window.requestIdleCallback(startAnimation);
+    } else {
+      fallbackTimerId = window.setTimeout(startAnimation, 500);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleCallbackId !== undefined) window.cancelIdleCallback?.(idleCallbackId);
+      if (fallbackTimerId !== undefined) window.clearTimeout(fallbackTimerId);
+      cleanupAnimation();
     };
   }, [
     segments,
