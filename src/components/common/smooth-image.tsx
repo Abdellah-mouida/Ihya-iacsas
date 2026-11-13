@@ -14,6 +14,7 @@ type SmoothImageProps = Omit<ImageProps, "fill" | "width" | "height" | "onLoad" 
   containerClassName?: string;
   fadeDurationMs?: number;
   revealImmediately?: boolean;
+  "data-testid"?: string;
   onError?: ImageProps["onError"];
 };
 
@@ -36,6 +37,7 @@ export function SmoothImage({
   draggable,
   fadeDurationMs = 550,
   revealImmediately = false,
+  "data-testid": imageTestId = "smooth-image",
   onError,
   ...imageProps
 }: SmoothImageProps) {
@@ -125,7 +127,7 @@ export function SmoothImage({
         onLoad={() => void finishDecode(false)}
         onError={(event) => { setFailedSource(sourceKey); onError?.(event); }}
         onTransitionEnd={handleTransitionEnd}
-        data-testid="smooth-image"
+        data-testid={imageTestId}
       />
     </span>
   );

@@ -49,12 +49,12 @@
 
 .profileCard {
   transition: box-shadow 240ms ease, border-color 240ms ease;
+  box-shadow: 0 18px 42px color-mix(in oklch, var(--main) 10%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .profileCard:hover {
     border-color: color-mix(in oklch, var(--main) 30%, var(--border));
-    box-shadow: 0 18px 42px color-mix(in oklch, var(--main) 10%, transparent);
   }
 }
 

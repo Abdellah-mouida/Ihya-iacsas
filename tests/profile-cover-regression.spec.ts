@@ -26,10 +26,12 @@ test("profile cover and settings crop match at required widths, themes, and loca
       let profileAspectForWidth = 0;
 
       for (const coverState of ["default", "uploaded"] as const) {
+        const expectedCover = coverState === "default" ? null : "/images/gathering.jpg";
         await prisma.user.update({
           where: { id: user.id },
-          data: { coverImage: coverState === "default" ? null : "/images/gathering.jpg" },
+          data: { coverImage: expectedCover },
         });
+        expect((await prisma.user.findUnique({ where: { id: user.id }, select: { coverImage: true } }))?.coverImage).toBe(expectedCover);
 
         for (const locale of ["ar", "en"] as const) {
           for (const theme of ["light", "sunset", "amoled", "black"] as const) {
@@ -41,6 +43,7 @@ test("profile cover and settings crop match at required widths, themes, and loca
             await page.goto("/profile");
             const profileFrame = page.locator('[data-testid="profile-cover-frame"]');
             await expect(profileFrame).toBeVisible();
+            await expect(profileFrame).toHaveAttribute("data-cover-source", expectedCover ?? "default");
             const profileFrameBox = await profileFrame.boundingBox();
             expect(profileFrameBox).toBeTruthy();
             const profileAspect = profileFrameBox ? profileFrameBox.width / profileFrameBox.height : 0;
@@ -57,14 +60,40 @@ test("profile cover and settings crop match at required widths, themes, and loca
             } else {
               await expect(page.locator('[data-testid="cover-upload-image"]')).toBeVisible();
             }
+            const header = page.locator('[data-testid="profile-header-card"]');
+            const restingShadow = await header.evaluate((element) => getComputedStyle(element).boxShadow);
+            expect(restingShadow, `profile header shadow is missing in ${locale}/${theme}`).not.toBe("none");
+            await header.hover({ position: { x: 8, y: 8 } });
+            expect(await header.evaluate((element) => getComputedStyle(element).boxShadow), `profile header shadow changes on hover in ${locale}/${theme}`).toBe(restingShadow);
             for (const infoBox of ["profile-glass-name", "profile-glass-details"]) {
               const box = page.locator(`[data-testid="${infoBox}"]`);
               await expect(box).toBeVisible();
-              expect(await box.evaluate((element) => getComputedStyle(element).backdropFilter)).toContain("blur");
-              expect(await box.evaluate((element) => getComputedStyle(element).borderWidth)).toBe("0px");
+              const styles = await box.evaluate((element) => {
+                const style = getComputedStyle(element);
+                const before = getComputedStyle(element, "::before");
+                const after = getComputedStyle(element, "::after");
+                return {
+                  backdropFilter: style.backdropFilter,
+                  borderWidth: style.borderWidth,
+                  outlineStyle: style.outlineStyle,
+                  boxShadow: style.boxShadow,
+                  pseudoBorders: [before.borderWidth, after.borderWidth],
+                  pseudoShadows: [before.boxShadow, after.boxShadow],
+                };
+              });
+              expect(styles.backdropFilter).toContain("blur");
+              expect(styles.borderWidth).toBe("0px");
+              expect(styles.outlineStyle).toBe("none");
+              const visibleBoxShadow = styles.boxShadow
+                .replace(/rgba\(0, 0, 0, 0\)\s+0px 0px 0px 0px/g, "")
+                .replaceAll(",", "")
+                .trim();
+              expect(visibleBoxShadow === "" || visibleBoxShadow === "none").toBe(true);
+              expect(styles.pseudoBorders).toEqual(["0px", "0px"]);
+              expect(styles.pseudoShadows).toEqual(["none", "none"]);
             }
             expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-            await page.locator('[data-testid="profile-header-card"]').screenshot({
+            await header.screenshot({
               path: `evidence/task-05/t2/profile-${width}-${locale}-${theme}-${coverState}.png`,
             });
           }
