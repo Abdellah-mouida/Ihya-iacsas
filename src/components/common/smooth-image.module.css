@@ -2,6 +2,7 @@
   position: relative;
   display: block;
   overflow: hidden;
+  container-type: inline-size;
 }
 
 .fill {
@@ -54,10 +55,11 @@
 
 .icon {
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: clamp(12px, 30cqi, 44px);
+  height: clamp(12px, 30cqi, 44px);
   place-items: center;
   color: color-mix(in oklch, var(--main) 34%, transparent);
+  animation: smooth-image-icon-float 4s ease-in-out infinite;
 }
 
 .icon svg {
@@ -79,8 +81,14 @@
   to { transform: translateX(480%) skewX(-14deg); }
 }
 
+@keyframes smooth-image-icon-float {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sweep { animation: none; }
+  .icon { animation: none; }
   .skeleton, .image { transition-duration: 0ms !important; }
   .image { transform: none; }
 }

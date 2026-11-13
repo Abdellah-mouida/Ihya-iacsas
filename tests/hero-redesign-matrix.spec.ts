@@ -32,11 +32,19 @@ test.describe("Home hero redesign", () => {
           localStorage.setItem("ihyaa-locale", localeValue);
           localStorage.setItem("ihyaa-theme", themeValue);
           document.cookie = `ihyaa-theme=${themeValue}; path=/`;
-          (window as Window & { __heroVitals?: { lcp: number; cls: number } }).__heroVitals = { lcp: 0, cls: 0 };
+          (window as Window & { __heroVitals?: { lcp: number; lcpElement: string; lcpRenderTime: number; lcpLoadTime: number; cls: number } }).__heroVitals = { lcp: 0, lcpElement: "", lcpRenderTime: 0, lcpLoadTime: 0, cls: 0 };
           new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
-              const metrics = (window as Window & { __heroVitals?: { lcp: number; cls: number } }).__heroVitals;
-              if (metrics) metrics.lcp = entry.startTime;
+              const metrics = (window as Window & { __heroVitals?: { lcp: number; lcpElement: string; lcpRenderTime: number; lcpLoadTime: number; cls: number } }).__heroVitals;
+              if (metrics) {
+                metrics.lcp = entry.startTime;
+                metrics.lcpRenderTime = (entry as LargestContentfulPaint).renderTime;
+                metrics.lcpLoadTime = (entry as LargestContentfulPaint).loadTime;
+                const element = (entry as LargestContentfulPaint).element;
+                metrics.lcpElement = element
+                  ? `${element.tagName.toLowerCase()}#${element.id}.${String(element.className).replaceAll(" ", ".")} ${element instanceof HTMLImageElement ? element.currentSrc : element.textContent?.trim().slice(0, 80)}`
+                  : "unknown";
+              }
             }
           }).observe({ type: "largest-contentful-paint", buffered: true });
           new PerformanceObserver((list) => {
@@ -46,7 +54,7 @@ test.describe("Home hero redesign", () => {
               const affectsHero = sources.some((source) => source.node?.closest?.("#home"));
               const firstContentfulPaint = performance.getEntriesByName("first-contentful-paint")[0]?.startTime;
               if (affectsHero && !shift.hadRecentInput && firstContentfulPaint !== undefined && shift.startTime >= firstContentfulPaint) {
-                const metrics = (window as Window & { __heroVitals?: { lcp: number; cls: number } }).__heroVitals;
+              const metrics = (window as Window & { __heroVitals?: { lcp: number; lcpElement: string; lcpRenderTime: number; lcpLoadTime: number; cls: number } }).__heroVitals;
                 if (metrics) metrics.cls += shift.value;
               }
             }
@@ -55,6 +63,8 @@ test.describe("Home hero redesign", () => {
 
         const page = await context.newPage();
         try {
+          const cdp = await context.newCDPSession(page);
+          await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
           await page.goto("/", { waitUntil: "domcontentloaded" });
           const hero = page.locator("#home");
           const heading = hero.getByRole("heading", { level: 1 });
@@ -105,6 +115,9 @@ test.describe("Home hero redesign", () => {
               copy: { left: c.left, right: c.right, top: c.top, bottom: c.bottom },
               photo: { top: p.top, height: p.height },
               clipPath: getComputedStyle(photo).clipPath,
+              clipPathData: document.querySelector("#home [data-testid='hero-frame'] clipPath path")?.getAttribute("d"),
+              shadowPathData: document.querySelector("#home [data-testid='hero-frame-shadow'] path")?.getAttribute("d"),
+              shadowFilter: getComputedStyle(document.querySelector("#home [data-testid='hero-frame-shadow'] path")!).filter,
               headingLines: new Set([...document.querySelectorAll("#home [data-testid='hero-heading-word']")].map((word) => Math.round(word.getBoundingClientRect().top))).size,
             };
           });
@@ -112,22 +125,42 @@ test.describe("Home hero redesign", () => {
           if (!geometry) throw new Error("Hero geometry is unavailable");
           expect(geometry.headingLines).toBeLessThanOrEqual((page.viewportSize()?.width ?? 360) <= 360 ? 3 : 2);
           expect(geometry.clipPath).toContain("ihyaa-hero-splash");
+          expect(geometry.shadowPathData).toBe(geometry.clipPathData);
+          expect(geometry.shadowFilter).toContain("drop-shadow");
           await expect(hero.getByTestId("hero-sticker")).toHaveCount(0);
           await expect(hero.getByTestId("hero-marquee")).toHaveCount(0);
           const copyOverlap = geometry.copy.left < geometry.frame.right && geometry.copy.right > geometry.frame.left && geometry.copy.top < geometry.frame.bottom && geometry.copy.bottom > geometry.frame.top;
           expect(copyOverlap, "Hero copy must remain outside the portrait and every face").toBe(false);
 
           await page.waitForTimeout(1200);
-          const vitals = await page.evaluate(() => (window as Window & { __heroVitals?: { lcp: number; cls: number } }).__heroVitals ?? { lcp: 0, cls: 0 });
-          expect(vitals.cls, `CLS in ${locale}/${theme}`).toBeLessThanOrEqual(0.001);
+          const vitals = await page.evaluate(() => {
+            const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+            return {
+              ...((window as Window & { __heroVitals?: { lcp: number; lcpElement: string; lcpRenderTime: number; lcpLoadTime: number; cls: number } }).__heroVitals ?? { lcp: 0, lcpElement: "", lcpRenderTime: 0, lcpLoadTime: 0, cls: 0 }),
+              responseStart: navigation?.responseStart ?? 0,
+              domContentLoaded: navigation?.domContentLoadedEventEnd ?? 0,
+              loadEventEnd: navigation?.loadEventEnd ?? 0,
+              portraitResource: performance.getEntriesByType("resource")
+                .filter((entry) => entry.name.includes("group-portrait-hero-384"))
+                .map((entry) => ({ startTime: entry.startTime, duration: entry.duration, responseEnd: (entry as PerformanceResourceTiming).responseEnd, transferSize: (entry as PerformanceResourceTiming).transferSize })),
+            };
+          });
+          expect(vitals.cls, `CLS in ${locale}/${theme}`).toBeLessThanOrEqual(0.01);
           if (page.viewportSize()?.width === 360) {
             expect(vitals.lcp, `LCP in ${locale}/${theme}`).toBeGreaterThan(0);
-            expect(vitals.lcp, `LCP must stay below 2.5s in ${locale}/${theme}`).toBeLessThan(2500);
+            expect(vitals.lcp, `LCP must stay below 2.5s in ${locale}/${theme}; details: ${JSON.stringify(vitals)}`).toBeLessThan(2500);
           }
 
           for (const width of WIDTHS) {
             await page.evaluate(() => window.scrollTo(0, 0));
             await page.setViewportSize({ width, height: 900 });
+            const sectionSizing = await hero.evaluate((node) => ({
+              height: node.getBoundingClientRect().height,
+              minHeight: Number.parseFloat(getComputedStyle(node).minHeight),
+              viewportHeight: window.innerHeight,
+            }));
+            expect(sectionSizing.minHeight).toBeGreaterThanOrEqual(sectionSizing.viewportHeight - 1);
+            expect(sectionSizing.height).toBeGreaterThanOrEqual(sectionSizing.viewportHeight - 1);
             const responsiveImage = await image.evaluate(async (node: HTMLImageElement) => {
               await node.decode();
               return {

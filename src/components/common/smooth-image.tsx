@@ -13,6 +13,8 @@ type SmoothImageProps = Omit<ImageProps, "fill" | "width" | "height" | "onLoad" 
   fill?: boolean;
   containerClassName?: string;
   fadeDurationMs?: number;
+  revealImmediately?: boolean;
+  "data-testid"?: string;
   onError?: ImageProps["onError"];
 };
 
@@ -34,6 +36,8 @@ export function SmoothImage({
   loading,
   draggable,
   fadeDurationMs = 550,
+  revealImmediately = false,
+  "data-testid": imageTestId = "smooth-image",
   onError,
   ...imageProps
 }: SmoothImageProps) {
@@ -97,7 +101,7 @@ export function SmoothImage({
       data-testid="smooth-image-frame"
       data-image-state={failed ? "error" : loaded ? "loaded" : "loading"}
     >
-      {skeletonVisible && (
+      {skeletonVisible && !revealImmediately && (
         <span
           aria-hidden="true"
           data-testid="smooth-image-skeleton"
@@ -118,12 +122,12 @@ export function SmoothImage({
         priority={priority}
         loading={priority ? undefined : loading ?? "lazy"}
         draggable={draggable}
-        className={cn(styles.image, className, loaded && !failed ? styles.imageLoaded : styles.imageWaiting)}
-        style={{ ...imageProps.style, transitionDuration: `${fadeMs}ms` }}
+        className={cn(styles.image, className, (loaded || revealImmediately) && !failed ? styles.imageLoaded : styles.imageWaiting)}
+        style={{ ...imageProps.style, transitionDuration: revealImmediately ? "0ms" : `${fadeMs}ms` }}
         onLoad={() => void finishDecode(false)}
         onError={(event) => { setFailedSource(sourceKey); onError?.(event); }}
         onTransitionEnd={handleTransitionEnd}
-        data-testid="smooth-image"
+        data-testid={imageTestId}
       />
     </span>
   );

@@ -1,12 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 import './FoldText.css';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -242,248 +238,276 @@ const FoldText = ({
       };
     }
 
-    const { axis, sign, origin } = hingeConfig;
-    const slats = SLATS[axis];
-    const unfoldEase = gsap.parseEase(ease) || gsap.parseEase('power3.out');
-    const foldEase = gsap.parseEase('power2.in');
-    const angle = safeStyle === 'flip' ? 180 : safeAngle;
-    const crease = safeCrease;
-    const finePointer = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? false;
-    const refold = hoverRefold && finePointer ? safeRefold : 0;
-    const lift = safeStyle === 'flip' ? 0.45 : 0;
+    let cancelled = false;
+    let failsafeTimer = null;
+    let cleanupInner = () => {};
 
-    const pieces = elements.map(element => {
-      const parts = safeStyle === 'blinds' ? Array.from(element.children) : [element];
-      if (safeStyle === 'blinds') {
-        element.style.opacity = '1';
-        parts.forEach((part, index) => {
-          part.style.transformOrigin = slats.origins[index];
-          if (index > 0) part.style.clipPath = slats.clips[index];
+    failsafeTimer = window.setTimeout(() => {
+      if (!cancelled && root.getAttribute('data-fold-started') !== 'true') {
+        clearToStatic();
+        onStateChangeRef.current?.('static');
+      }
+    }, 2000);
+
+    const fontsWait =
+      document.fonts?.ready && typeof document.fonts.ready.then === 'function'
+        ? Promise.race([
+            document.fonts.ready.catch(() => {}),
+            new Promise(resolve => window.setTimeout(resolve, 600))
+          ])
+        : Promise.resolve();
+
+    const setup = async () => {
+      const [{ gsap }, scrollTriggerMod] = await Promise.all([
+        import('gsap'),
+        trigger === 'scroll' ? import('gsap/ScrollTrigger') : Promise.resolve(null),
+        trigger === 'hover' || trigger === 'scroll' ? Promise.resolve() : fontsWait
+      ]);
+      if (cancelled) return;
+      const ScrollTrigger = scrollTriggerMod?.ScrollTrigger;
+      if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+
+      const { axis, sign, origin } = hingeConfig;
+      const slats = SLATS[axis];
+      const unfoldEase = gsap.parseEase(ease) || gsap.parseEase('power3.out');
+      const foldEase = gsap.parseEase('power2.in');
+      const angle = safeStyle === 'flip' ? 180 : safeAngle;
+      const crease = safeCrease;
+      const finePointer = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? false;
+      const refold = hoverRefold && finePointer ? safeRefold : 0;
+      const lift = safeStyle === 'flip' ? 0.45 : 0;
+
+      const pieces = elements.map(element => {
+        const parts = safeStyle === 'blinds' ? Array.from(element.children) : [element];
+        if (safeStyle === 'blinds') {
+          element.style.opacity = '1';
+          parts.forEach((part, index) => {
+            part.style.transformOrigin = slats.origins[index];
+            if (index > 0) part.style.clipPath = slats.clips[index];
+          });
+        } else {
+          element.style.transformOrigin = safeStyle === 'flip' ? '50% 50%' : origin;
+          element.style.backfaceVisibility = safeStyle === 'flip' ? 'visible' : '';
+        }
+        return { element, parts, t: startsFolded ? 0 : 1, f: 0, r: 0, aim: 0 };
+      });
+
+      const shade = (progress, tilt) => String(crease * clamp(1 - progress + tilt / 90, 0, 1));
+
+      const render = () => {
+        pieces.forEach(piece => {
+          const tilt = piece.r * refold;
+
+          if (safeStyle === 'blinds') {
+            let resting = tilt < 0.05;
+            piece.parts.forEach((part, index) => {
+              const offset = index * SLAT_DELAY;
+              const open = unfoldEase(clamp((piece.t - offset) / (1 - SLAT_DELAY), 0, 1));
+              const close = foldEase(clamp((piece.f - offset) / (1 - SLAT_DELAY), 0, 1));
+              const progress = open * (1 - close);
+              if (Math.abs(1 - progress) > 0.002) resting = false;
+              part.style.transform = `${axis}(${sign * ((1 - progress) * angle + tilt)}deg)`;
+              part.style.opacity = String(clamp(progress, 0, 1));
+              part.style.setProperty('--fold-crease', shade(progress, tilt));
+            });
+            piece.parts[0].style.clipPath = resting ? 'none' : slats.clips[0];
+            piece.parts[1].style.visibility = resting ? 'hidden' : 'visible';
+            return;
+          }
+
+          const progress = unfoldEase(piece.t) * (1 - foldEase(piece.f));
+          if (Math.abs(1 - progress) < 0.0005 && Math.abs(tilt) < 0.0005) {
+            piece.element.style.transform = '';
+            piece.element.style.opacity = '1';
+            piece.element.style.setProperty('--fold-crease', '0');
+            return;
+          }
+          const rise = lift * Math.sin(Math.PI * clamp(progress, 0, 1));
+          const turn = `${axis}(${sign * ((1 - progress) * angle + tilt)}deg)`;
+          piece.element.style.transform = rise > 0.001 ? `translateZ(${rise}em) ${turn}` : turn;
+          piece.element.style.opacity = String(clamp(progress, 0, 1));
+          piece.element.style.setProperty('--fold-crease', shade(progress, tilt));
+        });
+      };
+
+      let timeline = null;
+      let scrollTrigger = null;
+
+      const play = loop => {
+        timeline?.kill();
+        timeline = gsap.timeline({
+          paused: pausedRef.current,
+          onUpdate: render,
+          ...(loop ? { repeat: -1, repeatDelay: 0.35 } : {})
+        });
+        timeline.fromTo(
+          pieces,
+          { t: 0, f: 0 },
+          { t: 1, duration, ease: 'none', stagger: { each: safeStagger, from: staggerFrom } }
+        );
+        if (loop) {
+          timeline.to(
+            pieces,
+            { f: 1, duration: duration * 0.75, ease: 'none', stagger: { each: safeStagger, from: staggerFrom } },
+            `+=${safeDelay}`
+          );
+        }
+        timelineRef.current = timeline;
+        onStateChangeRef.current?.('ready');
+        render();
+      };
+
+      const handleEnter = () => play(false);
+
+      if (trigger === 'hover') {
+        root.setAttribute('data-fold-started', 'true');
+        root.removeAttribute('data-fold-initial');
+        render();
+        onStateChangeRef.current?.('ready');
+        root.addEventListener('mouseenter', handleEnter);
+      } else if (trigger === 'scroll' && ScrollTrigger) {
+        root.setAttribute('data-fold-started', 'true');
+        root.removeAttribute('data-fold-initial');
+        render();
+        scrollTrigger = ScrollTrigger.create({
+          trigger: root,
+          start: 'top 82%',
+          once: true,
+          onEnter: handleEnter
         });
       } else {
-        element.style.transformOrigin = safeStyle === 'flip' ? '50% 50%' : origin;
-        element.style.backfaceVisibility = safeStyle === 'flip' ? 'visible' : '';
-      }
-      return { element, parts, t: startsFolded ? 0 : 1, f: 0, r: 0, aim: 0 };
-    });
-
-    const shade = (progress, tilt) => String(crease * clamp(1 - progress + tilt / 90, 0, 1));
-
-    const render = () => {
-      pieces.forEach(piece => {
-        const tilt = piece.r * refold;
-
-        if (safeStyle === 'blinds') {
-          let resting = tilt < 0.05;
-          piece.parts.forEach((part, index) => {
-            const offset = index * SLAT_DELAY;
-            const open = unfoldEase(clamp((piece.t - offset) / (1 - SLAT_DELAY), 0, 1));
-            const close = foldEase(clamp((piece.f - offset) / (1 - SLAT_DELAY), 0, 1));
-            const progress = open * (1 - close);
-            if (Math.abs(1 - progress) > 0.002) resting = false;
-            part.style.transform = `${axis}(${sign * ((1 - progress) * angle + tilt)}deg)`;
-            part.style.opacity = String(clamp(progress, 0, 1));
-            part.style.setProperty('--fold-crease', shade(progress, tilt));
-          });
-          piece.parts[0].style.clipPath = resting ? 'none' : slats.clips[0];
-          piece.parts[1].style.visibility = resting ? 'hidden' : 'visible';
-          return;
-        }
-
-        const progress = unfoldEase(piece.t) * (1 - foldEase(piece.f));
-        if (Math.abs(1 - progress) < 0.0005 && Math.abs(tilt) < 0.0005) {
-          piece.element.style.transform = '';
-          piece.element.style.opacity = '1';
-          piece.element.style.setProperty('--fold-crease', '0');
-          return;
-        }
-        const rise = lift * Math.sin(Math.PI * clamp(progress, 0, 1));
-        const turn = `${axis}(${sign * ((1 - progress) * angle + tilt)}deg)`;
-        piece.element.style.transform = rise > 0.001 ? `translateZ(${rise}em) ${turn}` : turn;
-        piece.element.style.opacity = String(clamp(progress, 0, 1));
-        piece.element.style.setProperty('--fold-crease', shade(progress, tilt));
-      });
-    };
-
-    let timeline = null;
-    let scrollTrigger = null;
-    let cancelled = false;
-    let fontFallbackTimer = null;
-    let failsafeTimer = null;
-
-    const play = loop => {
-      timeline?.kill();
-      timeline = gsap.timeline({
-        paused: pausedRef.current,
-        onUpdate: render,
-        ...(loop ? { repeat: -1, repeatDelay: 0.35 } : {})
-      });
-      timeline.fromTo(
-        pieces,
-        { t: 0, f: 0 },
-        { t: 1, duration, ease: 'none', stagger: { each: safeStagger, from: staggerFrom } }
-      );
-      if (loop) {
-        timeline.to(
-          pieces,
-          { f: 1, duration: duration * 0.75, ease: 'none', stagger: { each: safeStagger, from: staggerFrom } },
-          `+=${safeDelay}`
-        );
-      }
-      timelineRef.current = timeline;
-      onStateChangeRef.current?.('ready');
-      render();
-    };
-
-    const handleEnter = () => play(false);
-
-    if (trigger === 'hover') {
-      root.setAttribute('data-fold-started', 'true');
-      root.removeAttribute('data-fold-initial');
-      render();
-      onStateChangeRef.current?.('ready');
-      root.addEventListener('mouseenter', handleEnter);
-    } else if (trigger === 'scroll') {
-      root.setAttribute('data-fold-started', 'true');
-      root.removeAttribute('data-fold-initial');
-      render();
-      scrollTrigger = ScrollTrigger.create({
-        trigger: root,
-        start: 'top 82%',
-        once: true,
-        onEnter: handleEnter
-      });
-    } else {
-      let started = false;
-      const startFold = () => {
-        if (started || cancelled) return;
-        started = true;
-        if (fontFallbackTimer) window.clearTimeout(fontFallbackTimer);
         if (failsafeTimer) window.clearTimeout(failsafeTimer);
         root.setAttribute('data-fold-started', 'true');
         play(trigger === 'loop');
         root.removeAttribute('data-fold-initial');
+      }
+
+      let pointer = null;
+      let centers = null;
+      let measured = null;
+      let relaxing = false;
+
+      const measure = box => {
+        centers = pieces.map(piece => {
+          const rect = piece.element.parentElement.getBoundingClientRect();
+          return { x: rect.left - box.left + rect.width / 2, y: rect.top - box.top + rect.height / 2 };
+        });
+        measured = { width: box.width, height: box.height };
       };
 
-      failsafeTimer = window.setTimeout(() => {
-        if (!started && !cancelled) {
-          clearToStatic();
-          onStateChangeRef.current?.('static');
+      const relax = (_time, deltaTime) => {
+        const step = Math.min(deltaTime, 64) / 1000;
+        let moving = false;
+        pieces.forEach(piece => {
+          const rate = piece.aim > piece.r ? 14 : 6;
+          piece.r += (piece.aim - piece.r) * (1 - Math.exp(-rate * step));
+          if (Math.abs(piece.aim - piece.r) > 0.001) moving = true;
+          else piece.r = piece.aim;
+        });
+        render();
+        if (!moving) {
+          gsap.ticker.remove(relax);
+          relaxing = false;
         }
-      }, 2000);
+      };
 
-      const fontsReady = document.fonts?.ready;
-      if (fontsReady && typeof fontsReady.then === 'function') {
-        fontFallbackTimer = window.setTimeout(startFold, 600);
-        fontsReady.then(startFold, startFold);
-      } else {
-        startFold();
+      const aim = () => {
+        const box = root.getBoundingClientRect();
+        const near =
+          pointer &&
+          pointer.x > box.left - safeRadius &&
+          pointer.x < box.right + safeRadius &&
+          pointer.y > box.top - safeRadius &&
+          pointer.y < box.bottom + safeRadius;
+        if (near && (!centers || Math.abs(box.width - measured.width) + Math.abs(box.height - measured.height) > 1)) {
+          measure(box);
+        }
+        let changed = false;
+        pieces.forEach((piece, index) => {
+          let value = 0;
+          if (near) {
+            const center = centers[index];
+            const distance = Math.hypot(box.left + center.x - pointer.x, box.top + center.y - pointer.y) / safeRadius;
+            if (distance < 1) value = 1 - distance * distance * (3 - 2 * distance);
+          }
+          if (value !== piece.aim) changed = true;
+          piece.aim = value;
+        });
+        if (changed && !relaxing) {
+          relaxing = true;
+          gsap.ticker.add(relax);
+        }
+      };
+
+      const handleMove = event => {
+        pointer = { x: event.clientX, y: event.clientY };
+        aim();
+      };
+
+      const handleLeave = () => {
+        pointer = null;
+        aim();
+      };
+
+      const handleScroll = () => {
+        if (pointer) aim();
+      };
+
+      if (refold) {
+        window.addEventListener('pointermove', handleMove, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+        document.documentElement.addEventListener('pointerleave', handleLeave);
       }
-    }
 
-    let pointer = null;
-    let centers = null;
-    let measured = null;
-    let relaxing = false;
-
-    const measure = box => {
-      centers = pieces.map(piece => {
-        const rect = piece.element.parentElement.getBoundingClientRect();
-        return { x: rect.left - box.left + rect.width / 2, y: rect.top - box.top + rect.height / 2 };
-      });
-      measured = { width: box.width, height: box.height };
-    };
-
-    const relax = (_time, deltaTime) => {
-      const step = Math.min(deltaTime, 64) / 1000;
-      let moving = false;
-      pieces.forEach(piece => {
-        const rate = piece.aim > piece.r ? 14 : 6;
-        piece.r += (piece.aim - piece.r) * (1 - Math.exp(-rate * step));
-        if (Math.abs(piece.aim - piece.r) > 0.001) moving = true;
-        else piece.r = piece.aim;
-      });
-      render();
-      if (!moving) {
+      const handleMotionChange = event => {
+        if (!event.matches) return;
+        timeline?.kill();
+        timeline = null;
+        timelineRef.current = null;
         gsap.ticker.remove(relax);
         relaxing = false;
-      }
+        clearToStatic();
+        onStateChangeRef.current?.('static');
+      };
+      motionQuery?.addEventListener?.('change', handleMotionChange);
+
+      cleanupInner = () => {
+        root.removeEventListener('mouseenter', handleEnter);
+        window.removeEventListener('pointermove', handleMove);
+        window.removeEventListener('scroll', handleScroll, { capture: true });
+        document.documentElement.removeEventListener('pointerleave', handleLeave);
+        motionQuery?.removeEventListener?.('change', handleMotionChange);
+        gsap.ticker.remove(relax);
+        scrollTrigger?.kill();
+        timeline?.kill();
+        timelineRef.current = null;
+        gsap.killTweensOf(pieces);
+      };
     };
 
-    const aim = () => {
-      const box = root.getBoundingClientRect();
-      const near =
-        pointer &&
-        pointer.x > box.left - safeRadius &&
-        pointer.x < box.right + safeRadius &&
-        pointer.y > box.top - safeRadius &&
-        pointer.y < box.bottom + safeRadius;
-      if (near && (!centers || Math.abs(box.width - measured.width) + Math.abs(box.height - measured.height) > 1)) {
-        measure(box);
-      }
-      let changed = false;
-      pieces.forEach((piece, index) => {
-        let value = 0;
-        if (near) {
-          const center = centers[index];
-          const distance = Math.hypot(box.left + center.x - pointer.x, box.top + center.y - pointer.y) / safeRadius;
-          if (distance < 1) value = 1 - distance * distance * (3 - 2 * distance);
-        }
-        if (value !== piece.aim) changed = true;
-        piece.aim = value;
+    const startSetup = () => {
+      if (cancelled) return;
+      void setup().catch(() => {
+        if (cancelled) return;
+        clearToStatic();
+        onStateChangeRef.current?.('static');
       });
-      if (changed && !relaxing) {
-        relaxing = true;
-        gsap.ticker.add(relax);
-      }
     };
 
-    const handleMove = event => {
-      pointer = { x: event.clientX, y: event.clientY };
-      aim();
-    };
-
-    const handleLeave = () => {
-      pointer = null;
-      aim();
-    };
-
-    const handleScroll = () => {
-      if (pointer) aim();
-    };
-
-    if (refold) {
-      window.addEventListener('pointermove', handleMove, { passive: true });
-      window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
-      document.documentElement.addEventListener('pointerleave', handleLeave);
+    let idleId;
+    let timerId;
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(startSetup, { timeout: 600 });
+    } else {
+      timerId = window.setTimeout(startSetup, 150);
     }
-
-    const handleMotionChange = event => {
-      if (!event.matches) return;
-      timeline?.kill();
-      timeline = null;
-      timelineRef.current = null;
-      gsap.ticker.remove(relax);
-      relaxing = false;
-      clearToStatic();
-      onStateChangeRef.current?.('static');
-    };
-    motionQuery?.addEventListener?.('change', handleMotionChange);
 
     return () => {
       cancelled = true;
-      if (fontFallbackTimer) window.clearTimeout(fontFallbackTimer);
       if (failsafeTimer) window.clearTimeout(failsafeTimer);
-      root.removeEventListener('mouseenter', handleEnter);
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('scroll', handleScroll, { capture: true });
-      document.documentElement.removeEventListener('pointerleave', handleLeave);
-      motionQuery?.removeEventListener?.('change', handleMotionChange);
-      gsap.ticker.remove(relax);
-      scrollTrigger?.kill();
-      timeline?.kill();
-      timelineRef.current = null;
-      gsap.killTweensOf(pieces);
+      if (idleId !== undefined) window.cancelIdleCallback?.(idleId);
+      if (timerId !== undefined) window.clearTimeout(timerId);
+      cleanupInner();
     };
   }, [
     segments,

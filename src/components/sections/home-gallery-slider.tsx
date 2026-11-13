@@ -82,6 +82,7 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
             : undefined;
         return {
           image: toSliderImageUrl(photo.imageUrl, isMobile),
+          rawImage: photo.imageUrl,
           alt: caption,
           caption,
           date,
@@ -93,6 +94,7 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
       const caption = t(item.altKey);
       return {
         image: toSliderImageUrl(item.src, isMobile),
+        rawImage: item.src,
         alt: caption,
         caption,
       };
@@ -113,7 +115,14 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
   return (
     <div className="relative aspect-square max-h-[80svh] w-full sm:aspect-video">
       {lowPower ? (
-        <MorphCrossfade items={items} dir={dir} labels={labels} />
+        <MorphCrossfade
+          items={items}
+          autoplay
+          autoplayDelay={3}
+          dir={dir}
+          labels={labels}
+          className="!absolute inset-0"
+        />
       ) : (
         <MorphSlider
           items={items}
@@ -128,6 +137,7 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
           lowPower={lowPower}
           dir={dir}
           labels={labels}
+          className="!absolute inset-0"
         />
       )}
     </div>

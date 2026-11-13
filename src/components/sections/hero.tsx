@@ -12,6 +12,8 @@ import { useLocale } from "@/i18n/locale-provider";
 import { EVENTS_HREF, IMAGES } from "@/lib/content";
 import { useLowPower } from "@/hooks/use-low-power";
 import FoldText from "@/components/FoldText";
+
+const HERO_SPLASH_PATH = "M .08 .24 C .11 .14 .23 .10 .33 .15 C .41 .06 .53 .04 .61 .12 C .72 .08 .83 .13 .86 .24 C .96 .25 .99 .35 .95 .44 C 1 .54 .97 .64 .91 .70 C .96 .81 .87 .91 .77 .89 C .69 .98 .58 .97 .50 .92 C .40 .99 .29 .93 .25 .84 C .14 .89 .05 .82 .09 .72 C .01 .64 .03 .52 .08 .44 C .02 .36 .03 .29 .08 .24 Z";
 function groupPortraitLoader({ width }: { width: number }) {
   // shortcut: serve the nearest pre-encoded AVIF; cap at 2048px to avoid a missing srcset candidate.
   const availableWidths = [384, 640, 750, 828, 1080, 1200, 1800, 1920, 2048];
@@ -64,9 +66,9 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="home"
-      className="relative z-10 mb-[-3.5rem] overflow-visible px-4 pt-24 pb-0 text-foreground sm:px-6 sm:pt-28"
+      className={`${styles.heroSection} relative z-10 mb-[-3.5rem] overflow-visible px-4 pb-0 text-foreground sm:px-6`}
     >
-      <div className="mx-auto grid max-w-6xl items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+      <div className={`${styles.heroInner} mx-auto grid max-w-6xl items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12`}>
         <div
           data-testid="hero-copy"
           className="relative z-10 order-2 flex flex-col items-start text-start lg:order-1"
@@ -152,9 +154,18 @@ export function Hero() {
                 id="ihyaa-hero-splash"
                 clipPathUnits="objectBoundingBox"
               >
-                <path d="M .08 .24 C .11 .14 .23 .10 .33 .15 C .41 .06 .53 .04 .61 .12 C .72 .08 .83 .13 .86 .24 C .96 .25 .99 .35 .95 .44 C 1 .54 .97 .64 .91 .70 C .96 .81 .87 .91 .77 .89 C .69 .98 .58 .97 .50 .92 C .40 .99 .29 .93 .25 .84 C .14 .89 .05 .82 .09 .72 C .01 .64 .03 .52 .08 .44 C .02 .36 .03 .29 .08 .24 Z" />
+                <path d={HERO_SPLASH_PATH} />
               </clipPath>
             </defs>
+          </svg>
+          <svg
+            aria-hidden="true"
+            data-testid="hero-frame-shadow"
+            className={styles.frameShadow}
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+          >
+            <path d={HERO_SPLASH_PATH} />
           </svg>
           <InViewMount className={styles.ornamentHost}>
             <svg
@@ -183,6 +194,7 @@ export function Hero() {
               alt={t("hero.photoAlt")}
               fill
               priority
+              revealImmediately
               fadeDurationMs={250}
               fetchPriority="high"
               sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"

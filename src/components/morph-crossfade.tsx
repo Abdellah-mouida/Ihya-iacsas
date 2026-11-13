@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { SmoothImage } from "@/components/common/smooth-image";
 import "./MorphSlider.css";
 
 export type SliderItem = {
   image: string;
+  rawImage?: string;
   alt?: string;
   caption?: string;
   date?: string;
@@ -33,6 +34,8 @@ export function MorphCrossfade({
   items,
   startIndex = 0,
   duration = 0.45,
+  autoplay = false,
+  autoplayDelay = 3,
   loop = true,
   showCaptions = true,
   showControls = true,
@@ -45,6 +48,8 @@ export function MorphCrossfade({
   items: SliderItem[];
   startIndex?: number;
   duration?: number;
+  autoplay?: boolean;
+  autoplayDelay?: number;
   loop?: boolean;
   showCaptions?: boolean;
   showControls?: boolean;
@@ -54,9 +59,42 @@ export function MorphCrossfade({
   reducedMotion?: boolean;
   className?: string;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(startIndex);
+  const [hovering, setHovering] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const [inView, setInView] = useState(true);
+  const [pageHidden, setPageHidden] = useState(false);
+  const [mqReducedMotion, setMqReducedMotion] = useState(false);
+  const effectiveReducedMotion = reducedMotion || mqReducedMotion;
   const safeIndex = items.length > 0 ? ((index % items.length) + items.length) % items.length : 0;
   const isRtl = dir === "rtl";
+
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const sync = () => setMqReducedMotion(Boolean(mq?.matches));
+    sync();
+    mq?.addEventListener?.("change", sync);
+    return () => mq?.removeEventListener?.("change", sync);
+  }, []);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onVisibility = () => setPageHidden(document.hidden);
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   const step = useCallback(
     (delta: number) => {
@@ -69,6 +107,14 @@ export function MorphCrossfade({
     },
     [items.length, loop],
   );
+
+  useEffect(() => {
+    if (!autoplay || effectiveReducedMotion || hovering || focusWithin || !inView || pageHidden || items.length < 2) {
+      return undefined;
+    }
+    const id = window.setTimeout(() => step(1), Math.max(autoplayDelay, 1) * 1000);
+    return () => window.clearTimeout(id);
+  }, [autoplay, autoplayDelay, effectiveReducedMotion, hovering, focusWithin, inView, pageHidden, items.length, safeIndex, step]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
@@ -87,6 +133,7 @@ export function MorphCrossfade({
 
   return (
     <div
+      ref={rootRef}
       data-rb="MorphSlider"
       data-morph-mode="crossfade"
       data-morph-rendering="false"
@@ -97,6 +144,12 @@ export function MorphCrossfade({
           "--ms-dot": `${(Math.min(duration, 0.45) * 0.45).toFixed(3)}s`,
         } as React.CSSProperties
       }
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      onFocusCapture={() => setFocusWithin(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setFocusWithin(false);
+      }}
     >
       <div
         className="morph-slider-stage"
@@ -115,12 +168,13 @@ export function MorphCrossfade({
               className={`morph-slider-fallback-slide ${i === safeIndex ? "is-active" : ""}`}
             >
               <SmoothImage
-                src={item.image}
+                src={item.rawImage || item.image}
                 alt={item.alt || item.caption || ""}
                 fill
+                loading="eager"
                 sizes="(max-width: 640px) 100vw, 1152px"
                 className="object-cover"
-                fadeDurationMs={reducedMotion ? 0 : 350}
+                fadeDurationMs={effectiveReducedMotion ? 0 : 350}
               />
             </div>
           ))}

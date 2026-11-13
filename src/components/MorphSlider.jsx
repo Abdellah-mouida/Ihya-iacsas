@@ -397,7 +397,11 @@ class MorphEngine {
           this.program.uniforms.uNextSize.value = this.sizes[index];
         }
       };
-      img.onerror = () => {};
+      img.onerror = () => {
+        if (!this.destroyed && index === this.current && !this.firstFrameSent) {
+          this.onContextLost?.();
+        }
+      };
       img.src = item.image;
     });
   }
@@ -837,12 +841,12 @@ export default function MorphSlider({
   );
 
   useEffect(() => {
-    if (!autoplay || lowPower || reducedMotion || hovering || focusWithin || !inView || pageHidden || items.length < 2) {
+    if (!autoplay || reducedMotion || hovering || focusWithin || !inView || pageHidden || items.length < 2) {
       return undefined;
     }
     const id = window.setTimeout(handleNext, Math.max(autoplayDelay, 1) * 1000);
     return () => window.clearTimeout(id);
-  }, [autoplay, autoplayDelay, lowPower, reducedMotion, hovering, focusWithin, inView, pageHidden, items.length, safeIndex, handleNext]);
+  }, [autoplay, autoplayDelay, reducedMotion, hovering, focusWithin, inView, pageHidden, items.length, safeIndex, handleNext]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -914,6 +918,8 @@ export default function MorphSlider({
         items={items}
         startIndex={safeIndex}
         duration={effectiveDuration}
+        autoplay={autoplay}
+        autoplayDelay={autoplayDelay}
         loop={loop}
         showCaptions={showCaptions}
         showControls={showControls}
