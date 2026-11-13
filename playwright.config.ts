@@ -25,5 +25,15 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "firefox-about",
+      testMatch: "**/about-composition.spec.ts",
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit-about",
+      testMatch: "**/about-composition.spec.ts",
+      use: { ...devices["Desktop Safari"] },
+    },
   ],
 });
