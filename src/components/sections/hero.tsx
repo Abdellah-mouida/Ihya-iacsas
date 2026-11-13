@@ -2,7 +2,7 @@
 
 import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
-import { useEffect, useRef, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CalendarDays, Info } from "lucide-react";
 
 import styles from "./hero.module.css";
@@ -11,113 +11,49 @@ import { InViewMount } from "@/components/common/in-view-mount";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENTS_HREF, IMAGES } from "@/lib/content";
 import { useLowPower } from "@/hooks/use-low-power";
-
+import FoldText from "@/components/FoldText";
 function groupPortraitLoader({ width }: { width: number }) {
   // shortcut: serve the nearest pre-encoded AVIF; cap at 2048px to avoid a missing srcset candidate.
   const availableWidths = [384, 640, 750, 828, 1080, 1200, 1800, 1920, 2048];
-  const selectedWidth = availableWidths.find((candidate) => candidate >= width) ?? 2048;
+  const selectedWidth =
+    availableWidths.find((candidate) => candidate >= width) ?? 2048;
   return `/images/group-portrait-hero-${selectedWidth}.avif`;
 }
 
 export function Hero() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const lowPower = useLowPower();
   const sectionRef = useRef<HTMLElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const timelineRef = useRef<{ pause: () => void; resume: () => void; kill: () => void } | null>(null);
+  const [foldPaused, setFoldPaused] = useState(false);
   const headline = t("hero.title");
-  const pieces = headline.split(/(\s+)/).filter(Boolean);
+
+  const handleFoldStateChange = useCallback((state: string) => {
+    const section = sectionRef.current;
+    if (!section || lowPower) return;
+    section.dataset.foldState = state;
+  }, [lowPower]);
 
   useEffect(() => {
     const section = sectionRef.current;
-    const title = titleRef.current;
-    if (!section || !title || lowPower) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (reducedMotion.matches) return;
+    if (!section || lowPower) return;
 
-    let visible = false;
-    let disposed = false;
-    let gsapModule: typeof import("gsap") | null = null;
-    const clearFoldTransforms = () => {
-      if (!gsapModule) return;
-      gsapModule.gsap.set(title.querySelectorAll<HTMLElement>("[data-fold-word]"), { clearProps: "transform" });
-    };
-    const animate = async () => {
-      if (!visible || disposed || timelineRef.current) return;
-      section.dataset.foldState = "loading";
-      try {
-        gsapModule ??= await import("gsap");
-        if (disposed || !visible || reducedMotion.matches) {
-          section.dataset.foldState = "static";
-          return;
-        }
-        const words = title.querySelectorAll<HTMLElement>("[data-fold-word]");
-        const timeline = gsapModule.gsap.fromTo(
-          words,
-          { transformPerspective: 700, rotationX: -92, y: 2, transformOrigin: "50% 0%" },
-          { rotationX: 0, y: 0, duration: 0.65, stagger: 0.045, ease: "power3.out", paused: true },
-        );
-        timelineRef.current = timeline;
-        section.dataset.foldState = "ready";
-        timeline.play();
-      } catch {
-        section.dataset.foldState = "static";
-        // The complete server-rendered title remains visible if the optional animation chunk fails.
-      }
-    };
-
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      section.dataset.foldVisible = String(visible);
-      if (visible) {
-        section.dataset.foldPaused = "false";
-        if (timelineRef.current) timelineRef.current.resume();
-        else void animate();
-      } else {
-        section.dataset.foldPaused = "true";
-        timelineRef.current?.pause();
-      }
-    }, { threshold: 0.1 });
-    const onMotionChange = (event: MediaQueryListEvent) => {
-      if (event.matches) {
-        timelineRef.current?.kill();
-        timelineRef.current = null;
-        clearFoldTransforms();
-        section.dataset.foldState = "static";
-      } else if (visible) {
-        void animate();
-      }
-    };
-    reducedMotion.addEventListener("change", onMotionChange);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting;
+        section.dataset.foldVisible = String(visible);
+        section.dataset.foldPaused = String(!visible);
+        setFoldPaused(!visible);
+      },
+      { threshold: 0.1 },
+    );
     observer.observe(section);
     return () => {
-      disposed = true;
       observer.disconnect();
-      reducedMotion.removeEventListener("change", onMotionChange);
-      timelineRef.current?.kill();
-      timelineRef.current = null;
-      clearFoldTransforms();
       delete section.dataset.foldVisible;
       delete section.dataset.foldState;
       delete section.dataset.foldPaused;
     };
   }, [lowPower]);
-
-  const refoldWord = async (event: PointerEvent<HTMLSpanElement>) => {
-    if (
-      lowPower ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      event.pointerType !== "mouse" ||
-      !window.matchMedia("(hover: hover) and (pointer: fine)").matches
-    ) return;
-    const word = event.currentTarget;
-    try {
-      const { gsap } = await import("gsap");
-      gsap.to(word, { rotationX: -45, transformPerspective: 700, transformOrigin: "50% 0%", duration: 0.18, yoyo: true, repeat: 1, ease: "power2.inOut" });
-    } catch {
-      // Keep the static title if the optional animation chunk is unavailable.
-    }
-  };
 
   return (
     <section
@@ -133,33 +69,38 @@ export function Hero() {
           <p className="w-full text-base font-semibold text-[var(--main)] sm:text-lg">
             {t("hero.programName")}
           </p>
-          <h1
-            ref={titleRef}
-            aria-label={headline}
+
+          <FoldText
+            as="h1"
             data-rb="FoldText"
-            className={`${styles.heroTitle} mt-3 min-h-[3.4em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold leading-[1.12] lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
-          >
-            {pieces.map((word, index) => {
-              if (/^\s+$/.test(word)) return word;
-              const endPercent = Math.round((index / Math.max(pieces.length - 1, 1)) * 100);
-              return (
-                <span key={`word-${index}`} data-testid="hero-heading-word" className={styles.wordBox}>
-                  <span
-                    aria-hidden="true"
-                    data-testid="hero-fold-piece"
-                    data-fold-word
-                    className={styles.word}
-                    onPointerEnter={refoldWord}
-                    style={{
-                      color: `color-mix(in oklch, var(--hero-title-start) ${100 - endPercent}%, var(--hero-title-end) ${endPercent}%)`,
-                    }}
-                  >
-                    {word}
-                  </span>
-                </span>
-              );
-            })}
-          </h1>
+            text={headline}
+            ariaLabel={headline}
+            foldStyle="paper"
+            splitBy={locale === "ar" ? "word" : "char"}
+            hinge="top"
+            trigger="mount"
+            foldAngle={92}
+            duration={0.65}
+            stagger={0.045}
+            staggerFrom="start"
+            ease="power3.out"
+            loopDelay={1.4}
+            hoverRefold={!lowPower}
+            refoldRadius={140}
+            refoldAngle={45}
+            perspective={700}
+            creaseShading={0.55}
+            fontSize="inherit"
+            fontWeight={800}
+            gradient={["var(--hero-title-start)", "var(--hero-title-end)"]}
+            disabled={lowPower}
+            paused={foldPaused}
+            onStateChange={handleFoldStateChange}
+            wordTestId="hero-heading-word"
+            pieceTestId="hero-fold-piece"
+            className={`${styles.heroTitle} mt-3 block min-h-[3.4em] w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold ${locale === "ar" ? "leading-[1.28]" : "leading-[1.12]"} lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
+          />
+
           <p className="mt-5 min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
             {t("hero.subtitle")}
           </p>
@@ -171,7 +112,9 @@ export function Hero() {
             >
               <Link href={EVENTS_HREF} dir="ltr">
                 <CalendarDays aria-hidden className="size-5" />
-                <span dir="auto" className="inline-block w-40 text-center">{t("hero.ctaPrimary")}</span>
+                <span dir="auto" className="inline-block w-40 text-center">
+                  {t("hero.ctaPrimary")}
+                </span>
               </Link>
             </Button>
             <Button
@@ -182,22 +125,44 @@ export function Hero() {
             >
               <a href="#about" dir="ltr">
                 <Info aria-hidden className="size-5" />
-                <span dir="auto" className="inline-block w-40 text-center">{t("hero.ctaSecondary")}</span>
+                <span dir="auto" className="inline-block w-40 text-center">
+                  {t("hero.ctaSecondary")}
+                </span>
               </a>
             </Button>
           </div>
         </div>
 
-        <div data-testid="hero-frame" className={`${styles.frameWrap} order-1 lg:order-2`}>
-          <svg aria-hidden="true" className={styles.clipDefinitions} viewBox="0 0 1 1" preserveAspectRatio="none">
+        <div
+          data-testid="hero-frame"
+          className={`${styles.frameWrap} order-1 lg:order-2`}
+        >
+          <svg
+            aria-hidden="true"
+            className={styles.clipDefinitions}
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+          >
             <defs>
-              <clipPath id="ihyaa-hero-splash" clipPathUnits="objectBoundingBox">
+              <clipPath
+                id="ihyaa-hero-splash"
+                clipPathUnits="objectBoundingBox"
+              >
                 <path d="M .08 .24 C .11 .14 .23 .10 .33 .15 C .41 .06 .53 .04 .61 .12 C .72 .08 .83 .13 .86 .24 C .96 .25 .99 .35 .95 .44 C 1 .54 .97 .64 .91 .70 C .96 .81 .87 .91 .77 .89 C .69 .98 .58 .97 .50 .92 C .40 .99 .29 .93 .25 .84 C .14 .89 .05 .82 .09 .72 C .01 .64 .03 .52 .08 .44 C .02 .36 .03 .29 .08 .24 Z" />
               </clipPath>
             </defs>
           </svg>
           <InViewMount className={styles.ornamentHost}>
-            <svg aria-hidden="true" className={lowPower ? styles.splashOrnaments : `${styles.splashOrnaments} ${styles.drift}`} viewBox="0 0 100 100" preserveAspectRatio="none">
+            <svg
+              aria-hidden="true"
+              className={
+                lowPower
+                  ? styles.splashOrnaments
+                  : `${styles.splashOrnaments} ${styles.drift}`
+              }
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
               <path d="M 8 24 C 11 14 23 10 33 15 C 41 6 53 4 61 12 C 72 8 83 13 86 24 C 96 25 99 35 95 44 C 100 54 97 64 91 70 C 96 81 87 91 77 89 C 69 98 58 97 50 92 C 40 99 29 93 25 84 C 14 89 5 82 9 72 C 1 64 3 52 8 44 C 2 36 3 29 8 24 Z" />
               <circle cx="28" cy="8" r="1.7" />
               <circle cx="72" cy="5" r="1.1" />

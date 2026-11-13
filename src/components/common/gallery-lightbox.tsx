@@ -1,17 +1,18 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SmoothImage } from "@/components/common/smooth-image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getGalleryPhotos } from "@/app/actions/gallery";
+import CircularCarousel from "@/components/CircularCarousel";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
+import { useLowPower } from "@/hooks/use-low-power";
 import { GALLERY } from "@/lib/content";
 import { EASE } from "@/lib/motion";
 import { InViewReveal } from "@/components/common/in-view-reveal";
-import { SpotlightCard } from "@/components/common/spotlight-card";
 
 const LIGHTBOX_SIZES = "(max-width: 768px) 92vw, 768px";
 
@@ -36,6 +37,7 @@ export function GalleryLightbox({
   initialItems?: LightboxItem[];
 } = {}) {
   const { t, locale, dir } = useLocale();
+  const lowPower = useLowPower();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -77,9 +79,40 @@ export function GalleryLightbox({
             h: g.h,
           }));
 
-  const items = limit ? rawItems.slice(0, limit) : rawItems;
+  const items = useMemo(
+    () => (limit ? rawItems.slice(0, limit) : rawItems),
+    [limit, rawItems],
+  );
 
   const count = items.length;
+
+  const carouselItems = useMemo(() => {
+    if (!items.length) return [];
+    const minSlots = 8;
+    const totalSlots = items.length < minSlots ? Math.ceil(minSlots / items.length) * items.length : items.length;
+    return Array.from({ length: totalSlots }, (_, slotIndex) => {
+      const sourceIndex = slotIndex % items.length;
+      const item = items[sourceIndex];
+      return {
+        src: item.src,
+        alt: item.caption,
+        title: item.caption,
+        ariaLabel: `${t("gallery.view")}: ${item.caption}`,
+        sourceIndex,
+      };
+    });
+  }, [items, t]);
+
+  const handleCarouselItemClick = useCallback(
+    (item?: { sourceIndex?: number }, fallbackIndex?: number) => {
+      if (!count) return;
+      const targetIndex = item?.sourceIndex ?? (fallbackIndex ?? 0) % count;
+      setDirection(0);
+      setIndex(targetIndex);
+      setOpen(true);
+    },
+    [count],
+  );
 
   const go = useCallback(
     (delta: number) => {
@@ -103,41 +136,39 @@ export function GalleryLightbox({
 
   return (
     <>
-      <InViewReveal
-        className="columns-2 gap-4 md:columns-3 [&>*]:mb-4"
-      >
-        {items.map((item, i) => (
-          <SpotlightCard
-            key={item.src}
-            className="group glass relative break-inside-avoid rounded-2xl shadow-layered transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-layered hover:ring-2 hover:ring-brass/30"
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setDirection(0);
-                setIndex(i);
-                setOpen(true);
-              }}
-              aria-label={t("gallery.view")}
-              className="relative block w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <SmoothImage
-                src={item.src}
-                alt={item.caption}
-                width={item.w}
-                height={item.h}
-                sizes="(max-width: 768px) 50vw, 33vw"
-                className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                <ZoomIn className="size-7 text-foreground" />
-              </span>
-              <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-background/80 to-transparent p-3 text-start text-xs font-medium text-foreground opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                {item.caption}
-              </span>
-            </button>
-          </SpotlightCard>
-        ))}
+      <InViewReveal>
+        <div className="relative h-[260px] w-full sm:h-[360px] md:h-[440px] lg:h-[520px]">
+          <CircularCarousel
+            data-rb="CircularCarousel"
+            ariaLabel={t("gallery.title")}
+            items={carouselItems}
+            preset="panorama"
+            intro={lowPower ? "none" : "rise"}
+            cardWidth={320}
+            aspectRatio={1.333}
+            speed={14}
+            captions={false}
+            gap={15}
+            tilt={0}
+            curve={1}
+            perspective={1800}
+            autoplay={lowPower ? "off" : "drift"}
+            interval={3}
+            direction="left"
+            momentum={0.6}
+            snap
+            pauseOnHover={false}
+            focusOnClick
+            draggable={false}
+            parallax={lowPower ? 0 : 0.3}
+            stretch={lowPower ? 0 : 0.5}
+            fadeColor="var(--background)"
+            depthFade={0.55}
+            innerShade={0.6}
+            cornerRadius={12}
+            onItemClick={handleCarouselItemClick}
+          />
+        </div>
       </InViewReveal>
 
       <Dialog open={open} onOpenChange={setOpen}>

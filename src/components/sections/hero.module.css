@@ -58,21 +58,6 @@
   object-position: center;
 }
 
-.wordBox {
-  position: relative;
-  display: inline-block;
-  height: 1.12em;
-  line-height: 1.12;
-  white-space: pre;
-  vertical-align: baseline;
-}
-
-.word {
-  position: relative;
-  display: inline-block;
-  white-space: pre;
-}
-
 .heroTitle {
   --hero-title-start: var(--main);
   --hero-title-end: var(--gold-deep);

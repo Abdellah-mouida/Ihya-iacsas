@@ -6,21 +6,13 @@ import Link from "next/link";
 
 import { SectionHeading } from "@/components/common/section-heading";
 import { InViewMount } from "@/components/common/in-view-mount";
+import { SpotlightCard } from "@/components/common/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { GALLERY } from "@/lib/content";
 
 function GallerySkeleton() {
   return (
-    <div className="columns-2 gap-4 md:columns-3 [&>*]:mb-4">
-      {GALLERY.map((item) => (
-        <div
-          key={item.src}
-          style={{ aspectRatio: `${item.w} / ${item.h}` }}
-          className="animate-pulse break-inside-avoid rounded-2xl bg-muted/60"
-        />
-      ))}
-    </div>
+    <div className="h-[260px] w-full animate-pulse rounded-2xl bg-muted/60 sm:h-[360px] md:h-[440px] lg:h-[520px]" />
   );
 }
 
@@ -44,9 +36,11 @@ export function Gallery() {
           title={t("gallery.title")}
           desc={t("gallery.desc")}
         />
-        <InViewMount className="mt-14" minHeight={440} placeholder={<GallerySkeleton />}>
-          <GalleryLightbox limit={8} />
-        </InViewMount>
+        <SpotlightCard className="glass relative mt-14 overflow-hidden rounded-3xl border border-brass/25 p-2 shadow-layered sm:p-4">
+          <InViewMount minHeight={260} placeholder={<GallerySkeleton />}>
+            <GalleryLightbox limit={8} />
+          </InViewMount>
+        </SpotlightCard>
 
         <div className="mt-12 flex justify-center">
           <Button
