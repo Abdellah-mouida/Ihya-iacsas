@@ -131,7 +131,11 @@ export async function getAuthorizedChannelsForUser(
 export async function canUserAccessConversation(
   userId: string,
   conversationId: string,
-): Promise<{ ok: boolean; conversationType?: "PUBLIC" | "DM" | "ROOM" }> {
+): Promise<{
+  ok: boolean;
+  conversationType?: "PUBLIC" | "DM" | "ROOM";
+  hasMembership?: boolean;
+}> {
   const conv = await prisma.conversation.findUnique({
     where: { id: conversationId },
     select: {
@@ -147,11 +151,13 @@ export async function canUserAccessConversation(
 
   if (!conv) return { ok: false };
 
+  const hasMembership = conv.members.length > 0;
+
   if (conv.type === "PUBLIC") {
-    return { ok: true, conversationType: "PUBLIC" };
+    return { ok: true, conversationType: "PUBLIC", hasMembership };
   }
 
-  if (conv.members.length === 0) {
+  if (!hasMembership) {
     return { ok: false };
   }
 
@@ -181,5 +187,5 @@ export async function canUserAccessConversation(
     }
   }
 
-  return { ok: true, conversationType: conv.type };
+  return { ok: true, conversationType: conv.type, hasMembership };
 }
