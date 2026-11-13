@@ -96,10 +96,7 @@ test("image skeleton reserves its frame and reveals after the image decodes with
 
 test("skeleton icon is static when reduced motion is requested", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.route("**/_next/image**", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    await route.continue();
-  });
+  await page.route(/logo-circle\.png/, (route) => route.abort());
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.locator("#about").scrollIntoViewIfNeeded();
   const skeleton = page.locator('#about [data-testid="smooth-image-skeleton"]').first();

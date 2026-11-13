@@ -7,6 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test:clean": "node scripts/clean-test-artifacts.mjs",
     "check:i18n": "node scripts/check-i18n.js",
     "audit:cloudinary": "tsx --env-file=.env.local scripts/audit-cloudinary.ts",
     "postinstall": "prisma generate",
