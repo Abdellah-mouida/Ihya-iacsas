@@ -20,6 +20,53 @@ enum BranchKind {
   CUSTOM
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum FriendRequestPolicy {
+  EVERYONE
+  NOBODY
+}
+
+enum ConversationType {
+  PUBLIC
+  DM
+  ROOM
+}
+
+enum ConversationMemberRole {
+  OWNER
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  ROOM_INVITE
+  SYSTEM
+}
+
+enum InviteKind {
+  LINK
+  MESSAGE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
 model CarouselPost {
   id          String   @id @default(cuid())
   imageUrl    String
@@ -154,17 +201,37 @@ model User {
   tempPasswordHash      String?
   tempPasswordExpiresAt DateTime?
   sessionVersion        Int       @default(1)
+  friendRequestPolicy   FriendRequestPolicy @default(EVERYONE)
+  showOnlineStatus      Boolean   @default(true)
+  showFriendCount       Boolean   @default(true)
+  chatTermsAcceptedAt   DateTime?
+  chatPublicTimeoutUntil DateTime?
+  chatBannedAt          DateTime?
+  chatBannedReason      String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  accounts        Account[]
-  sessions        Session[]
-  bookings        Booking[]
-  auditLogs       AuditLog[]
-  branchesCreated Branch[]
+  accounts                Account[]
+  sessions                Session[]
+  bookings                Booking[]
+  auditLogs               AuditLog[]
+  branchesCreated         Branch[]
+  friendshipsSent         Friendship[]         @relation("FriendshipRequester")
+  friendshipsReceived     Friendship[]         @relation("FriendshipAddressee")
+  blocksInitiated         Block[]              @relation("BlockBlocker")
+  blocksReceived          Block[]              @relation("BlockBlocked")
+  conversationsOwned      Conversation[]       @relation("ConversationOwner")
+  conversationMemberships ConversationMember[]
+  messagesSent            Message[]            @relation("MessageSender")
+  invitesSent             Invite[]             @relation("InviteInviter")
+  invitesReceived         Invite[]             @relation("InviteInvitee")
+  reportsFiled            Report[]             @relation("ReportReporter")
+  reportsTargeted         Report[]             @relation("ReportTarget")
+  reportsReviewed         Report[]             @relation("ReportReviewer")
 
   @@index([email])
   @@index([role])
+  @@index([name])
 }
 
 model Branch {
@@ -283,4 +350,162 @@ model SystemSetting {
   value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  pairKey     String           @unique
+  status      FriendshipStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
+  @@index([status])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model Conversation {
+  id               String           @id @default(cuid())
+  type             ConversationType
+  name             String?
+  emoji            String?
+  accentColor      String?
+  ownerId          String?
+  membersCanInvite Boolean          @default(true)
+  dmPairKey        String?          @unique
+  publicKey        String?          @unique
+  memberCap        Int              @default(50)
+  lastMessageAt    DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  owner    User?                @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members  ConversationMember[]
+  messages Message[]
+  invites  Invite[]
+  reports  Report[]
+
+  @@index([type, lastMessageAt(sort: Desc)])
+  @@index([ownerId])
+}
+
+model ConversationMember {
+  id             String                 @id @default(cuid())
+  conversationId String
+  userId         String
+  role           ConversationMemberRole @default(MEMBER)
+  joinedAt       DateTime               @default(now())
+  lastReadAt     DateTime               @default(now())
+  muted          Boolean                @default(false)
+  leftAt         DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, leftAt])
+  @@index([conversationId, leftAt])
+}
+
+model Message {
+  id           String      @id @default(cuid())
+  clientId     String?
+  conversationId String
+  senderId     String?
+  isAnonymized Boolean     @default(false)
+  type         MessageType @default(TEXT)
+  ciphertext   String      @db.Text
+  nonce        String
+  keyVersion   Int         @default(1)
+  replyToId    String?
+  createdAt    DateTime    @default(now())
+  editedAt     DateTime?
+  deletedAt    DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  replyTo      Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("MessageReply")
+  invite       Invite?      @relation("InviteMessage")
+  reports      Report[]
+
+  @@unique([conversationId, senderId, clientId])
+  @@index([conversationId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([conversationId, deletedAt, createdAt(sort: Desc)])
+  @@index([senderId])
+}
+
+model Invite {
+  id        String       @id @default(cuid())
+  roomId    String
+  inviterId String
+  inviteeId String?
+  kind      InviteKind
+  tokenHash String?      @unique
+  messageId String?      @unique
+  expiresAt DateTime
+  maxUses   Int          @default(1)
+  uses      Int          @default(0)
+  status    InviteStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  room    Conversation @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  inviter User         @relation("InviteInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User?        @relation("InviteInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  message Message?     @relation("InviteMessage", fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([roomId, status])
+  @@index([inviterId, status])
+  @@index([inviteeId, status])
+  @@index([expiresAt])
+}
+
+model Report {
+  id                 String       @id @default(cuid())
+  reporterId         String
+  reportedUserId     String?
+  conversationId     String
+  messageId          String?
+  reason             String
+  snapshotCiphertext String       @db.Text
+  snapshotNonce      String
+  snapshotKeyVersion Int          @default(1)
+  snapshotAadSubject String
+  status             ReportStatus @default(OPEN)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  resolutionNote     String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  reporter     User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?        @relation("ReportTarget", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  reviewedBy   User?        @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([reporterId])
+  @@index([conversationId])
 }

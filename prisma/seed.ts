@@ -176,6 +176,18 @@ async function main() {
     console.log("Seeded Events and sample Bookings.");
   }
 
+  await prisma.conversation.upsert({
+    where: { publicKey: "PUBLIC" },
+    update: {},
+    create: {
+      type: "PUBLIC",
+      publicKey: "PUBLIC",
+      name: "Public Space",
+      membersCanInvite: false,
+      memberCap: 100000,
+    },
+  });
+
   console.log("Seeding finished successfully.");
 }
 
