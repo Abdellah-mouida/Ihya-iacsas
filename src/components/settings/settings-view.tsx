@@ -22,6 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   User,
   Palette,
   Globe2,
@@ -117,6 +124,39 @@ export function SettingsView({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  // Messaging & Friends Privacy States
+  const [friendRequestPolicy, setFriendRequestPolicy] = useState<"EVERYONE" | "NOBODY">(
+    userData.friendRequestPolicy || "EVERYONE",
+  );
+  const [showOnlineStatus, setShowOnlineStatus] = useState(Boolean(userData.showOnlineStatus));
+  const [showFriendCount, setShowFriendCount] = useState(Boolean(userData.showFriendCount));
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+
+  const updatePrivacySettings = async (patch: {
+    friendRequestPolicy?: "EVERYONE" | "NOBODY";
+    showOnlineStatus?: boolean;
+    showFriendCount?: boolean;
+  }) => {
+    setIsSavingPrivacy(true);
+    try {
+      const res = await fetch("/api/user/privacy", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        notify.error(t("privacySettings.saveFailed"));
+        return;
+      }
+      notify.success(t("privacySettings.saved"));
+      router.refresh();
+    } catch {
+      notify.error(t("privacySettings.saveFailed"));
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -870,6 +910,103 @@ export function SettingsView({
                   {isPending ? (isAr ? "جاري التحديث..." : "Updating...") : isAr ? "تحديث كلمة المرور" : "Update Password"}
                 </Button>
               </form>
+
+              {/* Messaging & Friends Privacy */}
+              <div className="pt-6 border-t border-border/60 space-y-5 max-w-xl" data-testid="settings-chat-privacy-block">
+                <div>
+                  <h3 className="text-sm font-heading font-bold text-foreground">
+                    {t("privacySettings.heading")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t("privacySettings.description")}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    {t("privacySettings.friendRequestPolicyLabel")}
+                  </Label>
+                  <Select
+                    value={friendRequestPolicy}
+                    disabled={isSavingPrivacy}
+                    onValueChange={(value) => {
+                      const next = value === "NOBODY" ? "NOBODY" : "EVERYONE";
+                      setFriendRequestPolicy(next);
+                      void updatePrivacySettings({ friendRequestPolicy: next });
+                    }}
+                  >
+                    <SelectTrigger data-testid="privacy-friend-request-policy" className="max-w-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EVERYONE">{t("privacySettings.policyEveryone")}</SelectItem>
+                      <SelectItem value="NOBODY">{t("privacySettings.policyNobody")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/40 p-4">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-foreground">
+                      {t("privacySettings.showOnlineStatusLabel")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("privacySettings.showOnlineStatusHint")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showOnlineStatus}
+                    aria-label={t("privacySettings.showOnlineStatusLabel")}
+                    data-testid="privacy-show-online-toggle"
+                    disabled={isSavingPrivacy}
+                    onClick={() => {
+                      const next = !showOnlineStatus;
+                      setShowOnlineStatus(next);
+                      void updatePrivacySettings({ showOnlineStatus: next });
+                    }}
+                    className={`flex h-7 w-12 shrink-0 items-center rounded-full border p-1 transition-colors ${
+                      showOnlineStatus
+                        ? "justify-end border-primary bg-primary"
+                        : "justify-start border-border bg-muted"
+                    }`}
+                  >
+                    <span className="size-5 rounded-full bg-background shadow-sm" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/40 p-4">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-foreground">
+                      {t("privacySettings.showFriendCountLabel")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("privacySettings.showFriendCountHint")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showFriendCount}
+                    aria-label={t("privacySettings.showFriendCountLabel")}
+                    data-testid="privacy-show-friend-count-toggle"
+                    disabled={isSavingPrivacy}
+                    onClick={() => {
+                      const next = !showFriendCount;
+                      setShowFriendCount(next);
+                      void updatePrivacySettings({ showFriendCount: next });
+                    }}
+                    className={`flex h-7 w-12 shrink-0 items-center rounded-full border p-1 transition-colors ${
+                      showFriendCount
+                        ? "justify-end border-primary bg-primary"
+                        : "justify-start border-border bg-muted"
+                    }`}
+                  >
+                    <span className="size-5 rounded-full bg-background shadow-sm" />
+                  </button>
+                </div>
+              </div>
 
               {/* Data Inquiries Notice */}
               <div className="pt-6 border-t border-border/60 space-y-2">

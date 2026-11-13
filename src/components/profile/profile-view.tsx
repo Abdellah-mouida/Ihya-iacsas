@@ -7,6 +7,7 @@ import { RoleBadge } from "@/components/common/role-badge";
 import { StatusNotice } from "@/components/common/status-notice";
 import { PatternCover } from "@/components/common/pattern-cover";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { CountUp } from "@/components/common/count-up";
 import { Button } from "@/components/ui/button";
 import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 import {
@@ -26,6 +27,7 @@ import {
   XCircle,
   ExternalLink,
   ChevronRight,
+  Users,
 } from "lucide-react";
 
 interface ProfileViewProps {
@@ -101,6 +103,11 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                     {user.age} {isAr ? "سنة" : "years"}
                   </span>
                 )}
+                <span data-testid="profile-friend-count" className="flex min-w-0 items-center gap-1 font-medium text-foreground/90">
+                  <Users className="size-3.5 shrink-0 text-primary" />
+                  <CountUp value={user.friendCount} locale={locale} className="tabular-nums font-semibold" />
+                  <span>{t("friends.friendCountLabel")}</span>
+                </span>
               </div>
             </div>
           </div>

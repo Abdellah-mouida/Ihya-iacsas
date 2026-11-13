@@ -63,6 +63,10 @@ export interface UserAccountData {
     skills: string[];
     languages: string[];
     volunteerAreas: string[];
+    friendRequestPolicy: "EVERYONE" | "NOBODY";
+    showOnlineStatus: boolean;
+    showFriendCount: boolean;
+    friendCount: number;
   };
   bookings: AccountBookingItem[];
 }
@@ -178,6 +182,9 @@ export async function getUserAccountData(): Promise<{
         skills: true,
         languages: true,
         volunteerAreas: true,
+        friendRequestPolicy: true,
+        showOnlineStatus: true,
+        showFriendCount: true,
       },
     });
 
@@ -201,21 +208,29 @@ export async function getUserAccountData(): Promise<{
       });
     }
 
-    // Fetch user bookings
-    const bookings = await prisma.booking.findMany({
-      where: {
-        OR: [
-          { userId: user.id },
-          user.email ? { email: user.email.toLowerCase() } : { userId: user.id },
-        ],
-      },
-      include: {
-        event: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    // Fetch user bookings and accepted friend count
+    const [bookings, friendCount] = await Promise.all([
+      prisma.booking.findMany({
+        where: {
+          OR: [
+            { userId: user.id },
+            user.email ? { email: user.email.toLowerCase() } : { userId: user.id },
+          ],
+        },
+        include: {
+          event: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.friendship.count({
+        where: {
+          status: "ACCEPTED",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+        },
+      }),
+    ]);
 
     const formattedBookings: AccountBookingItem[] = bookings.map((b) => ({
       id: b.id,
@@ -268,6 +283,10 @@ export async function getUserAccountData(): Promise<{
           skills: user.skills || [],
           languages: user.languages || [],
           volunteerAreas: user.volunteerAreas || [],
+          friendRequestPolicy: user.friendRequestPolicy,
+          showOnlineStatus: user.showOnlineStatus,
+          showFriendCount: user.showFriendCount,
+          friendCount,
         },
         bookings: formattedBookings,
       },
