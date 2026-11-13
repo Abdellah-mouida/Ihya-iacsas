@@ -58,13 +58,24 @@
   width: clamp(12px, 30cqi, 44px);
   height: clamp(12px, 30cqi, 44px);
   place-items: center;
-  color: color-mix(in oklch, var(--main) 34%, transparent);
-  animation: smooth-image-icon-float 4s ease-in-out infinite;
+  color: color-mix(in oklch, var(--main) 58%, transparent);
+  animation: smooth-image-icon-pulse 1.6s ease-in-out infinite;
+}
+
+.iconStatic {
+  animation: none;
+  color: color-mix(in oklch, var(--foreground) 45%, transparent);
 }
 
 .icon svg {
   width: 100%;
   height: 100%;
+}
+
+.spinnerArc {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smooth-image-icon-spin 1s linear infinite;
 }
 
 .sweep {
@@ -73,7 +84,7 @@
   inset-inline-start: -40%;
   width: 30%;
   transform: skewX(-14deg);
-  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--foreground) 5%, transparent), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--foreground) 6%, transparent), transparent);
   animation: smooth-image-sweep 2.6s ease-in-out infinite;
 }
 
@@ -81,14 +92,29 @@
   to { transform: translateX(480%) skewX(-14deg); }
 }
 
-@keyframes smooth-image-icon-float {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.04); }
+@keyframes smooth-image-icon-pulse {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes smooth-image-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sweep { animation: none; }
-  .icon { animation: none; }
+  .sweep,
+  .icon,
+  .spinnerArc {
+    animation: none;
+  }
   .skeleton, .image { transition-duration: 0ms !important; }
   .image { transform: none; }
 }

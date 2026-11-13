@@ -2,7 +2,7 @@
 
 import Image, { type ImageProps } from "next/image";
 import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "react";
-import { ImageIcon, ImageOff } from "lucide-react";
+import { ImageOff } from "lucide-react";
 
 import styles from "./smooth-image.module.css";
 import { cn } from "@/lib/utils";
@@ -108,7 +108,29 @@ export function SmoothImage({
           className={cn(styles.skeleton, loaded && !failed && styles.skeletonLeaving, failed && styles.errorTile)}
           style={{ transitionDuration: `${fadeMs}ms` }}
         >
-          <span className={styles.icon}>{failed ? <ImageOff strokeWidth={1.5} /> : <ImageIcon strokeWidth={1.5} />}</span>
+          <span className={cn(styles.icon, failed && styles.iconStatic)}>
+            {failed ? (
+              <ImageOff strokeWidth={1.5} />
+            ) : (
+              <svg viewBox="0 0 36 36" fill="none" aria-hidden="true">
+                <circle cx="18" cy="18" r="15" stroke="currentColor" strokeWidth="2" strokeOpacity="0.22" />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeDasharray="30 66"
+                  data-spinner-arc="true"
+                  className={styles.spinnerArc}
+                />
+                <rect x="11.5" y="12.5" width="13" height="11" rx="2.2" stroke="currentColor" strokeWidth="1.4" strokeOpacity="0.82" />
+                <circle cx="15.2" cy="16" r="1.15" fill="currentColor" fillOpacity="0.82" />
+                <path d="M12.7 21.5l3.2-3.1 2.2 2.1 2-1.8 3.2 2.8" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.82" />
+              </svg>
+            )}
+          </span>
           {!failed && <span className={styles.sweep} />}
         </span>
       )}
