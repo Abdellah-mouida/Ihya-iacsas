@@ -24,7 +24,7 @@ test.describe("React Bits visible proof", () => {
     });
     for (const [route, markers] of [
       ["/", ["FoldText", "CountUp", "SpotlightCard", "MorphSlider"]],
-      ["/gallery", ["TiltedCard"]],
+      ["/gallery", ["DriftWall"]],
       ["/events", ["AnimatedContent", "SpotlightCard"]],
       ["/login", ["BlurText"]],
       ["/signup", ["ShinyText"]],

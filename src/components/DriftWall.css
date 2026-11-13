@@ -1,0 +1,147 @@
+@layer components {
+  .drift-wall {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: pan-y;
+    perspective: var(--dw-perspective, 1200px);
+    perspective-origin: 50% 50%;
+    --dw-tile-w: 210px;
+    --dw-tile-h: 140px;
+    --dw-gap: 20px;
+    --dw-radius: 14px;
+    --dw-lift: 64px;
+    --dw-dim: 0.84;
+    --dw-gray: 0;
+    --dw-overlay: var(--background);
+    --dw-edge: 42%;
+    -webkit-mask-image:
+      radial-gradient(ellipse 84% 84% at 50% 48%, #000 var(--dw-edge), transparent 100%),
+      linear-gradient(to bottom, transparent 0%, #000 10%, #000 84%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      radial-gradient(ellipse 84% 84% at 50% 48%, #000 var(--dw-edge), transparent 100%),
+      linear-gradient(to bottom, transparent 0%, #000 10%, #000 84%, transparent 100%);
+    mask-composite: intersect;
+  }
+
+  .drift-wall__plane {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+    will-change: transform;
+  }
+
+  .drift-wall__col {
+    position: relative;
+    width: calc(var(--dw-tile-w) + var(--dw-gap));
+    transform-style: preserve-3d;
+  }
+
+  .drift-wall__track {
+    display: flex;
+    flex-direction: column;
+    will-change: transform;
+    transform-style: preserve-3d;
+  }
+
+  .drift-wall__tile {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: calc(var(--dw-tile-h) + var(--dw-gap));
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+    transform-style: preserve-3d;
+  }
+
+  .drift-wall__inner {
+    position: absolute;
+    inset: calc(var(--dw-gap) / 2);
+    display: block;
+    border: 0;
+    border-radius: var(--dw-radius);
+    overflow: hidden;
+    background: var(--card);
+    opacity: var(--dw-dim);
+    transform: translate3d(var(--dw-jx, 0px), var(--dw-jy, 0px), 0) rotate(var(--dw-rot, 0deg));
+    pointer-events: none;
+    box-shadow: 0 12px 28px -16px color-mix(in oklch, var(--night-deep) 35%, transparent);
+    transition:
+      transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .drift-wall__media {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: grayscale(var(--dw-gray)) saturate(0.96);
+    transition: filter 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .drift-wall__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--dw-overlay);
+    opacity: 0.18;
+    pointer-events: none;
+    transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .drift-wall__tile.is-active .drift-wall__inner,
+  .drift-wall__tile:focus-visible .drift-wall__inner {
+    opacity: 1;
+    transform: translate3d(var(--dw-jx, 0px), var(--dw-jy, 0px), var(--dw-lift)) rotate(0deg);
+    box-shadow: 0 24px 56px -18px color-mix(in oklch, var(--night-deep) 55%, transparent);
+  }
+
+  .drift-wall__tile.is-active .drift-wall__media,
+  .drift-wall__tile:focus-visible .drift-wall__media {
+    filter: grayscale(0) saturate(1.05);
+  }
+
+  .drift-wall__tile.is-active .drift-wall__overlay,
+  .drift-wall__tile:focus-visible .drift-wall__overlay {
+    opacity: 0;
+  }
+
+  .drift-wall__tile:focus-visible .drift-wall__inner {
+    box-shadow:
+      0 24px 56px -18px color-mix(in oklch, var(--night-deep) 55%, transparent),
+      0 0 0 2px var(--ring);
+  }
+
+  html[data-perf="low"] .drift-wall__plane,
+  html[data-perf="low"] .drift-wall__track {
+    will-change: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .drift-wall__plane,
+    .drift-wall__track {
+      will-change: auto;
+    }
+
+    .drift-wall__inner,
+    .drift-wall__media,
+    .drift-wall__overlay {
+      transition: none;
+    }
+  }
+}

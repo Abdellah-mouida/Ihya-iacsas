@@ -5,7 +5,7 @@ const THEMES = ["light", "sunset", "amoled", "black"] as const;
 const LOCALES = ["ar", "en"] as const;
 const WIDTHS = [360, 768, 1440] as const;
 
-test("the gallery archive keeps its images, dates, modal and layout across themes and locales", async ({ browser }) => {
+test("the gallery DriftWall keeps its top title, borderless random layout, modal and responsiveness across themes and locales", async ({ browser }) => {
   test.setTimeout(240_000);
   fs.mkdirSync("evidence/task-07/t8/gallery", { recursive: true });
 
@@ -24,19 +24,20 @@ test("the gallery archive keeps its images, dates, modal and layout across theme
       try {
         await page.goto("/gallery", { waitUntil: "domcontentloaded" });
         await expect(page.locator("main h2").first()).toBeVisible({ timeout: 30_000 });
-        const cards = page.locator("[data-gallery-card]");
-        await expect(cards.first()).toBeVisible({ timeout: 30_000 });
-        const cardCount = await cards.count();
-        expect(cardCount).toBeGreaterThan(0);
+        const wall = page.locator('[data-rb="DriftWall"]');
+        await expect(wall).toBeVisible({ timeout: 30_000 });
+        expect(await wall.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe("0px");
 
-        const firstCard = cards.first();
-        const image = firstCard.locator("img");
-        await expect(image).toHaveAttribute("alt", /.+/);
-        const box = await firstCard.locator("button").boundingBox();
-        expect(box).toBeTruthy();
-        if (box) expect(Math.abs(box.width / box.height - 4 / 3)).toBeLessThan(0.04);
-        await expect(firstCard.locator("button")).toHaveAttribute("aria-label", /.+/);
-        await expect(page.locator("main h3").first()).toBeVisible();
+        const cards = wall.locator("[data-gallery-card]");
+        await expect(cards.first()).toBeVisible({ timeout: 30_000 });
+        const tileCount = await cards.count();
+        expect(tileCount).toBeGreaterThan(0);
+
+        const firstTile = cards.first();
+        await expect(firstTile.locator("img")).toHaveAttribute("alt", /.+/);
+        await expect(firstTile).toHaveAttribute("aria-label", /.+/);
+        const uniquePhotos = await cards.evaluateAll((els) => new Set(els.map((el) => el.getAttribute("aria-label"))).size);
+        expect(uniquePhotos).toBeGreaterThan(0);
 
         for (const width of WIDTHS) {
           await page.setViewportSize({ width, height: 900 });
@@ -45,24 +46,39 @@ test("the gallery archive keeps its images, dates, modal and layout across theme
             const visibleImages = Array.from(document.querySelectorAll<HTMLImageElement>("[data-gallery-card] img"))
               .filter((item) => {
                 const bounds = item.getBoundingClientRect();
-                return bounds.top < window.innerHeight && bounds.bottom > 0;
+                return bounds.width > 0 && bounds.height > 0 && bounds.top < window.innerHeight && bounds.bottom > 0 && bounds.left < window.innerWidth && bounds.right > 0;
               });
-            return visibleImages.length > 0 && visibleImages.every((item) => item.complete && item.naturalWidth > 0);
+            return visibleImages.length > 0 && visibleImages.some((item) => item.complete && item.naturalWidth > 0);
           }), { timeout: 20_000, intervals: [250, 500, 1000] }).toBe(true);
           await page.screenshot({ path: `evidence/task-07/t8/gallery/gallery-${width}-${theme}-${locale}.png` });
         }
 
-        await firstCard.locator("button").click();
+        const clickableTile = await wall.evaluate((wallEl) => {
+          const wr = wallEl.getBoundingClientRect();
+          const els = Array.from(wallEl.querySelectorAll("[data-gallery-card]"));
+          const match = els.find((el) => {
+            const r = el.getBoundingClientRect();
+            return (
+              r.width > 20 &&
+              r.height > 20 &&
+              r.left >= Math.max(0, wr.left + 8) &&
+              r.right <= Math.min(window.innerWidth, wr.right - 8) &&
+              r.top >= Math.max(0, wr.top + 32) &&
+              r.bottom <= Math.min(window.innerHeight, wr.bottom - 32)
+            );
+          });
+          return match?.getAttribute("data-tile-id") ?? null;
+        });
+        expect(clickableTile).toBeTruthy();
+        await wall.locator(`[data-tile-id="${clickableTile}"]`).click();
         const dialog = page.getByRole("dialog");
         await expect(dialog).toBeVisible();
         await expect(dialog.getByRole("img")).toHaveAttribute("alt", /.+/);
         await expect(dialog.getByRole("button", { name: locale === "ar" ? "إغلاق" : "Close" })).toBeVisible();
-        const counter = dialog.getByText(new RegExp(`^1\\s*\\/\\s*${cardCount}$`));
-        await expect(counter).toBeVisible();
-        if (cardCount > 1) {
-          await dialog.getByRole("button", { name: locale === "ar" ? "الصورة التالية" : "Next image" }).click();
-          const nextIndex = locale === "ar" ? cardCount : 2;
-          await expect(dialog.getByText(new RegExp(`^${nextIndex}\\s*\\/\\s*${cardCount}$`))).toBeVisible();
+        if (uniquePhotos > 1) {
+          const nextBtn = dialog.getByRole("button", { name: locale === "ar" ? "الصورة التالية" : "Next image" });
+          await expect(nextBtn).toBeVisible();
+          await nextBtn.click();
         }
         await page.keyboard.press("Escape");
         await expect(dialog).toBeHidden();

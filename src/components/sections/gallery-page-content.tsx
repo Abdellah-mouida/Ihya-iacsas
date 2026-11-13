@@ -1,19 +1,17 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, ZoomIn } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { getPublicGalleryPhotos } from "@/app/actions/gallery";
+import DriftWall from "@/components/DriftWall";
 import { SectionHeading } from "@/components/common/section-heading";
-import { InViewReveal } from "@/components/common/in-view-reveal";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useLowPower } from "@/hooks/use-low-power";
 import { useLocale } from "@/i18n/locale-provider";
 import { GALLERY } from "@/lib/content";
 import { EASE } from "@/lib/motion";
-import { SmoothImage } from "@/components/common/smooth-image";
-import { Button } from "@/components/ui/button";
-import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 type InitialGalleryPhoto = {
   id: string;
@@ -29,9 +27,6 @@ type PhotoItem = {
   id: string;
   src: string;
   caption: string;
-  createdAt: Date;
-  dateKey: string;
-  dateLabel: string;
   imageWidth: number | null;
   imageHeight: number | null;
 };
@@ -44,112 +39,98 @@ const slideVariants = {
   exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? "-8%" : "8%", scale: 0.98 }),
 };
 
+function createSeededRng(seed: number) {
+  let state = (seed >>> 0) || 1;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle<T>(list: T[], seed: number): T[] {
+  const copy = [...list];
+  const nextRand = createSeededRng(seed);
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(nextRand() * (i + 1));
+    const tmp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = tmp;
+  }
+  return copy;
+}
+
+function useMediaMatches(query: string, fallback: boolean) {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => {};
+      const mq = window.matchMedia(query);
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () => (typeof window !== "undefined" ? window.matchMedia(query).matches : fallback),
+    () => fallback,
+  );
+}
+
 export function GalleryPageContent({
   initialPhotos,
-  initialHasMore,
+  shuffleSeed = 1,
 }: {
   initialPhotos: InitialGalleryPhoto[];
-  initialHasMore: boolean;
+  shuffleSeed?: number;
 }) {
   const { t, locale, dir } = useLocale();
-  const [photoRows, setPhotoRows] = useState(initialPhotos);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  const lowPower = useLowPower();
+  const isTablet = useMediaMatches("(min-width: 640px)", false);
+  const isDesktop = useMediaMatches("(min-width: 1024px)", true);
 
-  // Lightbox state
   const [open, setOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
   const photos = useMemo<PhotoItem[]>(() => {
-    if (photoRows.length > 0) {
-      return photoRows.map((photo) => {
-        const date = new Date(photo.createdAt);
-        return {
-          id: photo.id,
-          src: photo.imageUrl,
-          imageWidth: photo.imageWidth,
-        imageHeight: photo.imageHeight,
-          caption: locale === "ar"
-            ? photo.captionAr || photo.captionEn || "صورة من إحياء"
-            : photo.captionEn || photo.captionAr || "Ihyaa moment",
-          createdAt: date,
-          dateKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-          dateLabel: date.toLocaleDateString(locale === "ar" ? "ar-MA" : "en-US", { year: "numeric", month: "long" }),
-        };
-      });
-    }
+    const base =
+      initialPhotos.length > 0
+        ? initialPhotos.map((photo) => ({
+            id: photo.id,
+            src: photo.imageUrl,
+            imageWidth: photo.imageWidth,
+            imageHeight: photo.imageHeight,
+            caption:
+              locale === "ar"
+                ? photo.captionAr || photo.captionEn || "صورة من إحياء"
+                : photo.captionEn || photo.captionAr || "Ihyaa moment",
+          }))
+        : GALLERY.map((item, index) => ({
+            id: `static-${index}`,
+            src: item.src,
+            caption: t(item.altKey),
+            imageWidth: item.w,
+            imageHeight: item.h,
+          }));
 
-    const fallbackDate = new Date();
-    return GALLERY.map((item, index) => ({
-      id: `static-${index}`,
-      src: item.src,
-      caption: t(item.altKey),
-      createdAt: fallbackDate,
-      dateKey: "archive",
-      dateLabel: t("gallery.archiveGroup"),
-      imageWidth: item.w,
-      imageHeight: item.h,
-    }));
-  }, [locale, photoRows, t]);
+    return seededShuffle(base, shuffleSeed);
+  }, [initialPhotos, locale, shuffleSeed, t]);
 
-  const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMore) return;
-    setLoadingMore(true);
-    setLoadMoreFailed(false);
-    try {
-      const result = await getPublicGalleryPhotos(photoRows.length, 12);
-      if (result.success) {
-        setPhotoRows((current) => [...current, ...result.photos]);
-        setHasMore(result.hasMore);
-      } else {
-        setLoadMoreFailed(true);
-      }
-    } catch {
-      setLoadMoreFailed(true);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [hasMore, loadingMore, photoRows.length]);
+  const wallItems = useMemo(
+    () =>
+      photos.map((photo, index) => ({
+        image: photo.src,
+        title: photo.caption,
+        width: photo.imageWidth,
+        height: photo.imageHeight,
+        sourceIndex: index,
+      })),
+    [photos],
+  );
 
-  // Group photos by dateKey
-  const groupedPhotos = useMemo(() => {
-    const map = new Map<string, { label: string; date: Date; items: PhotoItem[] }>();
-
-    for (const p of photos) {
-      if (!map.has(p.dateKey)) {
-        map.set(p.dateKey, {
-          label: p.dateLabel,
-          date: p.createdAt,
-          items: [],
-        });
-      }
-      map.get(p.dateKey)!.items.push(p);
-    }
-
-    return Array.from(map.entries())
-      .sort((a, b) => {
-        if (a[0] === "archive") return 1;
-        if (b[0] === "archive") return -1;
-        return b[1].date.getTime() - a[1].date.getTime();
-      })
-      .map(([key, group]) => ({
-        key,
-        label: group.label,
-        items: group.items,
-      }));
-  }, [photos]);
-
-  // Flattened photos for continuous lightbox browsing
-  const flatPhotos = useMemo(() => {
-    return groupedPhotos.flatMap((g) => g.items);
-  }, [groupedPhotos]);
-
-  const totalCount = flatPhotos.length;
+  const totalCount = photos.length;
 
   const go = useCallback(
     (delta: number) => {
+      if (totalCount === 0) return;
       setDirection(delta);
       setLightboxIndex((i) => (i + delta + totalCount) % totalCount);
     },
@@ -166,121 +147,84 @@ export function GalleryPageContent({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, go, dir]);
 
-  const current = flatPhotos[lightboxIndex];
+  const wallConfig = isDesktop
+    ? { columns: 5, tileWidth: 210, tileHeight: 140, gap: 20, tilt: 16, turn: 14, depth: 120, lift: 64, speed: 40 }
+    : isTablet
+      ? { columns: 4, tileWidth: 168, tileHeight: 114, gap: 14, tilt: 14, turn: 12, depth: 96, lift: 46, speed: 34 }
+      : { columns: 3, tileWidth: 124, tileHeight: 88, gap: 12, tilt: 12, turn: 10, depth: 76, lift: 34, speed: 28 };
+
+  const current = photos[lightboxIndex];
 
   return (
-    <div className="relative pt-36 pb-24 sm:pt-40 sm:pb-32 overflow-x-clip">
-      {/* Ambient glow behind header */}
+    <div className="relative isolate flex flex-1 flex-col pt-10 pb-8 sm:pt-14 sm:pb-12 overflow-x-clip">
       <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-24 -z-10 h-72 w-[min(90vw,48rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_55%_55%_at_center,color-mix(in_oklch,var(--main)_14%,transparent)_0%,transparent_80%)]"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-4 z-[1] h-64 w-[min(92vw,48rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_55%_55%_at_center,color-mix(in_oklch,var(--main)_14%,transparent)_0%,transparent_80%)]"
       />
 
-      <div className="mx-auto max-w-6xl px-5">
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-5">
         <SectionHeading
           kicker={t("gallery.pageKicker")}
           title={t("gallery.pageTitle")}
           desc={t("gallery.pageDesc")}
+          divider={false}
         />
-
-        {flatPhotos.length === 0 ? (
-          <div className="mt-16 flex flex-col items-center justify-center rounded-3xl glass p-12 text-center">
-            <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass ring-1 ring-brass/25">
-              <ImageIcon className="size-7" />
-            </span>
-            <h3 className="mt-4 font-heading text-xl font-semibold">
-              {t("gallery.emptyTitle")}
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("gallery.emptyDesc")}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-16 space-y-16">
-            {groupedPhotos.map((group) => (
-              <section key={group.key} className="space-y-6">
-                {/* Date group heading */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid size-8 place-items-center rounded-lg bg-brass/15 text-brass">
-                      <Calendar className="size-4" />
-                    </span>
-                    <h3 className="font-heading text-xl font-semibold text-foreground">
-                      {group.label}
-                    </h3>
-                  </div>
-                  <span className="rounded-full glass px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    {t("gallery.photosCount", { count: group.items.length })}
-                  </span>
-                </div>
-
-                {/* Group photos grid */}
-                <InViewReveal className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.items.map((item) => {
-                    const globalIdx = flatPhotos.findIndex((p) => p.id === item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        data-gallery-card
-                        data-rb="TiltedCard"
-                        className={`${rbStyles.tiltedCard} group glass relative overflow-hidden rounded-2xl shadow-layered hover:ring-2 hover:ring-brass/35`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDirection(0);
-                            setLightboxIndex(globalIdx >= 0 ? globalIdx : 0);
-                            setOpen(true);
-                          }}
-                          aria-label={item.caption}
-                          className="relative block aspect-[4/3] w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring overflow-hidden"
-                        >
-                          <SmoothImage
-                            src={item.src}
-                            alt={item.caption}
-                            fill
-                            width={item.imageWidth}
-                            height={item.imageHeight}
-                            priority={globalIdx === 0}
-                            sizes="(max-width: 639px) calc(100vw - 2.5rem), (max-width: 1023px) calc((100vw - 4rem) / 2), calc((min(100vw, 72rem) - 7rem) / 3)"
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          {/* Inner gold border */}
-                          <div className="pointer-events-none absolute inset-2.5 rounded-xl ring-1 ring-inset ring-gold/20 transition-all duration-300 group-hover:ring-gold/40" />
-
-                          {/* Hover scrim + zoom icon */}
-                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-night/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                            <ZoomIn className="size-8 text-white" />
-                          </span>
-
-                          {/* Caption bar */}
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-night/85 via-night/40 to-transparent p-4 text-start text-sm font-medium text-white opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                            <p className="line-clamp-2">{item.caption}</p>
-                          </div>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </InViewReveal>
-              </section>
-            ))}
-          </div>
-        )}
-
-        {hasMore ? (
-          <div className="mt-10 flex justify-center">
-            <div className="flex flex-col items-center gap-3">
-              {loadMoreFailed ? <p role="alert" className="text-sm text-destructive">{t("gallery.loadMoreError")}</p> : null}
-              <Button type="button" variant="outline" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" /> : null}
-                {t(loadingMore ? "gallery.loadingMore" : "gallery.loadMore")}
-              </Button>
-            </div>
-          </div>
-        ) : null}
       </div>
 
-      {/* Lightbox Dialog */}
+      {wallItems.length === 0 ? (
+        <div className="relative z-10 mx-auto mt-16 flex max-w-xl flex-col items-center justify-center px-6 py-12 text-center">
+          <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass">
+            <ImageIcon className="size-7" />
+          </span>
+          <h3 className="mt-4 font-heading text-xl font-semibold">
+            {t("gallery.emptyTitle")}
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("gallery.emptyDesc")}
+          </p>
+        </div>
+      ) : (
+        <section
+          aria-label={t("gallery.pageTitle")}
+          className="relative z-10 mt-4 w-full flex-1 sm:mt-6"
+        >
+          <div className="h-[62svh] min-h-[420px] w-full sm:h-[68svh] sm:min-h-[520px] lg:h-[74svh] lg:min-h-[600px]">
+            <DriftWall
+              data-rb="DriftWall"
+              items={wallItems}
+              columns={wallConfig.columns}
+              tileWidth={wallConfig.tileWidth}
+              tileHeight={wallConfig.tileHeight}
+              gap={wallConfig.gap}
+              radius={14}
+              tilt={wallConfig.tilt}
+              turn={dir === "rtl" ? wallConfig.turn : -wallConfig.turn}
+              roll={0}
+              perspective={1200}
+              depth={wallConfig.depth}
+              speed={wallConfig.speed}
+              direction="up"
+              variance={0.48}
+              parallax={lowPower ? 0 : 0.6}
+              pauseOnHover={false}
+              lift={wallConfig.lift}
+              fade={0.58}
+              dim={0.84}
+              grayscale={false}
+              overlayColor="var(--background)"
+              seed={shuffleSeed}
+              lowPower={lowPower}
+              ariaLabel={t("gallery.pageTitle")}
+              onItemClick={(_item: unknown, sourceIndex: number) => {
+                setDirection(0);
+                setLightboxIndex(sourceIndex);
+                setOpen(true);
+              }}
+            />
+          </div>
+        </section>
+      )}
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent closeLabel={t("gallery.close")} className="max-w-4xl border-brass/30 bg-background/95 p-3 sm:max-w-4xl">
           <DialogTitle className="sr-only">
@@ -314,7 +258,6 @@ export function GalleryPageContent({
               ) : null}
             </AnimatePresence>
 
-            {/* Navigation buttons */}
             <button
               type="button"
               aria-label={t("gallery.previousImage")}
