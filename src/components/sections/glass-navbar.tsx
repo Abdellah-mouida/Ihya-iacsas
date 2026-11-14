@@ -268,7 +268,7 @@ export function GlassNavbar({
     return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
-  // Top sentinel IntersectionObserver: transparent at top (scrollY = 0), glass after scrolling past 200px threshold
+  // Top sentinel IntersectionObserver: transparent at top (scrollY = 0), glass after scrolling past 100px threshold
   useEffect(() => {
     let sentinel = document.getElementById("navbar-scroll-sentinel");
     if (!sentinel) {
@@ -278,7 +278,7 @@ export function GlassNavbar({
       sentinel.style.top = "0px";
       sentinel.style.left = "0px";
       sentinel.style.width = "1px";
-      sentinel.style.height = "200px";
+      sentinel.style.height = "100px";
       sentinel.style.pointerEvents = "none";
       sentinel.style.visibility = "hidden";
       sentinel.style.zIndex = "-1";
@@ -287,7 +287,7 @@ export function GlassNavbar({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When the 200px sentinel is intersecting the top viewport, we are at the top (< 200px scroll)
+        // When the 100px sentinel is intersecting the top viewport, we are at the top (< 100px scroll)
         setScrolled(!entry.isIntersecting);
       },
       { threshold: 0 }
