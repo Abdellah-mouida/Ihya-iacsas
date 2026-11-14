@@ -1037,6 +1037,7 @@
     "moderatorDeleteMsg": "Moderator remove",
     "moderatorDeleteConfirmTitle": "Remove public message",
     "moderatorDeleteConfirmDesc": "Remove this message from the public space for all members?",
+    "messageUnavailable": "Message unavailable (encrypted with a different key)",
     "actionError": "Something went wrong. Please try again."
   },
   "adminModeration": {

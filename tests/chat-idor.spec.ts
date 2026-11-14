@@ -9,12 +9,14 @@ import {
   editMessage,
   getConversationMessageById,
   getConversationMessages,
+  getUnreadBadgeCounts,
   listConversationsForUser,
   markConversationRead,
   openOrCreateDmConversation,
   sendMessage,
   setConversationMuted,
 } from "../src/lib/chat/messages";
+import { encryptMessage } from "../src/lib/chat/crypto-core";
 import { acceptFriendRequest, blockUser, sendFriendRequest } from "../src/lib/chat/friends";
 
 const BASE = process.env.PLAYWRIGHT_TEST_BASE_URL || "http://127.0.0.1:3000";
@@ -410,6 +412,75 @@ test.describe("12-T4: Unified Message Pipeline, Linkifier & IDOR Matrix", () => 
       } else {
         await prisma.systemSetting.deleteMany({ where: { key: "chatEnabled" } });
       }
+    }
+  });
+
+  test("undecryptable message row does not crash unread counts, conversation list, or message fetch", async () => {
+    const a = await createUser("UndecA");
+    const b = await createUser("UndecB");
+    let dmId = "";
+
+    try {
+      await sendFriendRequest(a.id, b.id);
+      await acceptFriendRequest(b.id, a.id);
+      const dm = await openOrCreateDmConversation(a.id, b.id);
+      dmId = dm.id;
+
+      await sendMessage({
+        userId: a.id,
+        conversationId: dm.id,
+        body: "Readable message before key mismatch",
+      });
+
+      const wrongKey = randomBytes(32);
+      const badMsgId = `msg_bad_${randomBytes(8).toString("hex")}`;
+      const badEncrypted = encryptMessage(
+        {
+          plaintext: "Encrypted with another key",
+          conversationId: dm.id,
+          messageId: badMsgId,
+          senderId: a.id,
+        },
+        { activeVersion: 1, keys: new Map([[1, wrongKey]]) },
+      );
+
+      await prisma.message.create({
+        data: {
+          id: badMsgId,
+          conversationId: dm.id,
+          senderId: a.id,
+          type: "TEXT",
+          ciphertext: badEncrypted.ciphertext,
+          nonce: badEncrypted.nonce,
+          keyVersion: 1,
+          createdAt: new Date(Date.now() + 1000),
+        },
+      });
+
+      const unread = await getUnreadBadgeCounts(b.id);
+      expect(unread.unreadCount).toBeGreaterThanOrEqual(2);
+
+      const list = await listConversationsForUser(b.id);
+      const dmSummary = list.conversations.find((c) => c.id === dm.id);
+      expect(dmSummary?.lastMessage?.id).toBe(badMsgId);
+      expect(dmSummary?.lastMessage?.decryptionFailed).toBe(true);
+      expect(dmSummary?.lastMessage?.body).toBe("");
+
+      const page = await getConversationMessages({ userId: b.id, conversationId: dm.id });
+      const badItem = page.messages.find((m) => m.id === badMsgId);
+      const goodItem = page.messages.find((m) => m.body === "Readable message before key mismatch");
+      expect(badItem?.decryptionFailed).toBe(true);
+      expect(badItem?.body).toBe("");
+      expect(goodItem?.decryptionFailed).toBeUndefined();
+    } finally {
+      await prisma.message.deleteMany({ where: { senderId: { in: [a.id, b.id] } } });
+      if (dmId) {
+        await prisma.conversation.deleteMany({ where: { id: dmId } });
+      }
+      await prisma.rateLimit.deleteMany({
+        where: { OR: [{ key: { contains: a.id } }, { key: { contains: b.id } }] },
+      });
+      await prisma.user.deleteMany({ where: { id: { in: [a.id, b.id] } } });
     }
   });
 });

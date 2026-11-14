@@ -1037,6 +1037,7 @@
     "moderatorDeleteMsg": "حذف إشرافي",
     "moderatorDeleteConfirmTitle": "حذف رسالة عامة",
     "moderatorDeleteConfirmDesc": "هل تريد حذف هذه الرسالة من الفضاء العام لجميع الأعضاء؟",
+    "messageUnavailable": "الرسالة غير متاحة (مشفرة بمفتاح مختلف)",
     "actionError": "حدث خطأ غير متوقع، حاول مجدداً."
   },
   "adminModeration": {

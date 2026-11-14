@@ -351,7 +351,9 @@ export function ChatSidebar({
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {publicConv.lastMessage && !publicConv.lastMessage.deleted
-                        ? publicConv.lastMessage.body
+                        ? publicConv.lastMessage.decryptionFailed
+                          ? t("chat.messageUnavailable")
+                          : publicConv.lastMessage.body
                         : t("chat.publicSpaceDesc")}
                     </p>
                   </div>
@@ -498,9 +500,11 @@ export function ChatSidebar({
                               {conv.lastMessage
                                 ? conv.lastMessage.deleted
                                   ? t("chat.deletedMessage")
-                                  : conv.lastMessage.type === "ROOM_INVITE"
-                                  ? t("chatInvite.badge")
-                                  : conv.lastMessage.body
+                                  : conv.lastMessage.decryptionFailed
+                                    ? t("chat.messageUnavailable")
+                                    : conv.lastMessage.type === "ROOM_INVITE"
+                                      ? t("chatInvite.badge")
+                                      : conv.lastMessage.body
                                 : t("chat.openDm")}
                             </p>
                           </div>

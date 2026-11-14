@@ -3,7 +3,12 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { decryptMessage, encryptMessage, loadKeyringFromEnv } from "./crypto-core";
+import {
+  ChatEncryptionError,
+  decryptMessage,
+  encryptMessage,
+  loadKeyringFromEnv,
+} from "./crypto-core";
 import {
   assertFriendsAndUnblocked,
   canonicalPairKey,
@@ -45,11 +50,13 @@ export interface ChatMessageDTO {
   isAnonymized: boolean;
   type: "TEXT" | "ROOM_INVITE" | "SYSTEM";
   body: string;
+  decryptionFailed?: boolean;
   replyTo: {
     id: string;
     senderId: string | null;
     senderName: string | null;
     body: string;
+    decryptionFailed?: boolean;
     deleted: boolean;
   } | null;
   invite: {
@@ -94,6 +101,7 @@ export interface ConversationSummaryDTO {
     senderName: string | null;
     type: "TEXT" | "ROOM_INVITE" | "SYSTEM";
     body: string;
+    decryptionFailed?: boolean;
     createdAt: string;
     deleted: boolean;
   } | null;
@@ -138,19 +146,31 @@ function safeDecryptRow(row: {
   nonce: string;
   keyVersion: number;
   deletedAt: Date | null;
-}): string {
+}): string | null {
   if (row.deletedAt || !row.ciphertext || !row.nonce) {
     return "";
   }
   const aadSender = row.isAnonymized ? "anonymized" : (row.senderId ?? "");
-  return decryptMessage({
-    ciphertext: row.ciphertext,
-    nonce: row.nonce,
-    keyVersion: row.keyVersion,
-    conversationId: row.conversationId,
-    messageId: row.id,
-    senderId: aadSender,
-  });
+  try {
+    return decryptMessage({
+      ciphertext: row.ciphertext,
+      nonce: row.nonce,
+      keyVersion: row.keyVersion,
+      conversationId: row.conversationId,
+      messageId: row.id,
+      senderId: aadSender,
+    });
+  } catch (err) {
+    if (err instanceof ChatEncryptionError) {
+      console.warn("[chat] undecryptable message row", {
+        messageId: row.id,
+        conversationId: row.conversationId,
+        keyVersion: row.keyVersion,
+      });
+      return null;
+    }
+    throw err;
+  }
 }
 
 const messageInclude = {
@@ -201,7 +221,12 @@ type MessageRow = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
 
 function serializeMessage(row: MessageRow): ChatMessageDTO {
   const deleted = Boolean(row.deletedAt);
-  const body = deleted ? "" : safeDecryptRow(row);
+  const decryptedBody = deleted ? "" : safeDecryptRow(row);
+  const decryptedReply = row.replyTo
+    ? row.replyTo.deletedAt
+      ? ""
+      : safeDecryptRow(row.replyTo)
+    : null;
 
   const replyTo = row.replyTo
     ? {
@@ -210,7 +235,8 @@ function serializeMessage(row: MessageRow): ChatMessageDTO {
         senderName: row.replyTo.isAnonymized
           ? null
           : (row.replyTo.sender?.name ?? null),
-        body: row.replyTo.deletedAt ? "" : safeDecryptRow(row.replyTo),
+        body: decryptedReply ?? "",
+        ...(decryptedReply === null ? { decryptionFailed: true } : {}),
         deleted: Boolean(row.replyTo.deletedAt),
       }
     : null;
@@ -253,7 +279,8 @@ function serializeMessage(row: MessageRow): ChatMessageDTO {
           },
     isAnonymized: row.isAnonymized,
     type: row.type,
-    body,
+    body: decryptedBody ?? "",
+    ...(decryptedBody === null ? { decryptionFailed: true } : {}),
     replyTo,
     invite,
     createdAt: row.createdAt.toISOString(),
@@ -502,15 +529,19 @@ export async function listConversationsForUser(userId: string): Promise<{
           }
         : null,
       lastMessage: latest
-        ? {
-            id: latest.id,
-            senderId: latest.isAnonymized ? null : latest.senderId,
-            senderName: latest.isAnonymized ? null : latest.senderName,
-            type: latest.type,
-            body: safeDecryptRow(latest),
-            createdAt: latest.createdAt.toISOString(),
-            deleted: Boolean(latest.deletedAt),
-          }
+        ? (() => {
+            const decryptedLatest = safeDecryptRow(latest);
+            return {
+              id: latest.id,
+              senderId: latest.isAnonymized ? null : latest.senderId,
+              senderName: latest.isAnonymized ? null : latest.senderName,
+              type: latest.type,
+              body: decryptedLatest ?? "",
+              ...(decryptedLatest === null ? { decryptionFailed: true } : {}),
+              createdAt: latest.createdAt.toISOString(),
+              deleted: Boolean(latest.deletedAt),
+            };
+          })()
         : null,
     };
   });
@@ -530,26 +561,80 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
   unreadCount: number;
   pendingRequestsCount: number;
 }> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { chatTermsAcceptedAt: true, chatBannedAt: true },
-  });
+  const [user, pendingRequestsCount, memberships, blocks, friendships] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { chatTermsAcceptedAt: true, chatBannedAt: true },
+      }),
+      prisma.friendship.count({
+        where: { addresseeId: userId, status: "PENDING" },
+      }),
+      prisma.conversationMember.findMany({
+        where: { userId, leftAt: null, muted: false },
+        select: {
+          conversation: {
+            select: { id: true, type: true, dmPairKey: true },
+          },
+        },
+      }),
+      prisma.block.findMany({
+        where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+        select: { blockerId: true, blockedId: true },
+      }),
+      prisma.friendship.findMany({
+        where: {
+          status: "ACCEPTED",
+          OR: [{ requesterId: userId }, { addresseeId: userId }],
+        },
+        select: { pairKey: true },
+      }),
+    ]);
 
   if (!user || user.chatBannedAt) {
     return { unreadCount: 0, pendingRequestsCount: 0 };
   }
 
-  const pendingRequestsCount = await prisma.friendship.count({
-    where: { addresseeId: userId, status: "PENDING" },
-  });
-
   if (!user.chatTermsAcceptedAt) {
     return { unreadCount: 0, pendingRequestsCount };
   }
 
-  const summary = await listConversationsForUser(userId);
+  const blockedSet = new Set<string>();
+  for (const b of blocks) {
+    blockedSet.add(b.blockerId === userId ? b.blockedId : b.blockerId);
+  }
+  const acceptedPairs = new Set(friendships.map((f) => f.pairKey));
+
+  const accessibleIds = memberships
+    .filter((m) => {
+      const conv = m.conversation;
+      if (conv.type !== "DM") return true;
+      if (!conv.dmPairKey || !acceptedPairs.has(conv.dmPairKey)) return false;
+      const [a, b] = conv.dmPairKey.split(":");
+      const peerId = a === userId ? b : a;
+      return Boolean(peerId && !blockedSet.has(peerId));
+    })
+    .map((m) => m.conversation.id);
+
+  if (accessibleIds.length === 0) {
+    return { unreadCount: 0, pendingRequestsCount };
+  }
+
+  const [row] = await prisma.$queryRaw<Array<{ unread: number }>>(Prisma.sql`
+    SELECT COUNT(*)::int AS unread
+    FROM "Message" m
+    INNER JOIN "ConversationMember" cm
+      ON cm."conversationId" = m."conversationId"
+      AND cm."userId" = ${userId}
+      AND cm."leftAt" IS NULL
+    WHERE m."conversationId" IN (${Prisma.join(accessibleIds)})
+      AND m."deletedAt" IS NULL
+      AND (m."senderId" IS NULL OR m."senderId" <> ${userId})
+      AND m."createdAt" > cm."lastReadAt"
+  `);
+
   return {
-    unreadCount: summary.unreadTotal,
+    unreadCount: row?.unread ?? 0,
     pendingRequestsCount,
   };
 }

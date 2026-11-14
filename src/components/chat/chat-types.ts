@@ -36,6 +36,7 @@ export interface ChatConversationSummary {
     senderName: string | null;
     type: "TEXT" | "ROOM_INVITE" | "SYSTEM";
     body: string;
+    decryptionFailed?: boolean;
     createdAt: string;
     deleted: boolean;
   } | null;
@@ -55,11 +56,13 @@ export interface ChatMessageItem {
   isAnonymized: boolean;
   type: "TEXT" | "ROOM_INVITE" | "SYSTEM";
   body: string;
+  decryptionFailed?: boolean;
   replyTo: {
     id: string;
     senderId: string | null;
     senderName: string | null;
     body: string;
+    decryptionFailed?: boolean;
     deleted: boolean;
   } | null;
   invite: {

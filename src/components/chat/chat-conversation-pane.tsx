@@ -729,7 +729,9 @@ export function ChatConversationPane({
                                 <p dir="auto" className="truncate">
                                   {msg.replyTo.deleted
                                     ? t("chat.deletedMessage")
-                                    : msg.replyTo.body}
+                                    : msg.replyTo.decryptionFailed
+                                      ? t("chat.messageUnavailable")
+                                      : msg.replyTo.body}
                                 </p>
                               </div>
                             ) : null}
@@ -767,6 +769,10 @@ export function ChatConversationPane({
                             ) : msg.deleted ? (
                               <p className="italic opacity-75">
                                 {t("chat.deletedMessage")}
+                              </p>
+                            ) : msg.decryptionFailed ? (
+                              <p className="italic opacity-75">
+                                {t("chat.messageUnavailable")}
                               </p>
                             ) : (
                               <p dir="auto" className="whitespace-pre-wrap">
@@ -829,7 +835,7 @@ export function ChatConversationPane({
                               </span>
                             ) : null}
 
-                            {!msg.deleted && !msg.optimisticState ? (
+                            {!msg.deleted && !msg.decryptionFailed && !msg.optimisticState ? (
                               <div className="inline-flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                                 <button
                                   type="button"
