@@ -5,6 +5,11 @@ import {
   type PromotionActor,
   type PromotionDependencies,
 } from "@/lib/booking-promotion";
+import {
+  decryptMessage,
+  encryptMessage,
+  loadKeyringFromEnv,
+} from "@/lib/chat/crypto-core";
 
 type UserDeletionAction = "USER_DELETE" | "ACCOUNT_DELETE";
 
@@ -80,6 +85,109 @@ export async function deleteUserAccount({
       },
     });
 
+    const ownedRooms = await tx.conversation.findMany({
+      where: { ownerId: targetUserId, type: "ROOM" },
+      select: {
+        id: true,
+        members: {
+          where: { leftAt: null, userId: { not: targetUserId } },
+          orderBy: { joinedAt: "asc" },
+          take: 1,
+          select: { id: true, userId: true },
+        },
+      },
+    });
+    for (const room of ownedRooms) {
+      const nextOwner = room.members[0];
+      if (nextOwner) {
+        await tx.conversation.update({
+          where: { id: room.id },
+          data: { ownerId: nextOwner.userId },
+        });
+        await tx.conversationMember.update({
+          where: { id: nextOwner.id },
+          data: { role: "OWNER" },
+        });
+      } else {
+        await tx.conversation.delete({ where: { id: room.id } });
+      }
+    }
+
+    await tx.conversation.deleteMany({
+      where: {
+        type: "DM",
+        members: { some: { userId: targetUserId } },
+      },
+    });
+
+    await tx.message.updateMany({
+      where: { senderId: targetUserId, deletedAt: { not: null } },
+      data: { senderId: null, isAnonymized: true },
+    });
+
+    const activeMessages = await tx.message.findMany({
+      where: { senderId: targetUserId, deletedAt: null },
+      select: {
+        id: true,
+        conversationId: true,
+        ciphertext: true,
+        nonce: true,
+        keyVersion: true,
+      },
+    });
+    if (activeMessages.length > 0) {
+      const keyring = loadKeyringFromEnv();
+      for (const msg of activeMessages) {
+        if (!msg.ciphertext || !msg.nonce) {
+          await tx.message.update({
+            where: { id: msg.id },
+            data: { senderId: null, isAnonymized: true },
+          });
+          continue;
+        }
+        const plaintext = decryptMessage(
+          {
+            ciphertext: msg.ciphertext,
+            nonce: msg.nonce,
+            keyVersion: msg.keyVersion,
+            conversationId: msg.conversationId,
+            messageId: msg.id,
+            senderId: targetUserId,
+          },
+          keyring,
+        );
+        const reencrypted = encryptMessage(
+          {
+            plaintext,
+            conversationId: msg.conversationId,
+            messageId: msg.id,
+            senderId: "anonymized",
+          },
+          keyring,
+        );
+        await tx.message.update({
+          where: { id: msg.id },
+          data: {
+            senderId: null,
+            isAnonymized: true,
+            ciphertext: reencrypted.ciphertext,
+            nonce: reencrypted.nonce,
+            keyVersion: reencrypted.keyVersion,
+          },
+        });
+      }
+    }
+
+    await tx.friendship.deleteMany({
+      where: { OR: [{ requesterId: targetUserId }, { addresseeId: targetUserId }] },
+    });
+    await tx.block.deleteMany({
+      where: { OR: [{ blockerId: targetUserId }, { blockedId: targetUserId }] },
+    });
+    await tx.conversationMember.deleteMany({
+      where: { userId: targetUserId },
+    });
+
     await tx.user.delete({ where: { id: targetUserId } });
 
     return {
@@ -90,7 +198,7 @@ export async function deleteUserAccount({
         email: actor.email,
       } satisfies PromotionActor,
     };
-  });
+  }, { timeout: 15000 });
 
   for (const eventId of deletion.eventIds) {
     try {

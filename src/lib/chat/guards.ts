@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import { logActivity } from "@/lib/audit";
+import { can, type Permission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { touchUserActive } from "@/lib/activity";
 import { ChatServiceError } from "./friends";
@@ -121,6 +123,62 @@ export function chatErrorResponse(err: unknown, fallbackMessage: string) {
     );
   }
   return NextResponse.json({ error: fallbackMessage }, { status: 500 });
+}
+
+export interface AdminApiActor {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: "ADMIN" | "MODERATOR";
+}
+
+export async function requireAdminApiPermission(
+  permission: Permission,
+): Promise<
+  | { ok: true; actor: AdminApiActor }
+  | { ok: false; response: NextResponse }
+> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, name: true, email: true, role: true },
+  });
+  if (!user || !can(user.role, permission)) {
+    await logActivity({
+      actorId: session.user.id,
+      actorName: session.user.name ?? null,
+      actorEmail: session.user.email ?? null,
+      actorRole: session.user.role,
+      action: "ACCESS_DENIED",
+      targetType: "ADMIN_MODERATION",
+      details: { permission },
+    });
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+  if (user.role !== "ADMIN" && user.role !== "MODERATOR") {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+  return {
+    ok: true,
+    actor: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  };
 }
 
 export { canonicalPairKey } from "./friends";

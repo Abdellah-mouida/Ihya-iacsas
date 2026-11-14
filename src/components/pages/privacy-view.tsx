@@ -28,6 +28,7 @@ const PRIVACY_SECTIONS: LegalSection[] = [
   { id: "children", titleKey: "privacy.secChildrenTitle", bodyKey: "privacy.secChildrenBody" },
   { id: "changes", titleKey: "privacy.secChangesTitle", bodyKey: "privacy.secChangesBody" },
   { id: "contact", titleKey: "privacy.secContactTitle", bodyKey: "privacy.secContactBody" },
+  { id: "messaging", titleKey: "privacy.secMessagingTitle", bodyKey: "privacy.secMessagingBody" },
 ];
 
 export function PrivacyView() {

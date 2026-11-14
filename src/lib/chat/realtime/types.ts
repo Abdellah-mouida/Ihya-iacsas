@@ -38,7 +38,14 @@ export type RealtimeEvent =
   | {
       type: "member.changed";
       conversationId: string;
-      action: "joined" | "left" | "removed" | "updated";
+      action:
+        | "joined"
+        | "left"
+        | "removed"
+        | "updated"
+        | "moderation"
+        | "banned"
+        | "unbanned";
       userId?: string;
     }
   | {

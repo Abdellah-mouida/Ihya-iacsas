@@ -19,7 +19,8 @@ export type Permission =
   | "users:delete"
   | "audit:view"
   | "branches:manage"
-  | "settings:manage";
+  | "settings:manage"
+  | "chat:moderate";
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   USER: ["events:view"],
@@ -34,6 +35,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "contacts:view",
     "contacts:manage",
     "branches:manage",
+    "chat:moderate",
   ],
   ADMIN: [
     "events:view",
@@ -53,6 +55,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "audit:view",
     "branches:manage",
     "settings:manage",
+    "chat:moderate",
   ],
 } as const;
 

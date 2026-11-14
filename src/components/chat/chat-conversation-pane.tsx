@@ -75,6 +75,7 @@ export function ChatConversationPane({
   onFriendAction,
   onTypingPulse,
   onReportMessage,
+  onModeratorDeleteMessage,
 }: {
   conversation: ChatConversationSummary | null;
   currentUserId: string;
@@ -98,6 +99,7 @@ export function ChatConversationPane({
   onFriendAction: (action: "unfriend" | "block", targetUserId: string) => Promise<void>;
   onTypingPulse: () => void;
   onReportMessage?: (msg: ChatMessageItem) => void;
+  onModeratorDeleteMessage?: (messageId: string) => Promise<void>;
 }) {
   const { t, locale, dir } = useLocale();
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
@@ -862,18 +864,44 @@ export function ChatConversationPane({
                                       <Trash2 className="size-3.5" />
                                     </button>
                                   </>
-                                ) : onReportMessage ? (
-                                  <button
-                                    type="button"
-                                    data-testid={`report-msg-${msg.id}`}
-                                    onClick={() => onReportMessage(msg)}
-                                    aria-label={t("chat.reportBtn")}
-                                    title={t("chat.reportBtn")}
-                                    className="rounded p-0.5 hover:text-destructive"
-                                  >
-                                    <Flag className="size-3.5" />
-                                  </button>
-                                ) : null}
+                                ) : (
+                                  <>
+                                    {onReportMessage ? (
+                                      <button
+                                        type="button"
+                                        data-testid={`report-msg-${msg.id}`}
+                                        onClick={() => onReportMessage(msg)}
+                                        aria-label={t("chat.reportBtn")}
+                                        title={t("chat.reportBtn")}
+                                        className="rounded p-0.5 hover:text-destructive"
+                                      >
+                                        <Flag className="size-3.5" />
+                                      </button>
+                                    ) : null}
+                                    {conversation?.type === "PUBLIC" &&
+                                    onModeratorDeleteMessage ? (
+                                      <button
+                                        type="button"
+                                        data-testid={`mod-delete-msg-${msg.id}`}
+                                        onClick={async () => {
+                                          const ok = await confirm({
+                                            title: t("chat.moderatorDeleteConfirmTitle"),
+                                            description: t("chat.moderatorDeleteConfirmDesc"),
+                                            variant: "destructive",
+                                          });
+                                          if (ok) {
+                                            await onModeratorDeleteMessage(msg.id);
+                                          }
+                                        }}
+                                        aria-label={t("chat.moderatorDeleteMsg")}
+                                        title={t("chat.moderatorDeleteMsg")}
+                                        className="rounded p-0.5 hover:text-destructive"
+                                      >
+                                        <Trash2 className="size-3.5" />
+                                      </button>
+                                    ) : null}
+                                  </>
+                                )}
                               </div>
                             ) : null}
                           </div>

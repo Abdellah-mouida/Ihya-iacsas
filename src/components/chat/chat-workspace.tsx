@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import {
 } from "./chat-types";
 import styles from "./chat-workspace.module.css";
 import { CreateRoomDialog } from "./create-room-dialog";
+import { ReportMessageDialog } from "./report-message-dialog";
 import { RoomMembersSheet } from "./room-members-sheet";
 
 const EMPTY_FRIENDS: FriendsDashboardState = {
@@ -54,6 +56,7 @@ export function ChatWorkspace({
   bannedReason?: string | null;
 }) {
   const { t } = useLocale();
+  const router = useRouter();
   const [termsAccepted, setTermsAccepted] = useState(initialTermsAccepted);
   const [activeTab, setActiveTab] = useState<ChatTab>("public");
   const [conversations, setConversations] = useState<ChatConversationSummary[]>(
@@ -84,6 +87,7 @@ export function ChatWorkspace({
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
   const [roomPanelOpen, setRoomPanelOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ChatMessageItem | null>(null);
   const [vvHeight, setVvHeight] = useState<number | null>(null);
 
   const selectedIdRef = useRef<string | null>(selectedId);
@@ -382,7 +386,19 @@ export function ChatWorkspace({
             return;
           }
 
-          if (event.type === "message.updated" || event.type === "message.deleted") {
+          if (event.type === "message.deleted") {
+            const { conversationId, messageId } = event;
+            setMessagesByConv((prev) => ({
+              ...prev,
+              [conversationId]: (prev[conversationId] ?? []).map((m) =>
+                m.id === messageId ? { ...m, deleted: true, body: "" } : m,
+              ),
+            }));
+            void fetchConversations();
+            return;
+          }
+
+          if (event.type === "message.updated") {
             const { conversationId, messageId } = event;
             const res = await fetch(`/api/chat/messages/${messageId}`, {
               cache: "no-store",
@@ -465,6 +481,14 @@ export function ChatWorkspace({
           ) {
             void fetchConversations();
             if (event.type === "member.changed") {
+              if (
+                event.action === "moderation" ||
+                event.action === "banned" ||
+                event.action === "unbanned"
+              ) {
+                router.refresh();
+                return;
+              }
               void client.refreshSubscriptions();
               if (selectedIdRef.current === event.conversationId) {
                 void loadMessages(event.conversationId);
@@ -488,6 +512,7 @@ export function ChatWorkspace({
     fetchFriends,
     loadMessages,
     markRead,
+    router,
     t,
     termsAccepted,
   ]);
@@ -645,6 +670,26 @@ export function ChatWorkspace({
   async function handleDeleteMessage(messageId: string) {
     const res = await fetch(`/api/chat/messages/${messageId}`, {
       method: "DELETE",
+    });
+    if (!res.ok) {
+      notify.error(t("chat.actionError"));
+      return;
+    }
+    if (selectedId) {
+      setMessagesByConv((prev) => ({
+        ...prev,
+        [selectedId]: (prev[selectedId] ?? []).map((m) =>
+          m.id === messageId ? { ...m, deleted: true, body: "" } : m,
+        ),
+      }));
+    }
+  }
+
+  async function handleModeratorDeleteMessage(messageId: string) {
+    const res = await fetch(`/api/admin/moderation/messages/${messageId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "Removed by moderator" }),
     });
     if (!res.ok) {
       notify.error(t("chat.actionError"));
@@ -867,9 +912,22 @@ export function ChatWorkspace({
                 clientRef.current.sendTyping(selectedId, true);
               }
             }}
+            onReportMessage={(msg) => setReportTarget(msg)}
+            onModeratorDeleteMessage={
+              actor.role === "ADMIN" || actor.role === "MODERATOR"
+                ? handleModeratorDeleteMessage
+                : undefined
+            }
           />
         </div>
       </div>
+
+      <ReportMessageDialog
+        message={reportTarget}
+        onOpenChange={(open) => {
+          if (!open) setReportTarget(null);
+        }}
+      />
 
       <CreateRoomDialog
         open={createRoomOpen}

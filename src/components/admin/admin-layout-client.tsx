@@ -11,6 +11,7 @@ import {
   MapPin,
   Menu,
   Shield,
+  ShieldAlert,
   Sparkles,
   Ticket,
   Users,
@@ -58,6 +59,7 @@ export function AdminLayoutClient({ user, children }: AdminLayoutClientProps) {
     { href: "/admin/branches", label: t("adminBranches.navLabel"), icon: MapPin },
     { href: "/admin/bookings", label: isAr ? "الحجوزات" : "Bookings", icon: Ticket },
     { href: "/admin/contacts", label: isAr ? "الرسائل" : "Messages", icon: Mail },
+    { href: "/admin/moderation", label: t("adminModeration.navLabel"), icon: ShieldAlert },
     ...(user.role === "ADMIN"
       ? [
           { href: "/admin/users", label: isAr ? "المستخدمون" : "Users", icon: Users },
