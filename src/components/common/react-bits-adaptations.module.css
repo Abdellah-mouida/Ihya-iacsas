@@ -93,6 +93,62 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tiltedCard, .magicBento > *, .profileCard, .blurText, .shinyText, .animatedContent { animation: none; transition: none; transform: none; }
+  .tiltedCard, .magicBento > *, .profileCard, .blurText, .shinyText, .animatedContent, .animatedListItem { animation: none; transition: none; transform: none; }
   .shinyText::after { animation: none; }
+  .clickSparkRay { display: none; }
+}
+
+:global(html[data-perf="low"]) .shinyText::after {
+  animation: none;
+}
+
+:global(html[data-perf="low"]) .animatedContent,
+:global(html[data-perf="low"]) .blurText,
+:global(html[data-perf="low"]) .animatedListItem {
+  animation: none;
+}
+
+:global(html[data-perf="low"]) .clickSparkRay {
+  display: none;
+}
+
+.animatedListItem {
+  animation: rb-content-rise 280ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.clickSpark {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clickSparkBurst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.clickSparkRay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--main);
+  transform-origin: left center;
+  animation: rb-click-spark 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rb-click-spark {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle, 0deg)) translateX(8px) scaleX(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle, 0deg)) translateX(24px) scaleX(1.1);
+  }
 }

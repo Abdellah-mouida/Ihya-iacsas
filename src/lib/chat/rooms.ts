@@ -707,12 +707,32 @@ export async function createMessageInvite(
 
   const dmPairKey = canonicalPairKey(inviterId, input.inviteeId);
   const now = new Date();
-  const dm = await prisma.conversation.upsert({
+  let dm = await prisma.conversation.findUnique({
     where: { dmPairKey },
-    update: {},
-    create: { type: "DM", dmPairKey, memberCap: 2 },
     select: { id: true },
   });
+  if (!dm) {
+    try {
+      dm = await prisma.conversation.create({
+        data: { type: "DM", dmPairKey, memberCap: 2 },
+        select: { id: true },
+      });
+    } catch (err) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code?: string }).code === "P2002"
+      ) {
+        dm = await prisma.conversation.findUniqueOrThrow({
+          where: { dmPairKey },
+          select: { id: true },
+        });
+      } else {
+        throw err;
+      }
+    }
+  }
 
   await prisma.$transaction([
     prisma.conversationMember.upsert({

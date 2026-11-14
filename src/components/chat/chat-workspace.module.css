@@ -1,0 +1,120 @@
+.workspaceRoot {
+  height: calc(var(--chat-vv-height, 100dvh) - 5.25rem);
+  min-height: 420px;
+}
+
+@media (min-width: 640px) {
+  .workspaceRoot {
+    height: calc(var(--chat-vv-height, 100dvh) - 6.25rem);
+  }
+}
+
+.typingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--main);
+  animation: chat-typing-bounce 1.15s ease-in-out infinite;
+}
+
+.typingDot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.typingDot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.presencePulse {
+  animation: chat-presence-pulse 2.2s ease-out infinite;
+}
+
+.messageEnter {
+  animation: chat-message-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.inviteCardEnter {
+  animation: chat-invite-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unreadBadgePop {
+  animation: chat-badge-pop 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes chat-typing-bounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.38;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes chat-presence-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes chat-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chat-invite-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chat-badge-pop {
+  from {
+    opacity: 0.65;
+    transform: scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typingDot,
+  .presencePulse,
+  .messageEnter,
+  .inviteCardEnter,
+  .unreadBadgePop {
+    animation: none;
+    transform: none;
+  }
+}
+
+:global(html[data-perf="low"]) .typingDot,
+:global(html[data-perf="low"]) .presencePulse,
+:global(html[data-perf="low"]) .messageEnter,
+:global(html[data-perf="low"]) .inviteCardEnter,
+:global(html[data-perf="low"]) .unreadBadgePop {
+  animation: none;
+  transform: none;
+}

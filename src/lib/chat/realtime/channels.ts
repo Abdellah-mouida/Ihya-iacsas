@@ -72,7 +72,6 @@ export async function getAuthorizedChannelsForUser(
     };
   }
 
-  await ensurePublicConversationMember(userId);
   channels.push(presenceChannel());
 
   const [memberships, blocks, friendships] = await Promise.all([
@@ -101,6 +100,14 @@ export async function getAuthorizedChannelsForUser(
       select: { pairKey: true },
     }),
   ]);
+
+  if (!memberships.some((m) => m.conversation.type === "PUBLIC")) {
+    const pubId = await ensurePublicConversationMember(userId);
+    if (pubId) {
+      conversationIds.push(pubId);
+      channels.push(conversationChannel(pubId));
+    }
+  }
 
   const blockedUsers = new Set<string>();
   for (const b of blocks) {
@@ -135,6 +142,7 @@ export async function canUserAccessConversation(
   ok: boolean;
   conversationType?: "PUBLIC" | "DM" | "ROOM";
   hasMembership?: boolean;
+  dmPeerId?: string;
 }> {
   const conv = await prisma.conversation.findUnique({
     where: { id: conversationId },
@@ -185,6 +193,12 @@ export async function canUserAccessConversation(
     if (block || friendship?.status !== "ACCEPTED") {
       return { ok: false };
     }
+    return {
+      ok: true,
+      conversationType: "DM",
+      hasMembership,
+      dmPeerId: peerId,
+    };
   }
 
   return { ok: true, conversationType: conv.type, hasMembership };

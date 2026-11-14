@@ -35,6 +35,7 @@ import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/li
 import { getPublicEvents } from "@/app/actions/events";
 import { clearLegacyBookingState } from "@/lib/booking-state";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
+import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const hamburgerTop = {
@@ -57,12 +58,31 @@ function NewEventDot({ label }: { label: string }) {
   );
 }
 
+function ChatUnreadBadge({ count, label }: { count: number; label: string }) {
+  if (count <= 0) return null;
+  return (
+    <motion.span
+      key={count}
+      initial={{ scale: 0.72, opacity: 0.6 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 460, damping: 24 }}
+      data-testid="navbar-chat-badge"
+      aria-label={label}
+      className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-brass px-1.5 py-0.5 text-[11px] font-bold leading-none text-night shadow-sm"
+    >
+      {count > 99 ? "99+" : count}
+    </motion.span>
+  );
+}
+
 export function GlassNavbar({
   initialBookable = null,
   initialSession,
+  initialChatEnabled = false,
 }: {
   initialBookable?: boolean | null;
   initialSession?: Session | null;
+  initialChatEnabled?: boolean;
 } = {}) {
   const { t } = useLocale();
   const pathname = usePathname();
@@ -72,6 +92,8 @@ export function GlassNavbar({
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
+  const [chatEnabled, setChatEnabled] = useState(initialChatEnabled);
+  const [chatUnread, setChatUnread] = useState(0);
   // Render nothing until known to eliminate button flicker:
   // Starts null (unknown), only renders when explicitly true.
   const [hasBookableEvents, setHasBookableEvents] = useState<boolean | null>(initialBookable);
@@ -104,6 +126,135 @@ export function GlassNavbar({
       window.removeEventListener("storage", updateEvents);
     };
   }, [pathname]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      return;
+    }
+
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    const loadUnread = async () => {
+      try {
+        const res = await fetch("/api/chat/unread", { cache: "no-store" });
+        if (cancelled) return;
+        if (!res.ok) {
+          setChatEnabled(false);
+          setChatUnread(0);
+          return;
+        }
+        const data = (await res.json()) as {
+          totalUnread?: number;
+          pendingFriendRequests?: number;
+          pendingInvites?: number;
+        };
+        if (cancelled) return;
+        setChatEnabled(true);
+        setChatUnread(
+          (data.totalUnread ?? 0) +
+            (data.pendingFriendRequests ?? 0) +
+            (data.pendingInvites ?? 0),
+        );
+      } catch {
+        // Silent network fallback
+      }
+    };
+
+    const scheduleLoad = () => {
+      if (pathname.startsWith("/chat")) {
+        return;
+      }
+      if (initialChatEnabled) {
+        void loadUnread();
+        return;
+      }
+      if (typeof window.requestIdleCallback === "function") {
+        idleHandle = window.requestIdleCallback(() => void loadUnread(), {
+          timeout: 1200,
+        });
+      } else {
+        timeoutHandle = window.setTimeout(() => void loadUnread(), 400);
+      }
+    };
+
+    scheduleLoad();
+
+    const onUnreadCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ total?: number; count?: number }>).detail;
+      const nextCount =
+        typeof detail?.total === "number" ? detail.total : detail?.count;
+      if (typeof nextCount === "number") {
+        setChatEnabled(true);
+        setChatUnread(Math.max(0, nextCount));
+      } else {
+        void loadUnread();
+      }
+    };
+
+    window.addEventListener("ihyaa_chat_unread", onUnreadCustom);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("ihyaa_chat_unread", onUnreadCustom);
+      if (idleHandle !== null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+      }
+    };
+  }, [session?.user?.id, pathname, initialChatEnabled]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !chatEnabled || pathname.startsWith("/chat")) return;
+
+    let disposed = false;
+    let release: (() => void) | undefined;
+    let unsubscribe: (() => void) | undefined;
+    let timer: number | null = null;
+
+    const connectIdle = () => {
+      import("@/lib/chat/realtime/client")
+        .then(({ getChatRealtimeClient }) => {
+          if (disposed) return;
+          const client = getChatRealtimeClient();
+          release = client.acquire();
+          unsubscribe = client.onEvent((event) => {
+            if (event.type === "friend.changed" && event.kind === "requested") {
+              notify.info(
+                t("chat.toastFriendRequest").replace("{name}", t("chatInvite.unknownInviter")),
+              );
+            } else if (event.type === "invite.received") {
+              notify.info(
+                t("chat.toastRoomInvite")
+                  .replace("{name}", t("chatInvite.unknownInviter"))
+                  .replace("{room}", ""),
+              );
+            }
+            if (
+              event.type === "unread.sync" ||
+              event.type === "message.created" ||
+              event.type === "friend.changed" ||
+              event.type === "invite.received"
+            ) {
+              window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
+            }
+          });
+        })
+        .catch(() => {});
+    };
+
+    timer = window.setTimeout(connectIdle, 1500);
+    return () => {
+      disposed = true;
+      if (timer !== null) window.clearTimeout(timer);
+      unsubscribe?.();
+      release?.();
+    };
+  }, [session?.user?.id, chatEnabled, pathname, t]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -260,6 +411,44 @@ export function GlassNavbar({
               </li>
             );
           })}
+          {session?.user && chatEnabled ? (
+            <li className="relative" role="none">
+              <Link
+                href="/chat"
+                role="menuitem"
+                data-testid="navbar-chat-link"
+                aria-current={isActive("/chat") ? "page" : undefined}
+                className={cn(
+                  "relative flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200",
+                  isActive("/chat")
+                    ? "text-primary-foreground dark:text-primary-foreground"
+                    : transparentTop
+                    ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
+                    : "text-foreground/80 hover:text-foreground",
+                )}
+              >
+                {isActive("/chat") && (
+                  <motion.span
+                    layoutId="active-nav-pill"
+                    className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 30,
+                    }}
+                    style={{ willChange: "transform" }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center">
+                  {t("nav.chat")}
+                  <ChatUnreadBadge
+                    count={chatUnread}
+                    label={t("nav.chatUnread").replace("{count}", String(chatUnread))}
+                  />
+                </span>
+              </Link>
+            </li>
+          ) : null}
         </ul>
 
         {/* Controls */}
@@ -550,6 +739,31 @@ export function GlassNavbar({
                     </motion.li>
                   );
                 })}
+                {session?.user && chatEnabled ? (
+                  <motion.li variants={fadeUp}>
+                    <Link
+                      href="/chat"
+                      data-testid="navbar-mobile-chat-link"
+                      onClick={() => setOpen(false)}
+                      aria-current={isActive("/chat") ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                        isActive("/chat")
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex items-center">
+                        {t("nav.chat")}
+                        <ChatUnreadBadge
+                          count={chatUnread}
+                          label={t("nav.chatUnread").replace("{count}", String(chatUnread))}
+                        />
+                      </span>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
               </motion.ul>
               <div className="mt-3 flex flex-col gap-2.5 border-t border-border/60 pt-3">
                 {/* Theme & Language Switchers: ONLY rendered when signed out */}

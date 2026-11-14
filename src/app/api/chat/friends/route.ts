@@ -12,6 +12,8 @@ import {
   unblockUser,
   unfriendUser,
 } from "@/lib/chat/friends";
+import { getRealtimeTransport } from "@/lib/chat/realtime";
+import { userChannel } from "@/lib/chat/realtime/types";
 
 const friendActionSchema = z.object({
   action: z.enum([
@@ -88,6 +90,37 @@ export async function POST(request: Request) {
       case "unblock":
         result = await unblockUser(actorId, targetUserId);
         break;
+    }
+
+    const transport = getRealtimeTransport();
+    const kindMap = {
+      send: result.autoAccepted ? "accepted" : "requested",
+      cancel: "canceled",
+      accept: "accepted",
+      decline: "declined",
+      unfriend: "unfriended",
+      block: "blocked",
+    } as const;
+
+    if (action !== "unblock") {
+      const kind = kindMap[action];
+      await Promise.all([
+        transport.publish(userChannel(targetUserId), {
+          type: "friend.changed",
+          kind,
+          actorId,
+        }),
+        transport.publish(userChannel(targetUserId), {
+          type: "unread.sync",
+        }),
+        transport.publish(userChannel(actorId), {
+          type: "unread.sync",
+        }),
+      ]);
+    } else {
+      await transport.publish(userChannel(actorId), {
+        type: "unread.sync",
+      });
     }
 
     return NextResponse.json({ ok: true, ...result });

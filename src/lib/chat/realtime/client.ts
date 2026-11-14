@@ -22,6 +22,7 @@ class ChatRealtimeClient {
   private hasConnectedOnce = false;
 
   private eventSource: EventSource | null = null;
+  private pendingEventSource: EventSource | null = null;
   private ablyClient: { close: () => void } | null = null;
   private refreshTimer: number | null = null;
   private reconnectTimer: number | null = null;
@@ -32,6 +33,11 @@ class ChatRealtimeClient {
   private typingStopTimers = new Map<string, number>();
   private currentToken: RealtimeTokenResponse | null = null;
   private connectingPromise: Promise<void> | null = null;
+  private refreshPromise: Promise<void> | null = null;
+  private pendingRefresh = false;
+  private desiredConvIds: string[] = [];
+  private syncOnNextReady = false;
+  private recentMessageIds: string[] = [];
   private visibilityBound = false;
 
   acquire(): () => void {
@@ -53,7 +59,7 @@ class ChatRealtimeClient {
     if (this.idleHandle) {
       this.cancelIdle();
     }
-    if (!this.started) {
+    if (!this.started || (!this.currentToken && !this.connectingPromise)) {
       this.started = true;
       void this.connect();
     }
@@ -94,9 +100,59 @@ class ChatRealtimeClient {
 
   async refreshSubscriptions(): Promise<void> {
     if (this.refCount <= 0 && !this.started) return;
-    this.disconnectTransportOnly();
-    this.started = true;
-    await this.connect();
+    if (this.refreshPromise) {
+      this.pendingRefresh = true;
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      do {
+        this.pendingRefresh = false;
+        if (this.connectingPromise) {
+          await this.connectingPromise.catch(() => {});
+        }
+        this.syncOnNextReady = true;
+        this.started = true;
+        await this.connect();
+        if (this.pendingRefresh && this.currentToken) {
+          const subscribed = new Set(this.currentToken.channels);
+          const stillMissing = this.desiredConvIds.some(
+            (id) => !subscribed.has(`conv:${id}`),
+          );
+          if (!stillMissing) {
+            this.pendingRefresh = false;
+          }
+        }
+      } while (this.pendingRefresh && !this.destroyed);
+    })().finally(() => {
+      this.refreshPromise = null;
+    });
+
+    return this.refreshPromise;
+  }
+
+  ensureSubscribedConversations(conversationIds: string[]): void {
+    this.desiredConvIds = conversationIds;
+    if (this.destroyed || this.refCount <= 0) return;
+    if (this.refreshPromise) {
+      return;
+    }
+    if (!this.currentToken) {
+      if (!this.connectingPromise) {
+        this.started = true;
+        void this.connect();
+      } else if (conversationIds.length > 0) {
+        void this.connectingPromise.then(() => {
+          this.ensureSubscribedConversations(this.desiredConvIds);
+        });
+      }
+      return;
+    }
+    const subscribed = new Set(this.currentToken.channels);
+    const missing = conversationIds.some((id) => !subscribed.has(`conv:${id}`));
+    if (missing) {
+      void this.refreshSubscriptions();
+    }
   }
 
   sendTyping(conversationId: string, isTyping: boolean): void {
@@ -237,13 +293,47 @@ class ChatRealtimeClient {
   }
 
   private connectLocalSse(): void {
-    this.disconnectTransportOnly();
+    if (this.pendingEventSource) {
+      this.pendingEventSource.close();
+      this.pendingEventSource = null;
+    }
+    if (this.ablyClient) {
+      try {
+        this.ablyClient.close();
+      } catch {}
+      this.ablyClient = null;
+    }
+
     const es = new EventSource("/api/chat/realtime/stream", {
       withCredentials: true,
     });
-    this.eventSource = es;
+    const hasOpenPrimary =
+      this.eventSource !== null && this.eventSource.readyState !== EventSource.CLOSED;
+    if (hasOpenPrimary) {
+      this.pendingEventSource = es;
+    } else {
+      if (this.eventSource) {
+        this.eventSource.close();
+      }
+      this.eventSource = es;
+    }
 
     es.addEventListener("ready", (evt) => {
+      if (this.destroyed) {
+        es.close();
+        return;
+      }
+      if (this.pendingEventSource === es) {
+        if (this.eventSource && this.eventSource !== es) {
+          this.eventSource.close();
+        }
+        this.eventSource = es;
+        this.pendingEventSource = null;
+      } else if (this.eventSource !== es) {
+        es.close();
+        return;
+      }
+
       try {
         const data = JSON.parse((evt as MessageEvent).data) as {
           onlineUserIds?: string[];
@@ -254,13 +344,15 @@ class ChatRealtimeClient {
         }
       } catch {}
 
-      if (this.hasConnectedOnce) {
+      if (this.hasConnectedOnce || this.syncOnNextReady) {
+        this.syncOnNextReady = false;
         this.emitReconnect();
       }
       this.hasConnectedOnce = true;
     });
 
     es.addEventListener("message", (evt) => {
+      if (this.eventSource !== es) return;
       try {
         const envelope = JSON.parse((evt as MessageEvent).data) as RealtimeEnvelope;
         if (envelope?.event) {
@@ -270,12 +362,18 @@ class ChatRealtimeClient {
     });
 
     es.addEventListener("reconnect", () => {
+      if (this.eventSource !== es) return;
       void this.refreshSubscriptions();
     });
 
     es.onerror = () => {
       if (es.readyState === EventSource.CLOSED) {
-        this.scheduleReconnect();
+        if (this.pendingEventSource === es) {
+          this.pendingEventSource = null;
+        }
+        if (this.eventSource === es || !this.eventSource) {
+          this.scheduleReconnect();
+        }
       }
     };
   }
@@ -359,6 +457,13 @@ class ChatRealtimeClient {
     envelope?: RealtimeEnvelope,
   ): void {
     if (event.type === "message.created") {
+      if (this.recentMessageIds.includes(event.messageId)) {
+        return;
+      }
+      this.recentMessageIds.push(event.messageId);
+      if (this.recentMessageIds.length > 100) {
+        this.recentMessageIds.shift();
+      }
       this.recordMessageSeen(
         event.conversationId,
         event.messageId,
@@ -444,6 +549,10 @@ class ChatRealtimeClient {
   }
 
   private disconnectTransportOnly(): void {
+    if (this.pendingEventSource) {
+      this.pendingEventSource.close();
+      this.pendingEventSource = null;
+    }
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;

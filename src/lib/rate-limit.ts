@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -9,33 +10,35 @@ export async function checkRateLimit(
   windowSeconds: number,
 ): Promise<{ allowed: boolean; retryAfter?: number }> {
   try {
-    const now = new Date();
-    const expiresAt = new Date(Date.now() + windowSeconds * 1000);
+    const now = Date.now();
+    const expiresAt = new Date(now + windowSeconds * 1000);
+    const id = randomUUID();
 
-    const record = await prisma.rateLimit.findUnique({
-      where: { key },
-    });
+    const rows = await prisma.$queryRaw<Array<{ count: number; expiresAt: Date }>>`
+      INSERT INTO "RateLimit" ("id", "key", "count", "expiresAt", "createdAt", "updatedAt")
+      VALUES (${id}, ${key}, 1, ${expiresAt}, NOW(), NOW())
+      ON CONFLICT ("key") DO UPDATE SET
+        "count" = CASE
+          WHEN "RateLimit"."expiresAt" < NOW() THEN 1
+          ELSE "RateLimit"."count" + 1
+        END,
+        "expiresAt" = CASE
+          WHEN "RateLimit"."expiresAt" < NOW() THEN EXCLUDED."expiresAt"
+          ELSE "RateLimit"."expiresAt"
+        END,
+        "updatedAt" = NOW()
+      RETURNING "count", "expiresAt"
+    `;
 
-    if (!record || record.expiresAt < now) {
-      await prisma.rateLimit.upsert({
-        where: { key },
-        create: { key, count: 1, expiresAt },
-        update: { count: 1, expiresAt },
-      });
-      return { allowed: true };
-    }
+    const row = rows[0];
+    if (!row) return { allowed: true };
 
-    if (record.count >= limit) {
+    if (row.count > limit) {
       const remainingSeconds = Math.ceil(
-        (record.expiresAt.getTime() - now.getTime()) / 1000,
+        (new Date(row.expiresAt).getTime() - now) / 1000,
       );
       return { allowed: false, retryAfter: Math.max(1, remainingSeconds) };
     }
-
-    await prisma.rateLimit.update({
-      where: { key },
-      data: { count: { increment: 1 } },
-    });
 
     return { allowed: true };
   } catch {

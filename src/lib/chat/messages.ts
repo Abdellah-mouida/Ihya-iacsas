@@ -561,24 +561,46 @@ export async function openOrCreateDmConversation(
   await assertFriendsAndUnblocked(userId, peerId);
   const dmPairKey = canonicalPairKey(userId, peerId);
 
-  const conv = await prisma.conversation.upsert({
+  const dmSelect = {
+    id: true,
+    type: true,
+    emoji: true,
+    accentColor: true,
+    ownerId: true,
+    membersCanInvite: true,
+    lastMessageAt: true,
+  } as const;
+
+  let conv = await prisma.conversation.findUnique({
     where: { dmPairKey },
-    update: {},
-    create: {
-      type: "DM",
-      dmPairKey,
-      memberCap: 2,
-    },
-    select: {
-      id: true,
-      type: true,
-      emoji: true,
-      accentColor: true,
-      ownerId: true,
-      membersCanInvite: true,
-      lastMessageAt: true,
-    },
+    select: dmSelect,
   });
+  if (!conv) {
+    try {
+      conv = await prisma.conversation.create({
+        data: {
+          type: "DM",
+          dmPairKey,
+          memberCap: 2,
+        },
+        select: dmSelect,
+      });
+    } catch (err) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code?: string }).code === "P2002"
+      ) {
+        conv = await prisma.conversation.findUniqueOrThrow({
+          where: { dmPairKey },
+          select: dmSelect,
+        });
+      } else {
+        throw err;
+      }
+    }
+  }
 
   const [selfMember, peerMember] = await Promise.all([
     prisma.conversationMember.upsert({
@@ -609,13 +631,6 @@ export async function openOrCreateDmConversation(
       },
     }),
   ]);
-
-  await getRealtimeTransport()
-    .publish(userChannel(peerId), {
-      type: "unread.sync",
-      conversationId: conv.id,
-    })
-    .catch(() => {});
 
   return {
     id: conv.id,
@@ -727,18 +742,58 @@ export async function getConversationMessageById(params: {
 }): Promise<ChatMessageDTO> {
   const row = await prisma.message.findUnique({
     where: { id: params.messageId },
-    include: messageInclude,
+    include: {
+      ...messageInclude,
+      conversation: {
+        select: {
+          type: true,
+          dmPairKey: true,
+          members: {
+            where: { userId: params.userId, leftAt: null },
+            select: { id: true },
+          },
+        },
+      },
+    },
   });
   if (!row) {
     throw new ChatServiceError("Message not found", 404, "NOT_FOUND");
   }
 
-  const access = await canUserAccessConversation(
-    params.userId,
-    row.conversationId,
-  );
-  if (!access.ok) {
-    throw new ChatServiceError("Message not found", 404, "NOT_FOUND");
+  const conv = row.conversation;
+  if (conv.type !== "PUBLIC") {
+    if (conv.members.length === 0) {
+      throw new ChatServiceError("Message not found", 404, "NOT_FOUND");
+    }
+    if (conv.type === "DM") {
+      if (!conv.dmPairKey) {
+        throw new ChatServiceError("Message not found", 404, "NOT_FOUND");
+      }
+      const [idA, idB] = conv.dmPairKey.split(":");
+      const peerId = idA === params.userId ? idB : idA;
+      if (!peerId) {
+        throw new ChatServiceError("Message not found", 404, "NOT_FOUND");
+      }
+      const pairKey = canonicalPairKey(params.userId, peerId);
+      const [friendship, block] = await Promise.all([
+        prisma.friendship.findUnique({
+          where: { pairKey },
+          select: { status: true },
+        }),
+        prisma.block.findFirst({
+          where: {
+            OR: [
+              { blockerId: params.userId, blockedId: peerId },
+              { blockerId: peerId, blockedId: params.userId },
+            ],
+          },
+          select: { id: true },
+        }),
+      ]);
+      if (block || friendship?.status !== "ACCEPTED") {
+        throw new ChatServiceError("Message not found", 404, "NOT_FOUND");
+      }
+    }
   }
 
   loadKeyringFromEnv();
@@ -793,38 +848,7 @@ export async function sendMessage(params: {
 
   loadKeyringFromEnv();
 
-  if (clientId) {
-    const existing = await prisma.message.findUnique({
-      where: {
-        conversationId_senderId_clientId: {
-          conversationId: params.conversationId,
-          senderId: params.userId,
-          clientId,
-        },
-      },
-      include: messageInclude,
-    });
-    if (existing) {
-      return { message: serializeMessage(existing), deduplicated: true };
-    }
-  }
-
-  if (access.conversationType === "PUBLIC") {
-    const slow = await checkRateLimit(
-      `chat:public:slow:${params.userId}`,
-      1,
-      PUBLIC_SLOW_MODE_SECONDS,
-    );
-    if (!slow.allowed) {
-      throw new ChatServiceError(
-        "Slow mode active in public space. Please wait a moment.",
-        429,
-        "SLOW_MODE",
-      );
-    }
-  }
-
-  const [burstLimit, minuteLimit] = await Promise.all([
+  const [burstLimit, minuteLimit, slow, replyTarget] = await Promise.all([
     checkRateLimit(
       `chat:msg:burst:${params.userId}`,
       MESSAGE_BURST_LIMIT,
@@ -835,7 +859,28 @@ export async function sendMessage(params: {
       MESSAGE_MINUTE_LIMIT,
       MESSAGE_MINUTE_WINDOW_SECONDS,
     ),
+    access.conversationType === "PUBLIC"
+      ? checkRateLimit(
+          `chat:public:slow:${params.userId}`,
+          1,
+          PUBLIC_SLOW_MODE_SECONDS,
+        )
+      : Promise.resolve({ allowed: true }),
+    params.replyToId
+      ? prisma.message.findUnique({
+          where: { id: params.replyToId },
+          select: { id: true, conversationId: true, deletedAt: true },
+        })
+      : Promise.resolve(null),
   ]);
+
+  if (!slow.allowed) {
+    throw new ChatServiceError(
+      "Slow mode active in public space. Please wait a moment.",
+      429,
+      "SLOW_MODE",
+    );
+  }
   if (!burstLimit.allowed || !minuteLimit.allowed) {
     throw new ChatServiceError(
       "Sending too quickly. Please wait before sending again.",
@@ -845,10 +890,6 @@ export async function sendMessage(params: {
   }
 
   if (params.replyToId) {
-    const replyTarget = await prisma.message.findUnique({
-      where: { id: params.replyToId },
-      select: { id: true, conversationId: true, deletedAt: true },
-    });
     if (
       !replyTarget ||
       replyTarget.conversationId !== params.conversationId ||
@@ -869,7 +910,7 @@ export async function sendMessage(params: {
   const now = new Date();
   let createdRow: MessageRow;
   try {
-    const [msg] = await prisma.$transaction([
+    const [msg] = await Promise.all([
       prisma.message.create({
         data: {
           id: messageId,
@@ -923,13 +964,17 @@ export async function sendMessage(params: {
   }
 
   const transport = getRealtimeTransport();
-  await transport.publish(conversationChannel(params.conversationId), {
-    type: "message.created",
+  const payload = {
+    type: "message.created" as const,
     conversationId: params.conversationId,
     messageId: createdRow.id,
     senderId: params.userId,
     createdAt: createdRow.createdAt.toISOString(),
-  });
+  };
+  await transport.publish(conversationChannel(params.conversationId), payload);
+  if (access.conversationType === "DM" && access.dmPeerId) {
+    await transport.publish(userChannel(access.dmPeerId), payload);
+  }
 
   return { message: serializeMessage(createdRow), deduplicated: false };
 }

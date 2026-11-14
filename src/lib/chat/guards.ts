@@ -47,10 +47,13 @@ export type ChatAuthResult =
 export async function requireChatActor(options?: {
   requireTerms?: boolean;
 }): Promise<ChatAuthResult> {
-  const disabled = await requireChatEnabledApi();
-  if (disabled) return { ok: false, response: disabled };
-
-  const session = await auth();
+  const [enabled, session] = await Promise.all([isChatEnabled(), auth()]);
+  if (!enabled) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Not found" }, { status: 404 }),
+    };
+  }
   if (!session?.user?.id) {
     return {
       ok: false,

@@ -444,13 +444,18 @@ export async function blockUser(
   const pairKey = canonicalPairKey(actorId, targetUserId);
 
   await prisma.$transaction(async (tx) => {
-    await tx.block.upsert({
+    const existingBlock = await tx.block.findUnique({
       where: {
         blockerId_blockedId: { blockerId: actorId, blockedId: targetUserId },
       },
-      update: {},
-      create: { blockerId: actorId, blockedId: targetUserId },
+      select: { id: true },
     });
+    if (!existingBlock) {
+      await tx.block.createMany({
+        data: [{ blockerId: actorId, blockedId: targetUserId }],
+        skipDuplicates: true,
+      });
+    }
     await tx.friendship.deleteMany({ where: { pairKey } });
     await tx.invite.updateMany({
       where: {
