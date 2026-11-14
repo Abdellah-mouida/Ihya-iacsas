@@ -147,16 +147,19 @@ export function RoomMembersSheet({
       });
       const data = (await res.json().catch(() => ({}))) as {
         inviteUrl?: string;
+        token?: string;
         error?: string;
       };
-      if (!res.ok || !data.inviteUrl) {
+      const invitePath =
+        data.inviteUrl ?? (data.token ? `/chat/invite/${data.token}` : null);
+      if (!res.ok || !invitePath) {
         notify.error(data.error || t("chat.actionError"));
         return;
       }
       const fullUrl =
         typeof window !== "undefined"
-          ? `${window.location.origin}${data.inviteUrl}`
-          : data.inviteUrl;
+          ? `${window.location.origin}${invitePath}`
+          : invitePath;
       setCopiedLink(fullUrl);
       await navigator.clipboard?.writeText(fullUrl).catch(() => {});
       notify.success(t("chat.copyLinkSuccess"));

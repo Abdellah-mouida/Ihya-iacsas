@@ -5,6 +5,7 @@ import {
   canUserAccessConversation,
   conversationChannel,
   getRealtimeTransport,
+  userChannel,
 } from "@/lib/chat/realtime";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -69,13 +70,22 @@ export async function POST(request: Request) {
   map.set(throttleKey, isTyping ? now : 0);
 
   try {
-    await getRealtimeTransport().publish(conversationChannel(conversationId), {
-      type: "typing",
-      conversationId,
-      userId: actor.id,
-      isTyping,
-      at: now,
-    });
+    const transport = getRealtimeTransport();
+    const targets = [conversationChannel(conversationId)];
+    if (access.conversationType === "DM" && access.dmPeerId) {
+      targets.push(userChannel(access.dmPeerId));
+    }
+    await Promise.all(
+      targets.map((ch) =>
+        transport.publish(ch, {
+          type: "typing",
+          conversationId,
+          userId: actor.id,
+          isTyping,
+          at: now,
+        }),
+      ),
+    );
   } catch (err) {
     console.error("Failed to publish typing event:", err);
   }

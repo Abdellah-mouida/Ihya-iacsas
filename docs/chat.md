@@ -121,3 +121,19 @@ ABLY_API_KEY=
 ### Manual Production Provider Verification (Ably)
 1. Set `CHAT_REALTIME_PROVIDER=ably` and `ABLY_API_KEY=<key>` in `.env.local` (or Vercel preview).
 2. Open `/chat` in two sessions, confirm `/api/chat/realtime/token` returns `{ provider: "ably", tokenRequest }`, and verify live delivery, typing, and unread updates over `wss://realtime.ably.io`.
+
+---
+
+## 6. Automated Test Suite (T1–T9)
+
+All automated checks run exclusively against the Neon `dev` branch (`assertDevBranchDatabase()`):
+
+- `tests/chat-crypto.unit.spec.ts` — AES-256-GCM + HKDF round trip, tamper detection, AAD binding, `keyVersion` rotation, `server-only` guard (6 tests).
+- `tests/chat-realtime.unit.spec.ts` — 10-minute scoped token signing/expiry, Ably capability scoping, SSE ID-only delivery, membership/block revocation (3 tests).
+- `tests/chat-friends.spec.ts` — Friend state transitions, mutual auto-accept, duplicate/block guards, `/u/[id]` `CountUp` & privacy controls, `chatEnabled` 404 flag (2 tests).
+- `tests/chat-idor.spec.ts` — Safe `http(s)` linkifier, Public/DM/Room pipeline, cursor pagination, idempotent `clientId`, slow mode, HTTP 404 IDOR matrix (3 tests).
+- `tests/chat-rooms.spec.ts` — Private rooms, `ROOM_INVITE` DM cards, SHA-256 link invites, `O -> A -> B` invite chains, `membersCanInvite` toggle, stranger 404 rejection (2 tests).
+- `tests/chat-ui.spec.ts` — Guidelines gate, `data-rb` markers (`AnimatedList`, `ClickSpark`, `SpotlightCard`, `ShinyText`, `CountUp`), realtime DM/typing/seen, 320px phone 2-pane nav, Amoled & English checks (1 test).
+- `tests/chat-moderation.spec.ts` — Encrypted report snapshots, `/admin/moderation` report resolve, public delete/timeout/ban, global `chatEnabled` toggle, `/privacy#messaging`, account deletion anonymization (2 tests).
+- `tests/chat-e2e-full.spec.ts` — Full 4-context multi-user E2E flow across desktop Amoled, 320px Arabic RTL phone, 2-core/2GB `data-perf="low"`, and Moderator sessions (1 test).
+

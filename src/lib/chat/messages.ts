@@ -1056,13 +1056,22 @@ export async function editMessage(params: {
     include: messageInclude,
   });
 
-  await getRealtimeTransport().publish(conversationChannel(row.conversationId), {
-    type: "message.updated",
-    conversationId: row.conversationId,
-    messageId: row.id,
-    senderId: params.userId,
-    editedAt: editedAt.toISOString(),
-  });
+  const transport = getRealtimeTransport();
+  const targets = [conversationChannel(row.conversationId)];
+  if (access.conversationType === "DM" && access.dmPeerId) {
+    targets.push(userChannel(access.dmPeerId));
+  }
+  await Promise.all(
+    targets.map((ch) =>
+      transport.publish(ch, {
+        type: "message.updated",
+        conversationId: row.conversationId,
+        messageId: row.id,
+        senderId: params.userId,
+        editedAt: editedAt.toISOString(),
+      }),
+    ),
+  );
 
   return serializeMessage(updated);
 }
@@ -1120,13 +1129,22 @@ export async function deleteMessage(params: {
     include: messageInclude,
   });
 
-  await getRealtimeTransport().publish(conversationChannel(row.conversationId), {
-    type: "message.deleted",
-    conversationId: row.conversationId,
-    messageId: row.id,
-    senderId: params.userId,
-    deletedAt: deletedAt.toISOString(),
-  });
+  const transport = getRealtimeTransport();
+  const targets = [conversationChannel(row.conversationId)];
+  if (access.conversationType === "DM" && access.dmPeerId) {
+    targets.push(userChannel(access.dmPeerId));
+  }
+  await Promise.all(
+    targets.map((ch) =>
+      transport.publish(ch, {
+        type: "message.deleted",
+        conversationId: row.conversationId,
+        messageId: row.id,
+        senderId: params.userId,
+        deletedAt: deletedAt.toISOString(),
+      }),
+    ),
+  );
 
   return serializeMessage(updated);
 }
@@ -1158,13 +1176,19 @@ export async function markConversationRead(params: {
   });
 
   const transport = getRealtimeTransport();
+  const readTargets = [conversationChannel(params.conversationId)];
+  if (access.conversationType === "DM" && access.dmPeerId) {
+    readTargets.push(userChannel(access.dmPeerId));
+  }
   await Promise.all([
-    transport.publish(conversationChannel(params.conversationId), {
-      type: "read",
-      conversationId: params.conversationId,
-      userId: params.userId,
-      lastReadAt: lastReadAt.toISOString(),
-    }),
+    ...readTargets.map((ch) =>
+      transport.publish(ch, {
+        type: "read",
+        conversationId: params.conversationId,
+        userId: params.userId,
+        lastReadAt: lastReadAt.toISOString(),
+      }),
+    ),
     transport.publish(userChannel(params.userId), {
       type: "unread.sync",
       conversationId: params.conversationId,

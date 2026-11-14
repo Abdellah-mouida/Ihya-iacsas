@@ -134,9 +134,6 @@ class ChatRealtimeClient {
   ensureSubscribedConversations(conversationIds: string[]): void {
     this.desiredConvIds = conversationIds;
     if (this.destroyed || this.refCount <= 0) return;
-    if (this.refreshPromise) {
-      return;
-    }
     if (!this.currentToken) {
       if (!this.connectingPromise) {
         this.started = true;
