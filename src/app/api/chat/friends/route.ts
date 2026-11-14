@@ -34,7 +34,9 @@ export async function GET() {
 
   try {
     const data = await getFriendsDashboardData(authResult.user.id);
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
   } catch (err) {
     console.error("Failed to fetch friends dashboard:", err);
     return NextResponse.json(

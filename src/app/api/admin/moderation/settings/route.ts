@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { chatErrorResponse, requireAdminApiPermission } from "@/lib/chat/guards";
 import { setGlobalChatEnabled } from "@/lib/chat/moderation";
+
+const settingsSchema = z.object({
+  enabled: z.boolean(),
+});
 
 export async function PATCH(req: Request) {
   const authResult = await requireAdminApiPermission("settings:manage");
@@ -13,14 +18,17 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const payload =
-    body && typeof body === "object"
-      ? (body as Record<string, unknown>)
-      : {};
+  const parsed = settingsSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid settings payload" },
+      { status: 400 },
+    );
+  }
 
   try {
     const result = await setGlobalChatEnabled({
-      enabled: Boolean(payload.enabled),
+      enabled: parsed.data.enabled,
       actor: authResult.actor,
     });
     return NextResponse.json(result);

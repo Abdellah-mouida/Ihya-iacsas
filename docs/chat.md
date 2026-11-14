@@ -72,12 +72,52 @@ ABLY_API_KEY=
    - Sign in at [ably.com](https://ably.com), create an app (e.g. `ihyaa-chat`), and copy the Root or a scoped API key with `publish`, `subscribe`, and `presence` capabilities.
    - Set `CHAT_REALTIME_PROVIDER=ably` and `ABLY_API_KEY=<key>` in Vercel env vars.
 3. **Run Production DB Migration & Public Space Seed:**
-   *(Exact commands will be finalized once T1 migration is created.)*
+   ```bash
+   npx prisma migrate deploy
+   node scripts/seed-chat.mjs
+   ```
+   *(Confirmed idempotent: `scripts/seed-chat.mjs` ensures the `PUBLIC` conversation and default `chatEnabled="false"` setting exist without touching existing messages or user roles.)*
 4. **Enable `chatEnabled` Dark Launch Toggle:**
    - Chat ships **OFF by default** (`SystemSetting.key = "chatEnabled"`, `"false"`).
    - Toggle it on from `/admin/moderation` when ready.
 
 ---
 
-## 5. Key Rotation, Security Checklist & Manual Provider Verification
-*(Completed alongside T1–T8 implementation.)*
+## 5. Key Rotation, Security Checklist & Performance Audit (T8)
+
+### Key Rotation (`CHAT_ENCRYPTION_KEY`)
+1. Generate a new 32-byte key (`openssl rand -base64 32`).
+2. Move the previous key into `CHAT_ENCRYPTION_KEYS_PREVIOUS="1:<old-base64-key>"`.
+3. Set `CHAT_ENCRYPTION_KEY="<new-base64-key>"` and increment `CHAT_ENCRYPTION_KEY_VERSION=2`.
+4. New messages encrypt under version `2`; historical messages and report snapshots decrypt seamlessly using `keyVersion` lookup.
+
+### Security Best Practices Checklist
+- **Authentication & Role Authority**:
+  - `requireChatActor` validates `chatEnabled`, NextAuth session, `onboardingCompletedAt`, and `chatBannedAt` on every chat route; `requireAdminApiPermission("chat:moderate")` enforces `ADMIN | MODERATOR` for moderation (`chatEnabled` toggle restricted to `ADMIN` `settings:manage`).
+  - No automatic admin promotion; `deleteUserAccount` re-encrypts non-deleted public/room messages under `"anonymized"` AAD (`senderId: null, isAnonymized: true`) and deletes DMs/solo rooms.
+- **IDOR & Authorization Boundaries**:
+  - Every conversation, message, invite, and report lookup scopes by `userId` membership, `ACCEPTED` friendship (for DMs and friend-only invites), and bidirectional `Block` checks, returning generic `404` for unauthorized IDs or leaked invite links.
+  - Link invite tokens are 128-bit `base64url` secrets hashed with SHA-256 at rest and verified via `crypto.timingSafeEqual`.
+- **Cross-Origin Mutation & Response Caching Guards**:
+  - `src/middleware.ts` enforces same-origin validation (`Sec-Fetch-Site: cross-site` or `Origin` host mismatch -> `403`) on `POST|PATCH|PUT|DELETE` requests to `/api/chat/*` and `/api/admin/moderation*`.
+  - Sensitive chat GET endpoints (`/api/chat/conversations`, `/api/chat/messages`, `/api/chat/messages/[id]`, `/api/chat/friends`, `/api/chat/users/search`, `/api/chat/realtime/token`, `/api/chat/realtime/backfill`, `/api/admin/moderation`) emit `Cache-Control: no-store, max-age=0`; `/u/[id]` and `/chat/invite/[token]` force dynamic rendering.
+- **Input Validation, XSS & Rate Limits**:
+  - Strict `zod` schemas validate payloads and bounded IDs; `parseSafeMessageSegments` renders plain text + `http(s):` links only (`rel="noopener noreferrer"`), rejecting `javascript:` / `data:` / inline HTML.
+  - Atomic PostgreSQL `checkRateLimit` enforces friend request daily caps, prefix search limits (40/min), burst/minute message limits, `PUBLIC` slow mode (12s), invite brute-force throttling (30/5m), and report caps (15/24h).
+- **Secrets & Logs**:
+  - `src/lib/chat/crypto.ts` is marked `import "server-only"`; message ciphertexts, nonces, invite tokens, and plaintexts are never logged to stdout or `AuditLog`.
+
+### Performance & Index Verification (`EXPLAIN` on Neon Dev)
+- Verified with `SET LOCAL enable_seqscan = off`:
+  - Message pagination & unread counts use `Message_conversationId_createdAt_id_idx`.
+  - Sidebar membership uses `ConversationMember_userId_leftAt_idx`.
+  - Friends, DMs, blocks, and invites hit `Friendship_pairKey_key`, `Friendship_requesterId_status_idx`, `Friendship_addresseeId_status_idx`, `Block_blockerId_blockedId_key`, and `Invite_tokenHash_key`.
+  - Prefix search uses partial expression index `User_name_lower_pattern_idx` (`LOWER("name") text_pattern_ops WHERE "onboardingCompletedAt" IS NOT NULL AND "chatBannedAt" IS NULL`).
+  - Moderation queue uses `Report_createdAt_idx`.
+- **Bundle Isolation & Adaptive Quality**:
+  - `ably` and `ChatWorkspace` live in dynamic/route-scoped chunks (`/` First Load JS does not load `ably` or `ChatWorkspace`).
+  - `AnimatedList`, `ClickSpark`, and `/chat` CSS animations automatically degrade to static transitions under `prefers-reduced-motion: reduce` and `html[data-perf="low"]`.
+
+### Manual Production Provider Verification (Ably)
+1. Set `CHAT_REALTIME_PROVIDER=ably` and `ABLY_API_KEY=<key>` in `.env.local` (or Vercel preview).
+2. Open `/chat` in two sessions, confirm `/api/chat/realtime/token` returns `{ provider: "ably", tokenRequest }`, and verify live delivery, typing, and unread updates over `wss://realtime.ably.io`.

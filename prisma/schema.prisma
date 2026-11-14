@@ -506,6 +506,7 @@ model Report {
   reviewedBy   User?        @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
   @@index([reporterId])
   @@index([conversationId])
 }

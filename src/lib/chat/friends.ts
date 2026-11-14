@@ -633,23 +633,28 @@ export async function searchUsersByNamePrefix(
     excludedIds.add(b.blockedId);
   }
 
-  const users = await prisma.user.findMany({
-    where: {
-      id: { notIn: Array.from(excludedIds) },
-      onboardingCompletedAt: { not: null },
-      chatBannedAt: null,
-      name: { startsWith: query, mode: "insensitive" },
-    },
-    select: {
-      id: true,
-      name: true,
-      image: true,
-      city: true,
-      friendRequestPolicy: true,
-    },
-    orderBy: { name: "asc" },
-    take: 12,
-  });
+  const escapedPrefix = query.replace(/[\\%_]/g, "\\$&");
+  const likePattern = `${escapedPrefix.toLowerCase()}%`;
+  const excludedList = Array.from(excludedIds);
+
+  const users = await prisma.$queryRaw<
+    Array<{
+      id: string;
+      name: string;
+      image: string | null;
+      city: string | null;
+      friendRequestPolicy: "EVERYONE" | "NOBODY";
+    }>
+  >`
+    SELECT id, name, image, city, "friendRequestPolicy"
+    FROM "User"
+    WHERE "onboardingCompletedAt" IS NOT NULL
+      AND "chatBannedAt" IS NULL
+      AND LOWER(name) LIKE ${likePattern} ESCAPE '\\'
+      AND NOT (id = ANY(${excludedList}::text[]))
+    ORDER BY LOWER(name) ASC, name ASC
+    LIMIT 12
+  `;
 
   if (users.length === 0) return [];
 

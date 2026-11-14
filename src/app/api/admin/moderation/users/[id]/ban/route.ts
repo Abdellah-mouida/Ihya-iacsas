@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { chatErrorResponse, requireAdminApiPermission } from "@/lib/chat/guards";
 import { setUserChatBan } from "@/lib/chat/moderation";
+
+const banSchema = z.object({
+  banned: z.boolean(),
+  reason: z.string().trim().max(500).optional(),
+});
 
 export async function POST(
   req: Request,
@@ -10,6 +16,10 @@ export async function POST(
   if (!authResult.ok) return authResult.response;
 
   const { id } = await context.params;
+  if (!id || id.length > 64) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -17,17 +27,20 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const payload =
-    body && typeof body === "object"
-      ? (body as Record<string, unknown>)
-      : {};
+  const parsed = banSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid ban payload" },
+      { status: 400 },
+    );
+  }
 
   try {
     const result = await setUserChatBan({
       targetUserId: id,
-      banned: Boolean(payload.banned),
+      banned: parsed.data.banned,
       actor: authResult.actor,
-      reason: typeof payload.reason === "string" ? payload.reason : undefined,
+      reason: parsed.data.reason,
     });
     return NextResponse.json(result);
   } catch (err) {

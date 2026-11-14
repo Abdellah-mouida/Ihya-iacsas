@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { chatErrorResponse, requireAdminApiPermission } from "@/lib/chat/guards";
 import { moderateDeletePublicMessage } from "@/lib/chat/moderation";
+
+const deleteBodySchema = z.object({
+  reason: z.string().trim().max(500).optional(),
+});
 
 export async function DELETE(
   req: Request,
@@ -10,17 +15,18 @@ export async function DELETE(
   if (!authResult.ok) return authResult.response;
 
   const { id } = await context.params;
+  if (!id || id.length > 64) {
+    return NextResponse.json({ error: "Message not found" }, { status: 404 });
+  }
+
   let reason: string | undefined;
-  try {
-    const body = (await req.json().catch(() => ({}))) as Record<
-      string,
-      unknown
-    >;
-    if (typeof body.reason === "string") {
-      reason = body.reason;
+  const rawBody = await req.json().catch(() => null);
+  if (rawBody && typeof rawBody === "object") {
+    const parsed = deleteBodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid reason" }, { status: 400 });
     }
-  } catch {
-    reason = undefined;
+    reason = parsed.data.reason;
   }
 
   try {

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { chatErrorResponse, requireAdminApiPermission } from "@/lib/chat/guards";
 import { resolveChatReport } from "@/lib/chat/moderation";
+
+const resolveSchema = z.object({
+  status: z.enum(["RESOLVED", "DISMISSED"]),
+  resolutionNote: z.string().trim().max(500).optional(),
+});
 
 export async function PATCH(
   req: Request,
@@ -10,6 +16,10 @@ export async function PATCH(
   if (!authResult.ok) return authResult.response;
 
   const { id } = await context.params;
+  if (!id || id.length > 64) {
+    return NextResponse.json({ error: "Report not found" }, { status: 404 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -17,20 +27,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const payload =
-    body && typeof body === "object"
-      ? (body as Record<string, unknown>)
-      : {};
+  const parsed = resolveSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid report resolution payload" },
+      { status: 400 },
+    );
+  }
 
   try {
     const report = await resolveChatReport({
       reportId: id,
       actor: authResult.actor,
-      status: payload.status as "RESOLVED" | "DISMISSED",
-      resolutionNote:
-        typeof payload.resolutionNote === "string"
-          ? payload.resolutionNote
-          : undefined,
+      status: parsed.data.status,
+      resolutionNote: parsed.data.resolutionNote,
     });
     return NextResponse.json({ report });
   } catch (err) {

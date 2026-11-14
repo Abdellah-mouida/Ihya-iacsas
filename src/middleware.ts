@@ -78,8 +78,46 @@ function isSafeRelativeUrl(url: string | null): boolean {
   return true;
 }
 
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
+function isCrossOriginApiMutation(request: NextRequest): boolean {
+  const { pathname } = request.nextUrl;
+  if (
+    !MUTATING_METHODS.has(request.method) ||
+    (!pathname.startsWith("/api/chat/") &&
+      !pathname.startsWith("/api/admin/moderation"))
+  ) {
+    return false;
+  }
+
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite === "cross-site") {
+    return true;
+  }
+
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+
+  const expectedHost =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
+  try {
+    return new URL(origin).host !== expectedHost;
+  } catch {
+    return true;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (isCrossOriginApiMutation(request)) {
+    return NextResponse.json(
+      { error: "Cross-origin request rejected" },
+      { status: 403 },
+    );
+  }
 
   // Legacy /account redirect -> /profile
   if (pathname === "/account" || pathname.startsWith("/account/")) {

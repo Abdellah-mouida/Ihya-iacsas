@@ -6,6 +6,8 @@ import { inspectLinkInvite } from "@/lib/chat/rooms";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { InviteLandingView } from "@/components/chat/invite-landing-view";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "دعوة غرفة خاصة | برنامج إحياء",
   description: "قبول أو رفض دعوة غرفة محادثة خاصة",

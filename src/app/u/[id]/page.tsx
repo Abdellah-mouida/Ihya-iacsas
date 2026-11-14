@@ -6,6 +6,8 @@ import { getPublicProfile } from "@/lib/chat/friends";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { PublicProfileView } from "@/components/profile/public-profile-view";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "الملف العام | برنامج إحياء",
   description: "الملف العام للعضو في مجتمع إحياء",

@@ -11,7 +11,10 @@ export async function GET(request: Request) {
 
   try {
     const users = await searchUsersByNamePrefix(authResult.user.id, query);
-    return NextResponse.json({ users });
+    return NextResponse.json(
+      { users },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   } catch (err) {
     if (err instanceof ChatServiceError) {
       return NextResponse.json(
