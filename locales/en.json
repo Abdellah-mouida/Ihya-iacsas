@@ -1038,7 +1038,16 @@
     "moderatorDeleteConfirmTitle": "Remove public message",
     "moderatorDeleteConfirmDesc": "Remove this message from the public space for all members?",
     "messageUnavailable": "Message unavailable (encrypted with a different key)",
-    "actionError": "Something went wrong. Please try again."
+    "actionError": "Something went wrong. Please try again.",
+    "convMenuLabel": "Conversation menu",
+    "searchInConv": "Search in conversation",
+    "searchInConvPlaceholder": "Search loaded messages...",
+    "searchMatchesCount": "{count} matches",
+    "searchNoMatches": "No matches in loaded messages",
+    "searchPrev": "Previous match",
+    "searchNext": "Next match",
+    "inviteFriendsMenu": "Invite friends",
+    "messageActionsLabel": "Message actions"
   },
   "adminModeration": {
     "navLabel": "Moderation",

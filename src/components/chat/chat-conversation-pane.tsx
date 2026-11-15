@@ -18,14 +18,22 @@ import {
   BellOff,
   Check,
   CheckCheck,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
   Flag,
+  LogOut,
+  MoreHorizontal,
+  MoreVertical,
   Pencil,
   Reply,
   RotateCw,
+  Search,
   Send,
   Smile,
   Trash2,
   UserMinus,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -33,6 +41,14 @@ import { ClickSpark } from "@/components/common/click-spark";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-provider";
 import { parseSafeMessageSegments } from "@/lib/chat/links";
 import { cn } from "@/lib/utils";
@@ -72,6 +88,7 @@ export function ChatConversationPane({
   onRespondInvite,
   onToggleMute,
   onOpenRoomPanel,
+  onLeaveRoom,
   onFriendAction,
   onTypingPulse,
   onReportMessage,
@@ -96,6 +113,7 @@ export function ChatConversationPane({
   onRespondInvite: (inviteId: string, action: "accept" | "decline") => Promise<void>;
   onToggleMute: (conversationId: string, muted: boolean) => Promise<void>;
   onOpenRoomPanel: () => void;
+  onLeaveRoom?: (roomId: string) => Promise<void>;
   onFriendAction: (action: "unfriend" | "block", targetUserId: string) => Promise<void>;
   onTypingPulse: () => void;
   onReportMessage?: (msg: ChatMessageItem) => void;
@@ -109,6 +127,9 @@ export function ChatConversationPane({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMatchIdx, setActiveMatchIdx] = useState(0);
   const [atBottom, setAtBottom] = useState(true);
   const [nowMs, setNowMs] = useState(0);
   const [scrollWindow, setScrollWindow] = useState({
@@ -121,6 +142,7 @@ export function ChatConversationPane({
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const prevConvIdRef = useRef<string | null>(null);
   const prevLenRef = useRef(0);
   const prevScrollHeightRef = useRef(0);
@@ -228,6 +250,9 @@ export function ChatConversationPane({
         setReplyTo(null);
         setEditingId(null);
         setEmojiOpen(false);
+        setSearchOpen(false);
+        setSearchQuery("");
+        setActiveMatchIdx(0);
         setAtBottom(true);
         const start = messages.length <= 60 ? 0 : Math.max(0, messages.length - 50);
         const end = messages.length;
@@ -298,6 +323,45 @@ export function ChatConversationPane({
     }
   }
 
+  const trimmedSearch = searchQuery.trim().toLowerCase();
+  const searchActive = searchOpen && trimmedSearch.length > 0;
+
+  const matchedMessageIds = useMemo(() => {
+    if (!searchActive) return [] as string[];
+    const matches: string[] = [];
+    for (const msg of messages) {
+      if (msg.deleted || msg.decryptionFailed || msg.type === "SYSTEM") continue;
+      if (msg.body.toLowerCase().includes(trimmedSearch)) {
+        matches.push(msg.id);
+      }
+    }
+    return matches;
+  }, [messages, searchActive, trimmedSearch]);
+
+  const matchedSet = useMemo(() => new Set(matchedMessageIds), [matchedMessageIds]);
+  const safeMatchIdx =
+    matchedMessageIds.length === 0
+      ? 0
+      : Math.min(activeMatchIdx, matchedMessageIds.length - 1);
+  const activeMatchId = matchedMessageIds[safeMatchIdx] ?? null;
+
+  useEffect(() => {
+    if (!activeMatchId) return;
+    const container = listRef.current;
+    if (!container) return;
+    const target = container.querySelector<HTMLElement>(
+      `[data-testid="chat-message-${CSS.escape(activeMatchId)}"]`,
+    );
+    target?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeMatchId]);
+
+  function openSearchBar() {
+    setSearchOpen(true);
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }
+
   if (!conversation) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
@@ -331,25 +395,66 @@ export function ChatConversationPane({
     ? conversation.peer?.name || t("chatInvite.unknownInviter")
     : conversation.name || t("chat.tabRooms");
 
-  const startIndex = messages.length <= 60 ? 0 : Math.max(0, scrollWindow.start);
+  function renderHighlightedText(text: string) {
+    if (!searchActive) return text;
+    const lower = text.toLowerCase();
+    const parts: React.ReactNode[] = [];
+    let cursor = 0;
+    let idx = lower.indexOf(trimmedSearch, cursor);
+    let key = 0;
+    while (idx !== -1) {
+      if (idx > cursor) parts.push(text.slice(cursor, idx));
+      parts.push(
+        <mark
+          key={key++}
+          className="rounded bg-primary/30 px-0.5 text-inherit underline"
+        >
+          {text.slice(idx, idx + trimmedSearch.length)}
+        </mark>,
+      );
+      cursor = idx + trimmedSearch.length;
+      idx = lower.indexOf(trimmedSearch, cursor);
+    }
+    if (cursor < text.length) parts.push(text.slice(cursor));
+    return parts.length > 0 ? parts : text;
+  }
+
+  const startIndex =
+    searchActive || messages.length <= 60 ? 0 : Math.max(0, scrollWindow.start);
   const endIndex =
-    messages.length <= 60 ? messages.length : Math.min(messages.length, scrollWindow.end);
+    searchActive || messages.length <= 60
+      ? messages.length
+      : Math.min(messages.length, scrollWindow.end);
   const visibleMessages = messages.slice(startIndex, endIndex);
 
-  const topSpacer = messages.length <= 60 ? 0 : scrollWindow.topSpacer;
-  const bottomSpacer = messages.length <= 60 ? 0 : scrollWindow.bottomSpacer;
+  const topSpacer = searchActive || messages.length <= 60 ? 0 : scrollWindow.topSpacer;
+  const bottomSpacer =
+    searchActive || messages.length <= 60 ? 0 : scrollWindow.bottomSpacer;
 
   const accent = getRoomAccentStyle(conversation.accentColor);
+  const latestReportableMessage = [...messages]
+    .reverse()
+    .find((m) => m.senderId !== currentUserId && !m.deleted && !m.decryptionFailed && m.type !== "SYSTEM");
+
+  const typingText =
+    typingNames.length === 1
+      ? t("chat.typingSingle").replace("{name}", typingNames[0])
+      : typingNames.length > 1
+        ? t("chat.typingMultiple").replace("{count}", String(typingNames.length))
+        : null;
 
   return (
     <section
       data-testid="chat-conversation-pane"
-      className="flex h-full min-h-0 flex-col bg-background/40"
+      className="flex h-full min-h-0 flex-col bg-transparent"
     >
       {ConfirmDialogComponent}
 
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-card/75 px-3 py-2.5 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2.5">
+      <header
+        data-testid="chat-conv-header"
+        className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-card/75 px-2 py-2 sm:px-4"
+      >
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
           {showMobileBack ? (
             <Button
               type="button"
@@ -358,7 +463,7 @@ export function ChatConversationPane({
               data-testid="chat-mobile-back-btn"
               onClick={onMobileBack}
               aria-label={t("chat.backToList")}
-              className="size-9 shrink-0 rounded-xl md:hidden"
+              className="size-11 shrink-0 rounded-xl md:hidden"
             >
               <BackIcon className="size-5" />
             </Button>
@@ -367,7 +472,7 @@ export function ChatConversationPane({
           {isDm && conversation.peer ? (
             <Link
               href={`/u/${conversation.peer.id}`}
-              className="flex min-w-0 items-center gap-2.5 hover:opacity-85"
+              className="flex min-w-0 items-center gap-2.5 py-0.5 hover:opacity-85"
             >
               <div className="relative shrink-0">
                 <UserAvatar user={conversation.peer} size="sm" shape="circle" />
@@ -382,13 +487,22 @@ export function ChatConversationPane({
                 <p className="truncate font-heading text-sm font-bold text-foreground sm:text-base">
                   {title}
                 </p>
-                <p className="truncate text-[11px] text-muted-foreground">
-                  {peerOnline ? t("friends.online") : t("friends.offline")}
-                </p>
+                {typingText ? (
+                  <p
+                    data-testid="chat-typing-indicator"
+                    className="truncate text-xs font-medium text-primary"
+                  >
+                    {typingText}
+                  </p>
+                ) : (
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {peerOnline ? t("friends.online") : t("friends.offline")}
+                  </p>
+                )}
               </div>
             </Link>
           ) : (
-            <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex min-w-0 items-center gap-2.5 py-0.5">
               <span
                 className={cn(
                   "grid size-9 shrink-0 place-items-center rounded-xl border text-base",
@@ -401,14 +515,23 @@ export function ChatConversationPane({
                 <p className="truncate font-heading text-sm font-bold text-foreground sm:text-base">
                   {title}
                 </p>
-                <p className="truncate text-[11px] text-muted-foreground">
-                  {isPublic
-                    ? t("chat.publicSpaceDesc")
-                    : t("chat.membersCount").replace(
-                        "{count}",
-                        String(conversation.memberCount),
-                      )}
-                </p>
+                {typingText ? (
+                  <p
+                    data-testid="chat-typing-indicator"
+                    className="truncate text-xs font-medium text-primary"
+                  >
+                    {typingText}
+                  </p>
+                ) : (
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {isPublic
+                      ? t("chat.publicSpaceDesc")
+                      : t("chat.membersCount").replace(
+                          "{count}",
+                          String(conversation.memberCount),
+                        )}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -419,17 +542,13 @@ export function ChatConversationPane({
             type="button"
             variant="ghost"
             size="icon"
-            data-testid="chat-mute-toggle-btn"
-            onClick={() => void onToggleMute(conversation.id, !conversation.muted)}
-            aria-label={conversation.muted ? t("chat.unmuteRoom") : t("chat.muteRoom")}
-            title={conversation.muted ? t("chat.unmuteRoom") : t("chat.muteRoom")}
-            className="size-9 rounded-xl text-muted-foreground hover:text-foreground"
+            data-testid="chat-conv-search-btn"
+            onClick={() => (searchOpen ? setSearchOpen(false) : openSearchBar())}
+            aria-label={t("chat.searchInConv")}
+            title={t("chat.searchInConv")}
+            className="size-11 rounded-xl text-muted-foreground hover:text-foreground"
           >
-            {conversation.muted ? (
-              <BellOff className="size-4" />
-            ) : (
-              <Bell className="size-4" />
-            )}
+            <Search className="size-4" />
           </Button>
 
           {isRoom ? (
@@ -439,67 +558,276 @@ export function ChatConversationPane({
               size="sm"
               data-testid="chat-room-members-btn"
               onClick={onOpenRoomPanel}
-              className="h-9 rounded-xl px-2.5 text-xs font-semibold"
+              className="hidden h-11 rounded-xl px-3 text-xs font-semibold md:inline-flex"
             >
               <Users className="size-4 me-1.5" />
-              <span className="hidden sm:inline">{t("chat.membersBtn")}</span>
+              <span>{t("chat.membersBtn")}</span>
             </Button>
           ) : null}
 
-          {isDm && conversation.peer ? (
-            <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: t("friends.unfriendConfirmTitle"),
-                    description: t("friends.unfriendConfirmDesc"),
-                    variant: "destructive",
-                  });
-                  if (ok && conversation.peer) {
-                    await onFriendAction("unfriend", conversation.peer.id);
-                  }
-                }}
-                aria-label={t("friends.unfriend")}
-                title={t("friends.unfriend")}
-                className="size-9 rounded-xl text-muted-foreground hover:text-destructive"
+                data-testid="chat-conv-menu-btn"
+                aria-label={t("chat.convMenuLabel")}
+                title={t("chat.convMenuLabel")}
+                className="size-11 rounded-xl text-muted-foreground hover:text-foreground"
               >
-                <UserMinus className="size-4" />
+                <MoreVertical className="size-5" />
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: t("friends.blockConfirmTitle"),
-                    description: t("friends.blockConfirmDesc"),
-                    variant: "destructive",
-                  });
-                  if (ok && conversation.peer) {
-                    await onFriendAction("block", conversation.peer.id);
-                  }
-                }}
-                aria-label={t("friends.blockUser")}
-                title={t("friends.blockUser")}
-                className="size-9 rounded-xl text-muted-foreground hover:text-destructive"
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                data-testid="chat-menu-search"
+                onClick={openSearchBar}
+                className="min-h-11 gap-2"
               >
-                <Ban className="size-4" />
-              </Button>
-            </>
-          ) : null}
+                <Search className="size-4" />
+                <span>{t("chat.searchInConv")}</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                data-testid="chat-mute-toggle-btn"
+                onClick={() => void onToggleMute(conversation.id, !conversation.muted)}
+                className="min-h-11 gap-2"
+              >
+                {conversation.muted ? (
+                  <>
+                    <Bell className="size-4" />
+                    <span>{t("chat.unmuteRoom")}</span>
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="size-4" />
+                    <span>{t("chat.muteRoom")}</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+
+              {isRoom ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    data-testid="chat-menu-members"
+                    onClick={onOpenRoomPanel}
+                    className="min-h-11 gap-2"
+                  >
+                    <Users className="size-4" />
+                    <span>{t("chat.membersBtn")}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid="chat-menu-invite"
+                    onClick={onOpenRoomPanel}
+                    className="min-h-11 gap-2"
+                  >
+                    <UserPlus className="size-4" />
+                    <span>{t("chat.inviteFriendsMenu")}</span>
+                  </DropdownMenuItem>
+                  {onLeaveRoom ? (
+                    <DropdownMenuItem
+                      data-testid="chat-menu-leave"
+                      variant="destructive"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t("chat.leaveRoomTitle"),
+                          description: t("chat.leaveRoomDesc"),
+                          variant: "destructive",
+                        });
+                        if (ok) {
+                          await onLeaveRoom(conversation.id);
+                        }
+                      }}
+                      className="min-h-11 gap-2"
+                    >
+                      <LogOut className="size-4" />
+                      <span>{t("chat.leaveRoomBtn")}</span>
+                    </DropdownMenuItem>
+                  ) : null}
+                </>
+              ) : null}
+
+              {isDm && conversation.peer ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="min-h-11 gap-2">
+                    <Link href={`/u/${conversation.peer.id}`}>
+                      <ExternalLink className="size-4" />
+                      <span>{t("chat.viewProfile")}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid="chat-menu-unfriend"
+                    variant="destructive"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: t("friends.unfriendConfirmTitle"),
+                        description: t("friends.unfriendConfirmDesc"),
+                        variant: "destructive",
+                      });
+                      if (ok && conversation.peer) {
+                        await onFriendAction("unfriend", conversation.peer.id);
+                      }
+                    }}
+                    className="min-h-11 gap-2"
+                  >
+                    <UserMinus className="size-4" />
+                    <span>{t("friends.unfriend")}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid="chat-menu-block"
+                    variant="destructive"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: t("friends.blockConfirmTitle"),
+                        description: t("friends.blockConfirmDesc"),
+                        variant: "destructive",
+                      });
+                      if (ok && conversation.peer) {
+                        await onFriendAction("block", conversation.peer.id);
+                      }
+                    }}
+                    className="min-h-11 gap-2"
+                  >
+                    <Ban className="size-4" />
+                    <span>{t("friends.blockUser")}</span>
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+
+              {latestReportableMessage && onReportMessage ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    data-testid="chat-menu-report"
+                    onClick={() => onReportMessage(latestReportableMessage)}
+                    className="min-h-11 gap-2"
+                  >
+                    <Flag className="size-4" />
+                    <span>{t("chat.reportBtn")}</span>
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
+
+      {searchOpen ? (
+        <div
+          data-testid="chat-conv-search-bar"
+          className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-card/65 px-3 py-2 sm:px-4"
+        >
+          <div className="relative min-w-44 flex-1">
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              data-testid="chat-conv-search-input"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setActiveMatchIdx(0);
+              }}
+              placeholder={t("chat.searchInConvPlaceholder")}
+              className="h-11 rounded-xl ps-9 pe-3 text-base placeholder:text-base md:text-sm md:placeholder:text-sm"
+            />
+          </div>
+
+          {searchActive ? (
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                {matchedMessageIds.length === 0
+                  ? t("chat.searchNoMatches")
+                  : `${safeMatchIdx + 1}/${matchedMessageIds.length}`}
+              </span>
+              {matchedMessageIds.length > 1 ? (
+                <>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    aria-label={t("chat.searchPrev")}
+                    onClick={() =>
+                      setActiveMatchIdx((idx) =>
+                        idx <= 0 ? matchedMessageIds.length - 1 : idx - 1,
+                      )
+                    }
+                    className="size-11 rounded-xl"
+                  >
+                    <ChevronUp className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    aria-label={t("chat.searchNext")}
+                    onClick={() =>
+                      setActiveMatchIdx((idx) =>
+                        idx >= matchedMessageIds.length - 1 ? 0 : idx + 1,
+                      )
+                    }
+                    className="size-11 rounded-xl"
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasMore ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="chat-search-load-older"
+              disabled={loadingOlder}
+              onClick={onLoadOlder}
+              className="h-11 rounded-xl px-3 text-xs font-semibold"
+            >
+              {loadingOlder ? t("chat.loadingMessages") : t("chat.loadOlder")}
+            </Button>
+          ) : null}
+
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label={t("common.close")}
+            onClick={() => {
+              setSearchOpen(false);
+              setSearchQuery("");
+            }}
+            className="size-11 rounded-xl text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      ) : null}
 
       <div className="relative min-h-0 flex-1">
         <div
           ref={listRef}
           onScroll={updateWindowFromScroll}
           data-testid="chat-messages-scroll"
-          className="h-full overflow-y-auto px-3 py-4 sm:px-5"
+          className={cn(styles.chatScroll, "h-full overflow-y-auto px-2.5 py-3 sm:px-5 sm:py-4")}
         >
+          {hasMore && !loadingOlder ? (
+            <div className="pb-3 text-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-testid="chat-load-older-btn"
+                onClick={onLoadOlder}
+                className="h-11 rounded-xl px-4 text-xs font-semibold"
+              >
+                {t("chat.loadOlder")}
+              </Button>
+            </div>
+          ) : null}
           {loadingOlder ? (
             <p className="pb-3 text-center text-xs text-muted-foreground">
               {t("chat.loadingMessages")}
@@ -586,7 +914,7 @@ export function ChatConversationPane({
                           own ? "justify-end" : "justify-start",
                         )}
                       >
-                        <div className="glass max-w-xs rounded-2xl border border-primary/30 p-3.5 shadow-sm sm:max-w-sm">
+                        <div className="rounded-2xl border border-primary/30 bg-card/95 max-w-xs p-3.5 shadow-sm sm:max-w-sm">
                           <div className="flex items-center gap-2.5">
                             <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-base">
                               {msg.invite.roomEmoji || "💬"}
@@ -618,7 +946,7 @@ export function ChatConversationPane({
                                       setInviteBusyId(null);
                                     }
                                   }}
-                                  className="h-8 rounded-xl bg-primary px-3 text-xs text-primary-foreground"
+                                  className="h-11 rounded-xl bg-primary px-4 text-xs text-primary-foreground"
                                 >
                                   {t("chat.inviteAccept")}
                                 </Button>
@@ -636,7 +964,7 @@ export function ChatConversationPane({
                                       setInviteBusyId(null);
                                     }
                                   }}
-                                  className="h-8 rounded-xl px-3 text-xs"
+                                  className="h-11 rounded-xl px-4 text-xs"
                                 >
                                   {t("chat.inviteDecline")}
                                 </Button>
@@ -708,6 +1036,11 @@ export function ChatConversationPane({
                               own
                                 ? "rounded-ee-md border-primary/25 bg-primary text-primary-foreground"
                                 : "rounded-es-md border-border/75 bg-card/90 text-foreground",
+                              matchedSet.has(msg.id)
+                                ? msg.id === activeMatchId
+                                  ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                  : "ring-1 ring-primary/50"
+                                : "",
                               msg.optimisticState === "sending" ? "opacity-75" : "",
                               msg.optimisticState === "failed"
                                 ? "border-destructive bg-destructive/15 text-foreground"
@@ -744,7 +1077,7 @@ export function ChatConversationPane({
                                   onChange={(e) => setEditingDraft(e.target.value)}
                                   maxLength={2000}
                                   rows={2}
-                                  className="w-full resize-none rounded-xl border border-border bg-background px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                  className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring md:text-sm"
                                 />
                                 <div className="flex justify-end gap-1.5">
                                   <Button
@@ -752,7 +1085,7 @@ export function ChatConversationPane({
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => setEditingId(null)}
-                                    className="h-7 px-2 text-xs text-foreground"
+                                    className="h-11 px-3 text-xs text-foreground"
                                   >
                                     {t("chat.cancelEdit")}
                                   </Button>
@@ -760,7 +1093,7 @@ export function ChatConversationPane({
                                     type="button"
                                     size="sm"
                                     onClick={() => void handleSaveEdit(msg.id)}
-                                    className="h-7 bg-primary px-2.5 text-xs text-primary-foreground"
+                                    className="h-11 bg-primary px-3 text-xs text-primary-foreground"
                                   >
                                     {t("chat.saveEdit")}
                                   </Button>
@@ -788,127 +1121,212 @@ export function ChatConversationPane({
                                         own ? "text-primary-foreground" : "text-primary",
                                       )}
                                     >
-                                      {seg.value}
+                                      {renderHighlightedText(seg.value)}
                                     </a>
                                   ) : (
-                                    <span key={i}>{seg.value}</span>
+                                    <span key={i}>{renderHighlightedText(seg.value)}</span>
                                   ),
                                 )}
                               </p>
                             )}
+
+                            <div
+                              data-testid={`msg-bubble-meta-${msg.id}`}
+                              className={cn(
+                                "mt-1 flex items-center justify-end gap-1 text-[10px] leading-none",
+                                own ? "text-primary-foreground/80" : "text-muted-foreground",
+                              )}
+                            >
+                              {msg.editedAt && !msg.deleted ? (
+                                <span>{t("chat.editedTag")}</span>
+                              ) : null}
+                              {msg.optimisticState === "sending" ? (
+                                <span>{t("chat.sending")}</span>
+                              ) : null}
+                              <span dir="ltr">{timeFormatter.format(new Date(msg.createdAt))}</span>
+                              {isDm && own && !msg.optimisticState ? (
+                                <span
+                                  data-testid={`msg-receipt-${msg.id}`}
+                                  className="inline-flex items-center"
+                                >
+                                  {isSeenInDm ? (
+                                    <CheckCheck className="size-3.5" aria-hidden="true" />
+                                  ) : (
+                                    <Check className="size-3.5" aria-hidden="true" />
+                                  )}
+                                  <span className="sr-only">
+                                    {isSeenInDm ? t("chat.seenReceipt") : t("chat.sentReceipt")}
+                                  </span>
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
 
-                          <div className="mt-1 flex flex-wrap items-center gap-2 px-1 text-[11px] text-muted-foreground">
-                            <span>{timeFormatter.format(new Date(msg.createdAt))}</span>
-                            {msg.editedAt && !msg.deleted ? (
-                              <span>· {t("chat.editedTag")}</span>
-                            ) : null}
-                            {msg.optimisticState === "sending" ? (
-                              <span>· {t("chat.sending")}</span>
-                            ) : null}
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1 px-1 text-[11px] text-muted-foreground">
                             {msg.optimisticState === "failed" ? (
                               <button
                                 type="button"
                                 onClick={() => void onRetryMessage(msg)}
-                                className="inline-flex items-center gap-1 font-semibold text-destructive hover:underline"
+                                className="inline-flex min-h-11 items-center gap-1 px-2 font-semibold text-destructive hover:underline"
                               >
-                                <RotateCw className="size-3" />
+                                <RotateCw className="size-3.5" />
                                 {t("chat.retrySend")}
                               </button>
                             ) : null}
-                            {isDm && own && !msg.optimisticState ? (
-                              <span
-                                data-testid={`msg-receipt-${msg.id}`}
-                                className="inline-flex items-center gap-0.5 text-primary"
-                              >
-                                {isSeenInDm ? (
-                                  <>
-                                    <CheckCheck className="size-3.5" />
-                                    <span>{t("chat.seenReceipt")}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Check className="size-3.5" />
-                                    <span>{t("chat.sentReceipt")}</span>
-                                  </>
-                                )}
-                              </span>
-                            ) : null}
 
                             {!msg.deleted && !msg.decryptionFailed && !msg.optimisticState ? (
-                              <div className="inline-flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={() => setReplyTo(msg)}
-                                  aria-label={t("chat.replyAction")}
-                                  title={t("chat.replyAction")}
-                                  className="rounded p-0.5 hover:text-foreground"
-                                >
-                                  <Reply className="size-3.5" />
-                                </button>
-                                {own ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingId(msg.id);
-                                        setEditingDraft(msg.body);
-                                      }}
-                                      aria-label={t("chat.editAction")}
-                                      title={t("chat.editAction")}
-                                      className="rounded p-0.5 hover:text-foreground"
-                                    >
-                                      <Pencil className="size-3.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void handleDelete(msg)}
-                                      aria-label={t("chat.deleteAction")}
-                                      title={t("chat.deleteAction")}
-                                      className="rounded p-0.5 hover:text-destructive"
-                                    >
-                                      <Trash2 className="size-3.5" />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    {onReportMessage ? (
+                              <>
+                                <div className="hidden items-center gap-1 opacity-0 transition-opacity md:inline-flex md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => setReplyTo(msg)}
+                                    aria-label={t("chat.replyAction")}
+                                    title={t("chat.replyAction")}
+                                    className="rounded p-1 hover:text-foreground"
+                                  >
+                                    <Reply className="size-3.5" />
+                                  </button>
+                                  {own ? (
+                                    <>
                                       <button
                                         type="button"
-                                        data-testid={`report-msg-${msg.id}`}
-                                        onClick={() => onReportMessage(msg)}
-                                        aria-label={t("chat.reportBtn")}
-                                        title={t("chat.reportBtn")}
-                                        className="rounded p-0.5 hover:text-destructive"
-                                      >
-                                        <Flag className="size-3.5" />
-                                      </button>
-                                    ) : null}
-                                    {conversation?.type === "PUBLIC" &&
-                                    onModeratorDeleteMessage ? (
-                                      <button
-                                        type="button"
-                                        data-testid={`mod-delete-msg-${msg.id}`}
-                                        onClick={async () => {
-                                          const ok = await confirm({
-                                            title: t("chat.moderatorDeleteConfirmTitle"),
-                                            description: t("chat.moderatorDeleteConfirmDesc"),
-                                            variant: "destructive",
-                                          });
-                                          if (ok) {
-                                            await onModeratorDeleteMessage(msg.id);
-                                          }
+                                        onClick={() => {
+                                          setEditingId(msg.id);
+                                          setEditingDraft(msg.body);
                                         }}
-                                        aria-label={t("chat.moderatorDeleteMsg")}
-                                        title={t("chat.moderatorDeleteMsg")}
-                                        className="rounded p-0.5 hover:text-destructive"
+                                        aria-label={t("chat.editAction")}
+                                        title={t("chat.editAction")}
+                                        className="rounded p-1 hover:text-foreground"
+                                      >
+                                        <Pencil className="size-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleDelete(msg)}
+                                        aria-label={t("chat.deleteAction")}
+                                        title={t("chat.deleteAction")}
+                                        className="rounded p-1 hover:text-destructive"
                                       >
                                         <Trash2 className="size-3.5" />
                                       </button>
-                                    ) : null}
-                                  </>
-                                )}
-                              </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {onReportMessage ? (
+                                        <button
+                                          type="button"
+                                          data-testid={`report-msg-${msg.id}`}
+                                          onClick={() => onReportMessage(msg)}
+                                          aria-label={t("chat.reportBtn")}
+                                          title={t("chat.reportBtn")}
+                                          className="rounded p-1 hover:text-destructive"
+                                        >
+                                          <Flag className="size-3.5" />
+                                        </button>
+                                      ) : null}
+                                      {conversation?.type === "PUBLIC" &&
+                                      onModeratorDeleteMessage ? (
+                                        <button
+                                          type="button"
+                                          data-testid={`mod-delete-msg-${msg.id}`}
+                                          onClick={async () => {
+                                            const ok = await confirm({
+                                              title: t("chat.moderatorDeleteConfirmTitle"),
+                                              description: t("chat.moderatorDeleteConfirmDesc"),
+                                              variant: "destructive",
+                                            });
+                                            if (ok) {
+                                              await onModeratorDeleteMessage(msg.id);
+                                            }
+                                          }}
+                                          aria-label={t("chat.moderatorDeleteMsg")}
+                                          title={t("chat.moderatorDeleteMsg")}
+                                          className="rounded p-1 hover:text-destructive"
+                                        >
+                                          <Trash2 className="size-3.5" />
+                                        </button>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </div>
+
+                                <div className="md:hidden">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        aria-label={t("chat.messageActionsLabel")}
+                                        className="grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                                      >
+                                        <MoreHorizontal className="size-4" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align={own ? "end" : "start"}>
+                                      <DropdownMenuItem
+                                        onClick={() => setReplyTo(msg)}
+                                        className="min-h-11 gap-2"
+                                      >
+                                        <Reply className="size-4" />
+                                        <span>{t("chat.replyAction")}</span>
+                                      </DropdownMenuItem>
+                                      {own ? (
+                                        <>
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              setEditingId(msg.id);
+                                              setEditingDraft(msg.body);
+                                            }}
+                                            className="min-h-11 gap-2"
+                                          >
+                                            <Pencil className="size-4" />
+                                            <span>{t("chat.editAction")}</span>
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            variant="destructive"
+                                            onClick={() => void handleDelete(msg)}
+                                            className="min-h-11 gap-2"
+                                          >
+                                            <Trash2 className="size-4" />
+                                            <span>{t("chat.deleteAction")}</span>
+                                          </DropdownMenuItem>
+                                        </>
+                                      ) : (
+                                        <>
+                                          {onReportMessage ? (
+                                            <DropdownMenuItem
+                                              onClick={() => onReportMessage(msg)}
+                                              className="min-h-11 gap-2"
+                                            >
+                                              <Flag className="size-4" />
+                                              <span>{t("chat.reportBtn")}</span>
+                                            </DropdownMenuItem>
+                                          ) : null}
+                                          {conversation?.type === "PUBLIC" &&
+                                          onModeratorDeleteMessage ? (
+                                            <DropdownMenuItem
+                                              variant="destructive"
+                                              onClick={async () => {
+                                                const ok = await confirm({
+                                                  title: t("chat.moderatorDeleteConfirmTitle"),
+                                                  description: t("chat.moderatorDeleteConfirmDesc"),
+                                                  variant: "destructive",
+                                                });
+                                                if (ok) {
+                                                  await onModeratorDeleteMessage(msg.id);
+                                                }
+                                              }}
+                                              className="min-h-11 gap-2"
+                                            >
+                                              <Trash2 className="size-4" />
+                                              <span>{t("chat.moderatorDeleteMsg")}</span>
+                                            </DropdownMenuItem>
+                                          ) : null}
+                                        </>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </>
                             ) : null}
                           </div>
                         </div>
@@ -929,34 +1347,20 @@ export function ChatConversationPane({
           <Button
             type="button"
             size="sm"
+            data-testid="chat-jump-to-latest"
             onClick={scrollToBottom}
-            className="glass-strong absolute bottom-3 end-4 h-8 rounded-full border border-border/80 px-3 text-xs font-semibold text-foreground shadow-md"
+            className="absolute bottom-3 end-3 h-11 rounded-full border border-border/80 bg-card/95 px-4 text-xs font-semibold text-foreground shadow-md hover:bg-card"
           >
-            <ArrowDown className="size-3.5 me-1" />
+            <ArrowDown className="size-4 me-1.5" />
             {t("chat.jumpToLatest")}
           </Button>
         ) : null}
       </div>
 
-      {typingNames.length > 0 ? (
-        <div
-          data-testid="chat-typing-indicator"
-          className="flex shrink-0 items-center gap-2 border-t border-border/40 bg-card/55 px-4 py-1.5 text-xs text-muted-foreground"
-        >
-          <span className="inline-flex items-center gap-1" aria-hidden="true">
-            <span className={styles.typingDot} />
-            <span className={styles.typingDot} />
-            <span className={styles.typingDot} />
-          </span>
-          <span>
-            {typingNames.length === 1
-              ? t("chat.typingSingle").replace("{name}", typingNames[0])
-              : t("chat.typingMultiple").replace("{count}", String(typingNames.length))}
-          </span>
-        </div>
-      ) : null}
-
-      <footer className="relative shrink-0 border-t border-border/70 bg-card/85 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
+      <footer
+        data-testid="chat-composer-footer"
+        className="relative shrink-0 border-t border-border/70 bg-card/85 px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-2.5"
+      >
         {timeoutActive && publicTimeoutUntil ? (
           <div
             data-testid="chat-timeout-banner"
@@ -986,7 +1390,7 @@ export function ChatConversationPane({
                   type="button"
                   onClick={() => setReplyTo(null)}
                   aria-label={t("common.close")}
-                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                  className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:text-foreground"
                 >
                   <X className="size-4" />
                 </button>
@@ -996,7 +1400,7 @@ export function ChatConversationPane({
             {emojiOpen ? (
               <div
                 data-testid="chat-emoji-picker"
-                className="glass-strong absolute bottom-full start-3 mb-2 grid grid-cols-8 gap-1 rounded-2xl border border-border/80 p-2 shadow-layered"
+                className="absolute bottom-full start-2 mb-2 grid grid-cols-6 gap-1 rounded-2xl border border-border/80 bg-card/95 p-2 shadow-layered sm:start-3 sm:grid-cols-8"
               >
                 {CURATED_CHAT_EMOJIS.map((em) => (
                   <button
@@ -1006,7 +1410,7 @@ export function ChatConversationPane({
                       setDraft((prev) => `${prev}${em}`);
                       textareaRef.current?.focus();
                     }}
-                    className="grid size-8 place-items-center rounded-lg text-base hover:bg-primary/15"
+                    className="grid size-11 place-items-center rounded-xl text-lg hover:bg-primary/15"
                   >
                     {em}
                   </button>
@@ -1022,7 +1426,7 @@ export function ChatConversationPane({
                 data-testid="chat-emoji-btn"
                 onClick={() => setEmojiOpen((v) => !v)}
                 aria-label={t("chat.emojiPickerLabel")}
-                className="size-10 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+                className="size-11 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
               >
                 <Smile className="size-5" />
               </Button>
@@ -1039,13 +1443,13 @@ export function ChatConversationPane({
                   onTypingPulse();
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     void submitDraft();
                   }
                 }}
                 placeholder={t("chat.composerPlaceholder")}
-                className="min-h-10 max-h-32 flex-1 resize-none rounded-2xl border border-border/80 bg-background/80 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="min-h-11 max-h-32 flex-1 resize-none rounded-2xl border border-border/80 bg-background/80 px-3.5 py-2.5 text-base text-foreground placeholder:text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring md:text-sm md:placeholder:text-sm"
               />
 
               <ClickSpark>
@@ -1056,7 +1460,7 @@ export function ChatConversationPane({
                   disabled={draft.trim().length === 0}
                   onClick={() => void submitDraft()}
                   aria-label={t("chat.sendLabel")}
-                  className="size-10 shrink-0 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="size-11 shrink-0 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Send className="size-4" />
                 </Button>

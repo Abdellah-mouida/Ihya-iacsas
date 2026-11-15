@@ -1,12 +1,63 @@
 .workspaceRoot {
-  height: calc(var(--chat-vv-height, 100dvh) - 5.25rem);
-  min-height: 420px;
+  height: calc(var(--chat-vv-height, 100dvh) - 5rem);
+  max-height: calc(var(--chat-vv-height, 100dvh) - 5rem);
+  min-height: 0;
 }
 
 @media (min-width: 640px) {
   .workspaceRoot {
     height: calc(var(--chat-vv-height, 100dvh) - 6.25rem);
+    max-height: calc(var(--chat-vv-height, 100dvh) - 6.25rem);
   }
+}
+
+@media (min-width: 768px) {
+  .workspaceRoot {
+    min-height: 420px;
+  }
+}
+
+.chatSurface {
+  background: color-mix(in oklch, var(--card) 74%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .chatSurface {
+    background: color-mix(in oklch, var(--card) 96%, var(--background));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+:global(html[data-perf="low"]) .chatSurface {
+  background: color-mix(in oklch, var(--card) 96%, var(--background));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.chatScroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+}
+
+.chatScroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.chatScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatScroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--foreground) 20%, transparent);
+  border-radius: 9999px;
+}
+
+.chatScroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--foreground) 34%, transparent);
 }
 
 .typingDot {

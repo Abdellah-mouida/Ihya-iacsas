@@ -1038,7 +1038,16 @@
     "moderatorDeleteConfirmTitle": "حذف رسالة عامة",
     "moderatorDeleteConfirmDesc": "هل تريد حذف هذه الرسالة من الفضاء العام لجميع الأعضاء؟",
     "messageUnavailable": "الرسالة غير متاحة (مشفرة بمفتاح مختلف)",
-    "actionError": "حدث خطأ غير متوقع، حاول مجدداً."
+    "actionError": "حدث خطأ غير متوقع، حاول مجدداً.",
+    "convMenuLabel": "قائمة المحادثة",
+    "searchInConv": "البحث في المحادثة",
+    "searchInConvPlaceholder": "ابحث في الرسائل المحملة...",
+    "searchMatchesCount": "{count} نتيجة",
+    "searchNoMatches": "لا توجد نتائج في الرسائل المحملة",
+    "searchPrev": "النتيجة السابقة",
+    "searchNext": "النتيجة التالية",
+    "inviteFriendsMenu": "دعوة أصدقاء",
+    "messageActionsLabel": "خيارات الرسالة"
   },
   "adminModeration": {
     "navLabel": "الإشراف",

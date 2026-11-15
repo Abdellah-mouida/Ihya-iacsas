@@ -123,7 +123,11 @@ export function ChatWorkspace({
     };
     update();
     vv.addEventListener("resize", update);
-    return () => vv.removeEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
   }, []);
 
   const broadcastUnreadTotal = useCallback((convs: ChatConversationSummary[]) => {
@@ -799,6 +803,21 @@ export function ChatWorkspace({
     });
   }
 
+  async function handleLeaveRoom(roomId: string) {
+    const res = await fetch(`/api/chat/rooms/${roomId}/leave`, {
+      method: "POST",
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      notify.error(data.error || t("chat.actionError"));
+      return;
+    }
+    setActiveTab("public");
+    setSelectedId(conversations.find((c) => c.type === "PUBLIC")?.id ?? null);
+    setMobilePane("list");
+    void fetchConversations();
+  }
+
   useEffect(() => {
     if (!termsAccepted || bannedReason !== undefined) return;
     clientRef.current?.ensureSubscribedConversations(
@@ -847,13 +866,19 @@ export function ChatWorkspace({
       }
       className={cn(
         styles.workspaceRoot,
-        "mx-auto flex w-full max-w-7xl flex-col px-2 pb-2 sm:px-4 sm:pb-4",
+        "mx-auto flex w-full max-w-7xl flex-col px-0 pb-0 md:px-4 md:pb-4",
       )}
     >
-      <div className="glass-strong grid min-h-0 flex-1 overflow-hidden rounded-3xl border border-border/80 shadow-layered md:grid-cols-[330px_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)]">
+      <div
+        data-testid="chat-surface"
+        className={cn(
+          styles.chatSurface,
+          "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-none border-t border-border/80 shadow-layered md:grid-cols-[330px_minmax(0,1fr)] md:rounded-3xl md:border lg:grid-cols-[360px_minmax(0,1fr)]",
+        )}
+      >
         <div
           className={cn(
-            "min-h-0",
+            "min-h-0 h-full",
             mobilePane === "thread" ? "hidden md:block" : "block",
           )}
         >
@@ -876,7 +901,7 @@ export function ChatWorkspace({
 
         <div
           className={cn(
-            "min-h-0",
+            "min-h-0 h-full",
             mobilePane === "list" ? "hidden md:block" : "block",
           )}
         >
@@ -906,6 +931,7 @@ export function ChatWorkspace({
             onRespondInvite={handleRespondInvite}
             onToggleMute={handleToggleMute}
             onOpenRoomPanel={() => setRoomPanelOpen(true)}
+            onLeaveRoom={handleLeaveRoom}
             onFriendAction={handleFriendAction}
             onTypingPulse={() => {
               if (selectedId && clientRef.current) {

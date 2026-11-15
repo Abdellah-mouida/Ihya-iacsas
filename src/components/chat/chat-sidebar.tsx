@@ -162,31 +162,31 @@ export function ChatSidebar({
           size="sm"
           data-testid="chat-new-room-btn"
           onClick={onOpenCreateRoom}
-          className="h-9 shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+          className="h-11 min-w-11 shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
         >
-          <Plus className="size-4 me-1" />
+          <Plus className="size-4 sm:me-1" />
           <span className="hidden sm:inline">{t("chat.newRoom")}</span>
         </Button>
       </div>
 
       <div className="border-b border-border/60 px-3 py-2.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 start-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             data-testid="chat-search-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("chat.searchPlaceholder")}
-            className="h-9 rounded-xl ps-9 pe-8 text-xs"
+            className="h-11 rounded-xl ps-10 pe-11 text-base placeholder:text-base md:text-sm md:placeholder:text-sm"
           />
           {search ? (
             <button
               type="button"
               onClick={() => setSearch("")}
               aria-label={t("common.close")}
-              className="absolute top-1/2 end-2.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute top-1/2 end-0 grid size-11 -translate-y-1/2 place-items-center text-muted-foreground hover:text-foreground"
             >
-              <X className="size-3.5" />
+              <X className="size-4" />
             </button>
           ) : null}
         </div>
@@ -247,7 +247,7 @@ export function ChatSidebar({
                           size="sm"
                           variant="outline"
                           onClick={() => onOpenDm(user.id)}
-                          className="h-7 rounded-lg px-2 text-xs"
+                          className="h-11 rounded-xl px-3 text-xs"
                         >
                           {t("chat.openDm")}
                         </Button>
@@ -256,7 +256,7 @@ export function ChatSidebar({
                           type="button"
                           size="sm"
                           onClick={() => void onFriendAction("accept", user.id)}
-                          className="h-7 rounded-lg bg-primary px-2 text-xs text-primary-foreground"
+                          className="h-11 rounded-xl bg-primary px-3 text-xs text-primary-foreground"
                         >
                           {t("friends.acceptRequest")}
                         </Button>
@@ -266,7 +266,7 @@ export function ChatSidebar({
                           size="sm"
                           variant="outline"
                           onClick={() => void onFriendAction("cancel", user.id)}
-                          className="h-7 rounded-lg px-2 text-xs"
+                          className="h-11 rounded-xl px-3 text-xs"
                         >
                           {t("friends.requestSent")}
                         </Button>
@@ -276,9 +276,9 @@ export function ChatSidebar({
                           size="sm"
                           variant="outline"
                           onClick={() => void onFriendAction("send", user.id)}
-                          className="h-7 rounded-lg px-2 text-xs"
+                          className="h-11 rounded-xl px-3 text-xs"
                         >
-                          <UserPlus className="size-3 me-1" />
+                          <UserPlus className="size-3.5 me-1" />
                           {t("friends.addFriend")}
                         </Button>
                       )}
@@ -312,7 +312,7 @@ export function ChatSidebar({
               data-testid={`chat-tab-${id}`}
               onClick={() => onTabChange(id)}
               className={cn(
-                "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-colors",
+                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-colors",
                 active
                   ? "bg-card text-foreground shadow-sm border border-border/70"
                   : "text-muted-foreground hover:text-foreground",
@@ -326,7 +326,7 @@ export function ChatSidebar({
         })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-4">
+      <div className={cn(styles.chatScroll, "min-h-0 flex-1 overflow-y-auto p-3 space-y-4")}>
         {activeTab === "public" ? (
           <div className="space-y-2">
             {publicConv ? (
@@ -400,9 +400,9 @@ export function ChatSidebar({
                           data-testid={`accept-friend-${req.user.id}`}
                           onClick={() => void onFriendAction("accept", req.user.id)}
                           aria-label={t("friends.acceptRequest")}
-                          className="size-8 rounded-xl bg-primary text-primary-foreground"
+                          className="size-11 rounded-xl bg-primary text-primary-foreground"
                         >
-                          <Check className="size-3.5" />
+                          <Check className="size-4" />
                         </Button>
                         <Button
                           type="button"
@@ -410,9 +410,9 @@ export function ChatSidebar({
                           variant="outline"
                           onClick={() => void onFriendAction("decline", req.user.id)}
                           aria-label={t("friends.declineRequest")}
-                          className="size-8 rounded-xl"
+                          className="size-11 rounded-xl"
                         >
-                          <X className="size-3.5" />
+                          <X className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -443,7 +443,7 @@ export function ChatSidebar({
                       size="sm"
                       variant="ghost"
                       onClick={() => void onFriendAction("cancel", req.user.id)}
-                      className="h-7 rounded-lg px-2 text-xs text-muted-foreground"
+                      className="h-11 rounded-xl px-3 text-xs text-muted-foreground"
                     >
                       {t("friends.cancelRequest")}
                     </Button>
@@ -569,9 +569,9 @@ export function ChatSidebar({
                           variant="outline"
                           data-testid={`open-dm-${friend.id}`}
                           onClick={() => onOpenDm(friend.id)}
-                          className="h-7 shrink-0 rounded-lg px-2 text-xs"
+                          className="h-11 shrink-0 rounded-xl px-3 text-xs"
                         >
-                          <MessageSquarePlus className="size-3.5 me-1" />
+                          <MessageSquarePlus className="size-4 me-1.5" />
                           {t("chat.openDm")}
                         </Button>
                       </div>
@@ -602,9 +602,9 @@ export function ChatSidebar({
                       size="sm"
                       variant="ghost"
                       onClick={() => void onFriendAction("unblock", blocked.id)}
-                      className="h-7 px-2 text-xs"
+                      className="h-11 px-3 text-xs"
                     >
-                      <UserCheck className="size-3.5 me-1" />
+                      <UserCheck className="size-4 me-1.5" />
                       {t("friends.unblockUser")}
                     </Button>
                   </div>
