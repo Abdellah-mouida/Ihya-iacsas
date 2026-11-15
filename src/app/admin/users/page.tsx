@@ -1217,7 +1217,7 @@ export default function AdminUsersPage() {
                         <span className="text-muted-foreground block text-[11px]">
                           {t("account.bioLabel")}
                         </span>
-                        <p className="mt-0.5 text-foreground leading-relaxed whitespace-pre-wrap">
+                        <p className="mt-0.5 text-foreground leading-relaxed whitespace-pre-line [overflow-wrap:anywhere]">
                           {selectedUser.bio}
                         </p>
                       </div>

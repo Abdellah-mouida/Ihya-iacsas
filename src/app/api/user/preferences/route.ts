@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { safeRevalidatePath } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { getCachedEnabledThemes } from "@/lib/theme-server";
 
@@ -83,6 +84,10 @@ export async function PATCH(req: Request) {
         coverHeight: true,
       },
     });
+
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
+    safeRevalidatePath(`/u/${session.user.id}`);
 
     const response = NextResponse.json({ success: true, preferences: updated });
 

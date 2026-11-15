@@ -4,14 +4,18 @@ import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { clearLegacyBookingState } from "@/lib/booking-state";
-import { UserAccountData, deleteOwnAccount, updateUserProfile } from "@/app/actions/account";
+import {
+  UserAccountData,
+  deleteOwnAccount,
+  updateUserAvatar,
+  updateUserProfile,
+} from "@/app/actions/account";
 import { changePassword } from "@/app/actions/auth";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
-import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
-import { findMoroccanCity } from "@/data/morocco";
+import { CityCombobox } from "@/components/common/city-combobox";
 import { ProfileTagEditor } from "@/components/settings/profile-tag-editor";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { PatternCover } from "@/components/common/pattern-cover";
@@ -83,6 +87,7 @@ export function SettingsView({
   const isAr = locale === "ar";
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { update: updateSession } = useSession();
 
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (initialTab === "themes" || initialTab === "appearance") return "themes";
@@ -99,7 +104,6 @@ export function SettingsView({
   // Profile Form States
   const [name, setName] = useState(userData.name || "");
   const [city, setCity] = useState(userData.city || "");
-  const selectedCity = findMoroccanCity(city);
   const [age, setAge] = useState(userData.age ? String(userData.age) : "");
   const [bio, setBio] = useState(userData.bio || "");
   const [studyLevel, setStudyLevel] = useState(userData.studyLevel || "");
@@ -165,24 +169,45 @@ export function SettingsView({
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("name", name);
-      formData.set("city", city);
-      formData.set("age", age);
-      formData.set("bio", bio);
-      formData.set("studyLevel", studyLevel);
-      formData.set("institution", institution);
-      formData.set("interests", JSON.stringify(interests));
-      formData.set("skills", JSON.stringify(skills));
-      formData.set("languages", JSON.stringify(languages));
-      formData.set("volunteerAreas", JSON.stringify(volunteerAreas));
+    const normalizedName = name.trim();
+    const normalizedCity = city.trim();
+    const normalizedAge = age
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .trim();
+    const normalizedStudy = studyLevel.trim();
+    const normalizedInstitution = institution.trim();
 
-      const res = await updateUserProfile(formData, locale);
-      if (res.success && res.user) {
-        notify.success(isAr ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
-      } else {
-        notify.error(res.error || (isAr ? "حدث خطأ أثناء الحفظ" : "Save failed"));
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("name", normalizedName);
+        formData.set("city", normalizedCity);
+        formData.set("age", normalizedAge);
+        formData.set("bio", bio);
+        formData.set("studyLevel", normalizedStudy);
+        formData.set("institution", normalizedInstitution);
+        formData.set("interests", JSON.stringify(interests));
+        formData.set("skills", JSON.stringify(skills));
+        formData.set("languages", JSON.stringify(languages));
+        formData.set("volunteerAreas", JSON.stringify(volunteerAreas));
+
+        const res = await updateUserProfile(formData, locale);
+        if (res.success && res.user) {
+          await updateSession({
+            name: res.user.name,
+            city: res.user.city,
+            age: res.user.age,
+            image: res.user.image,
+          });
+          notify.success(isAr ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
+          router.push("/profile");
+          router.refresh();
+        } else {
+          notify.error(res.error || (isAr ? "حدث خطأ أثناء الحفظ" : "Save failed"));
+        }
+      } catch {
+        notify.error(isAr ? "تعذر حفظ التغييرات، حاول مجدداً" : "Failed to save profile changes");
       }
     });
   };
@@ -227,15 +252,23 @@ export function SettingsView({
         formData.append("folder", "avatars");
 
         const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) {
-          setAvatarUrl(data.url);
-          const profileForm = new FormData();
-          profileForm.set("image", data.url);
-          if (data.publicId) profileForm.set("imagePublicId", data.publicId);
-          await updateUserProfile(profileForm, locale);
-          notify.success(isAr ? "تم تحديث الصورة الشخصية" : "Profile photo updated");
+        const data = (await res.json()) as { url?: string; publicId?: string; error?: string };
+        if (!res.ok || !data.url) {
+          notify.error(data.error || (isAr ? "فشل رفع الصورة" : "Photo upload failed"));
+          return;
         }
+        const avatarRes = await updateUserAvatar(
+          { imageUrl: data.url, imagePublicId: data.publicId ?? null },
+          locale,
+        );
+        if (!avatarRes.success) {
+          notify.error(avatarRes.error || (isAr ? "فشل حفظ الصورة الشخصية" : "Failed to save profile photo"));
+          return;
+        }
+        setAvatarUrl(data.url);
+        await updateSession({ image: data.url });
+        router.refresh();
+        notify.success(isAr ? "تم تحديث الصورة الشخصية" : "Profile photo updated");
       } catch {
         notify.error(isAr ? "فشل رفع الصورة" : "Photo upload failed");
       }
@@ -250,23 +283,36 @@ export function SettingsView({
         formData.append("folder", "covers");
 
         const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) {
-          setCoverUrl(data.url);
-          setCoverImageWidth(data.imageWidth ?? null);
-          setCoverImageHeight(data.imageHeight ?? null);
-          await fetch("/api/user/preferences", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              coverImage: data.url,
-              coverImagePublicId: data.publicId,
-              coverWidth: data.imageWidth,
-              coverHeight: data.imageHeight,
-            }),
-          });
-          notify.success(isAr ? "تم تحديث الغلاف بنجاح" : "Cover updated successfully");
+        const data = (await res.json()) as {
+          url?: string;
+          publicId?: string;
+          imageWidth?: number;
+          imageHeight?: number;
+          error?: string;
+        };
+        if (!res.ok || !data.url) {
+          notify.error(data.error || (isAr ? "فشل رفع الغلاف" : "Cover upload failed"));
+          return;
         }
+        const prefRes = await fetch("/api/user/preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            coverImage: data.url,
+            coverImagePublicId: data.publicId,
+            coverWidth: data.imageWidth,
+            coverHeight: data.imageHeight,
+          }),
+        });
+        if (!prefRes.ok) {
+          notify.error(isAr ? "فشل حفظ الغلاف" : "Failed to save cover");
+          return;
+        }
+        setCoverUrl(data.url);
+        setCoverImageWidth(data.imageWidth ?? null);
+        setCoverImageHeight(data.imageHeight ?? null);
+        router.refresh();
+        notify.success(isAr ? "تم تحديث الغلاف بنجاح" : "Cover updated successfully");
       } catch {
         notify.error(isAr ? "فشل رفع الغلاف" : "Cover upload failed");
       }
@@ -274,15 +320,24 @@ export function SettingsView({
   };
 
   const handleSelectDefaultCover = async (path: string) => {
-    setCoverUrl(path);
-    setCoverImageWidth(null);
-    setCoverImageHeight(null);
-    await fetch("/api/user/preferences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coverImage: path, coverImagePublicId: null, coverWidth: null, coverHeight: null }),
-    });
-    notify.success(isAr ? "تم تعيين الغلاف الافتراضي" : "Default cover set");
+    try {
+      const res = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverImage: path, coverImagePublicId: null, coverWidth: null, coverHeight: null }),
+      });
+      if (!res.ok) {
+        notify.error(isAr ? "فشل تحديث الغلاف" : "Failed to update cover");
+        return;
+      }
+      setCoverUrl(path);
+      setCoverImageWidth(null);
+      setCoverImageHeight(null);
+      router.refresh();
+      notify.success(isAr ? "تم تعيين الغلاف الافتراضي" : "Default cover set");
+    } catch {
+      notify.error(isAr ? "فشل تحديث الغلاف" : "Failed to update cover");
+    }
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -416,7 +471,7 @@ export function SettingsView({
               id="settings-profile-section"
               data-testid="settings-profile-section"
               data-cover-crop-aspect={coverAspect}
-              className="min-w-0 space-y-8 overflow-hidden rounded-3xl border border-border/80 bg-card/60 p-5 shadow-sm backdrop-blur-xl sm:p-10"
+              className="min-w-0 space-y-8 overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-5 shadow-sm sm:bg-card/60 sm:p-10 sm:backdrop-blur-xl"
             >
               <div>
                 <h2 className="break-words text-xl font-heading font-bold text-foreground">
@@ -507,75 +562,95 @@ export function SettingsView({
               <form onSubmit={handleProfileSubmit} className="space-y-5 pt-4 border-t border-border/60">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "الاسم الكامل" : "Full Name"}</Label>
+                    <Label htmlFor="settings-name" className="text-xs font-semibold">{isAr ? "الاسم الكامل" : "Full Name"}</Label>
                     <Input
+                      id="settings-name"
+                      data-testid="settings-name-input"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="mt-1"
+                      onBlur={(e) => setName(e.target.value.trim())}
+                      placeholder={isAr ? "الاسم الكامل" : "Full name"}
+                      className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                       required
                     />
                   </div>
 
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "المدينة" : "City"}</Label>
-                    <select
-                      value={selectedCity ? (isAr ? selectedCity.nameAr : selectedCity.nameEn) : city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="mt-1 w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground"
-                    >
-                      <option value="">{isAr ? "اختر مدينتك..." : "Select city..."}</option>
-                      {MOROCCAN_CITIES.map((c) => (
-                        <option key={c.id} value={isAr ? c.nameAr : c.nameEn}>
-                          {isAr ? c.nameAr : c.nameEn}
-                        </option>
-                      ))}
-                    </select>
+                    <Label htmlFor="b-city" className="text-xs font-semibold">{isAr ? "المدينة" : "City"}</Label>
+                    <div className="mt-1.5">
+                      <CityCombobox
+                        value={city}
+                        onChange={setCity}
+                        locale={locale}
+                        placeholder={isAr ? "اختر مدينتك..." : "Select city..."}
+                        className="min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "العمر" : "Age"}</Label>
+                    <Label htmlFor="settings-age" className="text-xs font-semibold">{isAr ? "العمر" : "Age"}</Label>
                     <Input
-                      type="number"
+                      id="settings-age"
+                      data-testid="settings-age-input"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
-                      min={10}
-                      max={120}
-                      className="mt-1"
+                      onBlur={(e) =>
+                        setAge(
+                          e.target.value
+                            .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+                            .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+                            .trim(),
+                        )
+                      }
+                      placeholder={isAr ? "مثال: 22" : "e.g. 22"}
+                      className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                     />
                   </div>
 
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "المستوى الدراسي" : "Study Level"}</Label>
+                    <Label htmlFor="settings-studylevel" className="text-xs font-semibold">{isAr ? "المستوى الدراسي" : "Study Level"}</Label>
                     <Input
+                      id="settings-studylevel"
+                      data-testid="settings-studylevel-input"
                       value={studyLevel}
                       onChange={(e) => setStudyLevel(e.target.value)}
+                      onBlur={(e) => setStudyLevel(e.target.value.trim())}
                       placeholder={isAr ? "مثال: بكالوريا، ماستر، إجازة..." : "e.g. Master, Bachelor..."}
-                      className="mt-1"
+                      className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold">{isAr ? "المؤسسة التعليمية" : "Institution"}</Label>
+                  <Label htmlFor="settings-institution" className="text-xs font-semibold">{isAr ? "المؤسسة التعليمية" : "Institution"}</Label>
                   <Input
+                    id="settings-institution"
+                    data-testid="settings-institution-input"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
+                    onBlur={(e) => setInstitution(e.target.value.trim())}
                     placeholder={isAr ? "مثال: جامعة محمد الخامس..." : "e.g. Mohammed V University..."}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold">{isAr ? "نبذة قصيرة" : "Short Bio"}</Label>
+                  <Label htmlFor="settings-bio" className="text-xs font-semibold">{isAr ? "نبذة قصيرة" : "Short Bio"}</Label>
                   <Textarea
+                    id="settings-bio"
+                    data-testid="settings-bio-input"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    rows={3}
+                    rows={4}
                     maxLength={280}
                     placeholder={isAr ? "بضع كلمات عن أهدافك وطموحاتك..." : "A few words about your goals..."}
-                    className="mt-1 text-sm resize-none"
+                    className="mt-1.5 min-h-28 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm resize-none"
                   />
                 </div>
 
@@ -878,7 +953,7 @@ export function SettingsView({
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
@@ -888,7 +963,7 @@ export function SettingsView({
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
@@ -898,7 +973,7 @@ export function SettingsView({
                     type="password"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 

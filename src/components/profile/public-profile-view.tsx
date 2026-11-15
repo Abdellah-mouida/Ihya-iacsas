@@ -397,7 +397,7 @@ export function PublicProfileView({ initialProfile }: PublicProfileViewProps) {
             <h2 className="text-sm font-heading font-bold text-primary">
               {isAr ? "نبذة شخصية" : "About"}
             </h2>
-            <blockquote className="border-s-4 border-primary/50 ps-4 py-1 text-sm sm:text-base text-foreground font-serif italic leading-relaxed">
+            <blockquote className="border-s-4 border-primary/50 ps-4 py-1 text-sm sm:text-base text-foreground font-serif italic leading-relaxed whitespace-pre-line [overflow-wrap:anywhere]">
               «{profile.bio}»
             </blockquote>
           </div>

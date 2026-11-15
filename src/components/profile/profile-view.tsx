@@ -140,7 +140,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               <h2 className="text-sm font-heading font-bold text-primary flex items-center gap-2">
                 <span>{isAr ? "نبذة عني" : "About Me"}</span>
               </h2>
-              <blockquote className="border-s-4 border-primary/50 ps-4 py-1 text-sm sm:text-base text-foreground font-serif italic leading-relaxed">
+              <blockquote className="border-s-4 border-primary/50 ps-4 py-1 text-sm sm:text-base text-foreground font-serif italic leading-relaxed whitespace-pre-line [overflow-wrap:anywhere]">
                 «{user.bio}»
               </blockquote>
             </div>

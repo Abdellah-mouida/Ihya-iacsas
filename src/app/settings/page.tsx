@@ -5,6 +5,8 @@ import { SettingsView } from "@/components/settings/settings-view";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "الإعدادات | برنامج إحياء",
   description: "إعدادات الحساب والمظهر واللغة والخصوصية",

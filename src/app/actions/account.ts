@@ -71,13 +71,27 @@ export interface UserAccountData {
   bookings: AccountBookingItem[];
 }
 
-function sanitizePlainText(input: unknown): string {
+function sanitizePlainText(input: unknown, options?: { preserveNewlines?: boolean }): string {
   if (typeof input !== "string") return "";
-  return input
+  let cleaned = input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+    .replace(/<[^>]*>/g, "");
+  if (options?.preserveNewlines) {
+    cleaned = cleaned
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g, "")
+      .replace(/\n{4,}/g, "\n\n\n");
+  } else {
+    cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+  }
+  return cleaned.trim();
+}
+
+function normalizeAsciiDigits(value: string): string {
+  return value
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .trim();
 }
 
@@ -358,7 +372,7 @@ export async function updateUserProfile(
     };
   }
 
-  const ageNum = ageRaw ? Number(ageRaw) : NaN;
+  const ageNum = typeof ageRaw === "string" && ageRaw.trim() ? Number(normalizeAsciiDigits(ageRaw)) : NaN;
   if (!Number.isInteger(ageNum) || ageNum < 10 || ageNum > 120) {
     return {
       success: false,
@@ -370,7 +384,7 @@ export async function updateUserProfile(
 
   // Parse & sanitize optional fields (strip HTML tags, control chars)
   const rawBio = formData.get("bio");
-  const bio = rawBio !== null ? sanitizePlainText(rawBio) : null;
+  const bio = rawBio !== null ? sanitizePlainText(rawBio, { preserveNewlines: true }) : null;
   if (bio && bio.length > 280) {
     return {
       success: false,
@@ -542,9 +556,9 @@ export async function updateUserProfile(
 
     safeRevalidatePath("/profile");
     safeRevalidatePath("/settings");
-    safeRevalidatePath("/profile");
-    safeRevalidatePath("/settings");
     safeRevalidatePath("/onboarding");
+    safeRevalidatePath(`/u/${updatedUser.id}`);
+    safeRevalidatePath("/", "layout");
 
     return {
       success: true,
@@ -572,6 +586,76 @@ export async function updateUserProfile(
           : isAr
             ? "فشل تحديث البيانات الشخصية"
             : "Failed to update profile",
+    };
+  }
+}
+
+export async function updateUserAvatar(
+  input: { imageUrl: string; imagePublicId?: string | null },
+  locale: string = "ar",
+): Promise<{ success: boolean; image?: string | null; error?: string }> {
+  const isAr = locale === "ar";
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: isAr ? "يجب تسجيل الدخول أولاً" : "You must be signed in",
+    };
+  }
+
+  const imageUrl = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+  const imagePublicId = typeof input.imagePublicId === "string" && input.imagePublicId.trim()
+    ? input.imagePublicId.trim()
+    : null;
+
+  if (!imageUrl || (!imageUrl.startsWith("https://") && !imageUrl.startsWith("/"))) {
+    return {
+      success: false,
+      error: isAr ? "رابط الصورة غير صالح" : "Invalid image URL",
+    };
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true, imagePublicId: true },
+    });
+    if (!existing) {
+      return { success: false, error: isAr ? "المستخدم غير موجود" : "User not found" };
+    }
+
+    if (existing.imagePublicId && existing.imagePublicId !== imagePublicId) {
+      await deleteImageFromCloudinary(existing.imagePublicId).catch(() => {});
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: existing.id },
+      data: { image: imageUrl, imagePublicId },
+      select: { id: true, image: true, name: true, email: true },
+    });
+
+    await logActivity({
+      actorId: updated.id,
+      actorName: updated.name,
+      actorEmail: updated.email,
+      action: "PROFILE_UPDATED",
+      targetType: "User",
+      targetId: updated.id,
+      targetName: updated.name,
+      targetEmail: updated.email,
+    });
+
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
+    safeRevalidatePath(`/u/${updated.id}`);
+    safeRevalidatePath("/", "layout");
+
+    return { success: true, image: updated.image };
+  } catch (err) {
+    console.error("Error updating avatar:", err);
+    return {
+      success: false,
+      error: isAr ? "فشل حفظ الصورة الشخصية" : "Failed to save profile photo",
     };
   }
 }
