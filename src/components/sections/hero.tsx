@@ -28,7 +28,12 @@ export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const foldStateRef = useRef<string | null>(null);
   const [foldPaused, setFoldPaused] = useState(false);
+  const [heroImageLoaded, setHeroImageLoaded] = useState(false);
   const headline = t("hero.title");
+
+  const handleHeroImageLoad = useCallback(() => {
+    setHeroImageLoaded(true);
+  }, []);
 
   const handleFoldStateChange = useCallback((state: string) => {
     foldStateRef.current = state;
@@ -161,7 +166,8 @@ export function Hero() {
           <svg
             aria-hidden="true"
             data-testid="hero-frame-shadow"
-            className={styles.frameShadow}
+            data-shadow-loaded={heroImageLoaded ? "true" : "false"}
+            className={`${styles.frameShadow} ${heroImageLoaded ? styles.frameShadowVisible : ""}`}
             viewBox="0 0 1 1"
             preserveAspectRatio="none"
           >
@@ -197,6 +203,7 @@ export function Hero() {
               revealImmediately
               fadeDurationMs={250}
               fetchPriority="high"
+              onLoad={handleHeroImageLoad}
               sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"
               className="object-cover object-center"
             />

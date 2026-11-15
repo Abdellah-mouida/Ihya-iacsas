@@ -15,6 +15,7 @@ type SmoothImageProps = Omit<ImageProps, "fill" | "width" | "height" | "onLoad" 
   fadeDurationMs?: number;
   revealImmediately?: boolean;
   "data-testid"?: string;
+  onLoad?: () => void;
   onError?: ImageProps["onError"];
 };
 
@@ -38,6 +39,7 @@ export function SmoothImage({
   fadeDurationMs = 550,
   revealImmediately = false,
   "data-testid": imageTestId = "smooth-image",
+  onLoad,
   onError,
   ...imageProps
 }: SmoothImageProps) {
@@ -73,17 +75,19 @@ export function SmoothImage({
       const shouldSkipSweep = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       setFadeMs(cached ? Math.min(fadeDurationMs, 250) : fadeDurationMs);
       setLoadedSource(sourceKey);
+      onLoad?.();
       if (shouldSkipSweep) setRemovedSkeletonSource(sourceKey);
     } catch {
       if (image.naturalWidth > 0) {
         setFadeMs(cached ? Math.min(fadeDurationMs, 250) : fadeDurationMs);
         setLoadedSource(sourceKey);
+        onLoad?.();
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) setRemovedSkeletonSource(sourceKey);
       } else {
         setFailedSource(sourceKey);
       }
     }
-  }, [fadeDurationMs, sourceKey]);
+  }, [fadeDurationMs, onLoad, sourceKey]);
 
   useEffect(() => {
     const image = imageRef.current;
