@@ -7,51 +7,17 @@ import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
 import { requirePermission } from "@/lib/permissions";
+import { fetchAdminEventsForActor } from "@/lib/services/events";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
 import { readImageDimensions } from "@/lib/image-dimensions";
 
 export async function getEvents() {
-  await requirePermission("events:view");
+  const actor = await requirePermission("events:update");
   try {
-    const events = await prisma.event.findMany({
-      orderBy: { date: "desc" },
-      include: {
-        bookings: {
-          select: {
-            id: true,
-            status: true,
-            confirmed: true,
-          },
-        },
-      },
-    });
-
-    const enrichedEvents = events.map((ev) => {
-      const confirmedCount = ev.bookings.filter(
-        (b) => b.status === "CONFIRMED" || (b.confirmed && b.status !== "REJECTED"),
-      ).length;
-      const pendingCount = ev.bookings.filter((b) => b.status === "PENDING").length;
-      const waitlistCount = ev.bookings.filter((b) => b.status === "WAITLISTED").length;
-      const rejectedCount = ev.bookings.filter((b) => b.status === "REJECTED").length;
-
-      return {
-        ...ev,
-        posterUrl: resolveImageUrl(ev.posterUrl) ?? ev.posterUrl,
-        posterWidth: ev.posterWidth,
-        posterHeight: ev.posterHeight,
-        isEnded: isEventEnded(ev.date, ev.time),
-        _count: {
-          bookings: ev.bookings.length,
-        },
-        counts: {
-          total: ev.bookings.length,
-          confirmed: confirmedCount,
-          pending: pendingCount,
-          waitlisted: waitlistCount,
-          rejected: rejectedCount,
-        },
-      };
+    const enrichedEvents = await fetchAdminEventsForActor({
+      id: actor.id,
+      role: actor.role ?? "USER",
     });
 
     return { success: true, events: enrichedEvents };
@@ -59,7 +25,7 @@ export async function getEvents() {
     console.error("Error fetching events:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch events",
+      error: "Failed to fetch events",
       events: [],
     };
   }
