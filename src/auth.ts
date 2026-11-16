@@ -6,7 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/audit";
-import { verifySessionRotationProof } from "@/lib/session-sync";
+import {
+  isVerifiedGoogleProfile,
+  verifySessionRotationProof,
+} from "@/lib/session-sync";
 
 export class UnverifiedEmailError extends CredentialsSignin {
   code = "unverified_email";
@@ -141,8 +144,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig.callbacks,
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        if (!user.email) return false;
-        const cleanEmail = user.email.trim().toLowerCase();
+        if (!isVerifiedGoogleProfile(profile, user.email)) {
+          return false;
+        }
+        const cleanEmail = user.email!.trim().toLowerCase();
 
         const existingUser = await prisma.user.findUnique({
           where: { email: cleanEmail },

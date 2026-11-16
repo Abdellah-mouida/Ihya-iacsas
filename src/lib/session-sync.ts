@@ -76,3 +76,17 @@ export function verifySessionRotationProof(
   if (providedBuf.length !== expectedBuf.length) return false;
   return timingSafeEqual(providedBuf, expectedBuf);
 }
+
+export function isVerifiedGoogleProfile(
+  profile: unknown,
+  userEmail?: string | null,
+): boolean {
+  if (!userEmail || !userEmail.trim()) return false;
+  if (!profile || typeof profile !== "object") return false;
+  const record = profile as { email_verified?: unknown; email?: unknown };
+  if (record.email_verified !== true) return false;
+  if (typeof record.email === "string" && record.email.trim()) {
+    return record.email.trim().toLowerCase() === userEmail.trim().toLowerCase();
+  }
+  return true;
+}
