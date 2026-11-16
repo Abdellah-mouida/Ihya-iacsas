@@ -37,7 +37,6 @@ type RecentBooking = {
   fullName: string;
   email: string;
   city: string;
-  confirmed?: boolean;
   createdAt: Date;
   event: {
     titleAr: string;
