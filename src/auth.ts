@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/audit";
+import { verifySessionRotationProof } from "@/lib/session-sync";
 
 export class UnverifiedEmailError extends CredentialsSignin {
   code = "unverified_email";
@@ -231,22 +232,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // 2. Client called useSession().update(...)
-      if (trigger === "update" && session) {
-        if (session.name !== undefined) token.name = session.name;
-        if (session.image !== undefined) token.image = session.image;
-        if (session.city !== undefined) token.city = session.city;
-        if (session.age !== undefined) token.age = session.age;
-        if (session.locale !== undefined) token.locale = session.locale;
-        if (session.onboardingComplete !== undefined)
-          token.onboardingComplete = Boolean(session.onboardingComplete);
-        if (session.mustChangePassword !== undefined)
-          token.mustChangePassword = Boolean(session.mustChangePassword);
-        if (session.sessionVersion !== undefined)
-          token.sessionVersion = session.sessionVersion;
-      }
-
-      // 3. Token refresh / verification against database
+      // 2. Token refresh / verification against database (never trust client session fields on update)
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
@@ -268,8 +254,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        // User was deleted or sessionVersion mismatch (e.g. password was changed)
-        if (!dbUser || dbUser.sessionVersion !== (token.sessionVersion ?? 1)) {
+        const tokenVersion =
+          typeof token.sessionVersion === "number" ? token.sessionVersion : 1;
+        let isSessionValid = Boolean(
+          dbUser && dbUser.sessionVersion === tokenVersion,
+        );
+
+        if (
+          !isSessionValid &&
+          dbUser &&
+          trigger === "update" &&
+          session &&
+          typeof (session as { sessionRotationProof?: unknown })
+            .sessionRotationProof === "string"
+        ) {
+          isSessionValid = verifySessionRotationProof(
+            (session as { sessionRotationProof: string }).sessionRotationProof,
+            dbUser.id,
+            tokenVersion,
+            dbUser.sessionVersion,
+          );
+        }
+
+        // User was deleted or sessionVersion mismatch without signed rotation proof
+        if (!dbUser || !isSessionValid) {
           return null;
         }
 

@@ -14,6 +14,7 @@ import { uploadImageToCloudinaryDetailed, deleteImageFromCloudinary } from "@/li
 import { safeRevalidatePath } from "@/lib/cache";
 import { findMoroccanCity } from "@/data/morocco";
 import { logActivity } from "@/lib/audit";
+import { signSessionRotationProof } from "@/lib/session-sync";
 
 async function getClientIp(): Promise<string> {
   const headerList = await headers();
@@ -450,7 +451,7 @@ export async function requestPasswordReset(
 export interface ChangePasswordResult {
   success: boolean;
   error?: string;
-  sessionVersion?: number;
+  sessionRotationProof?: string;
 }
 
 export async function changePassword(
@@ -574,7 +575,11 @@ export async function changePassword(
 
   return {
     success: true,
-    sessionVersion: updatedUser.sessionVersion,
+    sessionRotationProof: signSessionRotationProof(
+      user.id,
+      user.sessionVersion,
+      updatedUser.sessionVersion,
+    ),
   };
 }
 

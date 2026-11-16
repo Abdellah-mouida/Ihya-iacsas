@@ -89,10 +89,9 @@ export function ChangePasswordView() {
         return;
       }
 
-      // Update active session with new sessionVersion and cleared mustChangePassword flag
+      // Update active session using signed server rotation proof
       await update({
-        sessionVersion: res.sessionVersion,
-        mustChangePassword: false,
+        sessionRotationProof: res.sessionRotationProof,
       });
 
       toast.success(t("auth.changePasswordSuccess"));
