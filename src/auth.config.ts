@@ -20,9 +20,15 @@ export const authConfig: NextAuthConfig = {
   ],
   callbacks: {
     redirect({ url, baseUrl }) {
-      // Allows relative callback URLs, blocking protocol-relative open redirects like //evil.com
+      // Allows relative callback URLs, blocking protocol-relative/backslash/control-char open redirects
       if (url.startsWith("/")) {
-        if (url.startsWith("//")) return baseUrl;
+        if (
+          url.startsWith("//") ||
+          url.startsWith("/\\") ||
+          /[\u0000-\u001f\u007f]/.test(url)
+        ) {
+          return baseUrl;
+        }
         return `${baseUrl}${url}`;
       }
       // Allows callback URLs on the exact same origin

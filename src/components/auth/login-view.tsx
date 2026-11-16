@@ -24,8 +24,13 @@ import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 function sanitizeCallbackUrl(url: string | null): string {
   if (!url) return "/profile";
-  // Disallow external URLs and protocol-relative URLs like //evil.com
-  if (url.startsWith("/") && !url.startsWith("//")) {
+  // Disallow external URLs, protocol-relative, backslash, and control-char open redirects
+  if (
+    url.startsWith("/") &&
+    !url.startsWith("//") &&
+    !url.startsWith("/\\") &&
+    !/[\u0000-\u001f\u007f]/.test(url)
+  ) {
     if (url === "/account" || url.startsWith("/account?")) {
       return url.replace("/account", "/profile");
     }

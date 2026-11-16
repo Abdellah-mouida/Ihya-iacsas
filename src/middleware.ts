@@ -56,16 +56,23 @@ const PROTECTED_USER_ROUTES = [
   "/profile",
   "/change-password",
   "/onboarding",
+  "/chat",
+  "/messages",
+  "/notifications",
+  "/u",
 ];
 
 function isSafeRelativeUrl(url: string | null): boolean {
   if (!url) return false;
-  // Must start with a single slash and not double slashes (protocol-relative)
+  // Must start with a single slash and not double slashes, backslash, or control chars
   if (
     !url.startsWith("/") ||
     url.startsWith("//") ||
-    url.startsWith("/\\")
-  ) return false;
+    url.startsWith("/\\") ||
+    /[\u0000-\u001f\u007f]/.test(url)
+  ) {
+    return false;
+  }
   // Must not redirect to another auth route
   if (
     PUBLIC_AUTH_ROUTES.some((route) => url === route || url.startsWith(`${route}?`)) ||
@@ -80,12 +87,20 @@ function isSafeRelativeUrl(url: string | null): boolean {
 
 const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
+const CSRF_PROTECTED_API_PREFIXES = [
+  "/api/chat/",
+  "/api/admin/",
+  "/api/notifications",
+  "/api/upload",
+  "/api/user/",
+  "/api/themes",
+];
+
 function isCrossOriginApiMutation(request: NextRequest): boolean {
   const { pathname } = request.nextUrl;
   if (
     !MUTATING_METHODS.has(request.method) ||
-    (!pathname.startsWith("/api/chat/") &&
-      !pathname.startsWith("/api/admin/moderation"))
+    !CSRF_PROTECTED_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   ) {
     return false;
   }
@@ -131,12 +146,12 @@ export async function middleware(request: NextRequest) {
 
   // Legacy admin login URL redirect -> /login
   if (pathname === "/admin/login") {
-    const nextParam =
+    const rawNext =
       request.nextUrl.searchParams.get("next") ||
-      request.nextUrl.searchParams.get("callbackUrl") ||
-      "/admin";
+      request.nextUrl.searchParams.get("callbackUrl");
+    const safeNext = isSafeRelativeUrl(rawNext) ? rawNext! : "/admin";
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", nextParam);
+    loginUrl.searchParams.set("callbackUrl", safeNext);
     return NextResponse.redirect(loginUrl);
   }
 

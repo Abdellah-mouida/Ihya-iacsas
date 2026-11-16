@@ -52,7 +52,13 @@ export function decideOnboardingRedirect({
 }
 
 export function safeOnboardingCallbackUrl(candidate: string | null | undefined) {
-  if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//") || candidate.startsWith("/\\")) {
+  if (
+    !candidate ||
+    !candidate.startsWith("/") ||
+    candidate.startsWith("//") ||
+    candidate.startsWith("/\\") ||
+    /[\u0000-\u001f\u007f]/.test(candidate)
+  ) {
     return "/";
   }
 
