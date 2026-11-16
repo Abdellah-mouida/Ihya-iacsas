@@ -15,6 +15,7 @@ import { safeRevalidatePath } from "@/lib/cache";
 import { findMoroccanCity } from "@/data/morocco";
 import { logActivity } from "@/lib/audit";
 import { signSessionRotationProof } from "@/lib/session-sync";
+import { hasValidImageMagicBytes } from "@/lib/upload-security";
 
 async function getClientIp(): Promise<string> {
   const headerList = await headers();
@@ -739,6 +740,14 @@ export async function completeOnboarding(
     try {
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
+      if (!hasValidImageMagicBytes(buffer)) {
+        return {
+          success: false,
+          error: isAr
+            ? "صيغة الصورة غير مدعومة. يرجى اختيار JPG أو PNG أو WebP"
+            : "Unsupported image format. Please select JPG, PNG, or WebP",
+        };
+      }
       const uploadRes = await uploadImageToCloudinaryDetailed(buffer, "ihyaa-profiles");
 
       // Delete old photo if it was in Cloudinary and differs

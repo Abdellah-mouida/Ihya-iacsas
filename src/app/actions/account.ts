@@ -11,6 +11,11 @@ import { findMoroccanCity } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
 import { cancelBookingForUser } from "@/lib/services/bookings";
+import {
+  hasValidImageMagicBytes,
+  isSafeLocalAssetPath,
+  verifyUploadProof,
+} from "@/lib/upload-security";
 import { deleteUserAccount } from "@/lib/user-deletion";
 import { logActivity } from "@/lib/audit";
 
@@ -509,8 +514,16 @@ export async function updateUserProfile(
 
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
+      if (!hasValidImageMagicBytes(buffer)) {
+        return {
+          success: false,
+          error: isAr
+            ? "صيغة الصورة غير مدعومة. يرجى اختيار JPG أو PNG أو WebP"
+            : "Unsupported image format. Please select JPG, PNG, or WebP",
+        };
+      }
 
-      if (existingUser.imagePublicId) {
+      if (existingUser.imagePublicId && existingUser.imagePublicId.startsWith("ihyaa-profiles/")) {
         await deleteImageFromCloudinary(existingUser.imagePublicId);
       }
 
@@ -591,7 +604,7 @@ export async function updateUserProfile(
 }
 
 export async function updateUserAvatar(
-  input: { imageUrl: string; imagePublicId?: string | null },
+  input: { imageUrl?: string; imagePublicId?: string | null; uploadProof?: string },
   locale: string = "ar",
 ): Promise<{ success: boolean; image?: string | null; error?: string }> {
   const isAr = locale === "ar";
@@ -603,12 +616,23 @@ export async function updateUserAvatar(
     };
   }
 
-  const imageUrl = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
-  const imagePublicId = typeof input.imagePublicId === "string" && input.imagePublicId.trim()
-    ? input.imagePublicId.trim()
-    : null;
+  let verifiedUrl: string | null = null;
+  let verifiedPublicId: string | null = null;
 
-  if (!imageUrl || (!imageUrl.startsWith("https://") && !imageUrl.startsWith("/"))) {
+  if (typeof input.uploadProof === "string" && input.uploadProof.trim()) {
+    const proof = verifyUploadProof(input.uploadProof.trim(), session.user.id, "avatars");
+    if (!proof) {
+      return {
+        success: false,
+        error: isAr ? "تعذر التحقق من رفع الصورة" : "Invalid image upload proof",
+      };
+    }
+    verifiedUrl = proof.url;
+    verifiedPublicId = proof.publicId;
+  } else if (typeof input.imageUrl === "string" && isSafeLocalAssetPath(input.imageUrl)) {
+    verifiedUrl = input.imageUrl.trim();
+    verifiedPublicId = null;
+  } else {
     return {
       success: false,
       error: isAr ? "رابط الصورة غير صالح" : "Invalid image URL",
@@ -624,13 +648,17 @@ export async function updateUserAvatar(
       return { success: false, error: isAr ? "المستخدم غير موجود" : "User not found" };
     }
 
-    if (existing.imagePublicId && existing.imagePublicId !== imagePublicId) {
+    if (
+      existing.imagePublicId &&
+      existing.imagePublicId.startsWith("ihyaa-profiles/") &&
+      existing.imagePublicId !== verifiedPublicId
+    ) {
       await deleteImageFromCloudinary(existing.imagePublicId).catch(() => {});
     }
 
     const updated = await prisma.user.update({
       where: { id: existing.id },
-      data: { image: imageUrl, imagePublicId },
+      data: { image: verifiedUrl, imagePublicId: verifiedPublicId },
       select: { id: true, image: true, name: true, email: true },
     });
 

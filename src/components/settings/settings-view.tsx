@@ -252,13 +252,18 @@ export function SettingsView({
         formData.append("folder", "avatars");
 
         const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = (await res.json()) as { url?: string; publicId?: string; error?: string };
-        if (!res.ok || !data.url) {
+        const data = (await res.json()) as {
+          url?: string;
+          publicId?: string;
+          uploadProof?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.url || !data.uploadProof) {
           notify.error(data.error || (isAr ? "فشل رفع الصورة" : "Photo upload failed"));
           return;
         }
         const avatarRes = await updateUserAvatar(
-          { imageUrl: data.url, imagePublicId: data.publicId ?? null },
+          { imageUrl: data.url, imagePublicId: data.publicId ?? null, uploadProof: data.uploadProof },
           locale,
         );
         if (!avatarRes.success) {
@@ -288,9 +293,10 @@ export function SettingsView({
           publicId?: string;
           imageWidth?: number;
           imageHeight?: number;
+          uploadProof?: string;
           error?: string;
         };
-        if (!res.ok || !data.url) {
+        if (!res.ok || !data.url || !data.uploadProof) {
           notify.error(data.error || (isAr ? "فشل رفع الغلاف" : "Cover upload failed"));
           return;
         }
@@ -298,10 +304,7 @@ export function SettingsView({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            coverImage: data.url,
-            coverImagePublicId: data.publicId,
-            coverWidth: data.imageWidth,
-            coverHeight: data.imageHeight,
+            uploadProof: data.uploadProof,
           }),
         });
         if (!prefRes.ok) {
@@ -363,6 +366,9 @@ export function SettingsView({
 
       const res = await changePassword(formData, locale);
       if (res.success) {
+        if (res.sessionRotationProof) {
+          await updateSession({ sessionRotationProof: res.sessionRotationProof });
+        }
         setCurrentPassword("");
         setNewPassword("");
         setConfirmNewPassword("");
