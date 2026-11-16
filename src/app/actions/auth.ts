@@ -320,15 +320,8 @@ export async function resendAccountVerificationOtp(
     where: { email: cleanEmail },
   });
 
-  if (!user) {
-    return { success: false, error: isAr ? "الحساب غير موجود" : "Account not found" };
-  }
-
-  if (user.emailVerified) {
-    return {
-      success: false,
-      error: isAr ? "تم تأكيد هذا الحساب مسبقاً، يرجى تسجيل الدخول" : "Account is already verified, please sign in",
-    };
+  if (!user || user.emailVerified) {
+    return { success: true };
   }
 
   // Invalidate old OTPs

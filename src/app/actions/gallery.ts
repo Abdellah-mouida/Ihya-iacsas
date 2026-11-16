@@ -7,6 +7,8 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
 import { readImageDimensions } from "@/lib/image-dimensions";
+import { safeActionError } from "@/lib/safe-error";
+import { hasValidImageMagicBytes, isSafePublicImageUrl } from "@/lib/upload-security";
 
 export async function getGalleryPhotos() {
   try {
@@ -24,7 +26,7 @@ export async function getGalleryPhotos() {
     console.error("Error fetching gallery photos:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch gallery photos",
+      error: safeActionError(error, "Failed to fetch gallery photos"),
       photos: [],
     };
   }
@@ -96,21 +98,23 @@ export async function createGalleryPhoto(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Invalid image file content." };
+        }
         imageMetadata = await readImageDimensions(buffer);
         imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-gallery");
-      } catch (uploadErr) {
+      } catch {
         if (!imageUrl) {
-          const errMsg =
-            uploadErr instanceof Error
-              ? uploadErr.message
-              : "Image upload failed";
-          return { success: false, error: errMsg };
+          return { success: false, error: "Image upload failed" };
         }
       }
     }
 
     if (!imageUrl) {
       return { success: false, error: "Please select an image file to upload or enter an Image URL." };
+    }
+    if (!isSafePublicImageUrl(imageUrl)) {
+      return { success: false, error: "Invalid image URL." };
     }
 
     const photo = await prisma.galleryPhoto.create({
@@ -139,7 +143,7 @@ export async function createGalleryPhoto(formData: FormData) {
     console.error("Error creating gallery photo:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to save gallery photo",
+      error: safeActionError(error, "Failed to save gallery photo"),
     };
   }
 }
@@ -188,13 +192,20 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
       captionEn,
     };
 
+    if (imageUrl && !isSafePublicImageUrl(imageUrl)) {
+      return { success: false, error: "Invalid image URL." };
+    }
+
     if (file && file.size > 0) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Invalid image file content." };
+        }
         Object.assign(dataToUpdate, await readImageDimensions(buffer));
         dataToUpdate.imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-gallery");
-      } catch (uploadErr) {
+      } catch {
         if (imageUrl) {
           dataToUpdate.imageUrl = imageUrl;
           if (imageUrl !== existing.imageUrl) {
@@ -204,7 +215,7 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
         } else {
           return {
             success: false,
-            error: uploadErr instanceof Error ? uploadErr.message : "Upload failed",
+            error: "Upload failed",
           };
         }
       }
@@ -247,7 +258,7 @@ export async function updateGalleryPhoto(id: string, formData: FormData) {
     console.error("Error updating gallery photo:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update gallery photo",
+      error: safeActionError(error, "Failed to update gallery photo"),
     };
   }
 }
@@ -284,7 +295,7 @@ export async function deleteGalleryPhoto(id: string) {
     console.error("Error deleting gallery photo:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete gallery photo",
+      error: safeActionError(error, "Failed to delete gallery photo"),
     };
   }
 }

@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { safeActionError } from "@/lib/safe-error";
 
 export async function submitContactMessage(data: {
   name: string;
@@ -12,17 +15,40 @@ export async function submitContactMessage(data: {
   message: string;
 }) {
   try {
-    const { name, email, message } = data;
+    const hdrs = await headers();
+    const rawIp =
+      hdrs.get("x-vercel-forwarded-for") ||
+      hdrs.get("x-real-ip") ||
+      hdrs.get("x-forwarded-for")?.split(",").pop() ||
+      "unknown";
+    const ip = rawIp.trim().slice(0, 64) || "unknown";
+    const rate = await checkRateLimit(`contact:${ip}`, 5, 600);
+    if (!rate.allowed) {
+      return {
+        success: false,
+        error: "Too many messages sent recently. Please try again later.",
+      };
+    }
+
+    const name = typeof data.name === "string" ? data.name.trim() : "";
+    const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+    const message = typeof data.message === "string" ? data.message.trim() : "";
 
     if (!name || !email || !message) {
       return { success: false, error: "Please fill in all fields" };
     }
+    if (name.length > 120 || email.length > 254 || message.length < 3 || message.length > 2000) {
+      return { success: false, error: "Input length is out of allowed bounds" };
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, error: "Invalid email address" };
+    }
 
     const contact = await prisma.contactMessage.create({
       data: {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        message: message.trim(),
+        name,
+        email,
+        message,
       },
     });
 
@@ -33,7 +59,7 @@ export async function submitContactMessage(data: {
     console.error("Error submitting contact message:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to submit message",
+      error: safeActionError(error, "Failed to submit message"),
     };
   }
 }
@@ -49,7 +75,7 @@ export async function getContactMessages() {
     console.error("Error fetching contact messages:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch messages",
+      error: safeActionError(error, "Failed to fetch messages"),
       messages: [],
     };
   }
@@ -84,7 +110,7 @@ export async function deleteContactMessage(id: string) {
     console.error("Error deleting contact message:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete message",
+      error: safeActionError(error, "Failed to delete message"),
     };
   }
 }

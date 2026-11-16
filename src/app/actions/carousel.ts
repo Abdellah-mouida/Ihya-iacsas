@@ -7,6 +7,11 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
 import { readImageDimensions } from "@/lib/image-dimensions";
+import { safeActionError } from "@/lib/safe-error";
+import {
+  hasValidImageMagicBytes,
+  isSafePublicImageUrl,
+} from "@/lib/upload-security";
 
 export async function getCarouselPosts(onlyActive = false) {
   try {
@@ -25,7 +30,7 @@ export async function getCarouselPosts(onlyActive = false) {
     console.error("Error fetching carousel posts:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch carousel posts",
+      error: safeActionError(error, "Failed to fetch carousel posts"),
       posts: [],
     };
   }
@@ -40,6 +45,9 @@ export async function createCarouselPost(formData: FormData) {
     let imageMetadata: Awaited<ReturnType<typeof readImageDimensions>> | null = null;
 
     let imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
+    if (imageUrl && !isSafePublicImageUrl(imageUrl)) {
+      return { success: false, error: "Invalid image URL." };
+    }
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
@@ -54,15 +62,15 @@ export async function createCarouselPost(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+        }
         imageMetadata = await readImageDimensions(buffer);
         imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
       } catch (uploadErr) {
         if (!imageUrl) {
-          const errMsg =
-            uploadErr instanceof Error
-              ? uploadErr.message
-              : "Image upload failed";
-          return { success: false, error: errMsg };
+          console.error("Error uploading carousel image:", uploadErr);
+          return { success: false, error: "Image upload failed" };
         }
       }
     }
@@ -100,7 +108,7 @@ export async function createCarouselPost(formData: FormData) {
     console.error("Error creating carousel post:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to save carousel post to database",
+      error: safeActionError(error, "Failed to save carousel post to database"),
     };
   }
 }
@@ -120,6 +128,9 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     const orderStr = formData.get("order") as string;
     const activeStr = formData.get("active") as string;
     const imageUrl = (formData.get("imageUrl") as string | null)?.trim() || null;
+    if (imageUrl && !isSafePublicImageUrl(imageUrl)) {
+      return { success: false, error: "Invalid image URL." };
+    }
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
@@ -150,6 +161,9 @@ export async function updateCarouselPost(id: string, formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+        }
         Object.assign(dataToUpdate, await readImageDimensions(buffer));
         dataToUpdate.imageUrl = await uploadImageToCloudinary(buffer, "ihyaa-carousel");
       } catch (uploadErr) {
@@ -160,9 +174,10 @@ export async function updateCarouselPost(id: string, formData: FormData) {
             dataToUpdate.imageHeight = null;
           }
         } else {
+          console.error("Error uploading carousel image:", uploadErr);
           return {
             success: false,
-            error: uploadErr instanceof Error ? uploadErr.message : "Upload failed",
+            error: "Upload failed",
           };
         }
       }
@@ -205,7 +220,7 @@ export async function updateCarouselPost(id: string, formData: FormData) {
     console.error("Error updating carousel post:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update carousel post",
+      error: safeActionError(error, "Failed to update carousel post"),
     };
   }
 }
@@ -235,7 +250,7 @@ export async function toggleCarouselActive(id: string, active: boolean) {
     console.error("Error toggling carousel post:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to toggle carousel post active status",
+      error: safeActionError(error, "Failed to toggle carousel post active status"),
     };
   }
 }
@@ -272,7 +287,7 @@ export async function deleteCarouselPost(id: string) {
     console.error("Error deleting carousel post:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete carousel post",
+      error: safeActionError(error, "Failed to delete carousel post"),
     };
   }
 }

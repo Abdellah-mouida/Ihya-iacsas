@@ -57,6 +57,20 @@ export function isSafeLocalAssetPath(value: string): boolean {
   return /^\/(?:patterns|images)\/[a-zA-Z0-9._/-]+$/.test(trimmed);
 }
 
+export function isSafePublicImageUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("/")) {
+    return !trimmed.startsWith("//") && !trimmed.startsWith("/\\") && !trimmed.includes("..");
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function expectedCloudinaryPrefixForFolder(folder: UploadFolder): string {
   return folder === "avatars" ? "ihyaa-profiles/" : "ihyaa-covers/";
 }

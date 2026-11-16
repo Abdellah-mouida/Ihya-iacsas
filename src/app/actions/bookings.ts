@@ -17,6 +17,7 @@ import {
   resolveTargetEvent,
 } from "@/lib/services/bookings";
 import { notify } from "@/lib/notifications";
+import { safeActionError } from "@/lib/safe-error";
 
 /**
  * Returns the current authenticated user state for the booking flow:
@@ -214,10 +215,7 @@ export async function getBookings(eventId?: string, status?: string) {
     console.error("Error fetching bookings:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch bookings",
+      error: safeActionError(error, "Failed to fetch bookings"),
       bookings: [],
     };
   }
@@ -279,8 +277,7 @@ export async function approveBooking(id: string) {
     console.error("Error approving booking:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to approve booking",
+      error: safeActionError(error, "Failed to approve booking"),
     };
   }
 }
@@ -369,8 +366,7 @@ export async function rejectBooking(id: string) {
     console.error("Error rejecting booking:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to reject booking",
+      error: safeActionError(error, "Failed to reject booking"),
     };
   }
 }
@@ -429,8 +425,7 @@ export async function promoteWaitlistBooking(id: string) {
     console.error("Error promoting waitlist booking:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to promote booking",
+      error: safeActionError(error, "Failed to promote booking"),
     };
   }
 }
@@ -496,10 +491,7 @@ export async function deleteBooking(id: string) {
     console.error("Error deleting booking:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to delete booking",
+      error: safeActionError(error, "Failed to delete booking"),
     };
   }
 }

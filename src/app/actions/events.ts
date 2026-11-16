@@ -11,6 +11,11 @@ import { fetchAdminEventsForActor } from "@/lib/services/events";
 import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
 import { readImageDimensions } from "@/lib/image-dimensions";
+import { safeActionError } from "@/lib/safe-error";
+import {
+  hasValidImageMagicBytes,
+  isSafePublicImageUrl,
+} from "@/lib/upload-security";
 
 export async function getEvents() {
   const actor = await requirePermission("events:update");
@@ -101,7 +106,7 @@ export async function getPublicEvents() {
     console.error("Error fetching public events:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch events",
+      error: safeActionError(error, "Failed to fetch events"),
       events: [],
       openEvents: [],
       pastEvents: [],
@@ -112,7 +117,7 @@ export async function getPublicEvents() {
 
 export async function getEventById(id: string) {
   try {
-    let event = await prisma.event.findFirst({
+    const event = await prisma.event.findFirst({
       where: {
         OR: [
           { slug: id },
@@ -129,29 +134,6 @@ export async function getEventById(id: string) {
         },
       },
     });
-
-    if (!event) {
-      event = await prisma.event.findFirst({
-        where: {
-          OR: [
-            { slug: { startsWith: id } },
-            { slug: { contains: id } },
-            { id: { startsWith: id } },
-            { id: { contains: id } },
-          ],
-        },
-        orderBy: { date: "asc" },
-        include: {
-          bookings: {
-            select: {
-              id: true,
-              status: true,
-              confirmed: true,
-            },
-          },
-        },
-      });
-    }
 
     if (!event) {
       return { success: false, error: "Event not found" };
@@ -195,8 +177,7 @@ export async function getEventById(id: string) {
   } catch (error) {
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to fetch event",
+      error: safeActionError(error, "Failed to fetch event"),
     };
   }
 }
@@ -227,6 +208,9 @@ export async function createEvent(formData: FormData) {
 
     const file = formData.get("image") as File | null;
     let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
+    if (posterUrl && !isSafePublicImageUrl(posterUrl)) {
+      return { success: false, error: "Invalid poster URL." };
+    }
     let posterMetadata: Awaited<ReturnType<typeof readImageDimensions>> | null = null;
 
     if (file && file.size > 8 * 1024 * 1024) {
@@ -242,15 +226,15 @@ export async function createEvent(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+        }
         posterMetadata = await readImageDimensions(buffer);
         posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
       } catch (uploadErr) {
         if (!posterUrl) {
-          const errMsg =
-            uploadErr instanceof Error
-              ? uploadErr.message
-              : "Event poster upload failed";
-          return { success: false, error: errMsg };
+          console.error("Error uploading event poster:", uploadErr);
+          return { success: false, error: "Event poster upload failed" };
         }
       }
     }
@@ -306,7 +290,7 @@ export async function createEvent(formData: FormData) {
     console.error("Error creating event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to save event to database",
+      error: safeActionError(error, "Failed to save event to database"),
     };
   }
 }
@@ -337,6 +321,9 @@ export async function updateEvent(id: string, formData: FormData) {
 
     const file = formData.get("image") as File | null;
     const posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
+    if (posterUrl && !isSafePublicImageUrl(posterUrl)) {
+      return { success: false, error: "Invalid poster URL." };
+    }
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
@@ -379,6 +366,9 @@ export async function updateEvent(id: string, formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+        }
         const posterMetadata = await readImageDimensions(buffer);
         dataToUpdate.posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
         dataToUpdate.posterWidth = posterMetadata.imageWidth;
@@ -391,9 +381,10 @@ export async function updateEvent(id: string, formData: FormData) {
             dataToUpdate.posterHeight = null;
           }
         } else {
+          console.error("Error uploading event poster:", uploadErr);
           return {
             success: false,
-            error: uploadErr instanceof Error ? uploadErr.message : "Upload failed",
+            error: "Upload failed",
           };
         }
       }
@@ -437,7 +428,7 @@ export async function updateEvent(id: string, formData: FormData) {
     console.error("Error updating event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update event",
+      error: safeActionError(error, "Failed to update event"),
     };
   }
 }
@@ -468,7 +459,7 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
     console.error("Error toggling event status:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to toggle event status",
+      error: safeActionError(error, "Failed to toggle event status"),
     };
   }
 }
@@ -507,7 +498,7 @@ export async function deleteEvent(id: string) {
     console.error("Error deleting event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete event",
+      error: safeActionError(error, "Failed to delete event"),
     };
   }
 }
