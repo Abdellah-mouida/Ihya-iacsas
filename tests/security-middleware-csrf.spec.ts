@@ -1,10 +1,19 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Middleware open-redirect, protected routes & API CSRF (IHY-SEC-012)", () => {
-  test("redirects anonymous users from /chat, /messages, /notifications, /u/* to /login", async ({
+  test("redirects anonymous users from protected user routes to /login", async ({
     request,
   }) => {
-    for (const path of ["/chat", "/messages", "/notifications", "/u/some-id"]) {
+    for (const path of [
+      "/settings",
+      "/profile",
+      "/change-password",
+      "/onboarding",
+      "/chat",
+      "/messages",
+      "/notifications",
+      "/u/some-id",
+    ]) {
       const res = await request.get(path, { maxRedirects: 0 });
       expect(res.status()).toBe(307);
       const location = res.headers()["location"] || "";
@@ -26,7 +35,7 @@ test.describe("Middleware open-redirect, protected routes & API CSRF (IHY-SEC-01
     }
   });
 
-  test("blocks cross-origin mutations on /api/notifications, /api/upload, /api/user/*, /api/admin/*", async ({
+  test("blocks cross-origin mutations on protected API endpoints", async ({
     request,
   }) => {
     for (const path of [
@@ -35,6 +44,7 @@ test.describe("Middleware open-redirect, protected routes & API CSRF (IHY-SEC-01
       "/api/user/preferences",
       "/api/user/privacy",
       "/api/admin/moderation/settings",
+      "/api/themes",
     ]) {
       const res = await request.patch(path, {
         headers: {
