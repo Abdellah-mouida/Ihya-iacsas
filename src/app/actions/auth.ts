@@ -12,11 +12,16 @@ import { generateTempPassword } from "@/lib/password";
 import { validatePasswordStrength } from "@/lib/password-strength";
 import { uploadImageToCloudinaryDetailed, deleteImageFromCloudinary } from "@/lib/cloudinary";
 import { safeRevalidatePath } from "@/lib/cache";
+<<<<<<< HEAD
 import { findMoroccanCity } from "@/data/morocco";
 import { logActivity } from "@/lib/audit";
 import { signSessionRotationProof } from "@/lib/session-sync";
 import { hasValidImageMagicBytes } from "@/lib/upload-security";
 import { extractClientIpFromHeaders } from "@/lib/request-ip";
+=======
+import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { signSessionRotationProof } from "@/lib/session-sync";
+>>>>>>> c66b97a (security(auth): bind session rotation to signed server proof [14-T4])
 
 async function getClientIp(): Promise<string> {
   return extractClientIpFromHeaders(await headers());

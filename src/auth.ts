@@ -5,11 +5,15 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
+<<<<<<< HEAD
 import { logActivity } from "@/lib/audit";
 import {
   isVerifiedGoogleProfile,
   verifySessionRotationProof,
 } from "@/lib/session-sync";
+=======
+import { verifySessionRotationProof } from "@/lib/session-sync";
+>>>>>>> c66b97a (security(auth): bind session rotation to signed server proof [14-T4])
 
 export class UnverifiedEmailError extends CredentialsSignin {
   code = "unverified_email";

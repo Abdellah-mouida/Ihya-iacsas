@@ -76,6 +76,7 @@ export function verifySessionRotationProof(
   if (providedBuf.length !== expectedBuf.length) return false;
   return timingSafeEqual(providedBuf, expectedBuf);
 }
+<<<<<<< HEAD
 
 export function isVerifiedGoogleProfile(
   profile: unknown,
@@ -90,3 +91,5 @@ export function isVerifiedGoogleProfile(
   }
   return true;
 }
+=======
+>>>>>>> c66b97a (security(auth): bind session rotation to signed server proof [14-T4])

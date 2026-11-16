@@ -21,9 +21,10 @@ test.describe("IHY-SEC-001: Session revocation cannot be bypassed via /api/auth/
     expect(verifySessionRotationProof(proof, "user-xyz", 1, 2)).toBe(false);
     expect(verifySessionRotationProof(proof, "user-abc", 2, 3)).toBe(false);
     expect(verifySessionRotationProof(proof, "user-abc", 1, 3)).toBe(false);
-    expect(verifySessionRotationProof(`${proof.slice(0, -1)}0`, "user-abc", 1, 2)).toBe(
-      false,
-    );
+
+    const [exp, sig] = proof.split(".");
+    const tampered = `${exp}.${sig.slice(0, -1)}${sig.endsWith("0") ? "1" : "0"}`;
+    expect(verifySessionRotationProof(tampered, "user-abc", 1, 2)).toBe(false);
 
     const expiredProof = signSessionRotationProof("user-abc", 1, 2, -1000);
     expect(verifySessionRotationProof(expiredProof, "user-abc", 1, 2)).toBe(false);
