@@ -95,11 +95,6 @@ export async function getBookingUserState(eventId?: string) {
   }
 }
 
-/**
- * Create a booking for an authenticated user who completed onboarding.
- * Automatically snapshots user data, enforces per-event uniqueness,
- * checks capacity and sets status (CONFIRMED, PENDING, or WAITLISTED).
- */
 export async function createAuthenticatedBooking(data: {
   eventId?: string;
   motive?: string;
@@ -191,10 +186,7 @@ export async function getBookings(eventId?: string, status?: string) {
         ...(eventId && eventId !== "all" ? { eventId } : {}),
         ...(status && status !== "all" ? { status } : {}),
       },
-      orderBy: [
-        { waitlistOrder: "asc" },
-        { createdAt: "desc" },
-      ],
+      orderBy: [{ waitlistOrder: "asc" }, { createdAt: "desc" }],
       include: {
         event: {
           select: {
@@ -313,7 +305,7 @@ export async function rejectBooking(id: string) {
         ? await promoteNextWaitlistedInTx(tx, booking.eventId)
         : null;
       return { changed: true as const, promoted };
-    });
+    }, { timeout: 15_000, maxWait: 10_000 });
 
     if (txResult.changed && booking.userId) {
       await notify(booking.userId, "BOOKING_REJECTED", {
@@ -455,7 +447,7 @@ export async function deleteBooking(id: string) {
           ? await promoteNextWaitlistedInTx(tx, booking.eventId)
           : null;
         return { deleted: true as const, promoted };
-      });
+      }, { timeout: 15_000, maxWait: 10_000 });
 
       if (txResult.promoted) {
         await deliverBookingPromotionEffects(
