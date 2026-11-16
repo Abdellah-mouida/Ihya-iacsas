@@ -203,7 +203,7 @@ export async function sendFriendRequest(
   }
 
   if (!options?.bypassRateLimit) {
-    const allowed = await checkRateLimit(
+    const { allowed } = await checkRateLimit(
       `friend-req:${actorId}`,
       FRIEND_REQUEST_DAILY_LIMIT,
       86400,
@@ -609,7 +609,7 @@ export async function searchUsersByNamePrefix(
   }
 
   if (!options?.bypassRateLimit) {
-    const allowed = await checkRateLimit(
+    const { allowed } = await checkRateLimit(
       `user-search:${viewerId}`,
       USER_SEARCH_PER_MIN_LIMIT,
       60,
