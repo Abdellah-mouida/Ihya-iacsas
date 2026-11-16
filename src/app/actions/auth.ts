@@ -16,16 +16,10 @@ import { findMoroccanCity } from "@/data/morocco";
 import { logActivity } from "@/lib/audit";
 import { signSessionRotationProof } from "@/lib/session-sync";
 import { hasValidImageMagicBytes } from "@/lib/upload-security";
+import { extractClientIpFromHeaders } from "@/lib/request-ip";
 
 async function getClientIp(): Promise<string> {
-  const headerList = await headers();
-  const forwarded = headerList.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-  const realIp = headerList.get("x-real-ip");
-  if (realIp) return realIp.trim();
-  return "127.0.0.1";
+  return extractClientIpFromHeaders(await headers());
 }
 
 export interface SignUpResult {

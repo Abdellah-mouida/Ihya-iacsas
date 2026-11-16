@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { safeActionError } from "@/lib/safe-error";
+import { extractClientIpFromHeaders } from "@/lib/request-ip";
 
 export async function submitContactMessage(data: {
   name: string;
@@ -16,12 +17,7 @@ export async function submitContactMessage(data: {
 }) {
   try {
     const hdrs = await headers();
-    const rawIp =
-      hdrs.get("x-vercel-forwarded-for") ||
-      hdrs.get("x-real-ip") ||
-      hdrs.get("x-forwarded-for")?.split(",").pop() ||
-      "unknown";
-    const ip = rawIp.trim().slice(0, 64) || "unknown";
+    const ip = extractClientIpFromHeaders(hdrs).slice(0, 64);
     const rate = await checkRateLimit(`contact:${ip}`, 5, 600);
     if (!rate.allowed) {
       return {

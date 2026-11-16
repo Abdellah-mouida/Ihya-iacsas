@@ -32,11 +32,11 @@ function getHub(): LocalHubState {
 
 function getSigningSecret(): string {
   const secret =
+    process.env.API_TOKEN_SECRET ||
     process.env.AUTH_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    process.env.CHAT_ENCRYPTION_KEY;
+    process.env.NEXTAUTH_SECRET;
   if (!secret || secret.length < 16) {
-    throw new Error("Missing AUTH_SECRET for local realtime token signing");
+    throw new Error("Missing AUTH_SECRET/API_TOKEN_SECRET for local realtime token signing");
   }
   return secret;
 }
@@ -67,7 +67,14 @@ export function verifyLocalRealtimeToken(
   const sig = token.slice(dot + 1);
   if (!encoded || !sig) return null;
 
-  const expected = createHmac("sha256", getSigningSecret())
+  let signingSecret: string;
+  try {
+    signingSecret = getSigningSecret();
+  } catch {
+    return null;
+  }
+
+  const expected = createHmac("sha256", signingSecret)
     .update(encoded)
     .digest("base64url");
 

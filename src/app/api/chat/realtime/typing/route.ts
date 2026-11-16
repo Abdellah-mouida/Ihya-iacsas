@@ -56,6 +56,16 @@ export async function POST(request: Request) {
   const throttleKey = `${actor.id}:${conversationId}`;
   const map = getTypingThrottleMap();
   const now = Date.now();
+  if (map.size > 1000) {
+    for (const [key, ts] of map.entries()) {
+      if (now - ts > 60_000) map.delete(key);
+    }
+    while (map.size >= 2000) {
+      const oldestKey = map.keys().next().value;
+      if (!oldestKey) break;
+      map.delete(oldestKey);
+    }
+  }
   const prev = map.get(throttleKey) ?? 0;
 
   if (isTyping && now - prev < 1500) {
@@ -67,7 +77,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, throttled: true });
   }
 
-  map.set(throttleKey, isTyping ? now : 0);
+  if (isTyping) {
+    map.set(throttleKey, now);
+  } else {
+    map.delete(throttleKey);
+  }
 
   try {
     const transport = getRealtimeTransport();
