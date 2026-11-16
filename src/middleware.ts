@@ -127,6 +127,10 @@ function isCrossOriginApiMutation(request: NextRequest): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname.startsWith("/api/v1")) {
+    return NextResponse.next();
+  }
+
   if (isCrossOriginApiMutation(request)) {
     return NextResponse.json(
       { error: "Cross-origin request rejected" },

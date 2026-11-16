@@ -550,6 +550,18 @@ export async function changePassword(
     },
   });
 
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.apiSession.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: now, revokedReason: "PASSWORD_CHANGED" },
+    }),
+    prisma.apiRefreshToken.updateMany({
+      where: { session: { userId: user.id }, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+  ]);
+
   await logActivity({
     actorId: user.id,
     actorName: user.name,

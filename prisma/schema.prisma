@@ -229,6 +229,7 @@ model User {
   reportsTargeted         Report[]             @relation("ReportTarget")
   reportsReviewed         Report[]             @relation("ReportReviewer")
   notifications           Notification[]
+  apiSessions             ApiSession[]
 
   @@index([email])
   @@index([role])
@@ -528,4 +529,45 @@ model Notification {
   @@index([userId, readAt, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, dedupeKey, createdAt(sort: Desc)])
+}
+
+model ApiSession {
+  id             String    @id @default(cuid())
+  userId         String
+  familyId       String    @unique
+  deviceName     String?
+  platform       String?
+  ipAddress      String?
+  userAgent      String?
+  sessionVersion Int       @default(1)
+  lastUsedAt     DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  revokedReason  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens ApiRefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model ApiRefreshToken {
+  id           String    @id @default(cuid())
+  sessionId    String
+  familyId     String
+  tokenHash    String    @unique
+  replacedById String?
+  usedAt       DateTime?
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  session ApiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([familyId])
+  @@index([expiresAt])
 }

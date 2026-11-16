@@ -145,39 +145,42 @@ export async function confirmBookingAndNotify(
   sourceAction: string,
   dependencies: PromotionDependencies = {},
 ) {
-  const txResult = await prisma.$transaction(async (tx) => {
-    // Lock the event row to serialize concurrent capacity & waitlist claims
-    await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${booking.eventId} FOR UPDATE`;
+  const txResult = await prisma.$transaction(
+    async (tx) => {
+      // Lock the event row to serialize concurrent capacity & waitlist claims
+      await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${booking.eventId} FOR UPDATE`;
 
-    const eventRow = await tx.event.findUnique({
-      where: { id: booking.eventId },
-      select: { capacityType: true, capacity: true },
-    });
-
-    if (eventRow?.capacityType === "LIMITED") {
-      const confirmedCount = await tx.booking.count({
-        where: { eventId: booking.eventId, status: "CONFIRMED" },
+      const eventRow = await tx.event.findUnique({
+        where: { id: booking.eventId },
+        select: { capacityType: true, capacity: true },
       });
-      if (confirmedCount >= (eventRow.capacity ?? 0)) {
-        return { changed: false, capacityFull: true } as const;
+
+      if (eventRow?.capacityType === "LIMITED") {
+        const confirmedCount = await tx.booking.count({
+          where: { eventId: booking.eventId, status: "CONFIRMED" },
+        });
+        if (confirmedCount >= (eventRow.capacity ?? 0)) {
+          return { changed: false, capacityFull: true } as const;
+        }
       }
-    }
 
-    const transition = await tx.booking.updateMany({
-      where: {
-        id: booking.id,
-        status: { in: ["PENDING", "WAITLISTED"] },
-        confirmed: false,
-      },
-      data: {
-        status: "CONFIRMED",
-        confirmed: true,
-        waitlistOrder: null,
-      },
-    });
+      const transition = await tx.booking.updateMany({
+        where: {
+          id: booking.id,
+          status: { in: ["PENDING", "WAITLISTED"] },
+          confirmed: false,
+        },
+        data: {
+          status: "CONFIRMED",
+          confirmed: true,
+          waitlistOrder: null,
+        },
+      });
 
-    return { changed: transition.count === 1, capacityFull: false } as const;
-  });
+      return { changed: transition.count === 1, capacityFull: false } as const;
+    },
+    { timeout: 15_000, maxWait: 10_000 },
+  );
 
   if (!txResult.changed) {
     return {
@@ -202,10 +205,13 @@ export async function promoteNextWaitlistedBooking(
   sourceAction: string,
   dependencies: PromotionDependencies = {},
 ) {
-  const promoted = await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
-    return promoteNextWaitlistedInTx(tx, eventId);
-  });
+  const promoted = await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+      return promoteNextWaitlistedInTx(tx, eventId);
+    },
+    { timeout: 15_000, maxWait: 10_000 },
+  );
 
   if (!promoted) return { changed: false, emailSent: false };
 

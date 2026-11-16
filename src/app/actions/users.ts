@@ -171,6 +171,18 @@ export async function updateUserRole({
     },
   });
 
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.apiSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now, revokedReason: "ROLE_CHANGED" },
+    }),
+    prisma.apiRefreshToken.updateMany({
+      where: { session: { userId }, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+  ]);
+
   await logActivity({
     actorId: actor.id,
     actorName: actor.name,
@@ -236,6 +248,8 @@ export async function deleteOrAnonymizeUser({
       // Remove linked accounts and active sessions
       await tx.account.deleteMany({ where: { userId } });
       await tx.session.deleteMany({ where: { userId } });
+      await tx.apiRefreshToken.deleteMany({ where: { session: { userId } } });
+      await tx.apiSession.deleteMany({ where: { userId } });
 
       // Anonymize user details but preserve ID so existing bookings/stats remain valid
       await tx.user.update({
