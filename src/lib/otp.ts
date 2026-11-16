@@ -1,10 +1,12 @@
 import crypto from "crypto";
 
+const MIN_OTP_SECRET_LENGTH = 16;
+
 export function assertOtpSecretConfigured(): string {
   const secret = process.env.OTP_SECRET?.trim();
-  if (!secret || secret.length < 16) {
+  if (!secret || secret.length < MIN_OTP_SECRET_LENGTH) {
     throw new Error(
-      "OTP_SECRET environment variable is required and must be at least 16 characters",
+      `OTP_SECRET environment variable must be set (minimum ${MIN_OTP_SECRET_LENGTH} characters)`,
     );
   }
   return secret;
