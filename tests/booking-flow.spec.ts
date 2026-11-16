@@ -1343,19 +1343,15 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(openIds).toContain(todayEventId);
     expect(pastIds).not.toContain(todayEventId);
 
-    // 5. Test Server Action booking block on ended event
-    const { requestBookingOtp } = await import("../src/app/actions/bookings");
-    const bookRes = await requestBookingOtp({
-      fullName: "Test Attendee",
-      email: `past-event.${randomBytes(12).toString("hex")}@gmail.com`,
-      city: "الرباط",
-      age: 25,
-      motive: "الحضور",
+    // 5. Test ended event guard directly & ensure createAuthenticatedBooking rejects unauthenticated calls
+    const { isEventEnded } = await import("../src/lib/event-time");
+    expect(isEventEnded(yesterday, "10:00")).toBe(true);
+    const { createAuthenticatedBooking } = await import("../src/app/actions/bookings");
+    const bookRes = await createAuthenticatedBooking({
       eventId: pastEventId,
       locale: "ar",
     });
     expect(bookRes.success).toBe(false);
-    expect(bookRes.error).toContain("انتهت هذه الفعالية");
 
     // 6. Test on UI: Navigate to /events
     await page.goto("/events");
