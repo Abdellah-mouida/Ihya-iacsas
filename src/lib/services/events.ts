@@ -49,7 +49,7 @@ export async function fetchAdminEventsForActor(actor: EventsActor | null) {
     throw new UnauthorizedError();
   }
   if (!can(actor.role, "events:update") && !can(actor.role, "bookings:view")) {
-    throw new ForbiddenError();
+    throw new ForbiddenError("events:update");
   }
 
   const events = await prisma.event.findMany({

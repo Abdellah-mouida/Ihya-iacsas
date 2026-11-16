@@ -18,8 +18,8 @@ import {
 } from "@/lib/upload-security";
 
 export async function getEvents() {
-  const actor = await requirePermission("events:update");
   try {
+    const actor = await requirePermission("events:update");
     const enrichedEvents = await fetchAdminEventsForActor({
       id: actor.id,
       role: actor.role ?? "USER",
@@ -27,7 +27,16 @@ export async function getEvents() {
 
     return { success: true, events: enrichedEvents };
   } catch (error) {
-    console.error("Error fetching events:", error);
+    if (
+      error instanceof Error &&
+      (error.name === "UnauthorizedError" || error.name === "ForbiddenError")
+    ) {
+      return {
+        success: false,
+        error: error.name === "UnauthorizedError" ? "Unauthorized" : "Forbidden",
+        events: [],
+      };
+    }
     return {
       success: false,
       error: "Failed to fetch events",
