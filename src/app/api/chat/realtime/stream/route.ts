@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireChatActor } from "@/lib/chat/guards";
+import { isChatEnabled, requireRealtimeActor } from "@/lib/chat/guards";
 import {
   getAuthorizedChannelsForUser,
   getRealtimeProviderKind,
@@ -18,7 +18,7 @@ const STREAM_TTL_MS = 10 * 60 * 1000;
 const HEARTBEAT_MS = 25_000;
 
 export async function GET(request: Request) {
-  const authResult = await requireChatActor({ requireTerms: false });
+  const authResult = await requireRealtimeActor();
   if (!authResult.ok) return authResult.response;
 
   if (getRealtimeProviderKind() !== "local") {
@@ -40,8 +40,14 @@ export async function GET(request: Request) {
     if (!verified || verified.sub !== userId) {
       return NextResponse.json({ error: "Invalid realtime token" }, { status: 403 });
     }
+    const chatEnabled = await isChatEnabled();
     channels = verified.ch;
-    allowPresence = verified.onl && Boolean(authResult.user.chatTermsAcceptedAt);
+    allowPresence =
+      verified.onl &&
+      chatEnabled &&
+      !authResult.user.chatBannedAt &&
+      Boolean(authResult.user.onboardingCompletedAt) &&
+      Boolean(authResult.user.chatTermsAcceptedAt);
     expiresAt = verified.exp;
   } else {
     const authz = await getAuthorizedChannelsForUser(userId);

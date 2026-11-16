@@ -80,6 +80,12 @@ export type RealtimeEvent =
       userId: string;
       online: boolean;
       at: number;
+    }
+  | {
+      type: "notification.created";
+      notificationId: string;
+      notificationType: string;
+      createdAt: string;
     };
 
 export interface RealtimeEnvelope {

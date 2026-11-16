@@ -38,6 +38,7 @@ class ChatRealtimeClient {
   private desiredConvIds: string[] = [];
   private syncOnNextReady = false;
   private recentMessageIds: string[] = [];
+  private recentNotificationIds: string[] = [];
   private visibilityBound = false;
 
   acquire(): () => void {
@@ -466,6 +467,14 @@ class ChatRealtimeClient {
         event.messageId,
         event.createdAt,
       );
+    } else if (event.type === "notification.created") {
+      if (this.recentNotificationIds.includes(event.notificationId)) {
+        return;
+      }
+      this.recentNotificationIds.push(event.notificationId);
+      if (this.recentNotificationIds.length > 100) {
+        this.recentNotificationIds.shift();
+      }
     } else if (event.type === "presence.changed") {
       if (event.online) {
         this.onlineUsers.add(event.userId);
@@ -582,6 +591,9 @@ class ChatRealtimeClient {
       window.clearTimeout(timer);
     }
     this.typingStopTimers.clear();
+    this.currentToken = null;
+    this.hasConnectedOnce = false;
+    this.onlineUsers.clear();
     this.disconnectTransportOnly();
   }
 }

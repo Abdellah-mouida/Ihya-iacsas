@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
 import { confirmBookingAndNotify } from "@/lib/booking-promotion";
+import { notify } from "@/lib/notifications";
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 const MAX_VERIFICATION_ATTEMPTS = 5;
@@ -1174,6 +1175,21 @@ export async function rejectBooking(id: string) {
         waitlistOrder: null,
       },
     });
+
+    if (booking.userId) {
+      await notify(booking.userId, "BOOKING_REJECTED", {
+        params: {
+          eventTitleAr: booking.event.titleAr,
+          eventTitleEn: booking.event.titleEn,
+        },
+        data: {
+          bookingId: booking.id,
+          eventId: booking.eventId,
+          slug: booking.event.slug,
+        },
+        dedupeKey: `booking:${booking.id}:rejected`,
+      });
+    }
 
     let autoPromotedName: string | null = null;
 

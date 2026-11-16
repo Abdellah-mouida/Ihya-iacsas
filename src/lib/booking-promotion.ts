@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/audit";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
+import { notify } from "@/lib/notifications";
 
 export type BookingPromotionRecord = {
   id: string;
   eventId: string;
+  userId?: string | null;
   email: string;
   fullName: string;
   event: {
@@ -14,6 +16,7 @@ export type BookingPromotionRecord = {
     date: Date;
     time: string;
     location: string;
+    capacityType?: string;
   };
   user: { locale: string | null } | null;
 };
@@ -52,6 +55,26 @@ export async function confirmBookingAndNotify(
 
   if (transition.count !== 1) {
     return { changed: false, emailSent: false };
+  }
+
+  if (booking.userId) {
+    const isDirectApproval = sourceAction === "BOOKING_APPROVE";
+    await notify(
+      booking.userId,
+      isDirectApproval ? "BOOKING_APPROVED" : "BOOKING_WAITLIST_PROMOTED",
+      {
+        params: {
+          eventTitleAr: booking.event.titleAr,
+          eventTitleEn: booking.event.titleEn,
+        },
+        data: {
+          bookingId: booking.id,
+          eventId: booking.eventId,
+          slug: booking.event.slug,
+        },
+        dedupeKey: `booking:${booking.id}:${isDirectApproval ? "approved" : "promoted"}`,
+      },
+    );
   }
 
   try {

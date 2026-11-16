@@ -37,7 +37,6 @@ import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/li
 import { getPublicEvents } from "@/app/actions/events";
 import { clearLegacyBookingState } from "@/lib/booking-state";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
-import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const hamburgerTop = {
@@ -151,15 +150,24 @@ export function GlassNavbar({
 
     const loadUnread = async () => {
       try {
-        const res = await fetch("/api/chat/unread", { cache: "no-store" });
+        const [chatRes, notifRes] = await Promise.all([
+          fetch("/api/chat/unread", { cache: "no-store" }),
+          fetch("/api/notifications/summary", { cache: "no-store" }),
+        ]);
         if (cancelled) return;
-        if (!res.ok) {
+        if (notifRes.ok) {
+          const notifData = (await notifRes.json()) as { unreadCount?: number };
+          if (!cancelled && typeof notifData.unreadCount === "number") {
+            setNotificationsUnread(Math.max(0, notifData.unreadCount));
+          }
+        }
+        if (!chatRes.ok) {
           setChatEnabled(false);
           setPublicUnread(0);
           setPrivateUnread(0);
           return;
         }
-        const data = (await res.json()) as {
+        const data = (await chatRes.json()) as {
           publicUnread?: number;
           privateUnread?: number;
           pendingRequestsCount?: number;
@@ -278,17 +286,6 @@ export function GlassNavbar({
             window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
           });
           unsubscribe = client.onEvent((event) => {
-            if (event.type === "friend.changed" && event.kind === "requested") {
-              notify.info(
-                t("chat.toastFriendRequest").replace("{name}", t("chatInvite.unknownInviter")),
-              );
-            } else if (event.type === "invite.received") {
-              notify.info(
-                t("chat.toastRoomInvite")
-                  .replace("{name}", t("chatInvite.unknownInviter"))
-                  .replace("{room}", ""),
-              );
-            }
             if (
               event.type === "unread.sync" ||
               event.type === "message.created" ||

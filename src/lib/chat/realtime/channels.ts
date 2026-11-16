@@ -41,16 +41,23 @@ export async function ensurePublicConversationMember(userId: string): Promise<st
 export async function getAuthorizedChannelsForUser(
   userId: string,
 ): Promise<AuthorizedChannelsResult> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      showOnlineStatus: true,
-      chatTermsAcceptedAt: true,
-      chatBannedAt: true,
-    },
-  });
+  const [user, chatSetting] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        showOnlineStatus: true,
+        onboardingCompletedAt: true,
+        chatTermsAcceptedAt: true,
+        chatBannedAt: true,
+      },
+    }),
+    prisma.systemSetting.findUnique({
+      where: { key: "chatEnabled" },
+      select: { value: true },
+    }),
+  ]);
 
-  if (!user || user.chatBannedAt) {
+  if (!user) {
     return {
       channels: [],
       conversationIds: [],
@@ -59,16 +66,25 @@ export async function getAuthorizedChannelsForUser(
     };
   }
 
+  const chatEnabled = chatSetting?.value === "true";
   const termsAccepted = Boolean(user.chatTermsAcceptedAt);
+  const canAccessChat =
+    chatEnabled &&
+    !user.chatBannedAt &&
+    Boolean(user.onboardingCompletedAt) &&
+    termsAccepted;
+
+  // Personal channel is always issued for authenticated users so realtime notifications
+  // work even when community chat is disabled, terms aren't accepted, or chat is restricted.
   const channels = [userChannel(userId)];
   const conversationIds: string[] = [];
 
-  if (!termsAccepted) {
+  if (!canAccessChat) {
     return {
       channels,
       conversationIds,
-      showOnlineStatus: user.showOnlineStatus,
-      termsAccepted: false,
+      showOnlineStatus: false,
+      termsAccepted,
     };
   }
 

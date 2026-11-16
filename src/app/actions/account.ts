@@ -11,6 +11,7 @@ import { findMoroccanCity } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
+import { notify } from "@/lib/notifications";
 import { deleteUserAccount } from "@/lib/user-deletion";
 import { logActivity } from "@/lib/audit";
 
@@ -766,6 +767,21 @@ export async function cancelUserBooking(
             waitlistOrder: null,
           },
         });
+
+        if (nextWaitlisted.userId) {
+          await notify(nextWaitlisted.userId, "BOOKING_WAITLIST_PROMOTED", {
+            params: {
+              eventTitleAr: booking.event.titleAr,
+              eventTitleEn: booking.event.titleEn,
+            },
+            data: {
+              bookingId: nextWaitlisted.id,
+              eventId: booking.eventId,
+              slug: booking.event.slug,
+            },
+            dedupeKey: `booking:${nextWaitlisted.id}:promoted`,
+          });
+        }
 
         await logActivity({
           actorId: session.user.id,

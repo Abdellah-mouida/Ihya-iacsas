@@ -1112,5 +1112,67 @@
     "dismissBtn": "تجاهل البلاغ",
     "actionDone": "تم تنفيذ إجراء الإشراف",
     "actionFailed": "تعذر تنفيذ إجراء الإشراف"
+  },
+  "notifications": {
+    "pageTitle": "الإشعارات",
+    "pageSubtitle": "آخر التحديثات حول حجوزاتك والأصدقاء والغرف الخاصة.",
+    "filterAll": "الكل",
+    "filterUnread": "غير مقروءة",
+    "markAllRead": "تحديد الكل كمقروء",
+    "markRead": "تحديد كمقروء",
+    "markUnread": "تحديد كغير مقروء",
+    "unreadBadge": "جديد",
+    "loadMore": "تحميل المزيد",
+    "loadingMore": "جاري التحميل...",
+    "emptyTitle": "لا توجد إشعارات بعد",
+    "emptyDesc": "ستظهر هنا التحديثات حول الحجوزات وطلبات الصداقة ودعوات الغرف.",
+    "emptyUnreadTitle": "لا توجد إشعارات غير مقروءة",
+    "emptyUnreadDesc": "لقد قرأت جميع إشعاراتك.",
+    "viewAction": "عرض",
+    "summaryOne": "لديك إشعار جديد واحد",
+    "summaryTwo": "لديك إشعاران جديدان",
+    "summaryFew": "لديك {count} إشعارات جديدة",
+    "summaryMany": "لديك {count} إشعاراً جديداً",
+    "updateError": "تعذر تحديث حالة الإشعار",
+    "markAllSuccess": "تم تحديد جميع الإشعارات كمقروءة",
+    "justNow": "الآن",
+    "types": {
+      "BOOKING_APPROVED": {
+        "title": "تم قبول الحجز",
+        "body": "تم قبول حجزك لفعالية \"{eventTitle}\"."
+      },
+      "BOOKING_REJECTED": {
+        "title": "تم رفض الحجز",
+        "body": "لم يتم قبول حجزك لفعالية \"{eventTitle}\"."
+      },
+      "BOOKING_WAITLIST_PROMOTED": {
+        "title": "تم تأكيد مقعدك",
+        "body": "تمت ترقيتك من قائمة الانتظار إلى مؤكد لفعالية \"{eventTitle}\"."
+      },
+      "FRIEND_REQUEST_RECEIVED": {
+        "title": "طلب صداقة جديد",
+        "body": "أرسل لك {actorName} طلب صداقة."
+      },
+      "FRIEND_REQUEST_ACCEPTED": {
+        "title": "تم قبول طلب الصداقة",
+        "body": "قبل {actorName} طلب صداقتك."
+      },
+      "ROOM_INVITE_RECEIVED": {
+        "title": "دعوة إلى غرفة خاصة",
+        "body": "دعاك {actorName} للانضمام إلى غرفة \"{roomName}\"."
+      },
+      "ADMIN_ROLE_CHANGED": {
+        "title": "تحديث صلاحية الحساب",
+        "body": "تم تحديث صلاحية حسابك إلى {role}."
+      },
+      "CHAT_MODERATION_ACTION": {
+        "title": "إشعار إشراف المحادثة",
+        "body": "تم تحديث صلاحيات الدردشة الخاصة بك من طرف المشرف."
+      },
+      "ADMIN_CHAT_REPORT": {
+        "title": "بلاغ دردشة جديد",
+        "body": "قام {actorName} بالإبلاغ عن رسالة لمراجعتها."
+      }
+    }
   }
 }

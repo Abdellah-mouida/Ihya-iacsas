@@ -7,6 +7,7 @@ import { SessionProvider } from "next-auth/react";
 import { LocaleProvider } from "@/i18n/locale-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "@/lib/toast";
+import { NotificationRealtimeBridge } from "@/components/notifications/notification-realtime-bridge";
 
 export function Providers({ children }: { children: ReactNode }) {
   // Ensure toast is accessible in browser runtime / testing
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <LocaleProvider>
           {children}
+          <NotificationRealtimeBridge />
           <Toaster position="top-center" closeButton />
         </LocaleProvider>
       </ThemeProvider>

@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/audit";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { deleteUserAccount } from "@/lib/user-deletion";
+import { notify } from "@/lib/notifications";
 
 export interface GetAdminUsersParams {
   page?: number;
@@ -188,6 +189,11 @@ export async function updateUserRole({
   });
 
   revalidatePath("/admin/users");
+  await notify(userId, "ADMIN_ROLE_CHANGED", {
+    params: { role: newRole },
+    data: { role: newRole },
+    dedupeKey: `role:${userId}:${newRole}:${actor.id}`,
+  });
   return { success: true, user: updated };
 }
 

@@ -7,6 +7,7 @@ import { ChatServiceError } from "./friends";
 import { getRealtimeTransport } from "./realtime";
 import { canUserAccessConversation } from "./realtime/channels";
 import { conversationChannel, userChannel } from "./realtime/types";
+import { notify, notifyStaffModerationReport } from "@/lib/notifications";
 
 export const reportMessageSchema = z.object({
   messageId: z.string().min(1).max(64),
@@ -200,6 +201,12 @@ export async function reportMessage(params: {
       conversationType: message.conversation.type,
       reportedUserId: message.senderId ?? null,
     },
+  });
+
+  await notifyStaffModerationReport({
+    actorId: params.reporterId,
+    actorName: params.reporterName || "User",
+    reportId: report.id,
   });
 
   return report;
@@ -588,6 +595,11 @@ export async function timeoutUserFromPublicChat(params: {
     });
   }
 
+  await notify(target.id, "CHAT_MODERATION_ACTION", {
+    params: { hours: parsed.data.hours },
+    data: { kind: parsed.data.hours > 0 ? "timeout" : "timeout_cleared" },
+  });
+
   return {
     userId: target.id,
     chatPublicTimeoutUntil: until ? until.toISOString() : null,
@@ -657,6 +669,11 @@ export async function setUserChatBan(params: {
       userId: target.id,
     });
   }
+
+  await notify(target.id, "CHAT_MODERATION_ACTION", {
+    params: { hours: parsed.data.banned ? 1 : 0 },
+    data: { kind: parsed.data.banned ? "banned" : "unbanned" },
+  });
 
   return {
     userId: target.id,

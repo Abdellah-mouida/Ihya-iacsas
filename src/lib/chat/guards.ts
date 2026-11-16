@@ -115,6 +115,51 @@ export async function requireChatActor(options?: {
   return { ok: true, user };
 }
 
+export interface RealtimeActor {
+  id: string;
+  name: string | null;
+  role: "ADMIN" | "MODERATOR" | "USER";
+  onboardingCompletedAt: Date | null;
+  chatTermsAcceptedAt: Date | null;
+  chatBannedAt: Date | null;
+  showOnlineStatus: boolean;
+}
+
+export async function requireRealtimeActor(): Promise<
+  | { ok: true; user: RealtimeActor }
+  | { ok: false; response: NextResponse }
+> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      role: true,
+      onboardingCompletedAt: true,
+      chatTermsAcceptedAt: true,
+      chatBannedAt: true,
+      showOnlineStatus: true,
+    },
+  });
+
+  if (!user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  return { ok: true, user };
+}
+
 export function chatErrorResponse(err: unknown, fallbackMessage: string) {
   if (err instanceof ChatServiceError) {
     return NextResponse.json(

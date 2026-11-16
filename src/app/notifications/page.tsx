@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { isChatEnabled } from "@/lib/chat/guards";
+import { listNotificationsForUser } from "@/lib/notifications";
 import { PageBackground } from "@/components/common/page-background";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
+import { NotificationsInbox } from "@/components/notifications/notifications-inbox";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +17,19 @@ export default async function NotificationsPage() {
     redirect("/onboarding");
   }
 
+  const [initialData, chatEnabled] = await Promise.all([
+    listNotificationsForUser(session.user.id, { limit: 20, filter: "all" }),
+    isChatEnabled(),
+  ]);
+
   return (
     <PageBackground>
-      <GlassNavbar initialSession={session} />
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-28 sm:pt-32">
-        <div
-          data-testid="notifications-page-placeholder"
-          className="rounded-3xl border border-border/60 bg-card/75 p-6 text-center text-sm text-muted-foreground backdrop-blur-md"
+      <GlassNavbar initialSession={session} initialChatEnabled={chatEnabled} />
+      <main>
+        <NotificationsInbox
+          initialItems={initialData.items}
+          initialNextCursor={initialData.nextCursor}
+          initialUnreadCount={initialData.unreadCount}
         />
       </main>
     </PageBackground>

@@ -13,6 +13,7 @@ import {
 import { getRealtimeTransport } from "./realtime";
 import { canUserAccessConversation } from "./realtime/channels";
 import { conversationChannel, userChannel } from "./realtime/types";
+import { notify } from "@/lib/notifications";
 
 export const ROOM_ACCENT_TOKENS = ["main", "brass", "gold", "sage"] as const;
 export type RoomAccentToken = (typeof ROOM_ACCENT_TOKENS)[number];
@@ -698,8 +699,12 @@ export async function createMessageInvite(
   if (room.members.some((m) => m.userId === input.inviteeId)) {
     throw new ChatServiceError("User is already a member", 409, "ALREADY_MEMBER");
   }
-  await Promise.all([
+  const [, inviter] = await Promise.all([
     assertFriendsAndUnblocked(inviterId, input.inviteeId),
+    prisma.user.findUnique({
+      where: { id: inviterId },
+      select: { name: true },
+    }),
     assertNotBlockedWithAny(input.inviteeId, [room.ownerId]).then((blocked) => {
       if (blocked) throw new ChatServiceError("Blocked", 403, "BLOCKED");
     }),
@@ -846,6 +851,19 @@ export async function createMessageInvite(
     transport.publish(userChannel(input.inviteeId), {
       type: "unread.sync",
       conversationId: dm.id,
+    }),
+    notify(input.inviteeId, "ROOM_INVITE_RECEIVED", {
+      params: {
+        actorName: inviter?.name ?? "",
+        roomName: room.name ?? "",
+      },
+      data: {
+        inviteId: invite.id,
+        roomId: room.id,
+        conversationId: dm.id,
+        actorId: inviterId,
+      },
+      dedupeKey: `room-invite:${invite.id}`,
     }),
   ]);
 

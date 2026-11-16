@@ -14,6 +14,7 @@ import {
 } from "@/lib/chat/friends";
 import { getRealtimeTransport } from "@/lib/chat/realtime";
 import { userChannel } from "@/lib/chat/realtime/types";
+import { notify } from "@/lib/notifications";
 
 const friendActionSchema = z.object({
   action: z.enum([
@@ -122,6 +123,28 @@ export async function POST(request: Request) {
     } else {
       await transport.publish(userChannel(actorId), {
         type: "unread.sync",
+      });
+    }
+
+    if (action === "send") {
+      if (result.autoAccepted) {
+        await notify(targetUserId, "FRIEND_REQUEST_ACCEPTED", {
+          params: { actorName: authResult.user.name ?? "" },
+          data: { actorId },
+          dedupeKey: `friend-accept:${actorId}:${targetUserId}`,
+        });
+      } else if (!result.alreadyExists) {
+        await notify(targetUserId, "FRIEND_REQUEST_RECEIVED", {
+          params: { actorName: authResult.user.name ?? "" },
+          data: { actorId },
+          dedupeKey: `friend-req:${actorId}:${targetUserId}`,
+        });
+      }
+    } else if (action === "accept") {
+      await notify(targetUserId, "FRIEND_REQUEST_ACCEPTED", {
+        params: { actorName: authResult.user.name ?? "" },
+        data: { actorId },
+        dedupeKey: `friend-accept:${actorId}:${targetUserId}`,
       });
     }
 

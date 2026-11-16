@@ -228,6 +228,7 @@ model User {
   reportsFiled            Report[]             @relation("ReportReporter")
   reportsTargeted         Report[]             @relation("ReportTarget")
   reportsReviewed         Report[]             @relation("ReportReviewer")
+  notifications           Notification[]
 
   @@index([email])
   @@index([role])
@@ -509,4 +510,22 @@ model Report {
   @@index([createdAt(sort: Desc)])
   @@index([reporterId])
   @@index([conversationId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  i18nKey   String
+  params    Json?
+  data      Json?
+  dedupeKey String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, dedupeKey, createdAt(sort: Desc)])
 }

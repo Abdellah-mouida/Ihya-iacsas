@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireChatActor } from "@/lib/chat/guards";
+import { requireRealtimeActor } from "@/lib/chat/guards";
 import {
   getAuthorizedChannelsForUser,
   getRealtimeTransport,
@@ -8,7 +8,7 @@ import {
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 
 export async function GET() {
-  const authResult = await requireChatActor({ requireTerms: false });
+  const authResult = await requireRealtimeActor();
   if (!authResult.ok) return authResult.response;
 
   try {

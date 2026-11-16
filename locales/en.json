@@ -1112,5 +1112,67 @@
     "dismissBtn": "Dismiss",
     "actionDone": "Moderation action applied",
     "actionFailed": "Failed to apply moderation action"
+  },
+  "notifications": {
+    "pageTitle": "Notifications",
+    "pageSubtitle": "Updates on your bookings, friends, and private rooms.",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "unreadBadge": "Unread",
+    "loadMore": "Load more",
+    "loadingMore": "Loading...",
+    "emptyTitle": "You're all caught up",
+    "emptyDesc": "New updates about bookings, friend requests, and room invites will appear here.",
+    "emptyUnreadTitle": "No unread notifications",
+    "emptyUnreadDesc": "All your notifications have been read.",
+    "viewAction": "View",
+    "summaryOne": "You have 1 new notification",
+    "summaryTwo": "You have 2 new notifications",
+    "summaryFew": "You have {count} new notifications",
+    "summaryMany": "You have {count} new notifications",
+    "updateError": "Could not update notification status",
+    "markAllSuccess": "All notifications marked as read",
+    "justNow": "Just now",
+    "types": {
+      "BOOKING_APPROVED": {
+        "title": "Booking approved",
+        "body": "Your booking for \"{eventTitle}\" was approved."
+      },
+      "BOOKING_REJECTED": {
+        "title": "Booking declined",
+        "body": "Your booking for \"{eventTitle}\" was not approved."
+      },
+      "BOOKING_WAITLIST_PROMOTED": {
+        "title": "Spot opened up",
+        "body": "You moved from the waitlist to confirmed for \"{eventTitle}\"."
+      },
+      "FRIEND_REQUEST_RECEIVED": {
+        "title": "New friend request",
+        "body": "{actorName} sent you a friend request."
+      },
+      "FRIEND_REQUEST_ACCEPTED": {
+        "title": "Friend request accepted",
+        "body": "{actorName} accepted your friend request."
+      },
+      "ROOM_INVITE_RECEIVED": {
+        "title": "Private room invite",
+        "body": "{actorName} invited you to \"{roomName}\"."
+      },
+      "ADMIN_ROLE_CHANGED": {
+        "title": "Account role updated",
+        "body": "Your account role was updated to {role}."
+      },
+      "CHAT_MODERATION_ACTION": {
+        "title": "Chat moderation notice",
+        "body": "Your community chat permissions were updated by a moderator."
+      },
+      "ADMIN_CHAT_REPORT": {
+        "title": "New chat report",
+        "body": "{actorName} reported a message for moderation review."
+      }
+    }
   }
 }
