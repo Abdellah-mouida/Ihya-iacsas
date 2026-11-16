@@ -72,13 +72,10 @@ export async function checkRateLimit(
   }
 }
 
-/**
- * Clear rate limit entry for testing or lockout reset
- */
 export async function clearRateLimit(key: string): Promise<void> {
   try {
     await prisma.rateLimit.deleteMany({ where: { key } });
   } catch {
-    // ignore
+    // Ignore if record does not exist
   }
 }
