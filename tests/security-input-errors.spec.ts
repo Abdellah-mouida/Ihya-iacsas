@@ -4,10 +4,11 @@ import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { createSyntheticUser, removeSyntheticUser } from "./helpers/synthetic-user";
 import { safeActionError } from "../src/lib/safe-error";
 import { isSafePublicImageUrl } from "../src/lib/upload-security";
+import { extractClientIpFromHeaders } from "../src/lib/request-ip";
 
 assertDevBranchDatabase("Security input validation, anti-enumeration, and safe-error checks");
 
-test.describe("IHY-SEC-013: input bounds, contact rate limit, anti-enumeration, safe errors", () => {
+test.describe("IHY-SEC-013 & IHY-SEC-014: input bounds, contact rate limit, anti-enumeration, safe errors, request IP", () => {
   test("safeActionError redacts internal errors and keeps auth errors", () => {
     const unauthErr = new Error("Internal detail");
     unauthErr.name = "UnauthorizedError";
@@ -27,6 +28,27 @@ test.describe("IHY-SEC-013: input bounds, contact rate limit, anti-enumeration, 
     expect(isSafePublicImageUrl("https://res.cloudinary.com/demo/image/upload/v1/a.jpg")).toBe(
       true,
     );
+  });
+
+  test("extractClientIpFromHeaders resists spoofed leftmost x-forwarded-for", () => {
+    const h1 = new Headers({
+      "x-vercel-forwarded-for": "203.0.113.5, 10.0.0.1",
+      "x-forwarded-for": "1.2.3.4, 203.0.113.5",
+    });
+    expect(extractClientIpFromHeaders(h1)).toBe("203.0.113.5");
+
+    const h2 = new Headers({
+      "x-real-ip": "198.51.100.7",
+      "x-forwarded-for": "1.2.3.4, 198.51.100.7",
+    });
+    expect(extractClientIpFromHeaders(h2)).toBe("198.51.100.7");
+
+    const h3 = new Headers({
+      "x-forwarded-for": "9.9.9.9, 192.0.2.44",
+    });
+    expect(extractClientIpFromHeaders(h3)).toBe("192.0.2.44");
+
+    expect(extractClientIpFromHeaders(new Headers())).toBe("127.0.0.1");
   });
 
   test("verify-email resend gives identical neutral response for missing vs verified emails", async ({
