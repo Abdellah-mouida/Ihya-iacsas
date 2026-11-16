@@ -74,12 +74,12 @@ test.describe("IHY-SEC-002: Dashboard booking exposure authorization", () => {
   });
 
   test("rejects anonymous and USER actors while returning only redacted fields to MODERATOR/ADMIN", async () => {
-    await expect(fetchDashboardStatsForActor(null)).rejects.toThrow(
+    await expect(fetchDashboardStatsForActor(null)).rejects.toBeInstanceOf(
       UnauthorizedError,
     );
     await expect(
       fetchDashboardStatsForActor({ id: "u-1", role: "USER" }),
-    ).rejects.toThrow(ForbiddenError);
+    ).rejects.toBeInstanceOf(ForbiddenError);
 
     for (const role of ["MODERATOR", "ADMIN"] as const) {
       const res = await fetchDashboardStatsForActor({ id: "u-2", role });

@@ -3,10 +3,10 @@ import { can, ForbiddenError, UnauthorizedError } from "@/lib/permissions";
 
 export interface DashboardActor {
   id: string;
-  role: string;
+  role?: string | null;
 }
 
-export async function fetchDashboardStatsForActor(actor: DashboardActor | null) {
+export async function fetchDashboardStatsForActor(actor: DashboardActor | null | undefined) {
   if (!actor?.id) {
     throw new UnauthorizedError();
   }

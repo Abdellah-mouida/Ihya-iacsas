@@ -5,10 +5,10 @@ import { fetchDashboardStatsForActor } from "@/lib/services/dashboard";
 
 export async function getDashboardStats(locale = "ar") {
   try {
-    const user = await requirePermission("bookings:view");
+    const actor = await requirePermission("bookings:view");
     const data = await fetchDashboardStatsForActor({
-      id: user.id,
-      role: user.role,
+      id: actor.id,
+      role: actor.role,
     });
 
     return {
