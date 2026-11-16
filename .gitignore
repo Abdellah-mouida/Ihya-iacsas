@@ -48,6 +48,7 @@ next-env.d.ts
 # local agent/session artifacts
 /.playwright-mcp/
 .agent/
+/security/
 session-*.md
 session*.md
 session.md
