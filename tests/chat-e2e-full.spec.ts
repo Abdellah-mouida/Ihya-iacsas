@@ -271,13 +271,21 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
       );
       expect(["rgb(0, 0, 0)", "oklch(0 0 0)", "oklab(0 0 0)", "lab(0 0 0)"]).toContain(amoledBg);
 
-      // 2. Friends workflow: A searches B's name prefix -> sends request -> B accepts -> /profile CountUp = 1
+      // 1b. /chat shows public room only (no sidebar), then navigate to /messages for private DMs & rooms
+      await expect(pageA.locator('[data-testid="chat-sidebar"]')).toHaveCount(0);
+      await pageA.goto("/messages", { waitUntil: "domcontentloaded" });
+      await pageB.goto("/messages", { waitUntil: "domcontentloaded" });
+      await expect(pageA.locator('[data-testid="chat-sidebar"]')).toBeVisible({ timeout: 15_000 });
+      await expect(pageB.locator('[data-testid="chat-sidebar"]')).toBeVisible({ timeout: 15_000 });
+
+      // 2. Friends workflow: A searches B's name prefix -> sends request -> B opens pinned requests & accepts -> /profile CountUp = 1
       await pageA.locator('[data-testid="chat-search-input"]').fill(userB.name!.slice(0, 12));
       const searchResults = pageA.locator('[data-testid="chat-user-search-results"]');
       await expect(searchResults).toContainText(userB.name!, { timeout: 15_000 });
       await searchResults.locator("button").first().click();
 
       await pageB.locator('[data-testid="chat-tab-friends"]').click();
+      await pageB.locator('[data-testid="friends-requests-pinned-row"]').click();
       const acceptBBtn = pageB.locator(`[data-testid="accept-friend-${userA.id}"]`);
       await expect(acceptBBtn).toBeVisible({ timeout: 15_000 });
       await acceptBBtn.click();
@@ -297,24 +305,8 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
       await expect(pageA.locator(`[data-testid="open-dm-${userB.id}"]`)).toBeVisible({
         timeout: 15_000,
       });
-      await Promise.all([
-        pageA.waitForResponse(
-          (res) =>
-            res.url().includes("/api/chat/conversations/dm") &&
-            res.request().method() === "POST" &&
-            res.status() === 200,
-          { timeout: 15_000 },
-        ),
-        pageB.waitForResponse(
-          (res) =>
-            res.url().includes("/api/chat/conversations/dm") &&
-            res.request().method() === "POST" &&
-            res.status() === 200,
-          { timeout: 15_000 },
-        ),
-        pageA.locator(`[data-testid="open-dm-${userB.id}"]`).click(),
-        pageB.locator(`[data-testid="open-dm-${userA.id}"]`).click(),
-      ]);
+      await pageA.locator(`[data-testid="open-dm-${userB.id}"]`).click();
+      await pageB.locator(`[data-testid="open-dm-${userA.id}"]`).click();
 
       await expect(pageB.locator('[data-testid="chat-mobile-back-btn"]')).toBeVisible({
         timeout: 15_000,
@@ -442,7 +434,7 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
       // B navigates back on 320px phone, opens DM with A, accepts ROOM_INVITE, sends room message
       await pageB.locator('[data-testid="chat-mobile-back-btn"]').click();
       await pageB.locator('[data-testid="chat-tab-friends"]').click();
-      await pageB.locator(`[data-testid="chat-conv-dm-${userA.id}"]`).click();
+      await pageB.locator(`[data-testid="open-dm-${userA.id}"]`).click();
       const acceptInviteBtn = pageB.locator('[data-testid^="invite-accept-"]').first();
       await expect(acceptInviteBtn).toBeVisible({ timeout: 15_000 });
       await acceptInviteBtn.click();
@@ -466,9 +458,11 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
         pageA.locator('[data-testid="chat-messages-scroll"]').getByText("Room message from B"),
       ).toBeVisible({ timeout: 12_000 });
 
-      // 5. Public Space + Moderator Delete
-      await pageA.locator('[data-testid="chat-tab-public"]').click();
-      await pageA.locator('[data-testid="chat-conv-public"]').click();
+      // 5. Public Space + Moderator Delete (/chat is public room only)
+      await pageA.goto("/chat", { waitUntil: "domcontentloaded" });
+      await expect(pageA.locator('[data-testid="chat-composer-input"]')).toBeVisible({
+        timeout: 15_000,
+      });
       await pageA.locator('[data-testid="chat-composer-input"]').fill("Public T9 message");
       const [pubMsgRes] = await Promise.all([
         pageA.waitForResponse(
@@ -483,9 +477,7 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
       const pubMsgPayload = (await pubMsgRes.json()) as { message: { id: string } };
       createdPublicMessageIds.push(pubMsgPayload.message.id);
 
-      await pageB.locator('[data-testid="chat-mobile-back-btn"]').click();
-      await pageB.locator('[data-testid="chat-tab-public"]').click();
-      await pageB.locator('[data-testid="chat-conv-public"]').click();
+      await pageB.goto("/chat", { waitUntil: "domcontentloaded" });
       await expect(
         pageB.locator('[data-testid="chat-messages-scroll"]').getByText("Public T9 message"),
       ).toBeVisible({ timeout: 12_000 });
@@ -502,10 +494,9 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
         ),
         pageMod.locator('[data-testid="chat-terms-accept-btn"]').click(),
       ]);
-      await expect(pageMod.locator('[data-testid="chat-conv-public"]')).toBeVisible({
-        timeout: 15_000,
-      });
-      await pageMod.locator('[data-testid="chat-conv-public"]').click();
+      await expect(
+        pageMod.locator(`[data-testid="chat-message-${pubMsgPayload.message.id}"]`),
+      ).toBeVisible({ timeout: 15_000 });
       await pageMod
         .locator(`[data-testid="chat-message-${pubMsgPayload.message.id}"]`)
         .hover();

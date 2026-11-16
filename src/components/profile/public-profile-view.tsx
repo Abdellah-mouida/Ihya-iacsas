@@ -322,7 +322,7 @@ export function PublicProfileView({ initialProfile }: PublicProfileViewProps) {
                   data-testid="public-profile-message-btn"
                   className="min-h-11 rounded-xl gap-2 font-heading font-semibold"
                 >
-                  <Link href={`/chat?dm=${encodeURIComponent(profile.id)}`}>
+                  <Link href={`/messages?tab=friends&dm=${encodeURIComponent(profile.id)}`}>
                     <MessageCircle className="size-4" />
                     <span>{t("friends.messageFriend")}</span>
                   </Link>

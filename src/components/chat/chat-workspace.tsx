@@ -42,6 +42,9 @@ function makeClientId(): string {
 
 export function ChatWorkspace({
   actor,
+  scope = "public",
+  initialTab = "friends",
+  initialDmPeerId = null,
   initialTermsAccepted,
   initialConversationId,
   initialConversations,
@@ -49,6 +52,9 @@ export function ChatWorkspace({
   bannedReason,
 }: {
   actor: ChatActorInfo;
+  scope?: "public" | "private";
+  initialTab?: ChatTab;
+  initialDmPeerId?: string | null;
   initialTermsAccepted: boolean;
   initialConversationId: string | null;
   initialConversations?: ChatConversationSummary[];
@@ -57,23 +63,32 @@ export function ChatWorkspace({
 }) {
   const { t } = useLocale();
   const router = useRouter();
+  const isPublicOnly = scope === "public";
   const [termsAccepted, setTermsAccepted] = useState(initialTermsAccepted);
-  const [activeTab, setActiveTab] = useState<ChatTab>("public");
+  const [activeTab, setActiveTab] = useState<ChatTab>(initialTab);
   const [conversations, setConversations] = useState<ChatConversationSummary[]>(
     initialConversations ?? [],
   );
   const [friendsData, setFriendsData] = useState<FriendsDashboardState>(
     initialFriends ?? EMPTY_FRIENDS,
   );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    () =>
-      initialConversationId ??
-      initialConversations?.find((c) => c.type === "PUBLIC")?.id ??
-      initialConversations?.[0]?.id ??
-      null,
-  );
+  const isBanned = bannedReason !== undefined && bannedReason !== null;
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (isPublicOnly) {
+      return initialConversations?.find((c) => c.type === "PUBLIC")?.id ?? null;
+    }
+    if (
+      initialConversationId &&
+      initialConversations?.some(
+        (c) => c.id === initialConversationId && c.type !== "PUBLIC",
+      )
+    ) {
+      return initialConversationId;
+    }
+    return null;
+  });
   const [mobilePane, setMobilePane] = useState<"list" | "thread">(
-    initialConversationId ? "thread" : "list",
+    isPublicOnly || initialConversationId || initialDmPeerId ? "thread" : "list",
   );
   const [messagesByConv, setMessagesByConv] = useState<
     Record<string, ChatMessageItem[]>
@@ -130,12 +145,35 @@ export function ChatWorkspace({
     };
   }, []);
 
-  const broadcastUnreadTotal = useCallback((convs: ChatConversationSummary[]) => {
-    const total = convs.reduce((sum, c) => sum + (c.muted ? 0 : c.unreadCount), 0);
-    window.dispatchEvent(
-      new CustomEvent("ihyaa_chat_unread", { detail: { total } }),
-    );
-  }, []);
+  const broadcastUnreadTotal = useCallback(
+    (convs: ChatConversationSummary[], incomingCount?: number) => {
+      const publicTotal = convs.reduce(
+        (sum, c) => sum + (c.type === "PUBLIC" && !c.muted ? c.unreadCount : 0),
+        0,
+      );
+      if (isPublicOnly) {
+        window.dispatchEvent(
+          new CustomEvent("ihyaa_chat_unread", {
+            detail: { publicTotal },
+          }),
+        );
+        return;
+      }
+      const pendingReqs =
+        incomingCount ?? friendsRef.current.incomingRequests.length;
+      const privateTotal =
+        convs.reduce(
+          (sum, c) => sum + (c.type !== "PUBLIC" && !c.muted ? c.unreadCount : 0),
+          0,
+        ) + pendingReqs;
+      window.dispatchEvent(
+        new CustomEvent("ihyaa_chat_unread", {
+          detail: { publicTotal, privateTotal },
+        }),
+      );
+    },
+    [isPublicOnly],
+  );
 
   const fetchConversations = useCallback(async () => {
     const res = await fetch("/api/chat/conversations", { cache: "no-store" });
@@ -145,18 +183,22 @@ export function ChatWorkspace({
     setConversations(list);
     broadcastUnreadTotal(list);
     setSelectedId((prev) => {
-      if (prev && list.some((c) => c.id === prev)) return prev;
-      return list.find((c) => c.type === "PUBLIC")?.id ?? list[0]?.id ?? null;
+      if (isPublicOnly) {
+        return list.find((c) => c.type === "PUBLIC")?.id ?? null;
+      }
+      if (prev && list.some((c) => c.id === prev && c.type !== "PUBLIC")) return prev;
+      return null;
     });
     return list;
-  }, [broadcastUnreadTotal]);
+  }, [broadcastUnreadTotal, isPublicOnly]);
 
   const fetchFriends = useCallback(async () => {
     const res = await fetch("/api/chat/friends", { cache: "no-store" });
     if (!res.ok) return;
     const data = (await res.json()) as FriendsDashboardState;
     setFriendsData(data);
-  }, []);
+    broadcastUnreadTotal(conversationsRef.current, data.incomingRequests.length);
+  }, [broadcastUnreadTotal]);
 
   const markRead = useCallback(
     async (conversationId: string, lastReadAt?: string) => {
@@ -216,11 +258,11 @@ export function ChatWorkspace({
   );
 
   const seededFromServerRef = useRef(
-    Boolean(initialConversations && initialFriends),
+    Boolean(initialConversations && (isPublicOnly || initialFriends)),
   );
 
   useEffect(() => {
-    if (!termsAccepted || bannedReason !== undefined) return;
+    if (!termsAccepted || isBanned) return;
     if (seededFromServerRef.current) {
       seededFromServerRef.current = false;
       broadcastUnreadTotal(conversationsRef.current);
@@ -229,26 +271,30 @@ export function ChatWorkspace({
     let active = true;
     const timer = window.setTimeout(() => {
       if (!active) return;
-      void Promise.all([fetchConversations(), fetchFriends()]);
+      if (isPublicOnly) {
+        void fetchConversations();
+      } else {
+        void Promise.all([fetchConversations(), fetchFriends()]);
+      }
     }, 0);
     return () => {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [bannedReason, broadcastUnreadTotal, fetchConversations, fetchFriends, termsAccepted]);
+  }, [isBanned, broadcastUnreadTotal, fetchConversations, fetchFriends, isPublicOnly, termsAccepted]);
 
   useEffect(() => {
-    if (!termsAccepted || bannedReason !== undefined || !selectedId) return;
-    let active = true;
+    if (!termsAccepted || isBanned || !selectedId) return;
+    if (messagesByConvRef.current[selectedId] !== undefined) {
+      void markRead(selectedId);
+      return;
+    }
     const timer = window.setTimeout(() => {
-      if (!active) return;
       void loadMessages(selectedId);
+      void markRead(selectedId);
     }, 0);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [bannedReason, loadMessages, selectedId, termsAccepted]);
+    return () => window.clearTimeout(timer);
+  }, [isBanned, loadMessages, selectedId, termsAccepted]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -271,7 +317,7 @@ export function ChatWorkspace({
   }, []);
 
   useEffect(() => {
-    if (!termsAccepted || bannedReason !== undefined) return;
+    if (!termsAccepted || isBanned) return;
     let active = true;
     let releaseFn: (() => void) | null = null;
     const unsubs: Array<() => void> = [];
@@ -510,7 +556,7 @@ export function ChatWorkspace({
     };
   }, [
     actor.id,
-    bannedReason,
+    isBanned,
     broadcastUnreadTotal,
     fetchConversations,
     fetchFriends,
@@ -726,6 +772,10 @@ export function ChatWorkspace({
     await fetchConversations();
     if (selectedId) await loadMessages(selectedId);
     if (action === "accept" && data.roomId) {
+      if (isPublicOnly) {
+        router.push(`/messages?tab=rooms&c=${encodeURIComponent(data.roomId)}`);
+        return;
+      }
       setActiveTab("rooms");
       setSelectedId(data.roomId);
       setMobilePane("thread");
@@ -749,45 +799,75 @@ export function ChatWorkspace({
     await Promise.all([fetchFriends(), fetchConversations()]);
   }
 
-  async function handleOpenDm(friendId: string) {
-    const existing = conversationsRef.current.find(
-      (c) => c.type === "DM" && c.peer?.id === friendId,
-    );
-    if (existing) {
-      setActiveTab("friends");
-      setSelectedId(existing.id);
-      setMobilePane("thread");
-      return;
-    }
+  const handleOpenDm = useCallback(
+    async (friendId: string) => {
+      const existing = conversationsRef.current.find(
+        (c) => c.type === "DM" && c.peer?.id === friendId,
+      );
+      if (existing) {
+        setActiveTab("friends");
+        setSelectedId(existing.id);
+        setMobilePane("thread");
+        return;
+      }
 
-    const res = await fetch("/api/chat/conversations/dm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ peerId: friendId }),
-    });
-    const data = (await res.json().catch(() => ({}))) as {
-      conversation?: ChatConversationSummary;
-      conversationId?: string;
-      error?: string;
-    };
-    const conversationId = data.conversation?.id ?? data.conversationId;
-    if (!res.ok || !conversationId) {
-      notify.error(data.error || t("chat.actionError"));
+      const res = await fetch("/api/chat/conversations/dm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ peerId: friendId }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        conversation?: ChatConversationSummary;
+        conversationId?: string;
+        error?: string;
+      };
+      const conversationId = data.conversation?.id ?? data.conversationId;
+      if (!res.ok || !conversationId) {
+        notify.error(data.error || t("chat.actionError"));
+        return;
+      }
+      if (data.conversation) {
+        const createdConv = data.conversation;
+        setConversations((prev) => {
+          if (prev.some((c) => c.id === createdConv.id)) return prev;
+          return [createdConv, ...prev];
+        });
+      } else {
+        void fetchConversations();
+      }
+      setActiveTab("friends");
+      setSelectedId(conversationId);
+      setMobilePane("thread");
+    },
+    [fetchConversations, t],
+  );
+
+  const dmInitDoneRef = useRef(false);
+  useEffect(() => {
+    if (
+      isPublicOnly ||
+      !initialDmPeerId ||
+      dmInitDoneRef.current ||
+      !termsAccepted ||
+      isBanned
+    ) {
       return;
     }
-    if (data.conversation) {
-      const createdConv = data.conversation;
-      setConversations((prev) => {
-        if (prev.some((c) => c.id === createdConv.id)) return prev;
-        return [createdConv, ...prev];
-      });
-    } else {
-      void fetchConversations();
+    dmInitDoneRef.current = true;
+    const timer = window.setTimeout(() => {
+      void handleOpenDm(initialDmPeerId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isBanned, handleOpenDm, initialDmPeerId, isPublicOnly, termsAccepted]);
+
+  const handleTabChange = useCallback((nextTab: ChatTab) => {
+    setActiveTab(nextTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", nextTab);
+      window.history.replaceState(null, "", url.toString());
     }
-    setActiveTab("friends");
-    setSelectedId(conversationId);
-    setMobilePane("thread");
-  }
+  }, []);
 
   async function handleToggleMute(conversationId: string, muted: boolean) {
     const res = await fetch(`/api/chat/conversations/${conversationId}/mute`, {
@@ -812,20 +892,20 @@ export function ChatWorkspace({
       notify.error(data.error || t("chat.actionError"));
       return;
     }
-    setActiveTab("public");
-    setSelectedId(conversations.find((c) => c.type === "PUBLIC")?.id ?? null);
+    setActiveTab("rooms");
+    setSelectedId(null);
     setMobilePane("list");
     void fetchConversations();
   }
 
   useEffect(() => {
-    if (!termsAccepted || bannedReason !== undefined) return;
+    if (!termsAccepted || isBanned) return;
     clientRef.current?.ensureSubscribedConversations(
       conversations.map((conv) => conv.id),
     );
-  }, [bannedReason, conversations, termsAccepted]);
+  }, [isBanned, conversations, termsAccepted]);
 
-  if (bannedReason !== undefined) {
+  if (isBanned) {
     return (
       <div className="mx-auto flex min-h-[70vh] max-w-xl items-center justify-center px-4">
         <div
@@ -873,36 +953,42 @@ export function ChatWorkspace({
         data-testid="chat-surface"
         className={cn(
           styles.chatSurface,
-          "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-none border-t border-border/80 shadow-layered md:grid-cols-[330px_minmax(0,1fr)] md:rounded-3xl md:border lg:grid-cols-[360px_minmax(0,1fr)]",
+          "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-none border-t border-border/80 shadow-layered md:rounded-3xl md:border",
+          isPublicOnly
+            ? "grid-cols-1"
+            : "md:grid-cols-[330px_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)]",
         )}
       >
-        <div
-          className={cn(
-            "min-h-0 h-full",
-            mobilePane === "thread" ? "hidden md:block" : "block",
-          )}
-        >
-          <ChatSidebar
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            conversations={conversations}
-            selectedConversationId={selectedId}
-            onSelectConversation={(cid) => {
-              setSelectedId(cid);
-              setMobilePane("thread");
-            }}
-            friendsData={friendsData}
-            onlineUsers={onlineUsers}
-            onOpenDm={(fid) => void handleOpenDm(fid)}
-            onFriendAction={handleFriendAction}
-            onOpenCreateRoom={() => setCreateRoomOpen(true)}
-          />
-        </div>
+        {!isPublicOnly ? (
+          <div
+            className={cn(
+              "min-h-0 h-full",
+              mobilePane === "thread" ? "hidden md:block" : "block",
+            )}
+          >
+            <ChatSidebar
+              currentUserId={actor.id}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              conversations={conversations}
+              selectedConversationId={selectedId}
+              onSelectConversation={(cid) => {
+                setSelectedId(cid);
+                setMobilePane("thread");
+              }}
+              friendsData={friendsData}
+              onlineUsers={onlineUsers}
+              onOpenDm={(fid) => void handleOpenDm(fid)}
+              onFriendAction={handleFriendAction}
+              onOpenCreateRoom={() => setCreateRoomOpen(true)}
+            />
+          </div>
+        ) : null}
 
         <div
           className={cn(
             "min-h-0 h-full",
-            mobilePane === "list" ? "hidden md:block" : "block",
+            !isPublicOnly && mobilePane === "list" ? "hidden md:block" : "block",
           )}
         >
           <ChatConversationPane
@@ -915,7 +1001,7 @@ export function ChatWorkspace({
             typingNames={typingNames}
             onlineUsers={onlineUsers}
             publicTimeoutUntil={actor.chatPublicTimeoutUntil}
-            showMobileBack={mobilePane === "thread"}
+            showMobileBack={!isPublicOnly && mobilePane === "thread"}
             onMobileBack={() => setMobilePane("list")}
             onLoadOlder={() => {
               if (!selectedId || !cursorByConv[selectedId] || loadingOlder) return;
@@ -976,10 +1062,8 @@ export function ChatWorkspace({
         onRoomUpdated={() => void fetchConversations()}
         onRoomLeftOrDeleted={() => {
           setRoomPanelOpen(false);
-          setActiveTab("public");
-          setSelectedId(
-            conversations.find((c) => c.type === "PUBLIC")?.id ?? null,
-          );
+          setActiveTab("rooms");
+          setSelectedId(null);
           setMobilePane("list");
           void fetchConversations();
         }}

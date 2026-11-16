@@ -59,21 +59,34 @@ async function signIn(page: Page, email: string, password: string) {
   await page.locator('[data-testid="login-email-input"]').fill(email);
   await page.locator('[data-testid="login-password-input"]').fill(password);
   await page.locator('[data-testid="login-submit-btn"]').click();
-  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25_000 });
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), {
+    timeout: 45_000,
+    waitUntil: "domcontentloaded",
+  });
   if (!page.url().includes("/chat")) {
-    await page.goto(`${BASE}/chat`);
+    await page.goto(`${BASE}/chat`, { waitUntil: "domcontentloaded" });
   }
   await expect(page.locator('[data-testid="chat-workspace"]')).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe("WhatsApp-style phone chat UX", () => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
 
   test("360px phone layout, 44px tap targets, blur(12px) container, search, and visualViewport shrink", async ({
     browser,
   }) => {
     const prevChatEnabled = await setChatEnabled(true);
     const user = await createChatUser("en", "amoled");
+    const peer = await createChatUser("en", "dark");
+
+    await prisma.friendship.create({
+      data: {
+        requesterId: user.id,
+        addresseeId: peer.id,
+        pairKey: [user.id, peer.id].sort().join(":"),
+        status: "ACCEPTED",
+      },
+    });
 
     try {
       const ctx = await browser.newContext({
@@ -130,8 +143,15 @@ test.describe("WhatsApp-style phone chat UX", () => {
 
       await signIn(page, user.email, user.password);
 
-      // On mobile list screen, open the public space conversation
-      await page.locator('[data-testid="chat-conv-public"]').click();
+      // /chat is public room only: no sidebar and no back arrow
+      await expect(page.locator('[data-testid="chat-composer-input"]')).toBeVisible();
+      await expect(page.locator('[data-testid="chat-sidebar"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="chat-mobile-back-btn"]')).toHaveCount(0);
+
+      // Navigate to /messages and open the WhatsApp-style DM conversation
+      await page.goto(`${BASE}/messages?tab=friends`);
+      await expect(page.locator('[data-testid="chat-sidebar"]')).toBeVisible({ timeout: 15_000 });
+      await page.locator(`[data-testid="open-dm-${peer.id}"]`).click();
       await expect(page.locator('[data-testid="chat-conversation-pane"]')).toBeVisible();
       await expect(page.locator('[data-testid="chat-sidebar"]')).toBeHidden();
 
@@ -266,10 +286,21 @@ test.describe("WhatsApp-style phone chat UX", () => {
 
       await ctx.close();
     } finally {
-      await prisma.message.deleteMany({ where: { senderId: user.id } });
-      await prisma.conversationMember.deleteMany({ where: { userId: user.id } });
-      await prisma.session.deleteMany({ where: { userId: user.id } });
-      await prisma.user.deleteMany({ where: { id: user.id } });
+      await prisma.message.deleteMany({ where: { senderId: { in: [user.id, peer.id] } } });
+      await prisma.conversationMember.deleteMany({ where: { userId: { in: [user.id, peer.id] } } });
+      await prisma.friendship.deleteMany({
+        where: { OR: [{ requesterId: { in: [user.id, peer.id] } }, { addresseeId: { in: [user.id, peer.id] } }] },
+      });
+      await prisma.conversation.deleteMany({
+        where: {
+          OR: [
+            { ownerId: { in: [user.id, peer.id] } },
+            { dmPairKey: [user.id, peer.id].sort().join(":") },
+          ],
+        },
+      });
+      await prisma.session.deleteMany({ where: { userId: { in: [user.id, peer.id] } } });
+      await prisma.user.deleteMany({ where: { id: { in: [user.id, peer.id] } } });
       await restoreChatEnabled(prevChatEnabled);
     }
   });

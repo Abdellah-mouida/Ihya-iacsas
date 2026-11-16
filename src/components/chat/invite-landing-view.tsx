@@ -52,7 +52,7 @@ export function InviteLandingView({ token, invite }: InviteLandingViewProps) {
       notify.success(t("chatInvite.acceptedToast"));
       const targetRoomId =
         typeof data.roomId === "string" ? data.roomId : invite.roomId;
-      router.push(`/chat?c=${encodeURIComponent(targetRoomId)}`);
+      router.push(`/messages?tab=rooms&c=${encodeURIComponent(targetRoomId)}`);
       router.refresh();
     } catch {
       notify.error(t("chatInvite.actionFailed"));
@@ -151,7 +151,7 @@ export function InviteLandingView({ token, invite }: InviteLandingViewProps) {
             {t("chatInvite.alreadyMember")}
           </p>
           <Button asChild className="w-full min-h-11 gap-2">
-            <Link href={`/chat?c=${encodeURIComponent(invite.roomId)}`}>
+            <Link href={`/messages?tab=rooms&c=${encodeURIComponent(invite.roomId)}`}>
               <DoorOpen className="size-4" aria-hidden="true" />
               <span>{t("chatInvite.openRoomBtn")}</span>
             </Link>

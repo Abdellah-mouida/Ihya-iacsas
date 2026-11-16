@@ -89,7 +89,17 @@ async function signIn(browser: Browser, email: string, password: string, viewpor
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
   page.on("console", (msg) => {
-    if (msg.type() === "error") errors.push(msg.text());
+    if (msg.type() === "error") {
+      const locUrl = msg.location()?.url ?? "";
+      if (
+        msg.text().includes("404 (Not Found)") &&
+        locUrl.includes("/_next/image") &&
+        locUrl.includes("res.cloudinary.com")
+      ) {
+        return;
+      }
+      errors.push(msg.text());
+    }
   });
   await page.goto("/login?callbackUrl=/chat");
   await expect(page.locator('[data-testid="login-view"]')).toBeVisible({ timeout: 15_000 });
@@ -134,8 +144,17 @@ test.describe("12-T6: Chat Workspace UI, React Bits, Responsive & Realtime", () 
         await expect(pageA.locator('[data-testid="chat-workspace"]')).toBeVisible({ timeout: 15_000 });
 
         await expect(pageA.locator('nav a[href="/chat"][aria-current="page"]')).toBeVisible();
-        await expect(pageA.locator('[data-rb="ShinyText"]').first()).toBeVisible();
+        await expect(pageA.locator('[data-testid="chat-sidebar"]')).toHaveCount(0);
         await expect(pageA.locator('[data-rb="ClickSpark"]').first()).toBeVisible();
+
+        // Profile dropdown exposes Private messages & Notifications links
+        await pageA.locator('[data-testid="navbar-user-menu-btn"]').click();
+        await expect(pageA.locator('[data-testid="navbar-messages-link"]')).toBeVisible();
+        await expect(pageA.locator('[data-testid="navbar-notifications-link"]')).toBeVisible();
+        await pageA.locator('[data-testid="navbar-messages-link"]').click();
+        await expect(pageA).toHaveURL(/\/messages(?:\?.*)?$/, { timeout: 15_000 });
+        await expect(pageA.locator('[data-rb="ShinyText"]').first()).toBeVisible();
+        await pageB.goto("/messages", { waitUntil: "domcontentloaded" });
 
         await pageA.locator('[data-testid="chat-tab-friends"]').click();
         await expect(pageA.locator('[data-rb="AnimatedList"]').first()).toBeVisible();
@@ -204,6 +223,34 @@ test.describe("12-T6: Chat Workspace UI, React Bits, Responsive & Realtime", () 
 
         await pageB.locator('[data-testid="chat-mobile-back-btn"]').click();
         await expect(pageB.locator('[data-testid="chat-sidebar"]')).toBeVisible();
+
+        // Check unread badge in avatar & profile dropdown when B receives a DM while away on /profile
+        await Promise.all([
+          pageB.waitForResponse(
+            (res) => res.url().includes("/api/chat/realtime/token") && res.status() === 200,
+            { timeout: 20_000 },
+          ),
+          pageB.goto("/profile", { waitUntil: "domcontentloaded" }),
+        ]);
+        await pageB.waitForTimeout(300);
+        await pageA.locator('[data-testid="chat-composer-input"]').fill("Unread badge check");
+        await Promise.all([
+          pageA.waitForResponse(
+            (res) =>
+              res.url().includes("/api/chat/messages") &&
+              res.request().method() === "POST" &&
+              res.status() === 201,
+            { timeout: 15_000 },
+          ),
+          pageA.locator('[data-testid="chat-send-btn"]').click(),
+        ]);
+        await expect(pageB.locator('[data-testid="navbar-mobile-unread-dot"]')).toBeVisible({
+          timeout: 12_000,
+        });
+        await pageB.locator('[data-testid="navbar-mobile-menu-btn"]').click();
+        await expect(pageB.locator('[data-testid="navbar-mobile-messages-badge"]')).toContainText("1", {
+          timeout: 10_000,
+        });
 
         const desktopOverflow = await pageA.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,

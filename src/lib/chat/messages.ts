@@ -305,17 +305,25 @@ export async function acceptChatTerms(userId: string): Promise<Date> {
   return acceptedAt;
 }
 
-export async function listConversationsForUser(userId: string): Promise<{
+export async function listConversationsForUser(
+  userId: string,
+  options?: { publicOnly?: boolean },
+): Promise<{
   conversations: ConversationSummaryDTO[];
   unreadTotal: number;
 }> {
+  const publicOnly = Boolean(options?.publicOnly);
   const [user, initialMemberships, blocks, friendships] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { chatTermsAcceptedAt: true, chatBannedAt: true },
     }),
     prisma.conversationMember.findMany({
-      where: { userId, leftAt: null },
+      where: {
+        userId,
+        leftAt: null,
+        ...(publicOnly ? { conversation: { type: "PUBLIC" } } : {}),
+      },
       select: {
         conversationId: true,
         muted: true,
@@ -335,17 +343,21 @@ export async function listConversationsForUser(userId: string): Promise<{
         },
       },
     }),
-    prisma.block.findMany({
-      where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
-      select: { blockerId: true, blockedId: true },
-    }),
-    prisma.friendship.findMany({
-      where: {
-        status: "ACCEPTED",
-        OR: [{ requesterId: userId }, { addresseeId: userId }],
-      },
-      select: { pairKey: true },
-    }),
+    publicOnly
+      ? Promise.resolve([])
+      : prisma.block.findMany({
+          where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+          select: { blockerId: true, blockedId: true },
+        }),
+    publicOnly
+      ? Promise.resolve([])
+      : prisma.friendship.findMany({
+          where: {
+            status: "ACCEPTED",
+            OR: [{ requesterId: userId }, { addresseeId: userId }],
+          },
+          select: { pairKey: true },
+        }),
   ]);
 
   if (!user || user.chatBannedAt || !user.chatTermsAcceptedAt) {
@@ -357,7 +369,11 @@ export async function listConversationsForUser(userId: string): Promise<{
     const pubId = await ensurePublicConversationMember(userId);
     if (pubId) {
       memberships = await prisma.conversationMember.findMany({
-        where: { userId, leftAt: null },
+        where: {
+          userId,
+          leftAt: null,
+          ...(publicOnly ? { conversation: { type: "PUBLIC" } } : {}),
+        },
         select: {
           conversationId: true,
           muted: true,
@@ -559,9 +575,13 @@ export async function listConversationsForUser(userId: string): Promise<{
 
 export async function getUnreadBadgeCounts(userId: string): Promise<{
   unreadCount: number;
+  publicUnread: number;
+  privateMessagesUnread: number;
   pendingRequestsCount: number;
+  pendingInvitesCount: number;
+  privateUnread: number;
 }> {
-  const [user, pendingRequestsCount, memberships, blocks, friendships] =
+  const [user, pendingRequestsCount, pendingInvitesCount, memberships, blocks, friendships] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -569,6 +589,13 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
       }),
       prisma.friendship.count({
         where: { addresseeId: userId, status: "PENDING" },
+      }),
+      prisma.invite.count({
+        where: {
+          inviteeId: userId,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
       }),
       prisma.conversationMember.findMany({
         where: { userId, leftAt: null, muted: false },
@@ -592,11 +619,25 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
     ]);
 
   if (!user || user.chatBannedAt) {
-    return { unreadCount: 0, pendingRequestsCount: 0 };
+    return {
+      unreadCount: 0,
+      publicUnread: 0,
+      privateMessagesUnread: 0,
+      pendingRequestsCount: 0,
+      pendingInvitesCount: 0,
+      privateUnread: 0,
+    };
   }
 
   if (!user.chatTermsAcceptedAt) {
-    return { unreadCount: 0, pendingRequestsCount };
+    return {
+      unreadCount: 0,
+      publicUnread: 0,
+      privateMessagesUnread: 0,
+      pendingRequestsCount,
+      pendingInvitesCount,
+      privateUnread: pendingRequestsCount + pendingInvitesCount,
+    };
   }
 
   const blockedSet = new Set<string>();
@@ -617,12 +658,21 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
     .map((m) => m.conversation.id);
 
   if (accessibleIds.length === 0) {
-    return { unreadCount: 0, pendingRequestsCount };
+    return {
+      unreadCount: 0,
+      publicUnread: 0,
+      privateMessagesUnread: 0,
+      pendingRequestsCount,
+      pendingInvitesCount,
+      privateUnread: pendingRequestsCount + pendingInvitesCount,
+    };
   }
 
-  const [row] = await prisma.$queryRaw<Array<{ unread: number }>>(Prisma.sql`
-    SELECT COUNT(*)::int AS unread
+  const rows = await prisma.$queryRaw<Array<{ type: string; unread: number }>>(Prisma.sql`
+    SELECT c."type"::text AS type, COUNT(*)::int AS unread
     FROM "Message" m
+    INNER JOIN "Conversation" c
+      ON c."id" = m."conversationId"
     INNER JOIN "ConversationMember" cm
       ON cm."conversationId" = m."conversationId"
       AND cm."userId" = ${userId}
@@ -631,11 +681,23 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
       AND m."deletedAt" IS NULL
       AND (m."senderId" IS NULL OR m."senderId" <> ${userId})
       AND m."createdAt" > cm."lastReadAt"
+    GROUP BY c."type"
   `);
 
+  let publicUnread = 0;
+  let privateMessagesUnread = 0;
+  for (const r of rows) {
+    if (r.type === "PUBLIC") publicUnread += r.unread ?? 0;
+    else privateMessagesUnread += r.unread ?? 0;
+  }
+
   return {
-    unreadCount: row?.unread ?? 0,
+    unreadCount: publicUnread + privateMessagesUnread,
+    publicUnread,
+    privateMessagesUnread,
     pendingRequestsCount,
+    pendingInvitesCount,
+    privateUnread: privateMessagesUnread + pendingRequestsCount + pendingInvitesCount,
   };
 }
 
@@ -687,21 +749,34 @@ export async function openOrCreateDmConversation(
     }
   }
 
+  await prisma.conversationMember.createMany({
+    data: [
+      { conversationId: conv.id, userId, role: "MEMBER" },
+      { conversationId: conv.id, userId: peerId, role: "MEMBER" },
+    ],
+    skipDuplicates: true,
+  });
+
+  await prisma.conversationMember.updateMany({
+    where: {
+      conversationId: conv.id,
+      userId: { in: [userId, peerId] },
+      leftAt: { not: null },
+    },
+    data: { leftAt: null },
+  });
+
   const [selfMember, peerMember] = await Promise.all([
-    prisma.conversationMember.upsert({
+    prisma.conversationMember.findUniqueOrThrow({
       where: {
         conversationId_userId: { conversationId: conv.id, userId },
       },
-      update: { leftAt: null },
-      create: { conversationId: conv.id, userId, role: "MEMBER" },
       select: { muted: true, lastReadAt: true },
     }),
-    prisma.conversationMember.upsert({
+    prisma.conversationMember.findUniqueOrThrow({
       where: {
         conversationId_userId: { conversationId: conv.id, userId: peerId },
       },
-      update: { leftAt: null },
-      create: { conversationId: conv.id, userId: peerId, role: "MEMBER" },
       select: {
         lastReadAt: true,
         user: {

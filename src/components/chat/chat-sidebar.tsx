@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Check,
-  Globe2,
+  ChevronDown,
   Lock,
-  MessageSquarePlus,
   Plus,
   Search,
   UserCheck,
   UserPlus,
   Users,
+  VolumeX,
   X,
 } from "lucide-react";
 import { AnimatedList } from "@/components/common/animated-list";
@@ -31,10 +31,11 @@ import {
 } from "./chat-types";
 import styles from "./chat-workspace.module.css";
 
-function UnreadPill({ count }: { count: number }) {
+function UnreadPill({ count, testId }: { count: number; testId?: string }) {
   if (count <= 0) return null;
   return (
     <span
+      data-testid={testId}
       className={cn(
         styles.unreadBadgePop,
         "inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-none text-primary-foreground",
@@ -45,7 +46,29 @@ function UnreadPill({ count }: { count: number }) {
   );
 }
 
+function formatListTime(iso: string | null | undefined, locale: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const isSameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (isSameDay) {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-MA" : "en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(d);
+  }
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-MA" : "en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
 export function ChatSidebar({
+  currentUserId,
   activeTab,
   onTabChange,
   conversations,
@@ -57,6 +80,7 @@ export function ChatSidebar({
   onFriendAction,
   onOpenCreateRoom,
 }: {
+  currentUserId: string;
   activeTab: ChatTab;
   onTabChange: (tab: ChatTab) => void;
   conversations: ChatConversationSummary[];
@@ -71,10 +95,11 @@ export function ChatSidebar({
   ) => Promise<void>;
   onOpenCreateRoom: () => void;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [search, setSearch] = useState("");
   const [userResults, setUserResults] = useState<ChatUserSummary[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
 
   const trimmedSearch = search.trim();
 
@@ -109,32 +134,85 @@ export function ChatSidebar({
 
   const displayedUserResults = trimmedSearch.length >= 3 ? userResults : [];
 
-  const publicConv = conversations.find((c) => c.type === "PUBLIC") ?? null;
-  const dmConvs = conversations.filter((c) => c.type === "DM");
-  const roomConvs = conversations.filter((c) => c.type === "ROOM");
+  const dmConvs = useMemo(
+    () => conversations.filter((c) => c.type === "DM"),
+    [conversations],
+  );
+  const roomConvs = useMemo(
+    () => conversations.filter((c) => c.type === "ROOM"),
+    [conversations],
+  );
 
-  const publicUnread = publicConv?.unreadCount ?? 0;
+  const dmByPeerId = useMemo(() => {
+    const map = new Map<string, ChatConversationSummary>();
+    for (const dm of dmConvs) {
+      if (dm.peer?.id) map.set(dm.peer.id, dm);
+    }
+    return map;
+  }, [dmConvs]);
+
   const friendsUnread =
-    dmConvs.reduce((acc, c) => acc + c.unreadCount, 0) +
+    dmConvs.reduce((acc, c) => acc + (c.muted ? 0 : c.unreadCount), 0) +
     friendsData.incomingRequests.length;
-  const roomsUnread = roomConvs.reduce((acc, c) => acc + c.unreadCount, 0);
+  const roomsUnread = roomConvs.reduce(
+    (acc, c) => acc + (c.muted ? 0 : c.unreadCount),
+    0,
+  );
 
   const lower = trimmedSearch.toLowerCase();
-  const filteredDms = lower
-    ? dmConvs.filter((c) => (c.peer?.name || "").toLowerCase().includes(lower))
-    : dmConvs;
-  const filteredFriends = lower
-    ? friendsData.friends.filter((f) =>
-        (f.name || "").toLowerCase().includes(lower),
-      )
-    : friendsData.friends;
-  const filteredRooms = lower
-    ? roomConvs.filter((r) => (r.name || "").toLowerCase().includes(lower))
-    : roomConvs;
+
+  const friendEntries = useMemo(() => {
+    const entries = friendsData.friends.map((friend) => ({
+      friend,
+      dm: dmByPeerId.get(friend.id) ?? null,
+    }));
+    const filtered = lower
+      ? entries.filter(({ friend }) =>
+          (friend.name || "").toLowerCase().includes(lower),
+        )
+      : entries;
+
+    filtered.sort((a, b) => {
+      const ta = a.dm?.lastMessageAt ? new Date(a.dm.lastMessageAt).getTime() : 0;
+      const tb = b.dm?.lastMessageAt ? new Date(b.dm.lastMessageAt).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return (a.friend.name || "").localeCompare(b.friend.name || "");
+    });
+    return filtered;
+  }, [dmByPeerId, friendsData.friends, lower]);
+
+  const filteredRooms = useMemo(() => {
+    const base = lower
+      ? roomConvs.filter((r) => (r.name || "").toLowerCase().includes(lower))
+      : roomConvs;
+    return [...base].sort((a, b) => {
+      const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return tb - ta;
+    });
+  }, [lower, roomConvs]);
 
   const friendIds = new Set(friendsData.friends.map((f) => f.id));
   const incomingIds = new Set(friendsData.incomingRequests.map((r) => r.user.id));
   const outgoingIds = new Set(friendsData.outgoingRequests.map((r) => r.user.id));
+  const totalRequestsCount =
+    friendsData.incomingRequests.length + friendsData.outgoingRequests.length;
+
+  function renderLastMessagePreview(conv: ChatConversationSummary | null): string {
+    if (!conv?.lastMessage) return t("chat.tapToChat");
+    if (conv.lastMessage.deleted) return t("chat.deletedMessage");
+    if (conv.lastMessage.decryptionFailed) return t("chat.messageUnavailable");
+    if (conv.lastMessage.type === "ROOM_INVITE") return t("chatInvite.badge");
+    const prefix =
+      conv.type === "DM"
+        ? conv.lastMessage.senderId === currentUserId
+          ? t("chat.youPrefix")
+          : ""
+        : conv.lastMessage.senderName
+          ? `${conv.lastMessage.senderName}: `
+          : "";
+    return `${prefix}${conv.lastMessage.body}`;
+  }
 
   return (
     <aside
@@ -150,10 +228,10 @@ export function ChatSidebar({
               "truncate font-heading text-lg font-bold text-foreground",
             )}
           >
-            {t("chat.pageTitle")}
+            {t("chat.messagesPageTitle")}
           </h1>
           <p className="truncate text-xs text-muted-foreground">
-            {t("chat.pageSubtitle")}
+            {t("chat.messagesPageSubtitle")}
           </p>
         </div>
 
@@ -293,11 +371,10 @@ export function ChatSidebar({
 
       <div
         role="tablist"
-        className="grid grid-cols-3 gap-1 border-b border-border/60 bg-muted/25 p-1.5"
+        className="grid grid-cols-2 gap-1 border-b border-border/60 bg-muted/25 p-1.5"
       >
         {(
           [
-            { id: "public", label: t("chat.tabPublic"), count: publicUnread, Icon: Globe2 },
             { id: "friends", label: t("chat.tabFriends"), count: friendsUnread, Icon: Users },
             { id: "rooms", label: t("chat.tabRooms"), count: roomsUnread, Icon: Lock },
           ] as const
@@ -312,9 +389,9 @@ export function ChatSidebar({
               data-testid={`chat-tab-${id}`}
               onClick={() => onTabChange(id)}
               className={cn(
-                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-colors",
+                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
                 active
-                  ? "bg-card text-foreground shadow-sm border border-border/70"
+                  ? "border border-border/70 bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -326,260 +403,209 @@ export function ChatSidebar({
         })}
       </div>
 
-      <div className={cn(styles.chatScroll, "min-h-0 flex-1 overflow-y-auto p-3 space-y-4")}>
-        {activeTab === "public" ? (
-          <div className="space-y-2">
-            {publicConv ? (
-              <button
-                type="button"
-                data-testid="chat-conv-public"
-                onClick={() => onSelectConversation(publicConv.id)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-2xl border p-3.5 text-start transition-colors",
-                  selectedConversationId === publicConv.id
-                    ? "border-primary/45 bg-primary/10"
-                    : "border-border/70 bg-background/50 hover:bg-muted/40",
-                )}
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-lg">
-                    {publicConv.emoji || "🌙"}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground">
-                      {t("chat.publicSpaceTitle")}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {publicConv.lastMessage && !publicConv.lastMessage.deleted
-                        ? publicConv.lastMessage.decryptionFailed
-                          ? t("chat.messageUnavailable")
-                          : publicConv.lastMessage.body
-                        : t("chat.publicSpaceDesc")}
-                    </p>
-                  </div>
-                </div>
-                <UnreadPill count={publicConv.unreadCount} />
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
+      <div className={cn(styles.chatScroll, "min-h-0 flex-1 overflow-y-auto p-3 space-y-3")}>
         {activeTab === "friends" ? (
-          <div className="space-y-4">
-            {(friendsData.incomingRequests.length > 0 ||
-              friendsData.outgoingRequests.length > 0) && (
-              <section className="space-y-2" data-testid="chat-requests-inbox">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  {t("chat.requestsInbox")}
-                </p>
-
-                {friendsData.incomingRequests.map((req) => (
-                  <SpotlightCard
-                    key={req.friendshipId}
-                    className="rounded-2xl border border-primary/25 bg-card/85 p-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <Link
-                        href={`/u/${req.user.id}`}
-                        className="flex min-w-0 items-center gap-2.5"
-                      >
-                        <UserAvatar user={req.user} size="sm" shape="circle" />
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-foreground">
-                            {req.user.name || t("chatInvite.unknownInviter")}
-                          </p>
-                          <p className="truncate text-[11px] text-muted-foreground">
-                            {t("chat.incomingRequests").replace("{count}", "1")}
-                          </p>
-                        </div>
-                      </Link>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          data-testid={`accept-friend-${req.user.id}`}
-                          onClick={() => void onFriendAction("accept", req.user.id)}
-                          aria-label={t("friends.acceptRequest")}
-                          className="size-11 rounded-xl bg-primary text-primary-foreground"
-                        >
-                          <Check className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          onClick={() => void onFriendAction("decline", req.user.id)}
-                          aria-label={t("friends.declineRequest")}
-                          className="size-11 rounded-xl"
-                        >
-                          <X className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </SpotlightCard>
-                ))}
-
-                {friendsData.outgoingRequests.map((req) => (
-                  <div
-                    key={req.friendshipId}
-                    className="flex items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/50 px-3 py-2.5"
-                  >
-                    <Link
-                      href={`/u/${req.user.id}`}
-                      className="flex min-w-0 items-center gap-2.5"
-                    >
-                      <UserAvatar user={req.user} size="sm" shape="circle" />
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-foreground">
-                          {req.user.name || t("chatInvite.unknownInviter")}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {t("friends.requestSent")}
-                        </p>
-                      </div>
-                    </Link>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => void onFriendAction("cancel", req.user.id)}
-                      className="h-11 rounded-xl px-3 text-xs text-muted-foreground"
-                    >
-                      {t("friends.cancelRequest")}
-                    </Button>
-                  </div>
-                ))}
-              </section>
-            )}
-
-            {filteredDms.length > 0 ? (
-              <section className="space-y-1.5">
-                <AnimatedList
-                  testId="chat-dm-list"
-                  items={filteredDms.map((conv) => ({ key: conv.id, conv }))}
-                  renderItem={({ conv }) => {
-                    const peerOnline =
-                      conv.peer?.isOnline === null
-                        ? false
-                        : Boolean(
-                            conv.peer?.isOnline ||
-                              (conv.peer?.id && onlineUsers.has(conv.peer.id)),
-                          );
-                    const active = selectedConversationId === conv.id;
-                    return (
-                      <button
-                        type="button"
-                        data-testid={`chat-conv-dm-${conv.peer?.id ?? conv.id}`}
-                        onClick={() => onSelectConversation(conv.id)}
-                        className={cn(
-                          "flex w-full items-center justify-between gap-2.5 rounded-2xl border px-3 py-2.5 text-start transition-colors",
-                          active
-                            ? "border-primary/45 bg-primary/10"
-                            : "border-border/65 bg-background/45 hover:bg-muted/40",
+          <div className="space-y-3">
+            {totalRequestsCount > 0 ? (
+              <section className="space-y-2">
+                <button
+                  type="button"
+                  data-testid="friends-requests-pinned-row"
+                  aria-expanded={requestsOpen}
+                  onClick={() => setRequestsOpen((o) => !o)}
+                  className="flex min-h-12 w-full items-center justify-between gap-2.5 rounded-2xl border border-primary/25 bg-primary/10 px-3.5 py-2.5 text-start transition-colors hover:bg-primary/15"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/20 text-primary">
+                      <UserPlus className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-foreground">
+                        {t("chat.requestsInbox")}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {t("chat.requestsCount").replace(
+                          "{count}",
+                          String(totalRequestsCount),
                         )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <UnreadPill count={friendsData.incomingRequests.length} />
+                    <ChevronDown
+                      className={cn(
+                        "size-4 text-muted-foreground transition-transform",
+                        requestsOpen && "rotate-180",
+                      )}
+                    />
+                  </div>
+                </button>
+
+                {requestsOpen ? (
+                  <div className="space-y-2 ps-1" data-testid="chat-requests-inbox">
+                    {friendsData.incomingRequests.map((req) => (
+                      <SpotlightCard
+                        key={req.friendshipId}
+                        className="rounded-2xl border border-primary/25 bg-card/85 p-3"
                       >
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <div className="relative shrink-0">
-                            <UserAvatar
-                              user={conv.peer ?? { name: conv.name }}
-                              size="sm"
-                              shape="circle"
-                            />
-                            {peerOnline ? (
-                              <span
-                                data-online="true"
-                                className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-card bg-green"
-                              />
-                            ) : null}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
-                              {conv.peer?.name || t("chatInvite.unknownInviter")}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {conv.lastMessage
-                                ? conv.lastMessage.deleted
-                                  ? t("chat.deletedMessage")
-                                  : conv.lastMessage.decryptionFailed
-                                    ? t("chat.messageUnavailable")
-                                    : conv.lastMessage.type === "ROOM_INVITE"
-                                      ? t("chatInvite.badge")
-                                      : conv.lastMessage.body
-                                : t("chat.openDm")}
-                            </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <Link
+                            href={`/u/${req.user.id}`}
+                            className="flex min-w-0 items-center gap-2.5"
+                          >
+                            <UserAvatar user={req.user} size="sm" shape="circle" />
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-foreground">
+                                {req.user.name || t("chatInvite.unknownInviter")}
+                              </p>
+                              <p className="truncate text-[11px] text-muted-foreground">
+                                {t("chat.incomingRequests").replace("{count}", "1")}
+                              </p>
+                            </div>
+                          </Link>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              data-testid={`accept-friend-${req.user.id}`}
+                              onClick={() => void onFriendAction("accept", req.user.id)}
+                              aria-label={t("friends.acceptRequest")}
+                              className="size-11 rounded-xl bg-primary text-primary-foreground"
+                            >
+                              <Check className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              data-testid={`decline-friend-${req.user.id}`}
+                              onClick={() => void onFriendAction("decline", req.user.id)}
+                              aria-label={t("friends.declineRequest")}
+                              className="size-11 rounded-xl"
+                            >
+                              <X className="size-4" />
+                            </Button>
                           </div>
                         </div>
-                        <UnreadPill count={conv.unreadCount} />
-                      </button>
-                    );
-                  }}
-                />
-              </section>
-            ) : null}
+                      </SpotlightCard>
+                    ))}
 
-            <section className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">
-                {t("chat.friendsListHeading").replace(
-                  "{count}",
-                  String(friendsData.friends.length),
-                )}
-              </p>
-              {filteredFriends.length === 0 ? (
-                <p className="rounded-2xl border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground">
-                  {t("chat.noFriends")}
-                </p>
-              ) : (
-                <AnimatedList
-                  testId="chat-friends-list"
-                  items={filteredFriends.map((f) => ({ key: f.id, friend: f }))}
-                  renderItem={({ friend }) => {
-                    const isOnline =
-                      friend.isOnline === null
-                        ? false
-                        : Boolean(friend.isOnline || onlineUsers.has(friend.id));
-                    return (
-                      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-background/45 px-3 py-2">
+                    {friendsData.outgoingRequests.map((req) => (
+                      <div
+                        key={req.friendshipId}
+                        className="flex items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/50 px-3 py-2.5"
+                      >
                         <Link
-                          href={`/u/${friend.id}`}
-                          className="flex min-w-0 items-center gap-2.5 hover:opacity-85"
+                          href={`/u/${req.user.id}`}
+                          className="flex min-w-0 items-center gap-2.5"
                         >
-                          <div className="relative shrink-0">
-                            <UserAvatar user={friend} size="sm" shape="circle" />
-                            {isOnline ? (
-                              <span
-                                data-online="true"
-                                className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-card bg-green"
-                              />
-                            ) : null}
-                          </div>
+                          <UserAvatar user={req.user} size="sm" shape="circle" />
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-foreground">
-                              {friend.name || t("chatInvite.unknownInviter")}
+                              {req.user.name || t("chatInvite.unknownInviter")}
                             </p>
-                            {friend.city ? (
-                              <p className="truncate text-[11px] text-muted-foreground">
-                                {friend.city}
-                              </p>
-                            ) : null}
+                            <p className="text-[11px] text-muted-foreground">
+                              {t("friends.requestSent")}
+                            </p>
                           </div>
                         </Link>
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
-                          data-testid={`open-dm-${friend.id}`}
-                          onClick={() => onOpenDm(friend.id)}
-                          className="h-11 shrink-0 rounded-xl px-3 text-xs"
+                          variant="ghost"
+                          onClick={() => void onFriendAction("cancel", req.user.id)}
+                          className="h-11 rounded-xl px-3 text-xs text-muted-foreground"
                         >
-                          <MessageSquarePlus className="size-4 me-1.5" />
-                          {t("chat.openDm")}
+                          {t("friends.cancelRequest")}
                         </Button>
                       </div>
-                    );
-                  }}
-                />
-              )}
-            </section>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
+            {friendEntries.length === 0 ? (
+              <div
+                data-testid="friends-empty-state"
+                className="rounded-2xl border border-border/60 bg-background/40 p-5 text-center space-y-1.5"
+              >
+                <p className="text-sm font-semibold text-foreground">
+                  {t("chat.friendsEmptyTitle")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("chat.friendsEmptyDesc")}
+                </p>
+              </div>
+            ) : (
+              <AnimatedList
+                testId="chat-friends-list"
+                items={friendEntries.map((entry) => ({
+                  key: entry.friend.id,
+                  ...entry,
+                }))}
+                renderItem={({ friend, dm }) => {
+                  const isOnline =
+                    friend.isOnline === null
+                      ? false
+                      : Boolean(friend.isOnline || onlineUsers.has(friend.id));
+                  const active = Boolean(dm && selectedConversationId === dm.id);
+                  const preview = renderLastMessagePreview(dm);
+                  const timeText = formatListTime(dm?.lastMessageAt, locale);
+
+                  return (
+                    <button
+                      type="button"
+                      data-testid={`open-dm-${friend.id}`}
+                      onClick={() =>
+                        dm ? onSelectConversation(dm.id) : onOpenDm(friend.id)
+                      }
+                      className={cn(
+                        "flex min-h-[60px] w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-start transition-colors",
+                        active
+                          ? "border-primary/45 bg-primary/10"
+                          : "border-border/65 bg-background/45 hover:bg-muted/40",
+                      )}
+                    >
+                      <div className="relative shrink-0">
+                        <UserAvatar user={friend} size="md" shape="circle" />
+                        {isOnline ? (
+                          <span
+                            data-online="true"
+                            className="absolute bottom-0 end-0 size-3 rounded-full border-2 border-card bg-green"
+                          />
+                        ) : null}
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-bold text-foreground">
+                            {friend.name || t("chatInvite.unknownInviter")}
+                          </p>
+                          {timeText ? (
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              {timeText}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs text-muted-foreground">
+                            {preview}
+                          </p>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {dm?.muted ? (
+                              <VolumeX className="size-3.5 text-muted-foreground" />
+                            ) : null}
+                            <UnreadPill count={dm?.muted ? 0 : dm?.unreadCount ?? 0} />
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                }}
+              />
+            )}
 
             {friendsData.blockedUsers.length > 0 ? (
               <section className="space-y-1.5 pt-2">
@@ -616,19 +642,25 @@ export function ChatSidebar({
 
         {activeTab === "rooms" ? (
           <div className="space-y-2.5">
-            <p className="text-xs font-semibold text-muted-foreground">
-              {t("chat.roomsHeading").replace("{count}", String(roomConvs.length))}
-            </p>
             {filteredRooms.length === 0 ? (
-              <div className="rounded-2xl border border-border/60 bg-background/40 p-4 text-center text-xs text-muted-foreground space-y-3">
-                <p>{t("chat.noRooms")}</p>
+              <div
+                data-testid="rooms-empty-state"
+                className="rounded-2xl border border-border/60 bg-background/40 p-5 text-center space-y-3"
+              >
+                <p className="text-sm font-semibold text-foreground">
+                  {t("chat.roomsEmptyTitle")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("chat.roomsEmptyDesc")}
+                </p>
                 <Button
                   type="button"
                   size="sm"
+                  data-testid="rooms-empty-create-btn"
                   onClick={onOpenCreateRoom}
-                  className="rounded-xl bg-primary text-primary-foreground"
+                  className="h-11 rounded-xl bg-primary px-4 text-primary-foreground"
                 >
-                  <Plus className="size-3.5 me-1" />
+                  <Plus className="size-4 me-1.5" />
                   {t("chat.newRoom")}
                 </Button>
               </div>
@@ -639,40 +671,59 @@ export function ChatSidebar({
                 renderItem={({ room }) => {
                   const accent = getRoomAccentStyle(room.accentColor);
                   const active = selectedConversationId === room.id;
+                  const timeText = formatListTime(room.lastMessageAt, locale);
+                  const preview = room.lastMessage
+                    ? renderLastMessagePreview(room)
+                    : t("chat.membersCount").replace("{count}", String(room.memberCount));
+
                   return (
                     <button
                       type="button"
                       data-testid={`chat-conv-room-${room.id}`}
                       onClick={() => onSelectConversation(room.id)}
                       className={cn(
-                        "flex w-full items-center justify-between gap-2.5 rounded-2xl border px-3 py-2.5 text-start transition-colors",
+                        "flex min-h-[60px] w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-start transition-colors",
                         active
                           ? "border-primary/45 bg-primary/10"
                           : "border-border/65 bg-background/45 hover:bg-muted/40",
                       )}
                     >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span
-                          className={cn(
-                            "grid size-9 shrink-0 place-items-center rounded-xl border text-base",
-                            accent.badge,
-                          )}
-                        >
-                          {room.emoji || "💬"}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">
+                      <span
+                        className={cn(
+                          "grid size-10 shrink-0 place-items-center rounded-xl border text-lg",
+                          accent.badge,
+                        )}
+                      >
+                        {room.emoji || "💬"}
+                      </span>
+
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-bold text-foreground">
                             {room.name}
                           </p>
+                          {timeText ? (
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              {timeText}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
                           <p className="truncate text-xs text-muted-foreground">
-                            {t("chat.membersCount").replace(
-                              "{count}",
-                              String(room.memberCount),
-                            )}
+                            {preview}
                           </p>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground">
+                              <Users className="size-3" />
+                              {room.memberCount}
+                            </span>
+                            {room.muted ? (
+                              <VolumeX className="size-3.5 text-muted-foreground" />
+                            ) : null}
+                            <UnreadPill count={room.muted ? 0 : room.unreadCount} />
+                          </div>
                         </div>
                       </div>
-                      <UnreadPill count={room.unreadCount} />
                     </button>
                   );
                 }}

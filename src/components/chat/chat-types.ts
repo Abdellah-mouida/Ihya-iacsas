@@ -1,4 +1,4 @@
-export type ChatTab = "public" | "friends" | "rooms";
+export type ChatTab = "friends" | "rooms";
 
 export type RoomAccentToken = "main" | "brass" | "gold" | "sage";
 

@@ -2,10 +2,12 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bell,
   Calendar,
   ChevronDown,
   ChevronLeft,
   LogOut,
+  MessagesSquare,
   Settings,
   Shield,
   User as UserIcon,
@@ -58,7 +60,15 @@ function NewEventDot({ label }: { label: string }) {
   );
 }
 
-function ChatUnreadBadge({ count, label }: { count: number; label: string }) {
+function ChatUnreadBadge({
+  count,
+  label,
+  testId = "navbar-chat-badge",
+}: {
+  count: number;
+  label: string;
+  testId?: string;
+}) {
   if (count <= 0) return null;
   return (
     <motion.span
@@ -66,7 +76,7 @@ function ChatUnreadBadge({ count, label }: { count: number; label: string }) {
       initial={{ scale: 0.72, opacity: 0.6 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 460, damping: 24 }}
-      data-testid="navbar-chat-badge"
+      data-testid={testId}
       aria-label={label}
       className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-brass px-1.5 py-0.5 text-[11px] font-bold leading-none text-night shadow-sm"
     >
@@ -93,7 +103,9 @@ export function GlassNavbar({
   const [open, setOpen] = useState(false);
   const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
   const [chatEnabled, setChatEnabled] = useState(initialChatEnabled);
-  const [chatUnread, setChatUnread] = useState(0);
+  const [publicUnread, setPublicUnread] = useState(0);
+  const [privateUnread, setPrivateUnread] = useState(0);
+  const [notificationsUnread, setNotificationsUnread] = useState(0);
   // Render nothing until known to eliminate button flicker:
   // Starts null (unknown), only renders when explicitly true.
   const [hasBookableEvents, setHasBookableEvents] = useState<boolean | null>(initialBookable);
@@ -143,20 +155,22 @@ export function GlassNavbar({
         if (cancelled) return;
         if (!res.ok) {
           setChatEnabled(false);
-          setChatUnread(0);
+          setPublicUnread(0);
+          setPrivateUnread(0);
           return;
         }
         const data = (await res.json()) as {
-          totalUnread?: number;
-          pendingFriendRequests?: number;
-          pendingInvites?: number;
+          publicUnread?: number;
+          privateUnread?: number;
+          pendingRequestsCount?: number;
+          pendingInvitesCount?: number;
         };
         if (cancelled) return;
         setChatEnabled(true);
-        setChatUnread(
-          (data.totalUnread ?? 0) +
-            (data.pendingFriendRequests ?? 0) +
-            (data.pendingInvites ?? 0),
+        setPublicUnread(data.publicUnread ?? 0);
+        setPrivateUnread(
+          data.privateUnread ??
+            (data.pendingRequestsCount ?? 0) + (data.pendingInvitesCount ?? 0),
         );
       } catch {
         // Silent network fallback
@@ -164,9 +178,6 @@ export function GlassNavbar({
     };
 
     const scheduleLoad = () => {
-      if (pathname.startsWith("/chat")) {
-        return;
-      }
       if (initialChatEnabled) {
         void loadUnread();
         return;
@@ -183,21 +194,53 @@ export function GlassNavbar({
     scheduleLoad();
 
     const onUnreadCustom = (event: Event) => {
-      const detail = (event as CustomEvent<{ total?: number; count?: number }>).detail;
-      const nextCount =
-        typeof detail?.total === "number" ? detail.total : detail?.count;
-      if (typeof nextCount === "number") {
+      const detail = (
+        event as CustomEvent<{
+          publicTotal?: number;
+          privateTotal?: number;
+          total?: number;
+          count?: number;
+        }>
+      ).detail;
+      let handled = false;
+      if (typeof detail?.publicTotal === "number") {
         setChatEnabled(true);
-        setChatUnread(Math.max(0, nextCount));
-      } else {
-        void loadUnread();
+        setPublicUnread(Math.max(0, detail.publicTotal));
+        handled = true;
+      }
+      if (typeof detail?.privateTotal === "number") {
+        setChatEnabled(true);
+        setPrivateUnread(Math.max(0, detail.privateTotal));
+        handled = true;
+      }
+      if (!handled) {
+        const legacyCount =
+          typeof detail?.total === "number" ? detail.total : detail?.count;
+        if (typeof legacyCount === "number") {
+          setChatEnabled(true);
+          setPublicUnread(Math.max(0, legacyCount));
+        } else {
+          void loadUnread();
+        }
+      }
+    };
+
+    const onNotificationUnreadCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ total?: number }>).detail;
+      if (typeof detail?.total === "number") {
+        setNotificationsUnread(Math.max(0, detail.total));
       }
     };
 
     window.addEventListener("ihyaa_chat_unread", onUnreadCustom);
+    window.addEventListener("ihyaa_notifications_unread", onNotificationUnreadCustom);
     return () => {
       cancelled = true;
       window.removeEventListener("ihyaa_chat_unread", onUnreadCustom);
+      window.removeEventListener(
+        "ihyaa_notifications_unread",
+        onNotificationUnreadCustom,
+      );
       if (idleHandle !== null && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idleHandle);
       }
@@ -209,11 +252,19 @@ export function GlassNavbar({
 
   useEffect(() => {
     const userId = session?.user?.id;
-    if (!userId || !chatEnabled || pathname.startsWith("/chat")) return;
+    if (
+      !userId ||
+      !chatEnabled ||
+      pathname.startsWith("/chat") ||
+      pathname.startsWith("/messages")
+    ) {
+      return;
+    }
 
     let disposed = false;
     let release: (() => void) | undefined;
     let unsubscribe: (() => void) | undefined;
+    let unsubscribeReconnect: (() => void) | undefined;
     let timer: number | null = null;
 
     const connectIdle = () => {
@@ -222,6 +273,10 @@ export function GlassNavbar({
           if (disposed) return;
           const client = getChatRealtimeClient();
           release = client.acquire();
+          client.connectNow();
+          unsubscribeReconnect = client.onReconnect(() => {
+            window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
+          });
           unsubscribe = client.onEvent((event) => {
             if (event.type === "friend.changed" && event.kind === "requested") {
               notify.info(
@@ -243,6 +298,7 @@ export function GlassNavbar({
               window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
             }
           });
+          window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
         })
         .catch(() => {});
     };
@@ -252,12 +308,15 @@ export function GlassNavbar({
       disposed = true;
       if (timer !== null) window.clearTimeout(timer);
       unsubscribe?.();
+      unsubscribeReconnect?.();
       release?.();
     };
   }, [session?.user?.id, chatEnabled, pathname, t]);
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   // Transparent at the very top of every page; background after scrolling.
   const transparentTop = !scrolled;
@@ -442,8 +501,8 @@ export function GlassNavbar({
                 <span className="relative z-10 flex items-center">
                   {t("nav.chat")}
                   <ChatUnreadBadge
-                    count={chatUnread}
-                    label={t("nav.chatUnread").replace("{count}", String(chatUnread))}
+                    count={publicUnread}
+                    label={t("nav.chatUnread").replace("{count}", String(publicUnread))}
                   />
                 </span>
               </Link>
@@ -480,14 +539,22 @@ export function GlassNavbar({
           {/* Desktop Auth State / User Menu */}
           {isAuthKnown ? (
             session?.user ? (
+              (() => {
+                const dropdownUnread =
+                  (chatEnabled ? privateUnread : 0) + notificationsUnread;
+                return (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     data-testid="navbar-user-menu-btn"
-                    aria-label={t("nav.userMenu")}
+                    aria-label={
+                      dropdownUnread > 0
+                        ? `${t("nav.userMenu")} (${t("nav.totalUnreadLabel").replace("{count}", String(dropdownUnread))})`
+                        : t("nav.userMenu")
+                    }
                     className={cn(
-                      "hidden sm:inline-flex items-center gap-1.5 rounded-full p-1 outline-none transition-all hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-primary",
+                      "relative hidden sm:inline-flex items-center gap-1.5 rounded-full p-1 outline-none transition-all hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-primary",
                       transparentTop
                         ? "bg-foreground/10 text-foreground dark:bg-white/10 dark:text-white"
                         : "bg-muted/70 text-foreground border border-border/60",
@@ -499,6 +566,14 @@ export function GlassNavbar({
                       shape="circle"
                       className="border-brass/25 ring-1 ring-primary/20"
                     />
+                    {dropdownUnread > 0 ? (
+                      <span
+                        data-testid="navbar-avatar-unread-badge"
+                        className="absolute -top-1 -end-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-brass px-1 text-[10px] font-bold leading-none text-night ring-2 ring-background"
+                      >
+                        {dropdownUnread > 99 ? "99+" : dropdownUnread}
+                      </span>
+                    ) : null}
                     <ChevronDown className="size-3.5 opacity-60 me-1" />
                   </button>
                 </DropdownMenuTrigger>
@@ -547,6 +622,48 @@ export function GlassNavbar({
                       {t("nav.myBookings")}
                     </Link>
                   </DropdownMenuItem>
+                  {chatEnabled ? (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/messages"
+                        data-testid="navbar-messages-link"
+                        className="flex cursor-pointer items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <MessagesSquare className="size-4" />
+                          {t("nav.privateMessages")}
+                        </span>
+                        <ChatUnreadBadge
+                          testId="navbar-messages-badge"
+                          count={privateUnread}
+                          label={t("nav.privateMessagesUnread").replace(
+                            "{count}",
+                            String(privateUnread),
+                          )}
+                        />
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/notifications"
+                      data-testid="navbar-notifications-link"
+                      className="flex cursor-pointer items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Bell className="size-4" />
+                        {t("nav.notifications")}
+                      </span>
+                      <ChatUnreadBadge
+                        testId="navbar-notifications-badge"
+                        count={notificationsUnread}
+                        label={t("nav.unreadNotifications").replace(
+                          "{count}",
+                          String(notificationsUnread),
+                        )}
+                      />
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
                       href="/settings"
@@ -584,6 +701,8 @@ export function GlassNavbar({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+                );
+              })()
             ) : (
               <div className="hidden sm:inline-flex items-center gap-2">
                 <Link
@@ -624,12 +743,19 @@ export function GlassNavbar({
             aria-label={t("nav.menu")}
             aria-expanded={open}
             className={cn(
-              "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
+              "relative grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
               transparentTop
                 ? "text-foreground dark:text-white"
                 : "glass text-foreground",
             )}
           >
+            {session?.user &&
+            (chatEnabled ? publicUnread + privateUnread : 0) + notificationsUnread > 0 ? (
+              <span
+                data-testid="navbar-mobile-unread-dot"
+                className="absolute top-1.5 end-1.5 size-2.5 rounded-full bg-brass ring-2 ring-background"
+              />
+            ) : null}
             <span className="relative block size-5 text-current">
               <motion.span
                 variants={hamburgerTop}
@@ -756,8 +882,66 @@ export function GlassNavbar({
                       <span className="flex items-center">
                         {t("nav.chat")}
                         <ChatUnreadBadge
-                          count={chatUnread}
-                          label={t("nav.chatUnread").replace("{count}", String(chatUnread))}
+                          count={publicUnread}
+                          label={t("nav.chatUnread").replace("{count}", String(publicUnread))}
+                        />
+                      </span>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
+                {session?.user && chatEnabled ? (
+                  <motion.li variants={fadeUp}>
+                    <Link
+                      href="/messages"
+                      data-testid="navbar-mobile-messages-link"
+                      onClick={() => setOpen(false)}
+                      aria-current={isActive("/messages") ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                        isActive("/messages")
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex items-center">
+                        {t("nav.privateMessages")}
+                        <ChatUnreadBadge
+                          testId="navbar-mobile-messages-badge"
+                          count={privateUnread}
+                          label={t("nav.privateMessagesUnread").replace(
+                            "{count}",
+                            String(privateUnread),
+                          )}
+                        />
+                      </span>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
+                {session?.user ? (
+                  <motion.li variants={fadeUp}>
+                    <Link
+                      href="/notifications"
+                      data-testid="navbar-mobile-notifications-link"
+                      onClick={() => setOpen(false)}
+                      aria-current={isActive("/notifications") ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                        isActive("/notifications")
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex items-center">
+                        {t("nav.notifications")}
+                        <ChatUnreadBadge
+                          testId="navbar-mobile-notifications-badge"
+                          count={notificationsUnread}
+                          label={t("nav.unreadNotifications").replace(
+                            "{count}",
+                            String(notificationsUnread),
+                          )}
                         />
                       </span>
                       <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
