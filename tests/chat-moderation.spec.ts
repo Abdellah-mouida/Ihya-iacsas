@@ -538,7 +538,7 @@ test("browser moderation flow, global chatEnabled switch, and /privacy messaging
       ).toHaveCount(0, { timeout: 15_000 });
 
       // 6. Verify /privacy messaging section exists in EN
-      await aliceLogin.page.goto("/privacy", { waitUntil: "domcontentloaded" });
+      await aliceLogin.page.goto("/privacy", { waitUntil: "load" });
       await expect(
         aliceLogin.page.locator("#messaging"),
       ).toBeVisible({ timeout: 15_000 });

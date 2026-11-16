@@ -243,7 +243,7 @@ test.describe("13-T6: Stored & Realtime Notification System", () => {
       await expect(pageOffline.locator("[data-sonner-toast]")).toHaveCount(0);
 
       // 5. /notifications inbox: click marks read & navigates to target (/profile#bookings)
-      await pageOffline.goto("/notifications", { waitUntil: "domcontentloaded" });
+      await pageOffline.goto("/notifications", { waitUntil: "load" });
       const inboxItem = pageOffline
         .locator('[data-testid^="notification-item-"]')
         .first();
@@ -265,7 +265,7 @@ test.describe("13-T6: Stored & Realtime Notification System", () => {
       expect(afterClickJson.unreadCount).toBe(0);
 
       // Verify onlineUser can mark all as read in /notifications
-      await pageOnline.goto("/notifications", { waitUntil: "domcontentloaded" });
+      await pageOnline.goto("/notifications", { waitUntil: "load" });
       const markAllBtn = pageOnline.locator(
         '[data-testid="notifications-mark-all-btn"]',
       );

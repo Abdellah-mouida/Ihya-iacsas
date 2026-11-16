@@ -210,7 +210,7 @@ export function NotificationsInbox({
     targetUrl: string,
   ) => {
     if (!item.readAt) {
-      void toggleReadState(item, true);
+      await toggleReadState(item, true);
     }
     router.push(targetUrl);
   };
