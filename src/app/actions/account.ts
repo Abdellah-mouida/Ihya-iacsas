@@ -10,8 +10,7 @@ import { isEventEnded } from "@/lib/event-time";
 import { findMoroccanCity } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
-import { sendWaitlistPromotionEmail } from "@/lib/email";
-import { notify } from "@/lib/notifications";
+import { cancelBookingForUser } from "@/lib/services/bookings";
 import { deleteUserAccount } from "@/lib/user-deletion";
 import { logActivity } from "@/lib/audit";
 
@@ -683,152 +682,30 @@ export async function cancelUserBooking(
   }
 
   try {
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        event: true,
-      },
+    const result = await cancelBookingForUser({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      userName: session.user.name,
+      bookingId,
+      locale,
     });
 
-    if (!booking) {
-      return {
-        success: false,
-        error: isAr ? "الحجز غير موجود" : "Booking not found",
-      };
-    }
-
-    // Verify ownership
-    const isOwner =
-      booking.userId === session.user.id ||
-      (session.user.email &&
-        booking.email.toLowerCase() === session.user.email.toLowerCase());
-
-    if (!isOwner) {
-      return {
-        success: false,
-        error: isAr
-          ? "غير مصرح لك بإلغاء هذا الحجز"
-          : "You are not authorized to cancel this booking",
-      };
-    }
-
-    // Check if event has ended
-    if (isEventEnded(booking.event.date, booking.event.time)) {
-      return {
-        success: false,
-        error: isAr
-          ? "لا يمكن إلغاء الحجز لفعالية قد انتهت"
-          : "Cannot cancel booking for an event that has already ended",
-      };
-    }
-
-    const wasConfirmed = booking.status === "CONFIRMED" || booking.confirmed;
-
-    // Delete the booking record
-    await prisma.booking.delete({
-      where: { id: bookingId },
-    });
-
-    await logActivity({
-      actorId: session.user.id,
-      actorName: session.user.name,
-      actorEmail: session.user.email,
-      action: "BOOKING_CANCELLED",
-      targetType: "Booking",
-      targetId: booking.id,
-      targetName: booking.fullName,
-      targetEmail: booking.email,
-      details: {
-        eventId: booking.eventId,
-        eventTitle: booking.event.titleEn || booking.event.titleAr,
-        previousStatus: booking.status,
-      },
-    });
-
-    // If confirmed on limited event, auto-promote next waitlisted attendee
-    if (wasConfirmed && booking.event.capacityType === "LIMITED") {
-      const nextWaitlisted = await prisma.booking.findFirst({
-        where: {
-          eventId: booking.eventId,
-          status: "WAITLISTED",
-        },
-        orderBy: [
-          { waitlistOrder: "asc" },
-          { createdAt: "asc" },
-        ],
-      });
-
-      if (nextWaitlisted) {
-        await prisma.booking.update({
-          where: { id: nextWaitlisted.id },
-          data: {
-            status: "CONFIRMED",
-            confirmed: true,
-            waitlistOrder: null,
-          },
-        });
-
-        if (nextWaitlisted.userId) {
-          await notify(nextWaitlisted.userId, "BOOKING_WAITLIST_PROMOTED", {
-            params: {
-              eventTitleAr: booking.event.titleAr,
-              eventTitleEn: booking.event.titleEn,
-            },
-            data: {
-              bookingId: nextWaitlisted.id,
-              eventId: booking.eventId,
-              slug: booking.event.slug,
-            },
-            dedupeKey: `booking:${nextWaitlisted.id}:promoted`,
-          });
-        }
-
-        await logActivity({
-          actorId: session.user.id,
-          actorName: session.user.name,
-          actorEmail: session.user.email,
-          action: "BOOKING_PROMOTE_WAITLIST",
-          targetType: "Booking",
-          targetId: nextWaitlisted.id,
-          targetName: nextWaitlisted.fullName,
-          targetEmail: nextWaitlisted.email,
-          details: {
-            sourceAction: "BOOKING_AUTO_PROMOTE_AFTER_CANCEL",
-            eventId: booking.eventId,
-            eventTitle: booking.event.titleEn || booking.event.titleAr,
-          },
-        });
-
-        try {
-          await sendWaitlistPromotionEmail(nextWaitlisted.email, {
-            titleAr: booking.event.titleAr,
-            titleEn: booking.event.titleEn,
-            date: booking.event.date,
-            time: booking.event.time,
-            location: booking.event.location,
-          });
-        } catch (emailErr) {
-          console.error("Error sending auto-promotion email:", emailErr);
-        }
-      }
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
 
     safeRevalidatePath("/profile");
     safeRevalidatePath("/settings");
     safeRevalidatePath("/events");
     safeRevalidatePath("/admin/bookings");
+    safeRevalidatePath("/admin");
 
     return { success: true };
   } catch (err) {
     console.error("Error cancelling user booking:", err);
     return {
       success: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : isAr
-            ? "فشل إلغاء الحجز"
-            : "Failed to cancel booking",
+      error: isAr ? "فشل إلغاء الحجز" : "Failed to cancel booking",
     };
   }
 }

@@ -4,52 +4,19 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { safeRevalidatePath } from "@/lib/cache";
-import { isEventEnded } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/audit";
-import { confirmBookingAndNotify } from "@/lib/booking-promotion";
+import {
+  confirmBookingAndNotify,
+  deliverBookingPromotionEffects,
+  promoteNextWaitlistedInTx,
+} from "@/lib/booking-promotion";
+import {
+  createBookingForUser,
+  resolveTargetEvent,
+} from "@/lib/services/bookings";
 import { notify } from "@/lib/notifications";
-import { checkRateLimit } from "@/lib/rate-limit";
-
-/**
- * Resolve target event by ID/slug without falling back to a different event
- */
-async function resolveTargetEvent(eventId?: string) {
-  if (eventId) {
-    const trimmed = eventId.trim();
-    // 1. Direct match on slug or ID
-    let event = await prisma.event.findFirst({
-      where: {
-        OR: [
-          { slug: trimmed },
-          { id: trimmed },
-        ],
-      },
-    });
-    if (event) return event;
-
-    // 2. Prefix or substring match for slug or id compatibility
-    event = await prisma.event.findFirst({
-      where: {
-        OR: [
-          { slug: { startsWith: trimmed } },
-          { slug: { contains: trimmed } },
-          { id: { startsWith: trimmed } },
-          { id: { contains: trimmed } },
-        ],
-      },
-      orderBy: { date: "asc" },
-    });
-    return event;
-  }
-
-  // Fallback only when NO event was specified: pick the active open event
-  return await prisma.event.findFirst({
-    where: { bookingOpen: true },
-    orderBy: { date: "asc" },
-  });
-}
 
 /**
  * Returns the current authenticated user state for the booking flow:
@@ -152,167 +119,16 @@ export async function createAuthenticatedBooking(data: {
       };
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        city: true,
-        age: true,
-        onboardingCompletedAt: true,
-      },
+    const result = await createBookingForUser({
+      userId: session.user.id,
+      eventId,
+      motive,
+      locale,
     });
 
-    if (!user || !user.onboardingCompletedAt || !user.city || !user.age || !user.email) {
-      return {
-        success: false,
-        needsOnboarding: true,
-        error:
-          locale === "ar"
-            ? "يرجى إكمال بياناتك الشخصية أولاً"
-            : "Please complete your profile first",
-      };
+    if (!result.success) {
+      return result;
     }
-
-    const userEmail = user.email;
-
-    // Resolve target event
-    const event = await resolveTargetEvent(eventId);
-    if (!event) {
-      return {
-        success: false,
-        error:
-          locale === "ar"
-            ? "الفعالية المطلوبة غير موجودة"
-            : "The requested event was not found",
-      };
-    }
-
-    if (!event.bookingOpen || isEventEnded(event.date, event.time)) {
-      return {
-        success: false,
-        error:
-          locale === "ar"
-            ? "انتهت هذه الفعالية أو أُغلق التسجيل فيها"
-            : "This event has ended or registration is closed",
-      };
-    }
-
-    // Rate limit: max 5 bookings per hour per user
-    const rateLimit = await checkRateLimit(`auth_book:${user.id}`, 5, 3600);
-    if (!rateLimit.allowed) {
-      return {
-        success: false,
-        error:
-          locale === "ar"
-            ? "طلبات حجز كثيرة جداً. يرجى المحاولة لاحقاً."
-            : "Too many booking requests. Please try again later.",
-      };
-    }
-
-    // Check uniqueness (by userId or by email)
-    const existingBooking = await prisma.booking.findFirst({
-      where: {
-        eventId: event.id,
-        OR: [
-          { userId: user.id },
-          { email: userEmail },
-        ],
-      },
-    });
-
-    if (existingBooking) {
-      return {
-        success: false,
-        alreadyBooked: true,
-        error:
-          locale === "ar"
-            ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
-            : "You have already booked for this event",
-      };
-    }
-
-    // Determine status & capacity
-    const isLimited = event.capacityType === "LIMITED";
-    let newStatus = "CONFIRMED";
-    let isConfirmed = true;
-    let waitlistOrder: number | null = null;
-
-    if (isLimited) {
-      const confirmedCount = await prisma.booking.count({
-        where: {
-          eventId: event.id,
-          status: "CONFIRMED",
-        },
-      });
-
-      const capacity = event.capacity ?? 0;
-      if (confirmedCount < capacity) {
-        newStatus = "PENDING";
-        isConfirmed = false;
-      } else {
-        newStatus = "WAITLISTED";
-        isConfirmed = false;
-        const lastWaitlisted = await prisma.booking.findFirst({
-          where: {
-            eventId: event.id,
-            status: "WAITLISTED",
-          },
-          orderBy: { waitlistOrder: "desc" },
-        });
-        waitlistOrder = (lastWaitlisted?.waitlistOrder ?? 0) + 1;
-      }
-    }
-
-    // Snapshot user data into Booking record
-    let booking;
-    try {
-      booking = await prisma.booking.create({
-        data: {
-          eventId: event.id,
-          userId: user.id,
-          fullName: user.name || "مشارك",
-          email: userEmail,
-          city: user.city,
-          age: user.age,
-          motive: motive?.trim() || null,
-          confirmed: isConfirmed,
-          status: newStatus,
-          waitlistOrder,
-        },
-      });
-    } catch (createErr: unknown) {
-      const err = createErr as { code?: string };
-      if (err?.code === "P2002") {
-        return {
-          success: false,
-          alreadyBooked: true,
-          error:
-            locale === "ar"
-              ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
-              : "You have already booked for this event",
-        };
-      }
-      throw createErr;
-    }
-
-    await logActivity({
-      actorId: user.id,
-      actorName: user.name,
-      actorEmail: user.email,
-      action: "BOOKING_CREATED",
-      targetType: "Booking",
-      targetId: booking.id,
-      targetName: booking.fullName,
-      targetEmail: booking.email,
-      details: {
-        eventId: event.id,
-        eventTitle: event.titleEn || event.titleAr,
-        status: newStatus,
-        waitlistOrder,
-      },
-    });
 
     safeRevalidatePath("/events");
     safeRevalidatePath("/book");
@@ -323,12 +139,24 @@ export async function createAuthenticatedBooking(data: {
 
     return {
       success: true,
-      bookingRef: `IHY-${booking.id.slice(-6).toUpperCase()}`,
-      status: newStatus,
-      waitlistOrder,
-      eventId: event.id,
+      bookingRef: result.bookingRef,
+      status: result.status,
+      waitlistOrder: result.waitlistOrder,
+      eventId: result.eventId,
     };
   } catch (error) {
+    const err = error as { code?: string };
+    if (err?.code === "P2002") {
+      const locale = data.locale || "ar";
+      return {
+        success: false,
+        alreadyBooked: true,
+        error:
+          locale === "ar"
+            ? "لقد قمت بالحجز في هذه الفعالية مسبقاً"
+            : "You have already booked for this event",
+      };
+    }
     if (process.env.NODE_ENV !== "production") {
       console.error("Error creating authenticated booking:", error);
     }
@@ -416,6 +244,9 @@ export async function approveBooking(id: string) {
 
     const approval = await confirmBookingAndNotify(booking, user, "BOOKING_APPROVE");
     if (!approval.changed) {
+      if (approval.capacityFull) {
+        return { success: false, error: "Event capacity is full" };
+      }
       const latest = await prisma.booking.findUnique({ where: { id }, select: { status: true } });
       if (latest?.status === "CONFIRMED") return { success: true, alreadyApproved: true };
       return { success: false, error: "Booking status changed before approval" };
@@ -466,18 +297,28 @@ export async function rejectBooking(id: string) {
       return { success: false, error: "Booking not found" };
     }
 
-    const wasConfirmed = booking.status === "CONFIRMED" || booking.confirmed;
+    const txResult = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${booking.eventId} FOR UPDATE`;
+      const current = await tx.booking.findUnique({
+        where: { id },
+        select: { id: true, status: true, confirmed: true },
+      });
+      if (!current) return { changed: false as const, promoted: null };
 
-    await prisma.booking.update({
-      where: { id },
-      data: {
-        status: "REJECTED",
-        confirmed: false,
-        waitlistOrder: null,
-      },
+      const wasConfirmed = current.status === "CONFIRMED" || current.confirmed;
+      const updated = await tx.booking.updateMany({
+        where: { id, status: { not: "REJECTED" } },
+        data: { status: "REJECTED", confirmed: false, waitlistOrder: null },
+      });
+      if (updated.count !== 1) return { changed: false as const, promoted: null };
+
+      const promoted = wasConfirmed
+        ? await promoteNextWaitlistedInTx(tx, booking.eventId)
+        : null;
+      return { changed: true as const, promoted };
     });
 
-    if (booking.userId) {
+    if (txResult.changed && booking.userId) {
       await notify(booking.userId, "BOOKING_REJECTED", {
         params: {
           eventTitleAr: booking.event.titleAr,
@@ -493,29 +334,13 @@ export async function rejectBooking(id: string) {
     }
 
     let autoPromotedName: string | null = null;
-
-    // If an approved/confirmed booking was rejected, freeing up a spot in a limited event
-    if (wasConfirmed && booking.event.capacityType === "LIMITED") {
-      const nextWaitlisted = await prisma.booking.findFirst({
-        where: {
-          eventId: booking.eventId,
-          status: "WAITLISTED",
-        },
-        orderBy: [
-          { waitlistOrder: "asc" },
-          { createdAt: "asc" },
-        ],
-        include: { user: { select: { locale: true } } },
-      });
-
-      if (nextWaitlisted) {
-        const promotion = await confirmBookingAndNotify(
-          { ...nextWaitlisted, event: booking.event },
-          user,
-          "BOOKING_AUTO_PROMOTE_AFTER_REJECT",
-        );
-        if (promotion.changed) autoPromotedName = nextWaitlisted.fullName;
-      }
+    if (txResult.promoted) {
+      autoPromotedName = txResult.promoted.fullName;
+      await deliverBookingPromotionEffects(
+        txResult.promoted,
+        user,
+        "BOOKING_AUTO_PROMOTE_AFTER_REJECT",
+      );
     }
 
     await logActivity({
@@ -570,6 +395,9 @@ export async function promoteWaitlistBooking(id: string) {
     }
     const promotion = await confirmBookingAndNotify(booking, user, "BOOKING_PROMOTE_WAITLIST");
     if (!promotion.changed) {
+      if (promotion.capacityFull) {
+        return { success: false, error: "Event capacity is full" };
+      }
       const latest = await prisma.booking.findUnique({ where: { id }, select: { status: true } });
       if (latest?.status === "CONFIRMED") return { success: true, alreadyApproved: true };
       return { success: false, error: "Booking status changed before promotion" };
@@ -616,49 +444,48 @@ export async function deleteBooking(id: string) {
     });
 
     if (booking) {
-      const wasConfirmed = booking.status === "CONFIRMED" || booking.confirmed;
+      const txResult = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${booking.eventId} FOR UPDATE`;
+        const current = await tx.booking.findUnique({
+          where: { id },
+          select: { id: true, status: true, confirmed: true },
+        });
+        if (!current) return { deleted: false as const, promoted: null };
 
-      await prisma.booking.delete({
-        where: { id },
+        const wasConfirmed = current.status === "CONFIRMED" || current.confirmed;
+        const deleted = await tx.booking.deleteMany({ where: { id } });
+        if (deleted.count !== 1) return { deleted: false as const, promoted: null };
+
+        const promoted = wasConfirmed
+          ? await promoteNextWaitlistedInTx(tx, booking.eventId)
+          : null;
+        return { deleted: true as const, promoted };
       });
 
-      // If a confirmed booking was deleted from a limited event, auto-promote next in waitlist
-      if (wasConfirmed && booking.event.capacityType === "LIMITED") {
-        const nextWaitlisted = await prisma.booking.findFirst({
-          where: {
-            eventId: booking.eventId,
-            status: "WAITLISTED",
-          },
-          orderBy: [
-            { waitlistOrder: "asc" },
-            { createdAt: "asc" },
-          ],
-          include: { user: { select: { locale: true } } },
-        });
-
-        if (nextWaitlisted) {
-          await confirmBookingAndNotify(
-            { ...nextWaitlisted, event: booking.event },
-            user,
-            "BOOKING_AUTO_PROMOTE_AFTER_DELETE",
-          );
-        }
+      if (txResult.promoted) {
+        await deliverBookingPromotionEffects(
+          txResult.promoted,
+          user,
+          "BOOKING_AUTO_PROMOTE_AFTER_DELETE",
+        );
       }
 
-      await logActivity({
-        actorId: user.id,
-        actorName: user.name,
-        actorEmail: user.email,
-        action: "BOOKING_DELETE",
-        targetType: "Booking",
-        targetId: id,
-        targetName: booking.fullName,
-        targetEmail: booking.email,
-        details: {
-          fullName: booking.fullName,
-          email: booking.email,
-        },
-      });
+      if (txResult.deleted) {
+        await logActivity({
+          actorId: user.id,
+          actorName: user.name,
+          actorEmail: user.email,
+          action: "BOOKING_DELETE",
+          targetType: "Booking",
+          targetId: id,
+          targetName: booking.fullName,
+          targetEmail: booking.email,
+          details: {
+            fullName: booking.fullName,
+            email: booking.email,
+          },
+        });
+      }
     }
 
     revalidatePath("/admin");
