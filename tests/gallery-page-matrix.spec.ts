@@ -24,11 +24,11 @@ test("the gallery DriftWall keeps its top title, borderless random layout, modal
       try {
         await page.goto("/gallery", { waitUntil: "domcontentloaded" });
         await expect(page.locator("main h2").first()).toBeVisible({ timeout: 30_000 });
-        const wall = page.locator('[data-rb="DriftWall"]');
+        const wall = page.locator('[data-rb="DriftColumns"]');
         await expect(wall).toBeVisible({ timeout: 30_000 });
         expect(await wall.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe("0px");
 
-        const cards = wall.locator("[data-gallery-card]");
+        const cards = wall.locator("button[data-gallery-card]");
         await expect(cards.first()).toBeVisible({ timeout: 30_000 });
         const tileCount = await cards.count();
         expect(tileCount).toBeGreaterThan(0);
@@ -55,7 +55,7 @@ test("the gallery DriftWall keeps its top title, borderless random layout, modal
 
         const clickableTile = await wall.evaluate((wallEl) => {
           const wr = wallEl.getBoundingClientRect();
-          const els = Array.from(wallEl.querySelectorAll("[data-gallery-card]"));
+          const els = Array.from(wallEl.querySelectorAll("button[data-gallery-card]"));
           const match = els.find((el) => {
             const r = el.getBoundingClientRect();
             return (

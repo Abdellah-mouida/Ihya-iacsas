@@ -29,11 +29,11 @@ test("gallery renders database photos randomly in DriftWall without borders", as
       document.cookie = "ihyaa-theme=light; path=/";
     });
     await page.goto("/gallery");
-    const wall = page.locator('[data-rb="DriftWall"]');
+    const wall = page.locator('[data-rb="DriftColumns"]');
     await expect(wall).toBeVisible();
     await expect(page.getByRole("button", { name: `${marker}-0` }).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: `${marker}-12` }).first()).toBeVisible({ timeout: 20_000 });
-    expect(await wall.locator("[data-gallery-card]").count()).toBeGreaterThanOrEqual(13);
+    expect(await wall.locator("button[data-gallery-card]").count()).toBeGreaterThanOrEqual(13);
   } finally {
     await prisma.galleryPhoto.deleteMany({
       where: { captionEn: { startsWith: marker } },

@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import DriftWall from "@/components/DriftWall";
+import { DriftColumns, type DriftGalleryPhoto } from "@/components/DriftColumns";
 import { SectionHeading } from "@/components/common/section-heading";
 import { SmoothImage } from "@/components/common/smooth-image";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -20,15 +20,7 @@ type InitialGalleryPhoto = {
   imageHeight: number | null;
   captionAr: string | null;
   captionEn: string | null;
-  createdAt: Date;
-};
-
-type PhotoItem = {
-  id: string;
-  src: string;
-  caption: string;
-  imageWidth: number | null;
-  imageHeight: number | null;
+  createdAt: Date | string;
 };
 
 const LIGHTBOX_SIZES = "(max-width: 768px) 92vw, 960px";
@@ -39,39 +31,14 @@ const slideVariants = {
   exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? "-8%" : "8%", scale: 0.98 }),
 };
 
-function createSeededRng(seed: number) {
-  let state = (seed >>> 0) || 1;
-  return () => {
-    state = (state + 0x6d2b79f5) | 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function seededShuffle<T>(list: T[], seed: number): T[] {
-  const copy = [...list];
-  const nextRand = createSeededRng(seed);
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(nextRand() * (i + 1));
-    const tmp = copy[i];
-    copy[i] = copy[j];
-    copy[j] = tmp;
+function toGalleryThumbUrl(src: string): string {
+  if (src.startsWith("https://res.cloudinary.com/") && src.includes("/image/upload/")) {
+    const [, after] = src.split("/image/upload/");
+    if (after && !after.startsWith("w_") && !after.includes(",w_")) {
+      return src.replace("/image/upload/", "/image/upload/f_auto,q_auto,c_limit,w_600/");
+    }
   }
-  return copy;
-}
-
-function useMediaMatches(query: string, fallback: boolean) {
-  return useSyncExternalStore(
-    (onStoreChange) => {
-      if (typeof window === "undefined") return () => {};
-      const mq = window.matchMedia(query);
-      mq.addEventListener("change", onStoreChange);
-      return () => mq.removeEventListener("change", onStoreChange);
-    },
-    () => (typeof window !== "undefined" ? window.matchMedia(query).matches : fallback),
-    () => fallback,
-  );
+  return src;
 }
 
 export function GalleryPageContent({
@@ -83,48 +50,49 @@ export function GalleryPageContent({
 }) {
   const { t, locale, dir } = useLocale();
   const lowPower = useLowPower();
-  const isTablet = useMediaMatches("(min-width: 640px)", false);
-  const isDesktop = useMediaMatches("(min-width: 1024px)", true);
 
   const [open, setOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  const photos = useMemo<PhotoItem[]>(() => {
-    const base =
-      initialPhotos.length > 0
-        ? initialPhotos.map((photo) => ({
-            id: photo.id,
-            src: photo.imageUrl,
-            imageWidth: photo.imageWidth,
-            imageHeight: photo.imageHeight,
-            caption:
-              locale === "ar"
-                ? photo.captionAr || photo.captionEn || "صورة من إحياء"
-                : photo.captionEn || photo.captionAr || "Ihyaa moment",
-          }))
-        : GALLERY.map((item, index) => ({
-            id: `static-${index}`,
-            src: item.src,
-            caption: t(item.altKey),
-            imageWidth: item.w,
-            imageHeight: item.h,
-          }));
+  const photos = useMemo<DriftGalleryPhoto[]>(() => {
+    const dateFormatter = new Intl.DateTimeFormat(locale === "ar" ? "ar-MA" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
 
-    return seededShuffle(base, shuffleSeed);
-  }, [initialPhotos, locale, shuffleSeed, t]);
+    if (initialPhotos.length > 0) {
+      return initialPhotos.slice(0, 60).map((photo) => {
+        const parsedDate = photo.createdAt ? new Date(photo.createdAt) : null;
+        const dateLabel =
+          parsedDate && !Number.isNaN(parsedDate.getTime())
+            ? dateFormatter.format(parsedDate)
+            : undefined;
+        return {
+          id: photo.id,
+          src: photo.imageUrl,
+          thumbSrc: toGalleryThumbUrl(photo.imageUrl),
+          imageWidth: photo.imageWidth,
+          imageHeight: photo.imageHeight,
+          dateLabel,
+          caption:
+            locale === "ar"
+              ? photo.captionAr || photo.captionEn || "صورة من إحياء"
+              : photo.captionEn || photo.captionAr || "Ihyaa moment",
+        };
+      });
+    }
 
-  const wallItems = useMemo(
-    () =>
-      photos.map((photo, index) => ({
-        image: photo.src,
-        title: photo.caption,
-        width: photo.imageWidth,
-        height: photo.imageHeight,
-        sourceIndex: index,
-      })),
-    [photos],
-  );
+    return GALLERY.slice(0, 60).map((item, index) => ({
+      id: `static-${index}`,
+      src: item.src,
+      thumbSrc: toGalleryThumbUrl(item.src),
+      caption: t(item.altKey),
+      imageWidth: item.w,
+      imageHeight: item.h,
+    }));
+  }, [initialPhotos, locale, t]);
 
   const totalCount = photos.length;
 
@@ -147,12 +115,6 @@ export function GalleryPageContent({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, go, dir]);
 
-  const wallConfig = isDesktop
-    ? { columns: 5, tileWidth: 210, tileHeight: 140, gap: 20, tilt: 16, turn: 14, depth: 120, lift: 64, speed: 40 }
-    : isTablet
-      ? { columns: 4, tileWidth: 168, tileHeight: 114, gap: 14, tilt: 14, turn: 12, depth: 96, lift: 46, speed: 34 }
-      : { columns: 3, tileWidth: 124, tileHeight: 88, gap: 12, tilt: 12, turn: 10, depth: 76, lift: 34, speed: 28 };
-
   const current = photos[lightboxIndex];
 
   return (
@@ -171,7 +133,7 @@ export function GalleryPageContent({
         />
       </div>
 
-      {wallItems.length === 0 ? (
+      {photos.length === 0 ? (
         <div className="relative z-10 mx-auto mt-16 flex max-w-xl flex-col items-center justify-center px-6 py-12 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-emerald/20 text-brass">
             <ImageIcon className="size-7" />
@@ -188,45 +150,26 @@ export function GalleryPageContent({
           aria-label={t("gallery.pageTitle")}
           className="relative z-10 mt-4 w-full flex-1 sm:mt-6"
         >
-          <div className="h-[62svh] min-h-[420px] w-full sm:h-[68svh] sm:min-h-[520px] lg:h-[74svh] lg:min-h-[600px]">
-            <DriftWall
-              data-rb="DriftWall"
-              items={wallItems}
-              columns={wallConfig.columns}
-              tileWidth={wallConfig.tileWidth}
-              tileHeight={wallConfig.tileHeight}
-              gap={wallConfig.gap}
-              radius={14}
-              tilt={wallConfig.tilt}
-              turn={dir === "rtl" ? wallConfig.turn : -wallConfig.turn}
-              roll={0}
-              perspective={1200}
-              depth={wallConfig.depth}
-              speed={wallConfig.speed}
-              direction="up"
-              variance={0.48}
-              parallax={lowPower ? 0 : 0.6}
-              pauseOnHover={false}
-              lift={wallConfig.lift}
-              fade={0.58}
-              dim={0.84}
-              grayscale={false}
-              overlayColor="var(--background)"
-              seed={shuffleSeed}
-              lowPower={lowPower}
-              ariaLabel={t("gallery.pageTitle")}
-              onItemClick={(_item: unknown, sourceIndex: number) => {
-                setDirection(0);
-                setLightboxIndex(sourceIndex);
-                setOpen(true);
-              }}
-            />
-          </div>
+          <DriftColumns
+            photos={photos}
+            shuffleSeed={shuffleSeed}
+            lowPower={lowPower}
+            ariaLabel={t("gallery.pageTitle")}
+            onPhotoClick={(photo) => {
+              const idx = photos.findIndex((p) => p.id === photo.id);
+              setDirection(0);
+              setLightboxIndex(idx >= 0 ? idx : 0);
+              setOpen(true);
+            }}
+          />
         </section>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent closeLabel={t("gallery.close")} className="max-w-4xl border-brass/30 bg-background/95 p-3 sm:max-w-4xl">
+        <DialogContent
+          closeLabel={t("gallery.close")}
+          className="max-w-4xl border-brass/30 bg-background/95 p-3 sm:max-w-4xl"
+        >
           <DialogTitle className="sr-only">
             {current ? current.caption : ""}
           </DialogTitle>

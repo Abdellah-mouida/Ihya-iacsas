@@ -18,7 +18,7 @@ function createShuffleSeed() {
 }
 
 export default async function GalleryPage() {
-  const [session, gallery] = await Promise.all([auth(), getPublicGalleryPhotos(0, 36)]);
+  const [session, gallery] = await Promise.all([auth(), getPublicGalleryPhotos(0, 60)]);
   const shuffleSeed = createShuffleSeed();
   return (
     <>

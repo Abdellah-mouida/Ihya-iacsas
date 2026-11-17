@@ -34,7 +34,7 @@ export async function getGalleryPhotos() {
 
 export async function getPublicGalleryPhotos(skip = 0, take = 12) {
   const offset = Number.isFinite(skip) ? Math.max(0, Math.trunc(skip)) : 0;
-  const limit = Number.isFinite(take) ? Math.min(48, Math.max(1, Math.trunc(take))) : 12;
+  const limit = Number.isFinite(take) ? Math.min(60, Math.max(1, Math.trunc(take))) : 12;
 
   try {
     const [photos, total] = await Promise.all([
