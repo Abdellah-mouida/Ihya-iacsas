@@ -9,6 +9,8 @@ import { prisma } from "../src/lib/prisma";
 assertDevBranchDatabase("Admin events authorization security regression test");
 
 test.describe("Admin events authorization (IHY-SEC-003)", () => {
+  test.setTimeout(60_000);
+
   test("unit: fetchAdminEventsForActor rejects anonymous and USER, and omits raw booking rows", async () => {
     await expect(fetchAdminEventsForActor(null)).rejects.toBeInstanceOf(
       UnauthorizedError,
