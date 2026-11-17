@@ -1,13 +1,22 @@
 import crypto from "crypto";
 
-const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
+export function assertOtpSecretConfigured(): string {
+  const secret = process.env.OTP_SECRET?.trim();
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      "OTP_SECRET environment variable is required and must be at least 16 characters",
+    );
+  }
+  return secret;
+}
 
 /**
  * Deterministic HMAC-SHA256 OTP hash
  */
 export function hashOtp(otp: string, email: string): string {
+  const secret = assertOtpSecretConfigured();
   return crypto
-    .createHmac("sha256", OTP_SECRET)
+    .createHmac("sha256", secret)
     .update(`${email.trim().toLowerCase()}:${otp.trim()}`)
     .digest("hex");
 }

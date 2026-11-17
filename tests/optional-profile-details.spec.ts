@@ -1,14 +1,18 @@
 import { test, expect } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import {
   TEST_ADMIN,
   ensureTestUser,
   loginAs,
 } from "./helpers/admin-auth";
 
+assertDevBranchDatabase("Optional profile details test");
+
 const TEST_PROFILE_USER = {
-  email: "profile.tester.2026@ihyaa.test",
-  password: "UserProfile123!",
+  email: `profile.tester.${randomBytes(12).toString("hex")}@example.test`,
+  password: `Profile-${randomBytes(18).toString("base64url")}!`,
   fullName: "حسام رحالة تجريبي",
   role: "USER" as const,
   city: "tetouan",

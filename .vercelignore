@@ -1,0 +1,6 @@
+/security/
+/.agent/
+/test-results/
+/playwright-report/
+/blob-report/
+/evidence/

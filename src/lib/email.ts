@@ -61,11 +61,10 @@ const CLOUDINARY_EMAIL_LOGO_URL =
   "https://res.cloudinary.com/ihyaa/image/upload/v1/branding/logo-circle.png";
 
 function getEmailLogoSrc(appUrl?: string): string {
-  if (process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL) {
-    return process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL;
-  }
-  if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
-    return `${appUrl}/images/logo-email-240.png`;
+  const explicit = process.env.NEXT_PUBLIC_CLOUDINARY_LOGO_URL;
+  if (explicit && isPublicHttpsUrl(explicit)) return explicit;
+  if (appUrl && isPublicHttpsUrl(appUrl)) {
+    return `${new URL(appUrl).origin}/images/logo-email-240.png`;
   }
   const base64 = getCircularLogoBase64();
   if (base64) {
@@ -77,6 +76,22 @@ function getEmailLogoSrc(appUrl?: string): string {
 const SENDER_NAME = "Ihyaa Program";
 const SENDER_EMAIL = "no-reply@ihyaa.is-cool.dev";
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+  })[char]!);
+}
+
+function isPublicHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname !== "localhost" &&
+      url.hostname !== "127.0.0.1" && !url.hostname.endsWith(".local");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Sends a transactional email through Brevo's v3 SMTP REST API.
  */
@@ -85,7 +100,7 @@ async function sendBrevoEmail(payload: {
   subject: string;
   htmlContent: string;
   textContent: string;
-}): Promise<{ success: boolean; error?: string; messageId?: string }> {
+}, maxAttempts = 2): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
@@ -100,7 +115,7 @@ async function sendBrevoEmail(payload: {
 
   let lastError = "Could not connect to email service.";
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
@@ -155,7 +170,7 @@ async function sendBrevoEmail(payload: {
       }
     }
 
-    if (attempt < 3) {
+    if (attempt < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
     }
   }
@@ -185,7 +200,8 @@ export async function sendOTPEmail(
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    process.env.NEXTAUTH_URL || "https://ihyaa.is-cool.dev";
 
   const logoSrc = getEmailLogoSrc(appUrl);
 
@@ -197,7 +213,7 @@ export async function sendOTPEmail(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="x-apple-disable-message-reformatting">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -226,7 +242,7 @@ export async function sendOTPEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -253,7 +269,7 @@ export async function sendOTPEmail(
         <!-- OTP Box with Brand Green Style -->
         <div class="otp-box" style="background: linear-gradient(135deg, rgba(16, 117, 39, 0.16) 0%, rgba(10, 84, 23, 0.08) 100%); border: 1.5px dashed #107527; border-radius: 16px; padding: 22px 16px; text-align: center; margin: 26px 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);">
           <span class="otp-text" style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 34px; font-weight: 800; letter-spacing: 12px; color: #10b981; display: inline-block; text-indent: 12px;">
-            ${otp}
+            ${escapeHtml(otp)}
           </span>
         </div>
 
@@ -283,7 +299,7 @@ export async function sendOTPEmail(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="x-apple-disable-message-reformatting">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -312,7 +328,7 @@ export async function sendOTPEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -339,7 +355,7 @@ export async function sendOTPEmail(
         <!-- OTP Box with Brand Green Style -->
         <div class="otp-box" style="background: linear-gradient(135deg, rgba(16, 117, 39, 0.16) 0%, rgba(10, 84, 23, 0.08) 100%); border: 1.5px dashed #107527; border-radius: 16px; padding: 22px 16px; text-align: center; margin: 26px 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);">
           <span class="otp-text" style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 34px; font-weight: 800; letter-spacing: 12px; color: #10b981; display: inline-block; text-indent: 12px;">
-            ${otp}
+            ${escapeHtml(otp)}
           </span>
         </div>
 
@@ -382,8 +398,10 @@ export async function sendWaitlistPromotionEmail(
     date: Date | string;
     time?: string;
     location: string;
+    url?: string;
   },
   locale: string = "ar",
+  options?: { sendOnce?: boolean },
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const isArabic = locale === "ar";
   const eventTitle = isArabic ? eventDetails.titleAr : eventDetails.titleEn;
@@ -391,18 +409,30 @@ export async function sendWaitlistPromotionEmail(
     isArabic ? "ar-MA" : "en-US",
     { weekday: "long", year: "numeric", month: "long", day: "numeric" },
   );
+  const configuredBase = process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    process.env.NEXTAUTH_URL || "https://ihyaa.is-cool.dev";
+  let baseUrl = "https://ihyaa.is-cool.dev";
+  try {
+    const parsedBase = new URL(configuredBase);
+    if (parsedBase.protocol === "https:") baseUrl = parsedBase.origin;
+  } catch { /* use the stable production origin */ }
+  const eventPath = eventDetails.url?.startsWith("/") ? eventDetails.url : "/events";
+  const eventUrl = `${baseUrl}${eventPath}`;
+  const safeEventUrl = eventUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
   const subject = isArabic
-    ? `تهانينا! تم تأكيد مقعدك في فعالية: ${eventTitle} — برنامج إحياء`
-    : `Congratulations! Your seat is confirmed for: ${eventTitle} — Ihyaa Program`;
+    ? `تمت الموافقة على حجزك في فعالية: ${eventTitle} — برنامج إحياء`
+    : `Your booking is approved for: ${eventTitle} — Ihyaa Program`;
 
   const plainText = isArabic
-    ? `السلام عليكم ورحمة الله وبركاته،\n\nيسر إدارة برنامج إحياء إشعارك بأنه قد توفر مقعد لك وتمت ترقيتك وتأكيد حضورك رسمياً في الفعالية:\n${eventTitle}\n\nالموعد: ${formattedDate} (${eventDetails.time || ""})\nالمكان: ${eventDetails.location}\n\nنتطلع لحضورك ومشاركتك معنا!\n\nبرنامج إحياء`
-    : `Hello,\n\nWe are pleased to inform you that a seat has become available and your registration has been officially confirmed for:\n${eventTitle}\n\nDate: ${formattedDate} (${eventDetails.time || ""})\nLocation: ${eventDetails.location}\n\nWe look forward to seeing you there!\n\nIhyaa Program`;
+    ? `السلام عليكم ورحمة الله وبركاته،\n\nتمت الموافقة على حجزك وتأكيد حضورك في الفعالية:\n${eventTitle}\n\nالموعد: ${formattedDate} (${eventDetails.time || ""})\nالمكان: ${eventDetails.location}\n\nتفاصيل الفعالية: ${eventUrl}\n\nنتطلع لحضورك ومشاركتك معنا!\n\nبرنامج إحياء`
+    : `Hello,\n\nYour booking has been approved and your attendance confirmed for:\n${eventTitle}\n\nDate: ${formattedDate} (${eventDetails.time || ""})\nLocation: ${eventDetails.location}\n\nEvent details: ${eventUrl}\n\nWe look forward to seeing you there!\n\nIhyaa Program`;
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    process.env.NEXTAUTH_URL || "https://ihyaa.is-cool.dev";
 
   const logoSrc = getEmailLogoSrc(appUrl);
 
@@ -414,7 +444,7 @@ export async function sendWaitlistPromotionEmail(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="x-apple-disable-message-reformatting">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -439,7 +469,7 @@ export async function sendWaitlistPromotionEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -459,24 +489,24 @@ export async function sendWaitlistPromotionEmail(
       <td class="content-cell" style="padding: 12px 32px 28px; text-align: right; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
         <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">السلام عليكم ورحمة الله وبركاته،</p>
         <p style="margin: 0 0 20px; color: #cbd5e1;">
-          يسرنا إعلامك بأنه قد توفر مقعد لك في الفعالية وتمت ترقية طلبك من قائمة الانتظار إلى <strong style="color: #34d399;">الحجز المؤكد</strong>.
+          تمت الموافقة على طلب حجزك وأصبح <strong style="color: #34d399;">حجزك مؤكداً</strong>.
         </p>
 
         <!-- Event Summary Card -->
         <div class="event-card-box" style="background: rgba(16, 117, 39, 0.12); border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 16px; padding: 20px; margin: 20px 0;">
           <h3 style="margin: 0 0 12px; font-size: 17px; color: #f8fafc; font-weight: 700;">
-            ${eventTitle}
+            ${escapeHtml(eventTitle)}
           </h3>
           <p style="margin: 6px 0; font-size: 13.5px; color: #94a3b8;">
-            📅 <strong>الموعد:</strong> ${formattedDate} ${eventDetails.time ? `(${eventDetails.time})` : ""}
+            📅 <strong>الموعد:</strong> ${escapeHtml(formattedDate)} ${eventDetails.time ? `(${escapeHtml(eventDetails.time)})` : ""}
           </p>
           <p style="margin: 6px 0; font-size: 13.5px; color: #94a3b8;">
-            📍 <strong>المكان:</strong> ${eventDetails.location}
+            📍 <strong>المكان:</strong> ${escapeHtml(eventDetails.location)}
           </p>
         </div>
 
         <p style="margin: 20px 0 0; color: #cbd5e1;">
-          نتطلع لحضورك ومشاركتك القيّمة. في حال تعذر حضورك، يُرجى التواصل معنا لإتاحة الفرصة لغيرك.
+          <a href="${safeEventUrl}" style="color:#34d399;text-decoration:underline;">تفاصيل الفعالية</a><br><br>نتطلع لحضورك ومشاركتك القيّمة. في حال تعذر حضورك، يُرجى التواصل معنا لإتاحة الفرصة لغيرك.
         </p>
       </td>
     </tr>
@@ -497,7 +527,7 @@ export async function sendWaitlistPromotionEmail(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="x-apple-disable-message-reformatting">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -522,7 +552,7 @@ export async function sendWaitlistPromotionEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -542,24 +572,24 @@ export async function sendWaitlistPromotionEmail(
       <td class="content-cell" style="padding: 12px 32px 28px; text-align: left; line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">
         <p style="margin: 0 0 14px; font-weight: 600; color: #f1f5f9;">Hello,</p>
         <p style="margin: 0 0 20px; color: #cbd5e1;">
-          We are pleased to inform you that a seat has opened up and your registration has been upgraded from the waitlist to <strong style="color: #34d399;">Confirmed Booking</strong>.
+          Your booking request has been approved and your <strong style="color: #34d399;">booking is confirmed</strong>.
         </p>
 
         <!-- Event Summary Card -->
         <div class="event-card-box" style="background: rgba(16, 117, 39, 0.12); border: 1px solid rgba(16, 117, 39, 0.35); border-radius: 16px; padding: 20px; margin: 20px 0;">
           <h3 style="margin: 0 0 12px; font-size: 17px; color: #f8fafc; font-weight: 700;">
-            ${eventTitle}
+            ${escapeHtml(eventTitle)}
           </h3>
           <p style="margin: 6px 0; font-size: 13.5px; color: #94a3b8;">
-            📅 <strong>Date:</strong> ${formattedDate} ${eventDetails.time ? `(${eventDetails.time})` : ""}
+            📅 <strong>Date:</strong> ${escapeHtml(formattedDate)} ${eventDetails.time ? `(${escapeHtml(eventDetails.time)})` : ""}
           </p>
           <p style="margin: 6px 0; font-size: 13.5px; color: #94a3b8;">
-            📍 <strong>Location:</strong> ${eventDetails.location}
+            📍 <strong>Location:</strong> ${escapeHtml(eventDetails.location)}
           </p>
         </div>
 
         <p style="margin: 20px 0 0; color: #cbd5e1;">
-          We look forward to welcoming you. If you can no longer attend, please let us know so we can offer your place to someone else.
+          <a href="${safeEventUrl}" style="color:#34d399;text-decoration:underline;">View event details</a><br><br>We look forward to welcoming you. If you can no longer attend, please let us know so we can offer your place to someone else.
         </p>
       </td>
     </tr>
@@ -574,12 +604,10 @@ export async function sendWaitlistPromotionEmail(
 </html>
 `;
 
-  return sendBrevoEmail({
-    to,
-    subject,
-    htmlContent: html,
-    textContent: plainText,
-  });
+  return sendBrevoEmail(
+    { to, subject, htmlContent: html, textContent: plainText },
+    options?.sendOnce ? 1 : 2,
+  );
 }
 
 /**
@@ -601,7 +629,8 @@ export async function sendAccountVerificationEmail(
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    process.env.NEXTAUTH_URL || "https://ihyaa.is-cool.dev";
 
   const logoSrc = getEmailLogoSrc(appUrl);
 
@@ -612,7 +641,7 @@ export async function sendAccountVerificationEmail(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -639,7 +668,7 @@ export async function sendAccountVerificationEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="شعار برنامج إحياء" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -664,7 +693,7 @@ export async function sendAccountVerificationEmail(
 
         <div class="otp-box" style="text-align: center; margin: 24px 0; padding: 22px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
           <span class="otp-text" style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4ade80; text-shadow: 0 2px 10px rgba(74, 222, 128, 0.35); text-indent: 8px; display: inline-block;">
-            ${otp}
+            ${escapeHtml(otp)}
           </span>
         </div>
 
@@ -692,7 +721,7 @@ export async function sendAccountVerificationEmail(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -719,7 +748,7 @@ export async function sendAccountVerificationEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -744,7 +773,7 @@ export async function sendAccountVerificationEmail(
 
         <div class="otp-box" style="text-align: center; margin: 24px 0; padding: 22px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
           <span class="otp-text" style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4ade80; text-shadow: 0 2px 10px rgba(74, 222, 128, 0.35); text-indent: 8px; display: inline-block;">
-            ${otp}
+            ${escapeHtml(otp)}
           </span>
         </div>
 
@@ -794,7 +823,8 @@ export async function sendTempPasswordEmail(
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    process.env.NEXTAUTH_URL || "https://ihyaa.is-cool.dev";
 
   const logoSrc = getEmailLogoSrc(appUrl);
 
@@ -805,7 +835,7 @@ export async function sendTempPasswordEmail(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -824,7 +854,7 @@ export async function sendTempPasswordEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -848,7 +878,7 @@ export async function sendTempPasswordEmail(
 
         <div class="pwd-box" style="text-align: center; margin: 24px 0; padding: 18px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
           <span class="pwd-text" style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #4ade80; display: inline-block;">
-            ${tempPassword}
+            ${escapeHtml(tempPassword)}
           </span>
         </div>
 
@@ -879,7 +909,7 @@ export async function sendTempPasswordEmail(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     @media only screen and (max-width: 480px) {
       .email-container { width: 100% !important; max-width: 100% !important; border-radius: 16px !important; }
@@ -898,7 +928,7 @@ export async function sendTempPasswordEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 16px;">
           <tr>
             <td style="width: 72px; height: 72px; text-align: center; vertical-align: middle;">
-              <img src="${logoSrc}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+              <img src="${escapeHtml(logoSrc)}" alt="Ihyaa Program Logo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
             </td>
           </tr>
         </table>
@@ -922,7 +952,7 @@ export async function sendTempPasswordEmail(
 
         <div class="pwd-box" style="text-align: center; margin: 24px 0; padding: 18px 14px; background: rgba(16, 117, 39, 0.15); border: 2px dashed #107527; border-radius: 16px;">
           <span class="pwd-text" style="font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #4ade80; display: inline-block;">
-            ${tempPassword}
+            ${escapeHtml(tempPassword)}
           </span>
         </div>
 

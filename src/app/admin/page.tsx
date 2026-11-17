@@ -20,6 +20,7 @@ import { toast } from "@/lib/toast";
 import { getDashboardStats } from "@/app/actions/dashboard";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 type StatsData = {
   carouselCount: number;
@@ -36,7 +37,6 @@ type RecentBooking = {
   fullName: string;
   email: string;
   city: string;
-  confirmed?: boolean;
   createdAt: Date;
   event: {
     titleAr: string;
@@ -63,6 +63,8 @@ export default function AdminOverviewPage() {
   };
 
   useEffect(() => {
+    // This async loader refreshes data when the selected locale changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [locale]);
 
@@ -141,7 +143,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
+      <div data-rb="MagicBento" className={`${rbStyles.magicBento} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6`}>
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (

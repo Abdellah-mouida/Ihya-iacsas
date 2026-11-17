@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { randomBytes } from "node:crypto";
 import { execSync } from "child_process";
+import type { Role } from "@prisma/client";
 import {
   can,
   hasAnyPermission,
@@ -11,6 +13,9 @@ import {
 } from "../src/lib/permissions";
 import { touchUserActive } from "../src/lib/activity";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
+
+assertDevBranchDatabase("Roles foundation test");
 
 test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", () => {
   test("1. Permissions matrix accurately enforces USER permissions", () => {
@@ -82,7 +87,7 @@ test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", ()
   test("4. Unauthenticated / null / undefined roles return false for all actions", () => {
     expect(can(null, "events:view")).toBe(false);
     expect(can(undefined, "events:view")).toBe(false);
-    expect(can("UNKNOWN_ROLE" as any, "events:view")).toBe(false);
+    expect(can("UNKNOWN_ROLE" as Role, "events:view")).toBe(false);
     expect(hasAnyPermission(null, ["events:view", "users:view"])).toBe(false);
     expect(getPermissionsForRole(null)).toEqual([]);
   });
@@ -99,8 +104,9 @@ test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", ()
 
   test("6. Every newly registered user receives USER role, and users cannot modify their own role", async () => {
     test.setTimeout(90000);
-    const firstEmail = `user1.${Date.now()}@example.test`;
-    const secondEmail = `user2.${Date.now()}@example.test`;
+    const suffix = randomBytes(12).toString("hex");
+    const firstEmail = `user1.${suffix}@example.test`;
+    const secondEmail = `user2.${suffix}@example.test`;
 
     // Create first user in isolation
     const firstUser = await prisma.user.create({
@@ -146,7 +152,7 @@ test.describe("Task 6: Roles Foundation, Permissions Matrix & Audit Logging", ()
   });
 
   test("7. touchUserActive() updates lastActiveAt and respects 5-minute throttling", async () => {
-    const testEmail = `activity.test.${Date.now()}@ihyaa.org`;
+    const testEmail = `activity.test.${randomBytes(12).toString("hex")}@example.test`;
     const testUser = await prisma.user.create({
       data: {
         email: testEmail,

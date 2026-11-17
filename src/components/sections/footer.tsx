@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { OrnamentDivider } from "@/components/common/ornament-divider";
+import { SocialIcon } from "@/components/common/social-icons";
 import { useLocale } from "@/i18n/locale-provider";
-import { BRANCHES, EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
+import { SOCIAL_LINKS } from "@/config/social";
+import { EVENT, FOOTER_LINKS, IMAGES } from "@/lib/content";
 
 export function Footer() {
   const { t } = useLocale();
@@ -53,23 +55,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Branches */}
-          <div className="flex flex-col gap-3">
-            <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
-              {t("footer.branchesTitle")}
-            </h3>
-            <ul className="flex flex-col gap-2">
-              {BRANCHES.map((branch) => (
-                <li
-                  key={branch.id}
-                  className="text-sm text-muted-foreground"
-                >
-                  {t(branch.nameKey)}
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {/* Contact */}
           <div className="flex flex-col gap-3">
             <h3 className="font-heading text-sm font-semibold uppercase tracking-wide text-primary dark:text-brass">
@@ -91,6 +76,25 @@ export function Footer() {
             >
               {t("nav.book")}
             </Link>
+            <div className="mt-2 flex flex-col gap-3">
+              <span className="text-xs font-medium text-muted-foreground">{t("contact.socialTitle")}</span>
+              <div className="flex items-center gap-2">
+                {SOCIAL_LINKS.map((social) => {
+                  return (
+                    <a
+                      key={social.platform}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t(social.ariaLabelKey)}
+                      className="glass inline-flex size-11 min-h-11 min-w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <SocialIcon platform={social.platform} className="size-5" />
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 

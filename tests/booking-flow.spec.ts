@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
 import crypto from "crypto";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import { generateUniqueEventSlug } from "../src/lib/slug";
+
+assertDevBranchDatabase("Booking flow test");
 
 const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
 
@@ -15,18 +19,19 @@ function computeHash(otp: string, email: string): string {
 test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
   test.setTimeout(45_000);
 
-  const testEmail = "playwright.test@gmail.com";
-  const testEmailA = "playwright.flowa@gmail.com";
-  const testEmailB = "playwright.flowb@gmail.com";
-  const testEmailUnique = "playwright.unique@gmail.com";
+  const testEmail = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const testEmailA = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const testEmailB = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const testEmailUnique = `booking.${randomBytes(12).toString("hex")}@gmail.com`;
+  const invalidEmail = `invalid.${randomBytes(12).toString("hex")}@bad-domain.invalid`;
 
   test.beforeEach(async () => {
     // Clean up test bookings, OTPs and rate limits
     await prisma.booking.deleteMany({
-      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, invalidEmail] } },
     });
     await prisma.otpVerification.deleteMany({
-      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, "unapproved@bad-domain.xyz"] } },
+      where: { email: { in: [testEmail, testEmailA, testEmailB, testEmailUnique, invalidEmail] } },
     });
     await prisma.rateLimit.deleteMany({
       where: {
@@ -56,7 +61,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.goto("/events/majlis-ihyaa/book");
 
     await page.fill("#b-name", "Test Attendee");
-    await page.fill("#b-email", "unapproved@bad-domain.xyz");
+    await page.fill("#b-email", invalidEmail);
 
     // Select Moroccan city via Combobox
     await page.click('[data-testid="city-combobox-trigger"]');
@@ -263,7 +268,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     // On event page, verify booked state replaces normal CTA
     const bookedBadge = page.getByTestId("booked-state-badge").first();
     await expect(bookedBadge).toBeVisible({ timeout: 15000 });
-    await expect(bookedBadge).toContainText(/أنت مسجل|You're booked|حجزك مؤكد|Booking Confirmed/i);
+    await expect(bookedBadge).toContainText(/تم تأكيد الحجز|Booking confirmed/i);
   });
 
   test("7. Light mode & Dark mode verification", async ({ page }) => {
@@ -528,7 +533,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(allBookings.some((b) => b.eventId === "test-event-second")).toBe(true);
   });
 
-  test("10. Event listing displays all open events; booking Event 1 marks ONLY Event 1 as booked, Event 2 remains bookable", async ({
+  test("10. Event listing ignores unscoped local booking markers", async ({
     page,
     context,
   }) => {
@@ -611,9 +616,9 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
     await page.reload();
 
-    // 5. Assert: Event 1 is marked as booked, Event 2 is STILL active and bookable!
-    await expect(event1Card.locator('[data-testid="booked-state-badge"]')).toBeVisible({ timeout: 10000 });
-    await expect(event1BookBtn).not.toBeVisible();
+    // Legacy browser markers cannot claim a booking without an authenticated DB row.
+    await expect(event1Card.locator('[data-testid="booked-state-badge"]')).toHaveCount(0);
+    await expect(event1BookBtn).toBeVisible();
 
     await expect(event2Card.locator('[data-testid="booked-state-badge"]')).not.toBeVisible();
     await expect(event2BookBtn).toBeVisible();
@@ -624,7 +629,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(page.url()).toContain("test-event-second");
   });
 
-  test("11. Already-booked visitors: navbar hides Book now when all events booked; booking page blocks form and redirects to event", async ({
+  test("11. Legacy browser markers cannot hide booking actions or imply a user booking", async ({
     page,
     context,
   }) => {
@@ -673,15 +678,15 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
     await page.reload();
 
-    // 4. Since the visitor already booked all open events, navbar "Book now" is HIDDEN
-    await expect(navbarBookBtn).not.toBeVisible({ timeout: 10000 });
+    // Legacy browser markers do not affect DB-derived booking availability.
+    await expect(navbarBookBtn).toBeVisible({ timeout: 10000 });
 
     // 5. Try navigating directly to the booking page for this event
     await page.goto("/events/majlis-ihyaa/book?eventId=majlis-ihyaa-2026");
 
-    // 6. Assert redirection to event page happens and form fields are never shown
-    await page.waitForURL(/.*\/events.*/, { timeout: 15000 });
-    expect(page.url()).toContain("/events");
+    // The unauthenticated visitor is sent to login; browser cookies cannot claim a booking.
+    await page.waitForURL(/.*\/login.*/, { timeout: 15000 });
+    expect(page.url()).toContain("/login");
     await expect(page.locator("#b-name")).not.toBeVisible();
 
     // Restore bookingOpen on the other event for upcoming tests
@@ -730,7 +735,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    const uniqueEmail = `otp.caret.${Date.now()}@gmail.com`;
+    const uniqueEmail = `otp.caret.${randomBytes(12).toString("hex")}@gmail.com`;
 
     // Fill Step 1 to reach Step 2
     await page.fill("#b-name", "Caret Tester");
@@ -810,7 +815,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     }
   });
 
-  test("15. Event card booked status as small top badge and single-line inquiries without wrapping (Task 9)", async ({
+  test("15. Legacy local booking markers do not change event card state", async ({
     page,
     context,
   }) => {
@@ -844,24 +849,8 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     });
     await page.reload();
 
-    // 3. When booked:
-    // a. Book button is hidden
-    await expect(eventCard.locator('[data-testid="book-btn-majlis-ihyaa-2026"]')).not.toBeVisible();
-
-    // b. Small top badge is visible
-    const badge = eventCard.locator('[data-testid="booked-state-badge"]');
-    await expect(badge).toBeVisible();
-    await expect(badge).toContainText(/أنت مسجل|You're booked/i);
-
-    // c. Badge is positioned at the top of the details card, above the event title
-    const title = eventCard.locator("h3");
-    const badgeBox = await badge.boundingBox();
-    const titleBox = await title.boundingBox();
-    expect(badgeBox).not.toBeNull();
-    expect(titleBox).not.toBeNull();
-    if (badgeBox && titleBox) {
-      expect(badgeBox.y).toBeLessThan(titleBox.y);
-    }
+    await expect(eventCard.locator('[data-testid="book-btn-majlis-ihyaa-2026"]')).toBeVisible();
+    await expect(eventCard.locator('[data-testid="booked-state-badge"]')).toHaveCount(0);
   });
 
   test("16. Small screen (<360px) responsive OTP layout and email template branding (Task 10)", async ({
@@ -877,7 +866,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    const uniqueEmail = `smallscreen.${Date.now()}@gmail.com`;
+    const uniqueEmail = `smallscreen.${randomBytes(12).toString("hex")}@gmail.com`;
 
     // Fill Step 1 to reach Step 2
     await page.fill("#b-name", "Small Screen Tester");
@@ -995,7 +984,7 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     await expect(summaryCard).not.toContainText("الدار البيضاء");
 
     // 4. Fill Step 1 details and advance to Step 2 (OTP)
-    const testEmail = `event.isolation.${Date.now()}@gmail.com`;
+    const testEmail = `event.isolation.${randomBytes(12).toString("hex")}@gmail.com`;
     await page.fill("#b-name", "Event Isolation Tester");
     await page.fill("#b-email", testEmail);
     await page.fill("#b-age", "25");
@@ -1354,19 +1343,15 @@ test.describe("Booking Flow Overhaul, Brevo API & Secure OTP", () => {
     expect(openIds).toContain(todayEventId);
     expect(pastIds).not.toContain(todayEventId);
 
-    // 5. Test Server Action booking block on ended event
-    const { requestBookingOtp } = await import("../src/app/actions/bookings");
-    const bookRes = await requestBookingOtp({
-      fullName: "Test Attendee",
-      email: "test.auto.past@gmail.com",
-      city: "الرباط",
-      age: 25,
-      motive: "الحضور",
+    // 5. Test ended event guard directly & ensure createAuthenticatedBooking rejects unauthenticated calls
+    const { isEventEnded } = await import("../src/lib/event-time");
+    expect(isEventEnded(yesterday, "10:00")).toBe(true);
+    const { createAuthenticatedBooking } = await import("../src/app/actions/bookings");
+    const bookRes = await createAuthenticatedBooking({
       eventId: pastEventId,
       locale: "ar",
     });
     expect(bookRes.success).toBe(false);
-    expect(bookRes.error).toContain("انتهت هذه الفعالية");
 
     // 6. Test on UI: Navigate to /events
     await page.goto("/events");

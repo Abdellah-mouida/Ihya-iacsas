@@ -132,7 +132,6 @@
   --sand: oklch(0.95 0.02 85);
   --main: oklch(0.44 0.13 146); /* Light default brand green */
   --texture-color: var(--main); /* Light: green texture */
-  --texture-opacity: 0.18;
 
   --gradient-brass: linear-gradient(
     135deg,
@@ -213,7 +212,6 @@
   --night-deep: oklch(0.08 0.005 260);
   --sand: oklch(0.3 0.02 260);
   --main: oklch(0.86 0.14 85); /* Black default: warm gold */
-  --texture-opacity: 0.11;
 
   --sidebar: oklch(0.12 0.005 260);
   --sidebar-foreground: oklch(0.95 0.01 85);
@@ -224,7 +222,6 @@
   --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: oklch(0.82 0.14 84);
   --main: oklch(0.86 0.14 85); /* Black: warm gold */
-  --texture-opacity: 0.12;
 }
 
 /* 4 Official Themes:
@@ -270,7 +267,6 @@ html[data-theme="oasis"],
   --night-deep: oklch(0.15 0.025 265);
   --sand: oklch(0.95 0.02 85);
   --main: oklch(0.44 0.13 146); /* Light: brand green */
-  --texture-opacity: 0.18;
 }
 
 /* 2. Sunset */
@@ -318,7 +314,6 @@ html[data-theme="ochre"],
   --sidebar-ring: oklch(0.65 0.14 50);
   --main: oklch(0.55 0.15 48); /* Sunset: warm terracotta/orange */
   --texture-color: var(--main); /* Sunset: orange/terracotta texture */
-  --texture-opacity: 0.18;
 }
 
 /* 3. Amoled (Pure #000, Green main titles, Gold secondary) */
@@ -377,7 +372,6 @@ html[data-theme="obsidian"],
   --sidebar-ring: oklch(0.72 0.17 148);
   --main: oklch(0.76 0.18 147); /* Amoled: vibrant green */
   --texture-color: var(--main); /* Amoled: vibrant green texture */
-  --texture-opacity: 0.16;
 }
 
 /* 4. Black (#111 background, Gold main titles, Green secondary) */
@@ -435,7 +429,6 @@ html[data-theme="ember"],
   --sidebar-ring: oklch(0.84 0.14 84);
   --main: oklch(0.86 0.14 85); /* Black: gold */
   --texture-color: var(--main); /* Black: gold texture */
-  --texture-opacity: 0.14;
 }
 
 @keyframes float {
@@ -480,17 +473,8 @@ html[data-theme="ember"],
 }
 
 @keyframes pulse-ring {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.7;
-  }
-  70% {
-    transform: scale(1.35);
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
+  0%, 100% { transform: scale(0.82); }
+  70% { transform: scale(1.45); }
 }
 
 @layer base {
@@ -646,6 +630,56 @@ html[data-theme="ember"],
     border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
   }
 
+  html[data-perf="low"] .glass {
+    background: color-mix(in oklch, var(--card) 94%, var(--background));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  html[data-perf="low"] .glass-strong {
+    background: color-mix(in oklch, var(--card) 97%, var(--background));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  html[data-perf="low"] [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  html[data-perf="low"] .blur-3xl {
+    display: none;
+  }
+
+  html[data-perf="low"] .animate-pulse-ring,
+  html[data-perf="low"] .animate-ping,
+  html[data-perf="low"] .animate-pulse,
+  html[data-perf="low"] .animate-float,
+  html[data-perf="low"] .animate-float-slow,
+  html[data-perf="low"] .animate-float-fast,
+  html[data-perf="low"] .animate-aurora,
+  html[data-perf="low"] .animate-spin-slow {
+    animation: none !important;
+  }
+
+  html[data-perf="low"] [data-testid="branch-marker-pulse"],
+  html[data-perf="low"] .mm-glow-layer {
+    display: none;
+  }
+
+  html[data-perf="low"] #branches svg {
+    shape-rendering: optimizeSpeed;
+  }
+
+  html[data-perf="low"] [data-testid="branch-inline-item"] button {
+    transition: none;
+    box-shadow: none;
+  }
+
+  html[data-perf="low"] .shadow-layered {
+    box-shadow: 0 2px 10px color-mix(in oklch, var(--night) 14%, transparent);
+  }
+
   /* Gradient text + ornament */
   .text-gradient-brass {
     background: var(--gradient-brass);
@@ -732,44 +766,6 @@ html[data-theme="ember"],
   /* Mihrab / arch-topped media */
   .arch-top {
     border-radius: 46% 46% var(--radius-lg) var(--radius-lg) / 26% 26% 0 0;
-  }
-
-  /* Subtle Islamic geometric field (masked, tinted, theme-aware).
-     The tint is painted as a vertical gradient that starts fully transparent
-     at the section's top edge, ramps to full by ~10% of the height, holds,
-     then mirrors the fade-out over the final ~10%. Because this lives in the
-     texture layer itself (not tied to scroll/time), every textured section
-     melts smoothly into the untextured ones above and below it. */
-  .pattern-islamic {
-    position: relative;
-    isolation: isolate;
-  }
-  .pattern-islamic::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      var(--brass) 10%,
-      var(--brass) 90%,
-      transparent 100%
-    );
-    opacity: 0.13;
-    -webkit-mask: url(/patterns/girih.svg) 0 0 / 52px 52px repeat;
-    mask: url(/patterns/girih.svg) 0 0 / 52px 52px repeat;
-  }
-  .dark .pattern-islamic::before {
-    background-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      var(--gold) 10%,
-      var(--gold) 90%,
-      transparent 100%
-    );
-    opacity: 0.1;
   }
 
   /* Star Rosette Secondary Pattern */

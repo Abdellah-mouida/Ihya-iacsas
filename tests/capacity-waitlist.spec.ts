@@ -1,23 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
-import crypto from "crypto";
 import { prisma } from "../src/lib/prisma";
 import { loginAdmin, assertDevBranchDatabase } from "./helpers/admin-auth";
-
-const OTP_SECRET = process.env.OTP_SECRET || "ihyaa-secure-production-salt-2026";
-
-function computeHash(otp: string, email: string): string {
-  return crypto
-    .createHmac("sha256", OTP_SECRET)
-    .update(`${email.trim().toLowerCase()}:${otp.trim()}`)
-    .digest("hex");
-}
+import { createSyntheticUser, removeSyntheticUser } from "./helpers/synthetic-user";
 
 test.describe.serial("Event Capacity System & Waitlist Flow", () => {
   test.setTimeout(120_000);
 
-  const user1Email = "user1.capacity.test@gmail.com";
-  const user2Email = "user2.capacity.test@gmail.com";
-  const user3Email = "user3.capacity.test@gmail.com";
+  let testUsers: Array<{ id: string; email: string; password: string }> = [];
 
   let eventId: string;
   let booking1Id: string;
@@ -26,37 +15,34 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
 
   async function cleanupTestData() {
     assertDevBranchDatabase("Capacity Test Cleanup");
-    await prisma.booking.deleteMany({
-      where: {
-        email: { in: [user1Email, user2Email, user3Email] },
-      },
-    });
-    await prisma.otpVerification.deleteMany({
-      where: {
-        email: { in: [user1Email, user2Email, user3Email] },
-      },
-    });
-    await prisma.rateLimit.deleteMany({
-      where: {
-        key: {
-          in: [
-            `otp_gen_cooldown:${user1Email}`,
-            `otp_gen_window:${user1Email}`,
-            `otp_ver_rate:${user1Email}`,
-            `otp_gen_cooldown:${user2Email}`,
-            `otp_gen_window:${user2Email}`,
-            `otp_ver_rate:${user2Email}`,
-            `otp_gen_cooldown:${user3Email}`,
-            `otp_gen_window:${user3Email}`,
-            `otp_ver_rate:${user3Email}`,
-          ],
-        },
-      },
-    });
+    if (testUsers.length) {
+      const bookings = await prisma.booking.findMany({
+        where: { userId: { in: testUsers.map((user) => user.id) } },
+        select: { id: true },
+      });
+      await prisma.auditLog.deleteMany({ where: { targetId: { in: bookings.map((booking) => booking.id) } } });
+      await prisma.booking.deleteMany({ where: { userId: { in: testUsers.map((user) => user.id) } } });
+      await prisma.session.deleteMany({ where: { userId: { in: testUsers.map((user) => user.id) } } });
+    }
   }
 
   test.beforeAll(async () => {
     await cleanupTestData();
+    testUsers = await Promise.all([
+      createSyntheticUser("Capacity waitlist user 1"),
+      createSyntheticUser("Capacity waitlist user 2"),
+      createSyntheticUser("Capacity waitlist user 3"),
+    ]);
+    await prisma.user.updateMany({
+      where: { id: { in: testUsers.map((user) => user.id) } },
+      data: {
+        city: "Rabat",
+        age: 26,
+        onboardingCompletedAt: new Date(),
+        termsAcceptedAt: new Date(),
+        termsVersion: "2026-10-11",
+      },
+    });
 
     // Clean up prior event if exists
     const priorEvent = await prisma.event.findFirst({
@@ -97,95 +83,53 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
       await prisma.booking.deleteMany({ where: { eventId } });
       await prisma.event.deleteMany({ where: { id: eventId } });
     }
+    for (const user of testUsers) await removeSyntheticUser(user.id);
+    testUsers = [];
   });
 
   async function completeBookingForm(
     page: Page,
     targetEventId: string,
-    fullName: string,
     email: string,
-    cityOptionTestId: string
+    expectWaitlist: boolean = false,
   ) {
-    await page.context().clearCookies();
-    await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.goto(`/events/${targetEventId}/book`);
-
-    await page.fill("#b-name", fullName);
-    await page.fill("#b-email", email);
-
-    await page.click('[data-testid="city-combobox-trigger"]');
-    await page.click(`[data-testid="${cityOptionTestId}"]`);
-
-    await page.fill("#b-age", "26");
+    const user = testUsers.find((candidate) => candidate.email === email);
+    if (!user) throw new Error(`No synthetic capacity account matches ${email}`);
+    await page.goto(`/login?callbackUrl=${encodeURIComponent(`/events/${targetEventId}/book`)}`);
+    await page.locator('[data-testid="login-email-input"]').fill(user.email);
+    await page.locator('[data-testid="login-password-input"]').fill(user.password);
+    await page.locator('[data-testid="login-submit-btn"]').click();
+    await expect(page).toHaveURL(new RegExp(`/events/${targetEventId}/book`), { timeout: 30_000 });
+    await expect(page.locator('[data-testid="booking-stepper"]')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('[data-testid="account-snapshot-card"]')).toBeVisible({ timeout: 30_000 });
+    if (expectWaitlist) await expect(page.locator("body")).toContainText(/قائمة الانتظار|waitlist/i);
     await page.fill("#b-motive", "المشاركة في فعاليات برنامج إحياء التدريبية والتطويرية");
-
-    await page.click('button[type="submit"]');
-
-    const otpFirstBox = page.locator('[data-testid="otp-box-0"]');
-    await expect(otpFirstBox).toBeVisible({ timeout: 50000 });
-
-    const activeOtp = await prisma.otpVerification.findFirst({
-      where: { email, usedAt: null },
-      orderBy: { createdAt: "desc" },
-    });
-    expect(activeOtp).toBeTruthy();
-
-    const testOtp = "987654";
-    const testHash = computeHash(testOtp, email);
-
-    await prisma.otpVerification.update({
-      where: { id: activeOtp!.id },
-      data: {
-        otpHash: testHash,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-    });
-
-    for (let i = 0; i < testOtp.length; i++) {
-      await page.fill(`[data-testid="otp-box-${i}"]`, testOtp[i]);
-    }
+    await page.locator('[data-testid="submit-booking-btn"]').click();
     await expect(page.locator('[data-testid="booking-confirmation-title"]')).toBeVisible({ timeout: 45000 });
   }
 
   test("1. User 1 books limited event -> receives PENDING status", async ({ page }) => {
-    await completeBookingForm(
-      page,
-      eventId,
-      "المستخدم الأول",
-      user1Email,
-      "city-option-rabat"
-    );
+    await completeBookingForm(page, eventId, testUsers[0].email);
 
     // Verify confirmation step displays pending review notice
     await expect(page.locator("body")).toContainText(/طلبك قيد المراجعة|مراجعة/i, {
       timeout: 30000,
     });
 
-    const b1 = await prisma.booking.findFirst({
-      where: { email: user1Email, eventId },
-    });
+    const b1 = await prisma.booking.findFirst({ where: { userId: testUsers[0].id, eventId } });
     expect(b1).toBeTruthy();
     expect(b1?.status).toBe("PENDING");
     booking1Id = b1!.id;
   });
 
   test("2. User 2 books limited event -> receives PENDING status", async ({ page }) => {
-    await completeBookingForm(
-      page,
-      eventId,
-      "المستخدم الثاني",
-      user2Email,
-      "city-option-casablanca"
-    );
+    await completeBookingForm(page, eventId, testUsers[1].email);
 
     await expect(page.locator("body")).toContainText(/طلبك قيد المراجعة|مراجعة/i, {
       timeout: 30000,
     });
 
-    const b2 = await prisma.booking.findFirst({
-      where: { email: user2Email, eventId },
-    });
+    const b2 = await prisma.booking.findFirst({ where: { userId: testUsers[1].id, eventId } });
     expect(b2).toBeTruthy();
     expect(b2?.status).toBe("PENDING");
     booking2Id = b2!.id;
@@ -200,6 +144,10 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     const approveBtn = page.locator(`[data-testid="approve-btn-${booking1Id}"]`);
     await expect(approveBtn).toBeVisible({ timeout: 15000 });
     await approveBtn.click();
+    await expect.poll(async () => {
+      return (await prisma.booking.findUnique({ where: { id: booking1Id }, select: { status: true } }))?.status;
+    }, { timeout: 30_000 }).toBe("CONFIRMED");
+    await page.reload();
 
     // Verify status badge on bookings page updates to confirmed
     const statusBadge = page.locator(`[data-testid="booking-status-${booking1Id}"]`);
@@ -224,6 +172,10 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
     const approveBtn = page.locator(`[data-testid="approve-btn-${booking2Id}"]`);
     await expect(approveBtn).toBeVisible({ timeout: 15000 });
     await approveBtn.click();
+    await expect.poll(async () => {
+      return (await prisma.booking.findUnique({ where: { id: booking2Id }, select: { status: true } }))?.status;
+    }, { timeout: 30_000 }).toBe("CONFIRMED");
+    await page.reload();
 
     const statusBadge = page.locator(`[data-testid="booking-status-${booking2Id}"]`);
     await expect(statusBadge).toContainText(/مؤكد|Confirmed/i, { timeout: 10000 });
@@ -238,24 +190,14 @@ test.describe.serial("Event Capacity System & Waitlist Flow", () => {
   });
 
   test("5. User 3 books full event -> joins WAITLIST with position #1", async ({ page }) => {
-    // Check booking page reflects capacity full status
-    await page.goto(`/events/${eventId}/book`);
-    await expect(page.locator("body")).toContainText(/قائمة الانتظار|waitlist/i);
-
-    await completeBookingForm(
-      page,
-      eventId,
-      "المستخدم الثالث",
-      user3Email,
-      "city-option-tangier"
-    );
+    await completeBookingForm(page, eventId, testUsers[2].email, true);
 
     // Verify confirmation step displays waitlist confirmation
     await expect(page.locator("body")).toContainText(/قائمة الانتظار/i, { timeout: 30000 });
     await expect(page.locator("body")).toContainText("#1");
 
     const b3 = await prisma.booking.findFirst({
-      where: { email: user3Email, eventId },
+      where: { userId: testUsers[2].id, eventId },
     });
     expect(b3).toBeTruthy();
     expect(b3?.status).toBe("WAITLISTED");

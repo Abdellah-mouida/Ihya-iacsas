@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { logActivity } from "@/lib/audit";
 
 export type Permission =
   | "events:view"
@@ -17,7 +18,9 @@ export type Permission =
   | "users:manage_roles"
   | "users:delete"
   | "audit:view"
-  | "settings:manage";
+  | "branches:manage"
+  | "settings:manage"
+  | "chat:moderate";
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   USER: ["events:view"],
@@ -31,6 +34,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "carousel:manage",
     "contacts:view",
     "contacts:manage",
+    "branches:manage",
+    "chat:moderate",
   ],
   ADMIN: [
     "events:view",
@@ -48,7 +53,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "users:manage_roles",
     "users:delete",
     "audit:view",
+    "branches:manage",
     "settings:manage",
+    "chat:moderate",
   ],
 } as const;
 
@@ -111,6 +118,12 @@ export async function requirePermission(
   const { auth } = await import("@/auth");
   const session = await auth();
   if (!session?.user?.id) {
+    await logActivity({
+      action: "ACCESS_DENIED",
+      targetType: "Permission",
+      targetName: permission,
+      details: { permission, reason: "UNAUTHENTICATED" },
+    });
     if (options.redirectOnFail) {
       redirect("/login");
     }
@@ -119,6 +132,15 @@ export async function requirePermission(
 
   const role = session.user.role as Role;
   if (!can(role, permission)) {
+    await logActivity({
+      actorId: session.user.id,
+      actorName: session.user.name,
+      actorEmail: session.user.email,
+      action: "ACCESS_DENIED",
+      targetType: "Permission",
+      targetName: permission,
+      details: { permission, role },
+    });
     if (options.redirectOnFail) {
       redirect("/403");
     }

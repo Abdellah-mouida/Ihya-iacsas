@@ -5,29 +5,22 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import { SectionHeading } from "@/components/common/section-heading";
+import { InViewMount } from "@/components/common/in-view-mount";
+import { SpotlightCard } from "@/components/common/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-provider";
-import { GALLERY } from "@/lib/content";
 
 function GallerySkeleton() {
   return (
-    <div className="columns-2 gap-4 md:columns-3 [&>*]:mb-4">
-      {GALLERY.map((item) => (
-        <div
-          key={item.src}
-          style={{ aspectRatio: `${item.w} / ${item.h}` }}
-          className="animate-pulse break-inside-avoid rounded-2xl bg-muted/60"
-        />
-      ))}
-    </div>
+    <div className="aspect-square max-h-[80svh] w-full animate-pulse rounded-2xl bg-muted/60 sm:aspect-video" />
   );
 }
 
-// Below the fold + heavy (7 images, dialog, motion): load as its own chunk.
-const GalleryLightbox = dynamic(
+// Below the fold + heavy (ogl + gsap slider): load as its own chunk.
+const HomeGallerySlider = dynamic(
   () =>
-    import("@/components/common/gallery-lightbox").then(
-      (m) => m.GalleryLightbox,
+    import("@/components/sections/home-gallery-slider").then(
+      (m) => m.HomeGallerySlider,
     ),
   { ssr: false, loading: () => <GallerySkeleton /> },
 );
@@ -43,15 +36,17 @@ export function Gallery() {
           title={t("gallery.title")}
           desc={t("gallery.desc")}
         />
-        <div className="mt-14">
-          <GalleryLightbox limit={8} />
-        </div>
+        <SpotlightCard className="glass relative mt-14 overflow-hidden rounded-3xl border border-brass/25 p-2 shadow-layered sm:p-4">
+          <InViewMount once minHeight={260} placeholder={<GallerySkeleton />}>
+            <HomeGallerySlider limit={10} />
+          </InViewMount>
+        </SpotlightCard>
 
         <div className="mt-12 flex justify-center">
           <Button
             asChild
             variant="outline"
-            className="glass group h-12 rounded-full border-foreground/20 px-8 text-base font-semibold text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-brass/40 hover:bg-foreground/5 hover:shadow-layered dark:border-border/60 dark:hover:bg-accent/40"
+            className="glass group h-12 rounded-full border-foreground/20 px-8 text-base font-semibold text-foreground shadow-sm transition-[transform,border-color,background-color,box-shadow] hover:-translate-y-0.5 hover:border-brass/40 hover:bg-foreground/5 hover:shadow-layered dark:border-border/60 dark:hover:bg-accent/40"
           >
             <Link href="/gallery" className="inline-flex items-center gap-2.5">
               <Images className="size-4 text-brass" />

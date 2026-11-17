@@ -3,7 +3,7 @@
 import { Check, ChevronsUpDown, MapPin, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { MOROCCAN_CITIES, type MoroccanCity } from "@/lib/moroccan-cities";
+import { findMoroccanCity, MOROCCAN_CITIES, normalizeMoroccanCityValue } from "@/data/morocco";
 import { cn } from "@/lib/utils";
 
 type CityComboboxProps = {
@@ -14,6 +14,8 @@ type CityComboboxProps = {
   searchPlaceholder?: string;
   noResultsText?: string;
   hasError?: boolean;
+  className?: string;
+  testId?: string;
 };
 
 export function CityCombobox({
@@ -24,6 +26,8 @@ export function CityCombobox({
   searchPlaceholder,
   noResultsText,
   hasError = false,
+  className,
+  testId = "city-combobox-trigger",
 }: CityComboboxProps) {
   const isAr = locale === "ar";
   const [open, setOpen] = useState(false);
@@ -52,6 +56,8 @@ export function CityCombobox({
         searchInputRef.current?.focus();
       }, 50);
     } else {
+      // Clear transient search text when the popover closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
     }
   }, [open]);
@@ -59,25 +65,18 @@ export function CityCombobox({
   // Find currently selected city
   const selectedCity = useMemo(() => {
     if (!value) return null;
-    const norm = value.trim().toLowerCase();
-    return (
-      MOROCCAN_CITIES.find(
-        (c) =>
-          c.id === norm ||
-          c.nameAr.toLowerCase() === norm ||
-          c.nameEn.toLowerCase() === norm,
-      ) || null
-    );
+    return findMoroccanCity(value) || null;
   }, [value]);
 
   const filteredCities = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = normalizeMoroccanCityValue(query);
     if (!q) return MOROCCAN_CITIES;
     return MOROCCAN_CITIES.filter(
       (c) =>
-        c.nameAr.toLowerCase().includes(q) ||
-        c.nameEn.toLowerCase().includes(q) ||
-        c.id.toLowerCase().includes(q),
+        normalizeMoroccanCityValue(c.nameAr).includes(q) ||
+        normalizeMoroccanCityValue(c.nameEn).includes(q) ||
+        normalizeMoroccanCityValue(c.nameFr).includes(q) ||
+        normalizeMoroccanCityValue(c.id).includes(q),
     );
   }, [query]);
 
@@ -97,14 +96,15 @@ export function CityCombobox({
       <button
         type="button"
         id="b-city"
-        data-testid="city-combobox-trigger"
+        data-testid={testId}
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-11 w-full items-center justify-between rounded-xl border bg-background/50 px-3.5 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-brass/60",
+          "flex h-11 w-full items-center justify-between rounded-xl border bg-background/50 px-3.5 py-2 text-base md:text-sm transition-all focus:outline-none focus:ring-2 focus:ring-brass/60",
           hasError ? "border-destructive ring-1 ring-destructive" : "border-input hover:border-brass/50",
           selectedCity ? "text-foreground font-medium" : "text-muted-foreground",
+          className,
         )}
       >
         <div className="flex items-center gap-2 truncate">
@@ -138,7 +138,7 @@ export function CityCombobox({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={searchPlaceholder || defaultSearchPlaceholder}
-              className="w-full bg-transparent px-2.5 py-1 text-sm outline-none placeholder:text-muted-foreground/70"
+              className="w-full bg-transparent px-2.5 py-1.5 text-base md:text-sm outline-none placeholder:text-base md:placeholder:text-sm placeholder:text-muted-foreground/70"
             />
           </div>
 

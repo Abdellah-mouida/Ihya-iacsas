@@ -8,8 +8,7 @@ const THEMES = ["light", "sunset", "amoled", "black"];
 // Home page section boundaries to audit
 const SECTION_PAIRS = [
   { prev: "hero", next: "#about", name: "hero-to-about" },
-  { prev: "#about", next: "#activities", name: "about-to-activities" },
-  { prev: "#activities", next: "#branches", name: "activities-to-branches" },
+  { prev: "#about", next: "#branches", name: "about-to-branches" },
   { prev: "#branches", next: "#cards", name: "branches-to-cards" },
   { prev: "#cards", next: "#gallery", name: "cards-to-gallery" },
   { prev: "#gallery", next: "#program", name: "gallery-to-program" },
@@ -112,8 +111,7 @@ test.describe("Task 2: Section Boundary Seams & Line Removal Audit", () => {
           }
 
           // Continuous background sections: seam step <= 3.0 / 255 (no divider line or shadow shelf).
-          // Hero has full photographic imagery fading into the page background; no sharp border line (maxDelta < 60.0).
-          const threshold = pair.name === "hero-to-about" ? 60.0 : 3.0;
+          const threshold = 3.0;
 
           expect(
             maxDelta,

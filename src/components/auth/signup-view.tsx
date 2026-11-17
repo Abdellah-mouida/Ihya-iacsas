@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -17,9 +17,121 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
-import { validatePasswordStrength } from "@/lib/password";
+import { validatePasswordStrength } from "@/lib/password-strength";
 import { signUpWithCredentials } from "@/app/actions/auth";
-import { AuthAmbientBackdrop } from "./auth-ambient-backdrop";
+import styles from "./auth-visuals.module.css";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
+
+
+type SignupTranslate = ReturnType<typeof useLocale>["t"];
+
+function SignupPasswordFields({
+  t,
+  isAr,
+  disabled,
+}: {
+  t: SignupTranslate;
+  isAr: boolean;
+  disabled: boolean;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordRules = validatePasswordStrength(password);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+
+  return (
+    <>
+      {/* Password */}
+      <div>
+        <label htmlFor="signup-password" className="block text-xs font-semibold text-foreground mb-1.5">
+          {t("auth.password")} <span className="text-destructive">*</span>
+        </label>
+        <div className="relative" dir="ltr">
+          <input
+            id="signup-password"
+            name="password"
+            data-testid="signup-password"
+            type={showPassword ? "text" : "password"}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={t("auth.passwordPlaceholder")}
+            className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+            disabled={disabled}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 end-0 pe-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
+        {password.length > 0 && (
+          <div className="mt-2.5 p-3 rounded-xl bg-muted/40 border border-border/40 space-y-1.5 text-xs">
+            <div className="font-semibold text-muted-foreground mb-1">{t("auth.passwordStrength")}:</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              <div className={`flex items-center gap-1.5 ${passwordRules.length ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}>
+                {passwordRules.length ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+                <span>{t("auth.ruleLength")}</span>
+              </div>
+              <div className={`flex items-center gap-1.5 ${passwordRules.uppercase && passwordRules.lowercase ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}>
+                {passwordRules.uppercase && passwordRules.lowercase ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+                <span>{isAr ? "حرف كبير وصغير" : "Upper & lower case"}</span>
+              </div>
+              <div className={`flex items-center gap-1.5 ${passwordRules.number ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}>
+                {passwordRules.number ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+                <span>{t("auth.ruleNumber")}</span>
+              </div>
+              <div className={`flex items-center gap-1.5 ${passwordRules.special ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}>
+                {passwordRules.special ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+                <span>{isAr ? "رمز خاص (!@#$)" : "Special character (!@#$)"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Confirm Password */}
+      <div>
+        <label htmlFor="signup-confirm-password" className="block text-xs font-semibold text-foreground mb-1.5">
+          {t("auth.confirmPassword")} <span className="text-destructive">*</span>
+        </label>
+        <div className="relative" dir="ltr">
+          <input
+            id="signup-confirm-password"
+            name="confirmPassword"
+            data-testid="signup-confirm-password"
+            type={showConfirmPassword ? "text" : "password"}
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder={t("auth.confirmPasswordPlaceholder")}
+            className={`w-full h-11 ps-3.5 pe-11 text-start rounded-xl border bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:border-primary transition-all ${confirmPassword && !passwordsMatch ? "border-destructive focus:ring-destructive/30" : "border-border/70 focus:ring-primary/40"}`}
+            disabled={disabled}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute inset-y-0 end-0 pe-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+          >
+            {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
+        {confirmPassword && (
+          <div className={`mt-1.5 text-xs flex items-center gap-1.5 ${passwordsMatch ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-destructive"}`}>
+            {passwordsMatch ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+            <span>{passwordsMatch ? t("auth.ruleMatch") : t("auth.errPasswordMismatch")}</span>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
 
 export function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -45,18 +157,99 @@ export function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function SignUpView() {
-  const { t, locale, dir } = useLocale();
+  const { locale } = useLocale();
+  const isAr = locale === "ar";
+  const BackIcon = isAr ? ArrowRight : ArrowLeft;
+
+  return (
+    <div className="relative isolate min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 z-0">
+      {/* Ambient background with depth and glow */}
+
+      {/* Container with max width */}
+      <div
+        data-testid="signup-view"
+        className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 items-stretch rounded-3xl border border-brass/15 bg-card/90 shadow-2xl overflow-hidden"
+      >
+        {/* Visual / Branding Panel (Desktop Only) */}
+        <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-primary-foreground overflow-hidden bg-primary/40">
+          <SmoothImage
+            src="/images/gathering.jpg"
+            alt="Ihyaa Gathering"
+            fill
+            sizes="(max-width: 1024px) 100vw, 42vw"
+            quality={90}
+            className="object-cover mix-blend-overlay opacity-40 select-none pointer-events-none"
+          />
+          <div className="absolute inset-0 z-10 bg-gradient-to-b from-primary/55 via-primary/20 to-primary/45" />
+          <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
+
+          {/* Top Brand */}
+          <div className="relative z-20">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+            >
+              <div className="relative size-12 rounded-full overflow-hidden border-2 border-brass/40 shadow-lg">
+                <SmoothImage
+                  src="/images/logo-circle.png"
+                  alt="Ihyaa Program Logo"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div>
+                <span className="font-heading text-xl font-bold tracking-tight block">
+                  {isAr ? "برنامج إحياء" : "Ihyaa Program"}
+                </span>
+                <span className="text-xs text-primary-foreground/75 font-medium block">
+                  {isAr ? "مبادرات ولقاءات شبابية" : "Youth Programs & Gatherings"}
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Center Quote / Pitch */}
+          <div className="relative z-20 my-auto py-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-xs font-semibold text-primary-foreground mb-4">
+              <Sparkles className="size-3.5" />
+              <span>{isAr ? "انضم إلى برنامج إحياء" : "Join Ihyaa Program"}</span>
+            </div>
+            <h2 className={`${styles.sideHeading} font-heading text-2xl font-bold text-primary-foreground leading-snug mb-3`}>
+              {isAr
+                ? "مساحتك للتلاقي، البناء، والإحياء"
+                : "Your space for connection, growth, and revival"}
+            </h2>
+            <p className="text-sm text-primary-foreground/80 leading-relaxed font-sans">
+              {isAr
+                ? "سجّل الآن لتتمكن من حجز مقعدك في كافة المجالس والفعاليات بنقرة واحدة، ومتابعة حالة حجوزاتك بشكل فوري."
+                : "Sign up today to reserve your seat at all upcoming gatherings and events with one click, and track your bookings in real time."}
+            </p>
+          </div>
+
+          {/* Bottom Back Link */}
+          <div className="relative z-20 pt-4 border-t border-primary-foreground/10">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+            >
+              <BackIcon className="size-3.5" />
+              <span>{isAr ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}</span>
+            </Link>
+          </div>
+        </div>
+
+        <SignUpFormPanel />
+      </div>
+    </div>
+  );
+}
+
+function SignUpFormPanel() {
+  const { t, locale } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isAr = locale === "ar";
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isGooglePending, setIsGooglePending] = useState(false);
 
@@ -69,7 +262,6 @@ export function SignUpView() {
     } else {
       toast.error(t("auth.oauthError"));
     }
-    setIsGooglePending(false);
   }, [searchParams, t]);
 
   useEffect(() => {
@@ -84,11 +276,16 @@ export function SignUpView() {
     };
   }, []);
 
-  const passwordRules = validatePasswordStrength(password);
-  const passwordsMatch = password.length > 0 && password === confirmPassword;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const fields = new FormData(e.currentTarget);
+    const name = String(fields.get("name") ?? "");
+    const email = String(fields.get("email") ?? "");
+    const password = String(fields.get("password") ?? "");
+    const confirmPassword = String(fields.get("confirmPassword") ?? "");
+    const termsAccepted = fields.get("termsAccepted") === "on";
+    const passwordRules = validatePasswordStrength(password);
+    const passwordsMatch = password.length > 0 && password === confirmPassword;
 
     if (!name.trim()) {
       toast.error(t("auth.errNameRequired"));
@@ -116,13 +313,8 @@ export function SignUpView() {
     }
 
     startTransition(async () => {
-      const formData = new FormData();
-      formData.set("name", name);
-      formData.set("email", email);
-      formData.set("password", password);
-      formData.set("termsAccepted", termsAccepted ? "true" : "false");
-
-      const res = await signUpWithCredentials(formData, locale);
+      fields.set("termsAccepted", termsAccepted ? "true" : "false");
+      const res = await signUpWithCredentials(fields, locale);
 
       if (!res.success) {
         toast.error(res.error || t("auth.errRateLimited"));
@@ -156,90 +348,12 @@ export function SignUpView() {
   const BackIcon = isAr ? ArrowRight : ArrowLeft;
 
   return (
-    <div className="relative isolate min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 bg-background z-0">
-      {/* Ambient background with depth and glow */}
-      <AuthAmbientBackdrop />
-
-      {/* Container with max width */}
-      <div
-        data-testid="signup-view"
-        className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch rounded-3xl border border-brass/15 bg-card/75 dark:bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden"
-      >
-        {/* Visual / Branding Panel (Desktop Only) */}
-        <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-10 text-white overflow-hidden bg-primary/95">
-          <Image
-            src="/images/gathering.jpg"
-            alt="Ihyaa Gathering"
-            fill
-            sizes="(max-width: 1024px) 100vw, 42vw"
-            quality={90}
-            className="object-cover mix-blend-overlay opacity-30 select-none pointer-events-none"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/90 via-primary/70 to-emerald-950/95" />
-
-          {/* Top Brand */}
-          <div className="relative z-10">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brass"
-            >
-              <div className="relative size-12 rounded-full overflow-hidden border-2 border-brass/40 shadow-lg">
-                <Image
-                  src="/images/logo-circle.png"
-                  alt="Ihyaa Program Logo"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div>
-                <span className="font-heading text-xl font-bold tracking-tight block">
-                  {isAr ? "برنامج إحياء" : "Ihyaa Program"}
-                </span>
-                <span className="text-xs text-brass-muted font-medium block">
-                  {isAr ? "مبادرات ولقاءات شبابية" : "Youth Programs & Gatherings"}
-                </span>
-              </div>
-            </Link>
-          </div>
-
-          {/* Center Quote / Pitch */}
-          <div className="relative z-10 my-auto py-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brass/15 border border-brass/30 text-xs font-semibold text-brass mb-4">
-              <Sparkles className="size-3.5" />
-              <span>{isAr ? "انضم إلى برنامج إحياء" : "Join Ihyaa Program"}</span>
-            </div>
-            <h2 className="font-heading text-2xl font-bold leading-snug mb-3">
-              {isAr
-                ? "مساحتك للتلاقي، البناء، والإحياء"
-                : "Your space for connection, growth, and revival"}
-            </h2>
-            <p className="text-sm text-white/80 leading-relaxed font-sans">
-              {isAr
-                ? "سجّل الآن لتتمكن من حجز مقعدك في كافة المجالس والفعاليات بنقرة واحدة، ومتابعة حالة حجوزاتك بشكل فوري."
-                : "Sign up today to reserve your seat at all upcoming gatherings and events with one click, and track your bookings in real time."}
-            </p>
-          </div>
-
-          {/* Bottom Back Link */}
-          <div className="relative z-10 pt-4 border-t border-white/10">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-xs text-white/70 hover:text-white transition-colors"
-            >
-              <BackIcon className="size-3.5" />
-              <span>{isAr ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Form Panel */}
         <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between lg:hidden mb-4">
               <Link href="/" className="inline-flex items-center gap-2.5">
-                <Image
+                <SmoothImage
                   src="/images/logo-circle.png"
                   alt="Ihyaa Program Logo"
                   width={38}
@@ -259,7 +373,7 @@ export function SignUpView() {
               </Link>
             </div>
 
-            <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+            <h1 data-rb="ShinyText" className={`${rbStyles.shinyText} font-heading text-2xl sm:text-3xl font-bold tracking-tight`}>
               {t("auth.signupTitle")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1.5 font-sans">
@@ -279,13 +393,12 @@ export function SignUpView() {
               </label>
               <input
                 id="signup-name"
+                name="name"
                 data-testid="signup-name"
                 type="text"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
                 placeholder={t("auth.fullNamePlaceholder")}
-                className="w-full h-11 px-3.5 rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                className="w-full h-11 px-3.5 rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
                 disabled={isPending}
               />
             </div>
@@ -300,137 +413,18 @@ export function SignUpView() {
               </label>
               <input
                 id="signup-email"
+                name="email"
                 data-testid="signup-email"
                 type="email"
                 required
                 dir="ltr"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder={t("auth.emailPlaceholder")}
                 className="w-full h-11 px-3.5 rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-start"
                 disabled={isPending}
               />
             </div>
 
-            {/* Password */}
-            <div>
-              <label
-                htmlFor="signup-password"
-                className="block text-xs font-semibold text-foreground mb-1.5"
-              >
-                {t("auth.password")} <span className="text-destructive">*</span>
-              </label>
-              <div className="relative" dir="ltr">
-                <input
-                  id="signup-password"
-                  data-testid="signup-password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t("auth.passwordPlaceholder")}
-                  className="w-full h-11 ps-3.5 pe-11 text-start rounded-xl border border-border/70 bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-                  disabled={isPending}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 end-0 pe-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-
-              {/* Real-time Password Strength checklist */}
-              {password.length > 0 && (
-                <div className="mt-2.5 p-3 rounded-xl bg-muted/40 border border-border/40 space-y-1.5 text-xs">
-                  <div className="font-semibold text-muted-foreground mb-1">
-                    {t("auth.passwordStrength")}:
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    <div
-                      className={`flex items-center gap-1.5 ${passwordRules.length ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}
-                    >
-                      {passwordRules.length ? <Check className="size-3.5" /> : <X className="size-3.5" />}
-                      <span>{t("auth.ruleLength")}</span>
-                    </div>
-                    <div
-                      className={`flex items-center gap-1.5 ${passwordRules.uppercase && passwordRules.lowercase ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}
-                    >
-                      {passwordRules.uppercase && passwordRules.lowercase ? (
-                        <Check className="size-3.5" />
-                      ) : (
-                        <X className="size-3.5" />
-                      )}
-                      <span>{isAr ? "حرف كبير وصغير" : "Upper & lower case"}</span>
-                    </div>
-                    <div
-                      className={`flex items-center gap-1.5 ${passwordRules.number ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}
-                    >
-                      {passwordRules.number ? <Check className="size-3.5" /> : <X className="size-3.5" />}
-                      <span>{t("auth.ruleNumber")}</span>
-                    </div>
-                    <div
-                      className={`flex items-center gap-1.5 ${passwordRules.special ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}`}
-                    >
-                      {passwordRules.special ? <Check className="size-3.5" /> : <X className="size-3.5" />}
-                      <span>{isAr ? "رمز خاص (!@#$)" : "Special character (!@#$)"}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label
-                htmlFor="signup-confirm-password"
-                className="block text-xs font-semibold text-foreground mb-1.5"
-              >
-                {t("auth.confirmPassword")} <span className="text-destructive">*</span>
-              </label>
-              <div className="relative" dir="ltr">
-                <input
-                  id="signup-confirm-password"
-                  data-testid="signup-confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={t("auth.confirmPasswordPlaceholder")}
-                  className={`w-full h-11 ps-3.5 pe-11 text-start rounded-xl border bg-background/60 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:border-primary transition-all ${
-                    confirmPassword && !passwordsMatch
-                      ? "border-destructive focus:ring-destructive/30"
-                      : "border-border/70 focus:ring-primary/40"
-                  }`}
-                  disabled={isPending}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 end-0 pe-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                >
-                  {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-
-              {confirmPassword && (
-                <div
-                  className={`mt-1.5 text-xs flex items-center gap-1.5 ${
-                    passwordsMatch
-                      ? "text-emerald-600 dark:text-emerald-400 font-medium"
-                      : "text-destructive"
-                  }`}
-                >
-                  {passwordsMatch ? <Check className="size-3.5" /> : <X className="size-3.5" />}
-                  <span>
-                    {passwordsMatch ? t("auth.ruleMatch") : t("auth.errPasswordMismatch")}
-                  </span>
-                </div>
-              )}
-            </div>
+            <SignupPasswordFields t={t} isAr={isAr} disabled={isPending} />
 
             {/* Terms of Service Checkbox */}
             <div className="pt-1">
@@ -438,8 +432,7 @@ export function SignUpView() {
                 <input
                   type="checkbox"
                   data-testid="signup-terms"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  name="termsAccepted"
                   className="mt-0.5 size-4 rounded border-border/80 text-primary focus:ring-primary/30 accent-primary"
                   disabled={isPending}
                 />
@@ -526,7 +519,5 @@ export function SignUpView() {
             </Link>
           </div>
         </div>
-      </div>
-    </div>
   );
 }

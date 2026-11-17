@@ -1,51 +1,28 @@
 "use server";
 
 import { safeRevalidatePath } from "@/lib/cache";
+import { auth } from "@/auth";
 import { deleteImageFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import { isEventEnded, isEventRegistrationOpen } from "@/lib/event-time";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueEventSlug } from "@/lib/slug";
 import { requirePermission } from "@/lib/permissions";
-import { createAuditLog } from "@/lib/audit";
+import { fetchAdminEventsForActor } from "@/lib/services/events";
+import { logActivity } from "@/lib/audit";
+import { resolveImageUrl } from "@/lib/content";
+import { readImageDimensions } from "@/lib/image-dimensions";
+import { safeActionError } from "@/lib/safe-error";
+import {
+  hasValidImageMagicBytes,
+  isSafePublicImageUrl,
+} from "@/lib/upload-security";
 
 export async function getEvents() {
-  await requirePermission("events:view");
+  const actor = await requirePermission("events:update");
   try {
-    const events = await prisma.event.findMany({
-      orderBy: { date: "desc" },
-      include: {
-        bookings: {
-          select: {
-            id: true,
-            status: true,
-            confirmed: true,
-          },
-        },
-      },
-    });
-
-    const enrichedEvents = events.map((ev) => {
-      const confirmedCount = ev.bookings.filter(
-        (b) => b.status === "CONFIRMED" || (b.confirmed && b.status !== "REJECTED"),
-      ).length;
-      const pendingCount = ev.bookings.filter((b) => b.status === "PENDING").length;
-      const waitlistCount = ev.bookings.filter((b) => b.status === "WAITLISTED").length;
-      const rejectedCount = ev.bookings.filter((b) => b.status === "REJECTED").length;
-
-      return {
-        ...ev,
-        isEnded: isEventEnded(ev.date, ev.time),
-        _count: {
-          bookings: ev.bookings.length,
-        },
-        counts: {
-          total: ev.bookings.length,
-          confirmed: confirmedCount,
-          pending: pendingCount,
-          waitlisted: waitlistCount,
-          rejected: rejectedCount,
-        },
-      };
+    const enrichedEvents = await fetchAdminEventsForActor({
+      id: actor.id,
+      role: actor.role ?? "USER",
     });
 
     return { success: true, events: enrichedEvents };
@@ -53,7 +30,7 @@ export async function getEvents() {
     console.error("Error fetching events:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch events",
+      error: "Failed to fetch events",
       events: [],
     };
   }
@@ -61,6 +38,7 @@ export async function getEvents() {
 
 export async function getPublicEvents() {
   try {
+    const session = await auth();
     const events = await prisma.event.findMany({
       orderBy: { date: "desc" },
       include: {
@@ -73,6 +51,16 @@ export async function getPublicEvents() {
         },
       },
     });
+
+    const userBookings = session?.user?.id
+      ? await prisma.booking.findMany({
+          where: { userId: session.user.id },
+          select: { eventId: true, status: true },
+        })
+      : [];
+    const bookingStatusByEventId = new Map(
+      userBookings.map((booking) => [booking.eventId, booking.status]),
+    );
 
     const enriched = events.map((ev) => {
       const confirmedCount = ev.bookings.filter(
@@ -91,13 +79,16 @@ export async function getPublicEvents() {
         date: ev.date,
         time: ev.time,
         location: ev.location,
-        posterUrl: ev.posterUrl,
+        posterUrl: resolveImageUrl(ev.posterUrl) ?? ev.posterUrl,
+        posterWidth: ev.posterWidth,
+        posterHeight: ev.posterHeight,
         isNew: ev.isNew,
         bookingOpen: ev.bookingOpen,
         capacityType: ev.capacityType,
         capacity: ev.capacity,
         confirmedCount,
         isFull,
+        userBookingStatus: bookingStatusByEventId.get(ev.id) ?? null,
       };
     });
 
@@ -115,7 +106,7 @@ export async function getPublicEvents() {
     console.error("Error fetching public events:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch events",
+      error: safeActionError(error, "Failed to fetch events"),
       events: [],
       openEvents: [],
       pastEvents: [],
@@ -126,7 +117,7 @@ export async function getPublicEvents() {
 
 export async function getEventById(id: string) {
   try {
-    let event = await prisma.event.findFirst({
+    const event = await prisma.event.findFirst({
       where: {
         OR: [
           { slug: id },
@@ -143,29 +134,6 @@ export async function getEventById(id: string) {
         },
       },
     });
-
-    if (!event) {
-      event = await prisma.event.findFirst({
-        where: {
-          OR: [
-            { slug: { startsWith: id } },
-            { slug: { contains: id } },
-            { id: { startsWith: id } },
-            { id: { contains: id } },
-          ],
-        },
-        orderBy: { date: "asc" },
-        include: {
-          bookings: {
-            select: {
-              id: true,
-              status: true,
-              confirmed: true,
-            },
-          },
-        },
-      });
-    }
 
     if (!event) {
       return { success: false, error: "Event not found" };
@@ -190,7 +158,9 @@ export async function getEventById(id: string) {
         date: event.date,
         time: event.time,
         location: event.location,
-        posterUrl: event.posterUrl,
+        posterUrl: resolveImageUrl(event.posterUrl),
+        posterWidth: event.posterWidth,
+        posterHeight: event.posterHeight,
         bookingOpen: event.bookingOpen,
         capacityType: event.capacityType,
         capacity: event.capacity,
@@ -207,8 +177,7 @@ export async function getEventById(id: string) {
   } catch (error) {
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to fetch event",
+      error: safeActionError(error, "Failed to fetch event"),
     };
   }
 }
@@ -239,6 +208,10 @@ export async function createEvent(formData: FormData) {
 
     const file = formData.get("image") as File | null;
     let posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
+    if (posterUrl && !isSafePublicImageUrl(posterUrl)) {
+      return { success: false, error: "Invalid poster URL." };
+    }
+    let posterMetadata: Awaited<ReturnType<typeof readImageDimensions>> | null = null;
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
@@ -253,14 +226,15 @@ export async function createEvent(formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+        }
+        posterMetadata = await readImageDimensions(buffer);
         posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
       } catch (uploadErr) {
         if (!posterUrl) {
-          const errMsg =
-            uploadErr instanceof Error
-              ? uploadErr.message
-              : "Event poster upload failed";
-          return { success: false, error: errMsg };
+          console.error("Error uploading event poster:", uploadErr);
+          return { success: false, error: "Event poster upload failed" };
         }
       }
     }
@@ -272,6 +246,7 @@ export async function createEvent(formData: FormData) {
     if (!posterUrl) {
       posterUrl = "/images/gathering.jpg"; // Default fallback poster
     }
+    if (posterUrl === "/images/gathering.jpg") posterMetadata = null;
 
     const slugRaw = (formData.get("slug") as string)?.trim() || titleEn || titleAr;
     const slug = await generateUniqueEventSlug(slugRaw);
@@ -287,6 +262,9 @@ export async function createEvent(formData: FormData) {
         time,
         location,
         posterUrl,
+        ...(posterMetadata
+          ? { posterWidth: posterMetadata.imageWidth, posterHeight: posterMetadata.imageHeight }
+          : { posterWidth: null, posterHeight: null }),
         isNew,
         bookingOpen,
         capacityType,
@@ -294,7 +272,7 @@ export async function createEvent(formData: FormData) {
       },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.create",
       targetType: "event",
@@ -312,7 +290,7 @@ export async function createEvent(formData: FormData) {
     console.error("Error creating event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to save event to database",
+      error: safeActionError(error, "Failed to save event to database"),
     };
   }
 }
@@ -343,6 +321,9 @@ export async function updateEvent(id: string, formData: FormData) {
 
     const file = formData.get("image") as File | null;
     const posterUrl = (formData.get("posterUrl") as string | null)?.trim() || null;
+    if (posterUrl && !isSafePublicImageUrl(posterUrl)) {
+      return { success: false, error: "Invalid poster URL." };
+    }
 
     if (file && file.size > 8 * 1024 * 1024) {
       return { success: false, error: "Image file size exceeds the 8MB limit." };
@@ -385,19 +366,32 @@ export async function updateEvent(id: string, formData: FormData) {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        if (!hasValidImageMagicBytes(buffer)) {
+          return { success: false, error: "Unsupported image format. Please select JPG, PNG, or WebP." };
+        }
+        const posterMetadata = await readImageDimensions(buffer);
         dataToUpdate.posterUrl = await uploadImageToCloudinary(buffer, "ihyaa-events");
+        dataToUpdate.posterWidth = posterMetadata.imageWidth;
+        dataToUpdate.posterHeight = posterMetadata.imageHeight;
       } catch (uploadErr) {
         if (posterUrl) {
           dataToUpdate.posterUrl = posterUrl;
+          if (posterUrl !== existing.posterUrl) {
+            dataToUpdate.posterWidth = null;
+            dataToUpdate.posterHeight = null;
+          }
         } else {
+          console.error("Error uploading event poster:", uploadErr);
           return {
             success: false,
-            error: uploadErr instanceof Error ? uploadErr.message : "Upload failed",
+            error: "Upload failed",
           };
         }
       }
-    } else if (posterUrl) {
+    } else if (posterUrl && posterUrl !== existing.posterUrl) {
       dataToUpdate.posterUrl = posterUrl;
+      dataToUpdate.posterWidth = null;
+      dataToUpdate.posterHeight = null;
     }
 
     const event = await prisma.event.update({
@@ -405,7 +399,7 @@ export async function updateEvent(id: string, formData: FormData) {
       data: dataToUpdate,
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.update",
       targetType: "event",
@@ -434,7 +428,7 @@ export async function updateEvent(id: string, formData: FormData) {
     console.error("Error updating event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update event",
+      error: safeActionError(error, "Failed to update event"),
     };
   }
 }
@@ -447,7 +441,7 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
       data: { [field]: value },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.toggle",
       targetType: "event",
@@ -465,7 +459,7 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
     console.error("Error toggling event status:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to toggle event status",
+      error: safeActionError(error, "Failed to toggle event status"),
     };
   }
 }
@@ -487,7 +481,7 @@ export async function deleteEvent(id: string) {
       where: { id },
     });
 
-    await createAuditLog({
+    await logActivity({
       actorId: session.id,
       action: "event.delete",
       targetType: "event",
@@ -504,7 +498,7 @@ export async function deleteEvent(id: string) {
     console.error("Error deleting event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete event",
+      error: safeActionError(error, "Failed to delete event"),
     };
   }
 }

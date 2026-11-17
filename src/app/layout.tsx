@@ -5,6 +5,9 @@ import { Providers } from "@/components/providers";
 import { RouteHistoryTracker } from "@/components/common/route-history-tracker";
 import { ThemeMetaColor } from "@/components/common/theme-meta-color";
 import { DynamicThemeStyles } from "@/components/common/dynamic-theme-styles";
+import { SiteAtmosphere } from "@/components/common/site-atmosphere";
+import { SitePointerGlow } from "@/components/common/site-pointer-glow";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -66,6 +69,17 @@ var c=colors[t]||'#faf8f2';
 var m=document.querySelector('meta[name="theme-color"]');
 if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}
 m.setAttribute('content',c);
+var rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var nav=window.navigator||{};
+var lowDev=rm||(nav.connection&&nav.connection.saveData)||(typeof nav.deviceMemory==='number'&&nav.deviceMemory<=4)||(typeof nav.hardwareConcurrency==='number'&&nav.hardwareConcurrency<=4);
+if(lowDev){document.documentElement.setAttribute('data-perf','low');}
+if(!rm){
+  document.documentElement.setAttribute('data-motion','on');
+  setTimeout(function(){
+    var els=document.querySelectorAll('[data-fold-initial="folded"]:not([data-fold-started="true"])');
+    for(var i=0;i<els.length;i++){els[i].setAttribute('data-fold-initial','static');}
+  },2000);
+}
 }catch(e){}})();`,
           }}
         />
@@ -73,10 +87,15 @@ m.setAttribute('content',c);
       </head>
       <body className="min-h-dvh bg-background text-foreground overflow-x-hidden">
         <ThemeMetaColor />
-        <Providers>
-          <RouteHistoryTracker />
-          {children}
-        </Providers>
+        <SiteAtmosphere />
+        <SitePointerGlow />
+        <div className="relative z-10">
+          <Providers>
+            <RouteHistoryTracker />
+            {children}
+          </Providers>
+        </div>
+        {process.env.VERCEL_ENV === "production" ? <SpeedInsights /> : null}
       </body>
     </html>
   );

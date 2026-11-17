@@ -2,8 +2,9 @@ import { auth } from "@/auth";
 import { getUserAccountData } from "@/app/actions/account";
 import { ProfileView } from "@/components/profile/profile-view";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
-import { PageTexture } from "@/components/common/page-texture";
 import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "الملف الشخصي | برنامج إحياء",
@@ -27,9 +28,8 @@ export default async function ProfilePage() {
   return (
     <>
       <GlassNavbar initialSession={session} />
-      <main className="relative isolate min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden z-0">
-        <PageTexture />
-        <div className="relative z-10 max-w-5xl mx-auto">
+      <main className="relative isolate min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden z-0">
+          <div className="relative z-10 max-w-5xl mx-auto">
           <ProfileView initialData={initialData} />
         </div>
       </main>

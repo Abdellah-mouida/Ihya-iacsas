@@ -8,20 +8,18 @@ import { TERMS_VERSION } from "@/lib/terms";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateNumericOtp, hashOtp, verifyOtpConstantTime } from "@/lib/otp";
 import { sendAccountVerificationEmail, sendTempPasswordEmail } from "@/lib/email";
-import { generateTempPassword, validatePasswordStrength } from "@/lib/password";
+import { generateTempPassword } from "@/lib/password";
+import { validatePasswordStrength } from "@/lib/password-strength";
 import { uploadImageToCloudinaryDetailed, deleteImageFromCloudinary } from "@/lib/cloudinary";
 import { safeRevalidatePath } from "@/lib/cache";
-import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { findMoroccanCity } from "@/data/morocco";
+import { logActivity } from "@/lib/audit";
+import { signSessionRotationProof } from "@/lib/session-sync";
+import { hasValidImageMagicBytes } from "@/lib/upload-security";
+import { extractClientIpFromHeaders } from "@/lib/request-ip";
 
 async function getClientIp(): Promise<string> {
-  const headerList = await headers();
-  const forwarded = headerList.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-  const realIp = headerList.get("x-real-ip");
-  if (realIp) return realIp.trim();
-  return "127.0.0.1";
+  return extractClientIpFromHeaders(await headers());
 }
 
 export interface SignUpResult {
@@ -105,8 +103,8 @@ export async function signUpWithCredentials(
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  if (existingUser && !existingUser.emailVerified) {
-    await prisma.user.update({
+  const registeredUser = existingUser && !existingUser.emailVerified
+    ? await prisma.user.update({
       where: { id: existingUser.id },
       data: {
         name,
@@ -115,9 +113,9 @@ export async function signUpWithCredentials(
         termsVersion: TERMS_VERSION,
         locale,
       },
-    });
-  } else {
-    await prisma.user.create({
+      select: { id: true, name: true, email: true },
+    })
+    : await prisma.user.create({
       data: {
         email: emailRaw,
         name,
@@ -127,8 +125,19 @@ export async function signUpWithCredentials(
         termsVersion: TERMS_VERSION,
         locale,
       },
+      select: { id: true, name: true, email: true },
     });
-  }
+
+  await logActivity({
+    actorId: registeredUser.id,
+    actorName: registeredUser.name,
+    actorEmail: registeredUser.email,
+    action: "SIGN_UP_CREDENTIALS",
+    targetType: "User",
+    targetId: registeredUser.id,
+    targetName: registeredUser.name,
+    targetEmail: registeredUser.email,
+  });
 
   // Invalidate previous ACCOUNT_VERIFY OTPs for this email
   await prisma.otpVerification.updateMany({
@@ -305,15 +314,8 @@ export async function resendAccountVerificationOtp(
     where: { email: cleanEmail },
   });
 
-  if (!user) {
-    return { success: false, error: isAr ? "الحساب غير موجود" : "Account not found" };
-  }
-
-  if (user.emailVerified) {
-    return {
-      success: false,
-      error: isAr ? "تم تأكيد هذا الحساب مسبقاً، يرجى تسجيل الدخول" : "Account is already verified, please sign in",
-    };
+  if (!user || user.emailVerified) {
+    return { success: true };
   }
 
   // Invalidate old OTPs
@@ -413,6 +415,18 @@ export async function requestPasswordReset(
       },
     });
 
+    await logActivity({
+      actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
+      action: "PASSWORD_RESET",
+      targetType: "User",
+      targetId: user.id,
+      targetName: user.name,
+      targetEmail: user.email,
+      details: { method: "temporary_password" },
+    });
+
     await sendTempPasswordEmail(user.email, tempPassword, locale);
   }
 
@@ -425,7 +439,7 @@ export async function requestPasswordReset(
 export interface ChangePasswordResult {
   success: boolean;
   error?: string;
-  sessionVersion?: number;
+  sessionRotationProof?: string;
 }
 
 export async function changePassword(
@@ -536,9 +550,36 @@ export async function changePassword(
     },
   });
 
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.apiSession.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: now, revokedReason: "PASSWORD_CHANGED" },
+    }),
+    prisma.apiRefreshToken.updateMany({
+      where: { session: { userId: user.id }, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+  ]);
+
+  await logActivity({
+    actorId: user.id,
+    actorName: user.name,
+    actorEmail: user.email,
+    action: "PASSWORD_CHANGED",
+    targetType: "User",
+    targetId: user.id,
+    targetName: user.name,
+    targetEmail: user.email,
+  });
+
   return {
     success: true,
-    sessionVersion: updatedUser.sessionVersion,
+    sessionRotationProof: signSessionRotationProof(
+      user.id,
+      user.sessionVersion,
+      updatedUser.sessionVersion,
+    ),
   };
 }
 
@@ -635,15 +676,15 @@ export async function completeOnboarding(
     };
   }
 
-  // Validate city against MOROCCAN_CITIES list or non-empty string
-  const cityMatch = MOROCCAN_CITIES.find(
-    (c) =>
-      c.id.toLowerCase() === city.toLowerCase() ||
-      c.nameAr.toLowerCase() === city.toLowerCase() ||
-      c.nameEn.toLowerCase() === city.toLowerCase(),
-  );
+  const cityMatch = findMoroccanCity(city);
+  if (!cityMatch) {
+    return {
+      success: false,
+      error: isAr ? "يرجى اختيار مدينتك" : "Please select your city",
+    };
+  }
 
-  const normalizedCity = cityMatch ? (isAr ? cityMatch.nameAr : cityMatch.nameEn) : city;
+  const normalizedCity = isAr ? cityMatch.nameAr : cityMatch.nameEn;
 
   const age = typeof ageRaw === "string" ? parseInt(ageRaw, 10) : Number(ageRaw);
   if (!age || isNaN(age) || age < 10 || age > 120) {
@@ -698,6 +739,14 @@ export async function completeOnboarding(
     try {
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
+      if (!hasValidImageMagicBytes(buffer)) {
+        return {
+          success: false,
+          error: isAr
+            ? "صيغة الصورة غير مدعومة. يرجى اختيار JPG أو PNG أو WebP"
+            : "Unsupported image format. Please select JPG, PNG, or WebP",
+        };
+      }
       const uploadRes = await uploadImageToCloudinaryDetailed(buffer, "ihyaa-profiles");
 
       // Delete old photo if it was in Cloudinary and differs
@@ -734,6 +783,18 @@ export async function completeOnboarding(
         : {}),
       onboardingCompletedAt: new Date(),
     },
+  });
+
+  await logActivity({
+    actorId: user.id,
+    actorName: name || user.name,
+    actorEmail: user.email,
+    action: "ONBOARDING_COMPLETED",
+    targetType: "User",
+    targetId: user.id,
+    targetName: name || user.name,
+    targetEmail: user.email,
+    details: { termsAccepted: Boolean(user.termsAcceptedAt || termsAccepted) },
   });
 
   safeRevalidatePath("/onboarding");

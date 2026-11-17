@@ -54,6 +54,7 @@ export function ProfileTagEditor({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return;
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       e.stopPropagation();
@@ -135,7 +136,7 @@ export function ProfileTagEditor({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="rounded-xl h-10 text-sm"
+            className="min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
           />
           <Button
             type="button"
@@ -148,7 +149,7 @@ export function ProfileTagEditor({
               handleAddTag();
             }}
             disabled={!inputValue.trim()}
-            className="rounded-xl h-10 px-3 shrink-0 flex items-center gap-1"
+            className="rounded-xl h-12 px-4 shrink-0 flex items-center gap-1"
           >
             <Plus className="size-4" />
           </Button>

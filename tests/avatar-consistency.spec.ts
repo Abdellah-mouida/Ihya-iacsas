@@ -12,7 +12,7 @@ test.describe("Task 1: Deterministic Avatar Consistency Across Pages", () => {
     const created = await ensureTestUser({
       ...TEST_REGULAR_USER,
       image: null,
-    } as any);
+    });
     testUser = {
       id: created.id,
       email: created.email ?? TEST_REGULAR_USER.email,

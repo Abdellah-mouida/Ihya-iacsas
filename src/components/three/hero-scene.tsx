@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Points, ShaderMaterial } from "three";
 
@@ -105,12 +105,8 @@ function ParticleField() {
   const pointsRef = useRef<Points>(null);
   const matRef = useRef<ShaderMaterial>(null);
 
-  // Lazily create + retain the buffers in a ref (not useMemo).
-  const buffersRef = useRef<Buffers | null>(null);
-  if (buffersRef.current === null) {
-    buffersRef.current = createBuffers(COUNT);
-  }
-  const buffers = buffersRef.current;
+  // Retain the mutable GPU buffers while keeping them out of render-time refs.
+  const [buffers] = useState(() => createBuffers(COUNT));
 
   const uniforms = useMemo(() => ({ uPixelRatio: { value: 1 } }), []);
 
@@ -134,6 +130,9 @@ function ParticleField() {
     return () => observer.disconnect();
   }, []);
 
+  // The simulation deliberately mutates typed-array CPU/GPU buffers per frame;
+  // React state is only their stable owner, not the rendered source of truth.
+  /* eslint-disable react-hooks/immutability */
   useFrame((state, delta) => {
     const pts = pointsRef.current;
     if (!pts) return;
@@ -177,6 +176,7 @@ function ParticleField() {
       matRef.current.uniforms.uPixelRatio.value = gl.getPixelRatio();
     }
   });
+  /* eslint-enable react-hooks/immutability */
 
   return (
     <points ref={pointsRef}>

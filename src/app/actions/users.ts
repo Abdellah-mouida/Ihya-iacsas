@@ -1,11 +1,16 @@
 "use server";
 
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
-import { createAuditLog } from "@/lib/audit";
+import { isAuditPermissionError, logAuditFailure } from "@/lib/audit-errors";
+import { AUDIT_LOG_ACTOR_INCLUDE, buildUserAuditLogWhere, type AuditLogWithActor } from "@/lib/audit-query";
+import { logActivity } from "@/lib/audit";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { deleteUserAccount } from "@/lib/user-deletion";
+import { notify } from "@/lib/notifications";
 
 export interface GetAdminUsersParams {
   page?: number;
@@ -27,7 +32,7 @@ export async function getAdminUsers({
   const skip = (safePage - 1) * safeLimit;
 
   // Build where query
-  const where: any = {};
+  const where: Prisma.UserWhereInput = {};
 
   if (role && role !== "ALL" && Object.values(Role).includes(role as Role)) {
     where.role = role as Role;
@@ -166,11 +171,27 @@ export async function updateUserRole({
     },
   });
 
-  await createAuditLog({
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.apiSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now, revokedReason: "ROLE_CHANGED" },
+    }),
+    prisma.apiRefreshToken.updateMany({
+      where: { session: { userId }, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+  ]);
+
+  await logActivity({
     actorId: actor.id,
+    actorName: actor.name,
+    actorEmail: actor.email,
     action: "USER_ROLE_UPDATE",
     targetType: "USER",
     targetId: userId,
+    targetName: updated.name,
+    targetEmail: updated.email,
     details: {
       targetEmail: targetUser.email,
       previousRole: targetUser.role,
@@ -180,6 +201,11 @@ export async function updateUserRole({
   });
 
   revalidatePath("/admin/users");
+  await notify(userId, "ADMIN_ROLE_CHANGED", {
+    params: { role: newRole },
+    data: { role: newRole },
+    dedupeKey: `role:${userId}:${newRole}:${actor.id}`,
+  });
   return { success: true, user: updated };
 }
 
@@ -222,6 +248,8 @@ export async function deleteOrAnonymizeUser({
       // Remove linked accounts and active sessions
       await tx.account.deleteMany({ where: { userId } });
       await tx.session.deleteMany({ where: { userId } });
+      await tx.apiRefreshToken.deleteMany({ where: { session: { userId } } });
+      await tx.apiSession.deleteMany({ where: { userId } });
 
       // Anonymize user details but preserve ID so existing bookings/stats remain valid
       await tx.user.update({
@@ -240,53 +268,67 @@ export async function deleteOrAnonymizeUser({
         },
       });
     });
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      actorEmail: actor.email,
+      action: "USER_ANONYMIZE",
+      targetType: "USER",
+      targetId: userId,
+      targetName: targetUser.name,
+      targetEmail: targetUser.email,
+      details: {
+        targetRole: targetUser.role,
+        action,
+        reason: reason?.trim() || "User anonymized via admin panel",
+      },
+    });
   } else {
-    // Permanent deletion
-    await prisma.$transaction(async (tx) => {
-      // Delete user: sessions & accounts cascade; bookings userId set to null by relation
-      await tx.user.delete({
-        where: { id: userId },
-      });
+    await deleteUserAccount({
+      targetUserId: userId,
+      actorId: actor.id,
+      action: "USER_DELETE",
+      reason: reason?.trim() || "User deleted via admin panel",
     });
   }
-
-  await createAuditLog({
-    actorId: actor.id,
-    action: action === "delete" ? "USER_DELETE" : "USER_ANONYMIZE",
-    targetType: "USER",
-    targetId: userId,
-    details: {
-      targetEmail: targetUser.email,
-      targetRole: targetUser.role,
-      action,
-      reason: reason?.trim() || `User ${action}d via admin panel`,
-    },
-  });
 
   revalidatePath("/admin/users");
   return { success: true };
 }
 
-export async function getUserAuditLogs(userId: string) {
-  await requirePermission("audit:view");
+export async function getUserAuditLogs(
+  userId: string,
+  options: { action?: string; cursor?: string | null } = {},
+): Promise<
+  | { success: true; logs: AuditLogWithActor[]; nextCursor: string | null }
+  | { success: false; kind: "permission" | "server"; digest?: string }
+> {
+  try {
+    await requirePermission("audit:view");
 
-  const logs = await prisma.auditLog.findMany({
-    where: {
-      OR: [{ targetId: userId }, { actorId: userId }],
-    },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: {
-      actor: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      },
-    },
-  });
+    if (!userId || userId.length > 128) {
+      throw new Error("Invalid user activity target.");
+    }
+    const cursor = options.cursor
+      ? z.string().max(64).regex(/^[a-zA-Z0-9_-]+$/).parse(options.cursor)
+      : undefined;
+    const logs = await prisma.auditLog.findMany({
+      where: buildUserAuditLogWhere(userId, options.action),
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      take: 21,
+      include: AUDIT_LOG_ACTOR_INCLUDE,
+    });
 
-  return { success: true, logs };
+    const hasMore = logs.length > 20;
+    const page = hasMore ? logs.slice(0, 20) : logs;
+    return {
+      success: true,
+      logs: page,
+      nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
+    };
+  } catch (error) {
+    if (isAuditPermissionError(error)) return { success: false, kind: "permission" };
+    return { success: false, kind: "server", digest: logAuditFailure("user activity query", error) };
+  }
 }

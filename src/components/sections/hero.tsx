@@ -1,138 +1,215 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowDown, CalendarDays, Info } from "lucide-react";
-import dynamic from "next/dynamic";
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CalendarDays, Info } from "lucide-react";
 
-import { AuroraBackground } from "@/components/react-bits/aurora-background";
+import styles from "./hero.module.css";
 import { Button } from "@/components/ui/button";
-import { Texture } from "@/components/common/texture";
+import { InViewMount } from "@/components/common/in-view-mount";
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENTS_HREF, IMAGES } from "@/lib/content";
-import { fadeUp, staggerContainer } from "@/lib/motion";
+import { useLowPower } from "@/hooks/use-low-power";
+import FoldText from "@/components/FoldText";
 
-const HeroScene = dynamic(() => import("@/components/three/hero-scene"), {
-  ssr: false,
-});
+const HERO_SPLASH_PATH = "M .08 .24 C .11 .14 .23 .10 .33 .15 C .41 .06 .53 .04 .61 .12 C .72 .08 .83 .13 .86 .24 C .96 .25 .99 .35 .95 .44 C 1 .54 .97 .64 .91 .70 C .96 .81 .87 .91 .77 .89 C .69 .98 .58 .97 .50 .92 C .40 .99 .29 .93 .25 .84 C .14 .89 .05 .82 .09 .72 C .01 .64 .03 .52 .08 .44 C .02 .36 .03 .29 .08 .24 Z";
+function groupPortraitLoader({ width }: { width: number }) {
+  // shortcut: serve the nearest pre-encoded AVIF; cap at 2048px to avoid a missing srcset candidate.
+  const availableWidths = [384, 640, 750, 828, 1080, 1200, 1800, 1920, 2048];
+  const selectedWidth =
+    availableWidths.find((candidate) => candidate >= width) ?? 2048;
+  return `/images/group-portrait-hero-${selectedWidth}.avif`;
+}
 
 export function Hero() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const lowPower = useLowPower();
+  const sectionRef = useRef<HTMLElement>(null);
+  const foldStateRef = useRef<string | null>(null);
+  const [foldPaused, setFoldPaused] = useState(false);
+  const [heroImageLoaded, setHeroImageLoaded] = useState(false);
+  const headline = t("hero.title");
+
+  const handleHeroImageLoad = useCallback(() => {
+    setHeroImageLoaded(true);
+  }, []);
+
+  const handleFoldStateChange = useCallback((state: string) => {
+    foldStateRef.current = state;
+    const section = sectionRef.current;
+    if (!section) return;
+    section.dataset.foldState = state;
+  }, []);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    if (foldStateRef.current) {
+      section.dataset.foldState = foldStateRef.current;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting;
+        section.dataset.foldVisible = String(visible);
+        section.dataset.foldPaused = String(!visible);
+        setFoldPaused(!visible);
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(section);
+    return () => {
+      observer.disconnect();
+      delete section.dataset.foldVisible;
+      delete section.dataset.foldState;
+      delete section.dataset.foldPaused;
+    };
+  }, []);
 
   return (
     <section
+      ref={sectionRef}
       id="home"
-      className="relative isolate flex min-h-dvh items-center overflow-hidden pt-28 pb-32 text-foreground z-0"
+      className={`${styles.heroSection} relative z-10 mb-[-3.5rem] overflow-visible px-4 pb-0 text-foreground sm:px-6`}
     >
-      {/* Layer 1: Photo Layer (real next/image at z-[1]) */}
-      <div className="absolute inset-0 z-[1] overflow-hidden select-none">
-        <Image
-          src={IMAGES.groupPortrait}
-          alt="Ihyaa Youth Gathering"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center"
-        />
-        {/* Soft edge-only scrim: fades smoothly to 100% solid background at bottom so photo completely melts into the page background */}
+      <div className={`${styles.heroInner} mx-auto grid max-w-6xl items-center gap-4 sm:gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12`}>
         <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, color-mix(in srgb, var(--background) 70%, transparent) 0%, transparent 45%, color-mix(in srgb, var(--background) 70%, transparent) 80%, var(--background) 95%, var(--background) 100%)",
-          }}
-        />
-      </div>
+          data-testid="hero-copy"
+          className="relative z-10 order-2 flex flex-col items-start text-start lg:order-1"
+        >
+          <p className="w-full text-base font-semibold text-[var(--main)] sm:text-lg">
+            {t("hero.programName")}
+          </p>
 
-      {/* Layer 3: Ambient Aurora + Particles + Corner Vignette */}
-      <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden select-none">
-        {/* React Bits aurora — warm animated light over photo */}
-        <AuroraBackground className="opacity-20 mix-blend-screen dark:opacity-30" />
+          <FoldText
+            as="h1"
+            data-rb="FoldText"
+            text={headline}
+            ariaLabel={headline}
+            foldStyle="paper"
+            splitBy={locale === "ar" ? "word" : "char"}
+            hinge="top"
+            trigger="mount"
+            foldAngle={92}
+            duration={0.65}
+            stagger={0.045}
+            staggerFrom="start"
+            ease="power3.out"
+            loopDelay={1.4}
+            hoverRefold={!lowPower}
+            refoldRadius={140}
+            refoldAngle={45}
+            perspective={700}
+            creaseShading={0.55}
+            fontSize="inherit"
+            fontWeight={800}
+            gradient={["var(--hero-title-start)", "var(--hero-title-end)"]}
+            paused={foldPaused}
+            onStateChange={handleFoldStateChange}
+            wordTestId="hero-heading-word"
+            pieceTestId="hero-fold-piece"
+            className={`${styles.heroTitle} mt-1.5 sm:mt-3 block w-full max-w-[21ch] text-balance font-heading text-[clamp(1.55rem,7.8vw,3rem)] font-extrabold ${locale === "ar" ? "min-h-[2.6em] leading-[1.28]" : "min-h-[3.4em] leading-[1.12]"} lg:min-h-[2.3em] lg:max-w-none lg:text-[clamp(3rem,4.2vw,4.25rem)]`}
+          />
 
-        {/* Drifting ambient particles */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-70">
-          <HeroScene />
+          <p className="mt-2.5 sm:mt-5 min-h-[2.5em] sm:min-h-[3em] w-full max-w-[30rem] text-pretty text-base leading-relaxed text-foreground sm:text-lg">
+            {t("hero.subtitle")}
+          </p>
+          <div className="mt-4 sm:mt-7 flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="h-12 w-full rounded-full bg-[var(--main)] px-6 font-semibold text-background transition-[transform,opacity] hover:-translate-y-0.5 hover:opacity-90 sm:w-auto"
+            >
+              <Link href={EVENTS_HREF} dir="ltr">
+                <CalendarDays aria-hidden className="size-5" />
+                <span dir="auto" className="inline-block w-40 text-center">
+                  {t("hero.ctaPrimary")}
+                </span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="lg"
+              className="h-12 w-full rounded-full px-5 text-foreground transition-[transform,background-color] hover:-translate-y-0.5 sm:w-auto"
+            >
+              <a href="#about" dir="ltr">
+                <Info aria-hidden className="size-5" />
+                <span dir="auto" className="inline-block w-40 text-center">
+                  {t("hero.ctaSecondary")}
+                </span>
+              </a>
+            </Button>
+          </div>
         </div>
 
-        {/* Soft corner perimeter vignette — strictly transparent at center */}
         <div
-          aria-hidden
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,var(--background)_100%)] opacity-70"
-        />
+          data-testid="hero-frame"
+          className={`${styles.frameWrap} order-1 lg:order-2`}
+        >
+          <svg
+            aria-hidden="true"
+            className={styles.clipDefinitions}
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <clipPath
+                id="ihyaa-hero-splash"
+                clipPathUnits="objectBoundingBox"
+              >
+                <path d={HERO_SPLASH_PATH} />
+              </clipPath>
+            </defs>
+          </svg>
+          <svg
+            aria-hidden="true"
+            data-testid="hero-frame-shadow"
+            data-shadow-loaded={heroImageLoaded ? "true" : "false"}
+            className={`${styles.frameShadow} ${heroImageLoaded ? styles.frameShadowVisible : ""}`}
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+          >
+            <path d={HERO_SPLASH_PATH} />
+          </svg>
+          <InViewMount className={styles.ornamentHost}>
+            <svg
+              aria-hidden="true"
+              className={
+                lowPower
+                  ? styles.splashOrnaments
+                  : `${styles.splashOrnaments} ${styles.drift}`
+              }
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <path d="M 8 24 C 11 14 23 10 33 15 C 41 6 53 4 61 12 C 72 8 83 13 86 24 C 96 25 99 35 95 44 C 100 54 97 64 91 70 C 96 81 87 91 77 89 C 69 98 58 97 50 92 C 40 99 29 93 25 84 C 14 89 5 82 9 72 C 1 64 3 52 8 44 C 2 36 3 29 8 24 Z" />
+              <circle cx="28" cy="8" r="1.7" />
+              <circle cx="72" cy="5" r="1.1" />
+              <circle cx="92" cy="19" r="1.3" />
+            </svg>
+          </InViewMount>
+          <div
+            data-testid="hero-photo-frame"
+            className={`${styles.photoFrame} relative mx-auto aspect-[1.351/1] w-full max-w-[760px]`}
+          >
+            <SmoothImage
+              src={IMAGES.groupPortraitHero}
+              loader={groupPortraitLoader}
+              alt={t("hero.photoAlt")}
+              fill
+              priority
+              revealImmediately
+              fadeDurationMs={250}
+              fetchPriority="high"
+              onLoad={handleHeroImageLoad}
+              sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 3rem), (max-width: 1199px) calc(55vw - 3.3rem), 607px"
+              className="object-cover object-center"
+            />
+          </div>
+        </div>
       </div>
-
-      {/* Layer 4: Interactive Typography & Actions */}
-      <motion.div
-        variants={staggerContainer(0.14, 0.1)}
-        initial="hidden"
-        animate="show"
-        className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center"
-      >
-        <motion.span
-          variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/85 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-foreground shadow-xs backdrop-blur-md"
-        >
-          <span className="size-1.5 animate-pulse rounded-full bg-gold" />
-          {t("hero.kicker")}
-        </motion.span>
-
-        <motion.h1
-          variants={fadeUp}
-          className="mt-6 font-heading text-7xl font-extrabold leading-[0.95] sm:text-8xl md:text-9xl"
-        >
-          <span className="text-shine">{t("hero.title")}</span>
-        </motion.h1>
-
-        <motion.p
-          variants={fadeUp}
-          className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-foreground/80 sm:text-xl"
-        >
-          {t("hero.subtitle")}
-        </motion.p>
-
-        <motion.div
-          variants={fadeUp}
-          className="mt-9 flex flex-col items-center gap-3 sm:flex-row"
-        >
-          <Button
-            asChild
-            className="bg-brass-gradient h-12 rounded-full px-7 text-base font-semibold text-night shadow-layered transition-all hover:-translate-y-0.5 hover:opacity-95"
-          >
-            <Link href={EVENTS_HREF}>
-              <CalendarDays className="size-5" />
-              {t("hero.ctaPrimary")}
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="glass h-12 rounded-full border-border/70 px-7 text-base font-semibold text-foreground/95 transition-all hover:-translate-y-0.5 hover:bg-muted/60 dark:border-border/60 dark:hover:bg-accent/40"
-          >
-            <a href="#about">
-              <Info className="size-5" />
-              {t("hero.ctaSecondary")}
-            </a>
-          </Button>
-        </motion.div>
-      </motion.div>
-
-      {/* Scroll cue */}
-      <motion.a
-        href="#about"
-        aria-label={t("hero.scroll")}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.1, duration: 0.8 }}
-        className="absolute inset-x-0 bottom-6 mx-auto flex w-max flex-col items-center gap-2 text-foreground/80 dark:text-foreground/90 transition-colors hover:text-foreground"
-      >
-        <span className="text-[0.75rem] font-medium uppercase tracking-[0.2em]">
-          {t("hero.scroll")}
-        </span>
-        <span className="grid size-9 place-items-center rounded-full border border-foreground/25 dark:border-white/25">
-          <ArrowDown className="size-4 animate-bounce" />
-        </span>
-      </motion.a>
     </section>
   );
 }

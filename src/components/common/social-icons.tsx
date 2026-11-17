@@ -1,3 +1,5 @@
+import type { SocialPlatform } from "@/config/social";
+
 export function FacebookIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -30,4 +32,37 @@ export function InstagramIcon({ className }: { className?: string }) {
       <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
     </svg>
   );
+}
+
+export function YouTubeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2" y="5" width="20" height="14" rx="4" />
+      <path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function SocialIcon({
+  platform,
+  className,
+}: {
+  platform: SocialPlatform;
+  className?: string;
+}) {
+  const Icon = {
+    facebook: FacebookIcon,
+    instagram: InstagramIcon,
+    youtube: YouTubeIcon,
+  }[platform];
+  return <Icon className={className} />;
 }

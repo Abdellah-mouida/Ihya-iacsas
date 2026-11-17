@@ -35,23 +35,17 @@ test.describe("Task 5: Hero Photo Visibility & Stacking Contract", () => {
         );
         expect(naturalWidth).toBeGreaterThan(0);
 
-        // 2. Sample elementsFromPoint in the middle-right area (outside title text)
-        const sampleResult = await page.evaluate(() => {
-          const hero = document.getElementById("home");
-          if (!hero) return { found: false, heroImgPresent: false, topElement: "" };
-
-          const rect = hero.getBoundingClientRect();
-          // Sample point near right flank where photo faces/people sit
-          const sampleX = rect.left + rect.width * 0.75;
+        // Sample the center of the responsive image frame, which follows the copy on phones.
+        const sampleResult = await heroImg.evaluate((img: HTMLImageElement) => {
+          const rect = img.getBoundingClientRect();
+          const sampleX = rect.left + rect.width * 0.5;
           const sampleY = rect.top + rect.height * 0.5;
-
           const elements = document.elementsFromPoint(sampleX, sampleY);
           const hasImage = elements.some((el) => el.tagName.toLowerCase() === "img");
           const topElement = elements[0]?.tagName.toLowerCase() || "";
           const topClasses = elements[0]?.className || "";
-
           return {
-            found: true,
+            found: rect.width > 0 && rect.height > 0,
             hasImage,
             topElement,
             topClasses,

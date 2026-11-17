@@ -8,7 +8,7 @@ import { Footer } from "@/components/sections/footer";
 import { GlassNavbar } from "@/components/sections/glass-navbar";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OnboardingView } from "@/components/auth/onboarding-view";
-import { AuthAmbientBackdrop } from "@/components/auth/auth-ambient-backdrop";
+import { safeOnboardingCallbackUrl } from "@/lib/onboarding-guard";
 
 export const metadata: Metadata = {
   title: "إعداد الملف الشخصي — برنامج إحياء | Profile Setup — Ihyaa Program",
@@ -22,7 +22,7 @@ export default async function OnboardingPage({
 }) {
   const session = await auth();
   const params = await searchParams;
-  const callbackUrl = params?.callbackUrl || "/";
+  const callbackUrl = safeOnboardingCallbackUrl(params?.callbackUrl);
 
   if (!session?.user?.id) {
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
@@ -62,9 +62,8 @@ export default async function OnboardingPage({
   return (
     <>
       <GlassNavbar />
-      <main className="relative isolate min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center bg-background overflow-hidden z-0">
-        <AuthAmbientBackdrop />
-        <div className="relative z-10 w-full max-w-lg">
+      <main className="relative isolate min-h-screen pt-28 pb-16 px-4 flex flex-col items-center justify-center overflow-hidden z-0">
+          <div className="relative z-10 w-full max-w-lg">
           <Suspense
             fallback={
               <div className="flex items-center justify-center p-12">

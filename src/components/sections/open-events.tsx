@@ -24,11 +24,14 @@ type DisplayEvent = {
   location?: string;
   locationKey?: string;
   posterUrl?: string;
+  posterWidth?: number | null;
+  posterHeight?: number | null;
   poster?: string;
   capacityType?: string;
   capacity?: number | null;
   confirmedCount?: number;
   isFull?: boolean;
+  userBookingStatus?: string | null;
 };
 
 export function OpenEvents() {
@@ -63,13 +66,14 @@ export function OpenEvents() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(mq.matches);
+    const frame = window.requestAnimationFrame(() => setPrefersReducedMotion(mq.matches));
 
     const handler = (e: MediaQueryListEvent) => {
       setPrefersReducedMotion(e.matches);
     };
     mq.addEventListener?.("change", handler);
     return () => {
+      window.cancelAnimationFrame(frame);
       mq.removeEventListener?.("change", handler);
     };
   }, []);

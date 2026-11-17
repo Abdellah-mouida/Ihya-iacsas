@@ -16,9 +16,9 @@ export function AuroraBackground({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="animate-aurora absolute -top-1/4 left-[15%] size-[62vh] rounded-full bg-[radial-gradient(circle,var(--gold),transparent_60%)] opacity-45 blur-3xl" />
-      <div className="animate-aurora absolute top-[20%] right-[12%] size-[56vh] rounded-full bg-[radial-gradient(circle,var(--emerald),transparent_60%)] opacity-30 blur-3xl [animation-delay:-6s]" />
-      <div className="animate-aurora absolute bottom-[-10%] left-[30%] size-[52vh] rounded-full bg-[radial-gradient(circle,var(--brass),transparent_60%)] opacity-35 blur-3xl [animation-delay:-11s]" />
+      <div className="animate-aurora absolute -top-1/4 left-[15%] size-[62vh] rounded-full bg-[radial-gradient(circle,var(--gold),transparent_60%)] opacity-45" />
+      <div className="animate-aurora absolute top-[20%] right-[12%] size-[56vh] rounded-full bg-[radial-gradient(circle,var(--emerald),transparent_60%)] opacity-30 [animation-delay:-6s]" />
+      <div className="animate-aurora absolute bottom-[-10%] left-[30%] size-[52vh] rounded-full bg-[radial-gradient(circle,var(--brass),transparent_60%)] opacity-35 [animation-delay:-11s]" />
     </div>
   );
 }

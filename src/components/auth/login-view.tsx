@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -19,11 +19,18 @@ import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
 import { resendAccountVerificationOtp } from "@/app/actions/auth";
 import { GoogleIcon } from "./signup-view";
+import styles from "./auth-visuals.module.css";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 function sanitizeCallbackUrl(url: string | null): string {
   if (!url) return "/profile";
-  // Disallow external URLs and protocol-relative URLs like //evil.com
-  if (url.startsWith("/") && !url.startsWith("//")) {
+  // Disallow external URLs, protocol-relative, backslash, and control-char open redirects
+  if (
+    url.startsWith("/") &&
+    !url.startsWith("//") &&
+    !url.startsWith("/\\") &&
+    !/[\u0000-\u001f\u007f]/.test(url)
+  ) {
     if (url === "/account" || url.startsWith("/account?")) {
       return url.replace("/account", "/profile");
     }
@@ -57,9 +64,12 @@ export function LoginView() {
     if (!errorParam) return;
 
     if (errorParam === "access_denied" || errorParam === "OAuthCallbackError_access_denied") {
+      // Mirror the URL-provided OAuth result into the localized form state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(t("auth.oauthCancelled"));
       toast.error(t("auth.oauthCancelled"));
     } else {
+      // Mirror the URL-provided OAuth result into the localized form state.
       setErrorMessage(t("auth.oauthError"));
       toast.error(t("auth.oauthError"));
     }
@@ -207,24 +217,24 @@ export function LoginView() {
     <div
       dir={dir}
       data-testid="login-view"
-      className="w-full max-w-5xl mx-auto rounded-3xl border border-brass/15 bg-card/60 backdrop-blur-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[560px]"
+      className="w-full max-w-5xl mx-auto rounded-3xl border border-brass/15 bg-card/90 shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[560px]"
     >
       {/* Visual Side Banner (Desktop Only) */}
-      <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/95 text-white">
-        <Image
+      <div className="hidden lg:col-span-5 lg:flex flex-col justify-between relative p-10 overflow-hidden bg-primary/40 text-primary-foreground">
+        <SmoothImage
           src="/images/gathering.jpg"
           alt="Ihyaa Program"
           fill
           sizes="(max-width: 1024px) 100vw, 42vw"
           quality={90}
-          priority
-          className="object-cover opacity-25 mix-blend-overlay"
+          className="object-cover opacity-40 mix-blend-overlay"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary/55 via-primary/20 to-primary/45" />
+        <div className={`absolute inset-0 pointer-events-none ${styles.sideGlow}`} />
 
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="size-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center p-1.5 shadow-inner">
-            <Image
+        <div className="relative z-20 flex items-center gap-3">
+          <div className="size-11 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/20 flex items-center justify-center p-1.5 shadow-inner">
+            <SmoothImage
               src="/images/logo-circle.png"
               alt="Ihyaa Logo"
               width={36}
@@ -233,33 +243,33 @@ export function LoginView() {
             />
           </div>
           <div>
-            <h2 className="font-heading text-lg font-bold text-white tracking-wide">
+            <h2 className="font-heading text-lg font-bold text-primary-foreground tracking-wide">
               {isAr ? "برنامج إحياء" : "Ihyaa Program"}
             </h2>
-            <p className="text-[11px] text-white/70">
+            <p className="text-[11px] text-primary-foreground/70">
               {isAr ? "تسجيل الدخول إلى حسابك" : "Sign in to your account"}
             </p>
           </div>
         </div>
 
-        <div className="relative z-10 my-auto py-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs text-brass-light mb-4">
+        <div className="relative z-20 my-auto py-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/15 text-xs text-primary-foreground mb-4">
             <Sparkles className="size-3.5" />
             <span>{isAr ? "مرحباً بعودتك" : "Welcome Back"}</span>
           </div>
-          <h3 className="font-heading text-2xl font-bold text-white leading-relaxed mb-3">
+          <h3 className={`${styles.sideHeading} font-heading text-2xl font-bold text-primary-foreground leading-relaxed mb-3`}>
             {isAr
               ? "متابعة الفعاليات، إدارة الحجوزات، والتواصل مع أعضاء البرنامج"
               : "Track events, manage bookings, and stay connected with program members"}
           </h3>
-          <p className="text-xs text-white/75 leading-relaxed">
+          <p className="text-xs text-primary-foreground/75 leading-relaxed">
             {isAr
               ? "منصة شبابية تجمع بين القيم الإيمانية، البناء الفكري، والأنشطة التربوية الهادفة."
               : "A youth platform uniting spiritual values, intellectual growth, and purposeful activities."}
           </p>
         </div>
 
-        <div className="relative z-10 text-[11px] text-white/60 flex items-center justify-between border-t border-white/10 pt-4">
+        <div className="relative z-20 text-[11px] text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/10 pt-4">
           <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
           <span>{isAr ? "المملكة المغربية" : "Kingdom of Morocco"}</span>
         </div>
@@ -287,7 +297,8 @@ export function LoginView() {
           </div>
           <h1
             data-testid="login-title"
-            className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-1.5"
+            data-rb="BlurText"
+            className={`${rbStyles.blurText} font-heading text-2xl sm:text-3xl font-bold text-foreground mb-1.5`}
           >
             {t("auth.loginTitle")}
           </h1>
@@ -403,7 +414,7 @@ export function LoginView() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t("auth.emailPlaceholder")}
-              className="w-full h-11 px-3.5 rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 shadow-sm"
+              className="w-full h-11 px-3.5 rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200 shadow-sm"
             />
           </div>
 
@@ -435,7 +446,7 @@ export function LoginView() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t("auth.passwordPlaceholder")}
-                className="w-full h-11 ps-3.5 pe-11 text-start rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 shadow-sm"
+                className="w-full h-11 ps-3.5 pe-11 text-start rounded-2xl border border-input bg-background/80 focus:bg-background text-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200 shadow-sm"
               />
               <button
                 type="button"

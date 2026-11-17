@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "../src/lib/prisma";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 import {
   TEST_ADMIN,
   TEST_MODERATOR,
@@ -7,6 +8,8 @@ import {
   ensureTestUser,
   loginAs,
 } from "./helpers/admin-auth";
+
+assertDevBranchDatabase("Admin access gate test");
 
 test.describe("Task 7: Role-Based Admin Access & Permission Gate", () => {
   test.beforeAll(async () => {
@@ -98,6 +101,23 @@ test.describe("Task 7: Role-Based Admin Access & Permission Gate", () => {
 
     // Blocked from /admin/users with 403
     await page.goto("/admin/users");
+    await expect(page).toHaveURL(/\/403/, { timeout: 30000 });
+  });
+
+  test("Branches management is available to ADMIN and MODERATOR and forbidden to USER", async ({ page }) => {
+    test.setTimeout(90_000);
+    await loginAs(page, TEST_ADMIN, "/admin/branches");
+    await expect(page).toHaveURL(/\/admin\/branches/, { timeout: 30000 });
+    await expect(page.getByRole("heading", { name: /manage branches|إدارة الفروع/i })).toBeVisible();
+    await expect(page.locator("aside").getByRole("link", { name: /branches|الفروع/i })).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, TEST_MODERATOR, "/admin/branches");
+    await expect(page).toHaveURL(/\/admin\/branches/, { timeout: 30000 });
+    await expect(page.getByRole("heading", { name: /manage branches|إدارة الفروع/i })).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, TEST_REGULAR_USER, "/admin/branches");
     await expect(page).toHaveURL(/\/403/, { timeout: 30000 });
   });
 

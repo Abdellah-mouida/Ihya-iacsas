@@ -1,8 +1,7 @@
 import {
-  BookOpen,
-  HandHeart,
-  MessagesSquare,
-  Trophy,
+  Compass,
+  GraduationCap,
+  MessageCircle,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -11,12 +10,18 @@ export const IMAGES = {
   football: "/images/football.jpg",
   prayer: "/images/prayer.jpg",
   gathering: "/images/gathering.jpg",
-  groupPortrait: "/images/group-portrait.jpg",
+  groupPortrait: "/images/group-portrait.avif",
+  groupPortraitHero: "/images/group-portrait-hero-1800.avif",
   logoBanner: "/images/logo-banner.jpg",
   logoCircle: "/images/logo-circle.png",
   defaultPoster: "/images/gathering.jpg",
   eventPoster: "/images/gathering.jpg",
 } as const;
+
+/** Resolve the retired group JPG path that may still be stored in database rows. */
+export function resolveImageUrl(url: string | null): string | null {
+  return url === "/images/group-portrait.jpg" ? IMAGES.groupPortrait : url;
+}
 
 export const EVENT = {
   phone: "0615789337",
@@ -67,79 +72,36 @@ export const NAV_LINKS: NavLink[] = [
 export const FOOTER_LINKS: NavLink[] = [
   { key: "nav.home", href: "/" },
   { key: "nav.about", href: "/#about" },
-  { key: "nav.activities", href: "/#activities" },
   { key: "nav.gallery", href: "/gallery" },
   { key: "nav.events", href: "/events" },
   { key: "nav.contact", href: "/#contact" },
 ];
 
-export type IconItem = {
-  icon: LucideIcon;
-  titleKey: string;
-  descKey: string;
-};
-
-export const ABOUT_CARDS: IconItem[] = [
-  {
-    icon: Users,
-    titleKey: "about.cardGatheringsTitle",
-    descKey: "about.cardGatheringsDesc",
-  },
-  {
-    icon: HandHeart,
-    titleKey: "about.cardActivitiesTitle",
-    descKey: "about.cardActivitiesDesc",
-  },
-  {
-    icon: BookOpen,
-    titleKey: "about.cardContentTitle",
-    descKey: "about.cardContentDesc",
-  },
-];
-
-export type Activity = IconItem & { num: string };
+export type Activity = { icon: LucideIcon; num: string; titleKey: string; descKey: string };
 export const ACTIVITIES: Activity[] = [
   {
     num: "01",
-    icon: MessagesSquare,
-    titleKey: "activities.gatheringsTitle",
-    descKey: "activities.gatheringsDesc",
+    icon: Users,
+    titleKey: "about.activities.gatherings",
+    descKey: "about.activities.gatheringsDescription",
   },
   {
     num: "02",
-    icon: Trophy,
-    titleKey: "activities.sportsTitle",
-    descKey: "activities.sportsDesc",
+    icon: Compass,
+    titleKey: "about.activities.outings",
+    descKey: "about.activities.outingsDescription",
   },
   {
     num: "03",
-    icon: BookOpen,
-    titleKey: "activities.learningTitle",
-    descKey: "activities.learningDesc",
-  },
-];
-
-export type Branch = { id: string; nameKey: string; regionKey: string };
-export const BRANCHES: Branch[] = [
-  {
-    id: "marrakech",
-    nameKey: "branches.marrakech",
-    regionKey: "branches.regionMarrakech",
+    icon: MessageCircle,
+    titleKey: "about.activities.dialogues",
+    descKey: "about.activities.dialoguesDescription",
   },
   {
-    id: "taroudant",
-    nameKey: "branches.taroudant",
-    regionKey: "branches.regionTaroudant",
-  },
-  {
-    id: "famzguid",
-    nameKey: "branches.famzguid",
-    regionKey: "branches.regionFamzguid",
-  },
-  {
-    id: "ouledteima",
-    nameKey: "branches.ouledteima",
-    regionKey: "branches.regionOuledteima",
+    num: "04",
+    icon: GraduationCap,
+    titleKey: "about.activities.training",
+    descKey: "about.activities.trainingDescription",
   },
 ];
 
@@ -148,7 +110,7 @@ export type GalleryItem = { src: string; altKey: string; w: number; h: number };
 export const GALLERY: GalleryItem[] = [
   { src: IMAGES.gathering, altKey: "gallery.altGathering", w: 590, h: 332 },
   { src: IMAGES.prayer, altKey: "gallery.altPrayer", w: 1280, h: 960 },
-  { src: IMAGES.groupPortrait, altKey: "gallery.altGroup", w: 2048, h: 1516 },
+  { src: IMAGES.groupPortrait, altKey: "gallery.altGroup", w: 4096, h: 3032 },
   { src: IMAGES.football, altKey: "gallery.altFootball", w: 1280, h: 960 },
 ];
 

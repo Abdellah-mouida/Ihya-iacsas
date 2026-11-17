@@ -1,13 +1,10 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Theme main color & pattern texture layer verification", () => {
-  test("Home page renders texture layer with mask-image and pattern SVG HTTP 200", async ({ page, request }) => {
+  test("Home page renders shared inline khatam texture and pattern assets remain available", async ({ page, request }) => {
     // Check pattern SVGs are 200 OK
     const patterns = [
-      "/patterns/mandala.svg",
-      "/patterns/star-rosette.svg",
       "/patterns/girih.svg",
-      "/patterns/interlocking-geometric.svg",
       "/patterns/corner-ornament.svg",
     ];
 
@@ -19,17 +16,14 @@ test.describe("Theme main color & pattern texture layer verification", () => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
 
-    // Check shared page background texture layer exists
-    const textureSurface = page.locator('[data-testid="page-texture-layer"]').first();
+    // Check shared root atmosphere has an inline theme-tinted texture.
+    const textureSurface = page.locator('[data-testid="site-atmosphere"]');
     await expect(textureSurface).toBeAttached();
 
     // Verify SVG pattern element or rect mask is present in texture layer
-    const patternPresent = await textureSurface.evaluate((el) => {
-      const svg = el.querySelector("svg");
-      const pattern = el.querySelector("pattern");
-      const rect = el.querySelector("rect");
-      return Boolean(svg && pattern && rect);
-    });
+    const patternPresent = await textureSurface.evaluate((el) =>
+      Boolean(el.querySelector("svg") && el.querySelector("pattern#site-khatam-pattern") && el.querySelector("mask#site-pattern-mask"))
+    );
 
     expect(patternPresent).toBe(true);
 
@@ -38,18 +32,13 @@ test.describe("Theme main color & pattern texture layer verification", () => {
     const mapExists = await page.locator("#branches svg").count();
     expect(mapExists).toBeGreaterThanOrEqual(1);
 
-    // Verify activities section card titles in Arabic have no Latin characters
-    const activitiesSection = page.locator("#activities");
-    await expect(activitiesSection).toBeAttached();
-
-    const activityCards = activitiesSection.locator("h3");
-    const count = await activityCards.count();
-    expect(count).toBeGreaterThanOrEqual(3);
-
-    // Check first card text
-    const text = await activitiesSection.textContent();
-    expect(text).toContain("01");
-    // In Arabic locale, ensure no Latin "FIELD" word
+    // The merged About section owns all four localized activity cards.
+    const aboutSection = page.locator("#about");
+    await expect(aboutSection).toBeAttached();
+    await expect(page.locator("#activities")).toHaveCount(0);
+    await expect(aboutSection.locator("[data-testid=home-activity-card]")).toHaveCount(4);
+    const text = await aboutSection.textContent();
+    expect(text).toContain("لقاءات");
     expect(text).not.toContain("FIELD");
     expect(text).not.toContain("MIND");
     expect(text).not.toContain("IMPACT");

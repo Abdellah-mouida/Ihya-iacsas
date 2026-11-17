@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
-import Image from "next/image";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { signOut } from "next-auth/react";
-import { UserAccountData, updateUserProfile } from "@/app/actions/account";
+import { signOut, useSession } from "next-auth/react";
+import { clearLegacyBookingState } from "@/lib/booking-state";
+import {
+  UserAccountData,
+  deleteOwnAccount,
+  updateUserAvatar,
+  updateUserProfile,
+} from "@/app/actions/account";
 import { changePassword } from "@/app/actions/auth";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
-import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { CityCombobox } from "@/components/common/city-combobox";
 import { ProfileTagEditor } from "@/components/settings/profile-tag-editor";
 import { ImageCropperDialog } from "@/components/common/image-cropper-dialog";
 import { PatternCover } from "@/components/common/pattern-cover";
@@ -21,6 +26,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   User,
   Palette,
   Globe2,
@@ -28,16 +40,23 @@ import {
   Upload,
   CheckCircle2,
   KeyRound,
-  Trash2,
   LogOut,
-  AlertTriangle,
   ExternalLink,
-  ChevronRight,
   ArrowRight,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { ThemeDto } from "@/lib/theme-constants";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 
 interface SettingsViewProps {
   initialData: UserAccountData;
@@ -45,21 +64,30 @@ interface SettingsViewProps {
   availableThemes?: ThemeDto[];
 }
 
-const DEFAULT_COVER_PRESETS = [
-  { id: "default", nameAr: "افتراضي", nameEn: "Default", path: "/patterns/girih.svg" },
-  { id: "mandala", nameAr: "ماندالا", nameEn: "Mandala", path: "/patterns/mandala.svg" },
-  { id: "star-rosette", nameAr: "نجمة", nameEn: "Star Rosette", path: "/patterns/star-rosette.svg" },
-];
+function getCurrentProfileCoverAspectRatio(): number {
+  const main = document.querySelector("main");
+  if (!main) return 16 / 9;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const mainStyle = getComputedStyle(main);
+  const horizontalPadding =
+    Number.parseFloat(mainStyle.paddingInlineStart) + Number.parseFloat(mainStyle.paddingInlineEnd);
+  const mainContentWidth = main.getBoundingClientRect().width - horizontalPadding;
+  const profileCoverWidth = Math.max(0, Math.min(mainContentWidth, 64 * rootFontSize) - 2);
+  const profileCoverHeight = (window.matchMedia("(min-width: 640px)").matches ? 16 : 12) * rootFontSize;
+  return profileCoverWidth / profileCoverHeight;
+}
 
 export function SettingsView({
   initialData,
   initialTab = "profile",
   availableThemes = [],
 }: SettingsViewProps) {
-  const { t, locale, setLocale, dir } = useLocale();
+  const { locale, setLocale, t } = useLocale();
   const isAr = locale === "ar";
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { update: updateSession } = useSession();
 
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (initialTab === "themes" || initialTab === "appearance") return "themes";
@@ -68,8 +96,10 @@ export function SettingsView({
     return "profile";
   });
 
-  const [userData, setUserData] = useState(initialData.user);
+  const [userData] = useState(initialData.user);
   const [isPending, startTransition] = useTransition();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingAccount, startDeleteTransition] = useTransition();
 
   // Profile Form States
   const [name, setName] = useState(userData.name || "");
@@ -86,15 +116,51 @@ export function SettingsView({
   // Avatar & Cover States
   const [avatarUrl, setAvatarUrl] = useState(userData.image || "");
   const [coverUrl, setCoverUrl] = useState(userData.coverImage || "/patterns/girih.svg");
+  const [coverImageWidth, setCoverImageWidth] = useState(userData.coverWidth);
+  const [coverImageHeight, setCoverImageHeight] = useState(userData.coverHeight);
   const [isAvatarCropOpen, setIsAvatarCropOpen] = useState(false);
   const [rawAvatarSrc, setRawAvatarSrc] = useState<string | null>(null);
   const [isCoverCropOpen, setIsCoverCropOpen] = useState(false);
   const [rawCoverSrc, setRawCoverSrc] = useState<string | null>(null);
+  const [coverAspect, setCoverAspect] = useState(16 / 9);
 
   // Security Form States
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  // Messaging & Friends Privacy States
+  const [friendRequestPolicy, setFriendRequestPolicy] = useState<"EVERYONE" | "NOBODY">(
+    userData.friendRequestPolicy || "EVERYONE",
+  );
+  const [showOnlineStatus, setShowOnlineStatus] = useState(Boolean(userData.showOnlineStatus));
+  const [showFriendCount, setShowFriendCount] = useState(Boolean(userData.showFriendCount));
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+
+  const updatePrivacySettings = async (patch: {
+    friendRequestPolicy?: "EVERYONE" | "NOBODY";
+    showOnlineStatus?: boolean;
+    showFriendCount?: boolean;
+  }) => {
+    setIsSavingPrivacy(true);
+    try {
+      const res = await fetch("/api/user/privacy", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        notify.error(t("privacySettings.saveFailed"));
+        return;
+      }
+      notify.success(t("privacySettings.saved"));
+      router.refresh();
+    } catch {
+      notify.error(t("privacySettings.saveFailed"));
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -103,24 +169,45 @@ export function SettingsView({
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("name", name);
-      formData.set("city", city);
-      formData.set("age", age);
-      formData.set("bio", bio);
-      formData.set("studyLevel", studyLevel);
-      formData.set("institution", institution);
-      formData.set("interests", JSON.stringify(interests));
-      formData.set("skills", JSON.stringify(skills));
-      formData.set("languages", JSON.stringify(languages));
-      formData.set("volunteerAreas", JSON.stringify(volunteerAreas));
+    const normalizedName = name.trim();
+    const normalizedCity = city.trim();
+    const normalizedAge = age
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .trim();
+    const normalizedStudy = studyLevel.trim();
+    const normalizedInstitution = institution.trim();
 
-      const res = await updateUserProfile(formData, locale);
-      if (res.success && res.user) {
-        notify.success(isAr ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
-      } else {
-        notify.error(res.error || (isAr ? "حدث خطأ أثناء الحفظ" : "Save failed"));
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("name", normalizedName);
+        formData.set("city", normalizedCity);
+        formData.set("age", normalizedAge);
+        formData.set("bio", bio);
+        formData.set("studyLevel", normalizedStudy);
+        formData.set("institution", normalizedInstitution);
+        formData.set("interests", JSON.stringify(interests));
+        formData.set("skills", JSON.stringify(skills));
+        formData.set("languages", JSON.stringify(languages));
+        formData.set("volunteerAreas", JSON.stringify(volunteerAreas));
+
+        const res = await updateUserProfile(formData, locale);
+        if (res.success && res.user) {
+          await updateSession({
+            name: res.user.name,
+            city: res.user.city,
+            age: res.user.age,
+            image: res.user.image,
+          });
+          notify.success(isAr ? "تم تحديث الملف الشخصي بنجاح" : "Profile updated successfully");
+          router.push("/profile");
+          router.refresh();
+        } else {
+          notify.error(res.error || (isAr ? "حدث خطأ أثناء الحفظ" : "Save failed"));
+        }
+      } catch {
+        notify.error(isAr ? "تعذر حفظ التغييرات، حاول مجدداً" : "Failed to save profile changes");
       }
     });
   };
@@ -142,12 +229,20 @@ export function SettingsView({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      setCoverAspect(getCurrentProfileCoverAspectRatio());
       setRawCoverSrc(reader.result as string);
       setIsCoverCropOpen(true);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
+
+  useEffect(() => {
+    if (!isCoverCropOpen) return;
+    const updateAspect = () => setCoverAspect(getCurrentProfileCoverAspectRatio());
+    window.addEventListener("resize", updateAspect);
+    return () => window.removeEventListener("resize", updateAspect);
+  }, [isCoverCropOpen]);
 
   const handleAvatarCropped = async (cropped: { file: File }) => {
     startTransition(async () => {
@@ -157,15 +252,28 @@ export function SettingsView({
         formData.append("folder", "avatars");
 
         const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) {
-          setAvatarUrl(data.url);
-          const profileForm = new FormData();
-          profileForm.set("image", data.url);
-          if (data.publicId) profileForm.set("imagePublicId", data.publicId);
-          await updateUserProfile(profileForm, locale);
-          notify.success(isAr ? "تم تحديث الصورة الشخصية" : "Profile photo updated");
+        const data = (await res.json()) as {
+          url?: string;
+          publicId?: string;
+          uploadProof?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.url || !data.uploadProof) {
+          notify.error(data.error || (isAr ? "فشل رفع الصورة" : "Photo upload failed"));
+          return;
         }
+        const avatarRes = await updateUserAvatar(
+          { imageUrl: data.url, imagePublicId: data.publicId ?? null, uploadProof: data.uploadProof },
+          locale,
+        );
+        if (!avatarRes.success) {
+          notify.error(avatarRes.error || (isAr ? "فشل حفظ الصورة الشخصية" : "Failed to save profile photo"));
+          return;
+        }
+        setAvatarUrl(data.url);
+        await updateSession({ image: data.url });
+        router.refresh();
+        notify.success(isAr ? "تم تحديث الصورة الشخصية" : "Profile photo updated");
       } catch {
         notify.error(isAr ? "فشل رفع الصورة" : "Photo upload failed");
       }
@@ -180,16 +288,34 @@ export function SettingsView({
         formData.append("folder", "covers");
 
         const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) {
-          setCoverUrl(data.url);
-          await fetch("/api/user/preferences", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ coverImage: data.url, coverImagePublicId: data.publicId }),
-          });
-          notify.success(isAr ? "تم تحديث الغلاف بنجاح" : "Cover updated successfully");
+        const data = (await res.json()) as {
+          url?: string;
+          publicId?: string;
+          imageWidth?: number;
+          imageHeight?: number;
+          uploadProof?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.url || !data.uploadProof) {
+          notify.error(data.error || (isAr ? "فشل رفع الغلاف" : "Cover upload failed"));
+          return;
         }
+        const prefRes = await fetch("/api/user/preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uploadProof: data.uploadProof,
+          }),
+        });
+        if (!prefRes.ok) {
+          notify.error(isAr ? "فشل حفظ الغلاف" : "Failed to save cover");
+          return;
+        }
+        setCoverUrl(data.url);
+        setCoverImageWidth(data.imageWidth ?? null);
+        setCoverImageHeight(data.imageHeight ?? null);
+        router.refresh();
+        notify.success(isAr ? "تم تحديث الغلاف بنجاح" : "Cover updated successfully");
       } catch {
         notify.error(isAr ? "فشل رفع الغلاف" : "Cover upload failed");
       }
@@ -197,13 +323,24 @@ export function SettingsView({
   };
 
   const handleSelectDefaultCover = async (path: string) => {
-    setCoverUrl(path);
-    await fetch("/api/user/preferences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coverImage: path, coverImagePublicId: null }),
-    });
-    notify.success(isAr ? "تم تعيين الغلاف الافتراضي" : "Default cover set");
+    try {
+      const res = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverImage: path, coverImagePublicId: null, coverWidth: null, coverHeight: null }),
+      });
+      if (!res.ok) {
+        notify.error(isAr ? "فشل تحديث الغلاف" : "Failed to update cover");
+        return;
+      }
+      setCoverUrl(path);
+      setCoverImageWidth(null);
+      setCoverImageHeight(null);
+      router.refresh();
+      notify.success(isAr ? "تم تعيين الغلاف الافتراضي" : "Default cover set");
+    } catch {
+      notify.error(isAr ? "فشل تحديث الغلاف" : "Failed to update cover");
+    }
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -229,6 +366,9 @@ export function SettingsView({
 
       const res = await changePassword(formData, locale);
       if (res.success) {
+        if (res.sessionRotationProof) {
+          await updateSession({ sessionRotationProof: res.sessionRotationProof });
+        }
         setCurrentPassword("");
         setNewPassword("");
         setConfirmNewPassword("");
@@ -239,16 +379,31 @@ export function SettingsView({
     });
   };
 
+  const handleDeleteOwnAccount = () => {
+    startDeleteTransition(async () => {
+      const result = await deleteOwnAccount();
+      if (!result.success) {
+        notify.error(t("account.deleteAccountFailed"));
+        return;
+      }
+
+      clearLegacyBookingState();
+      setDeleteDialogOpen(false);
+      await signOut({ callbackUrl: "/login" });
+    });
+  };
+
   const [backPath, setBackPath] = useState("/");
 
   useEffect(() => {
     // shortcut: In-memory tracker resets to "/" on full page reload.
     // Upgrade path: Store and validate a `?from=` query parameter.
-    setBackPath(getLastNonSettingsPath());
+    const frame = requestAnimationFrame(() => setBackPath(getLastNonSettingsPath()));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   return (
-    <div className="space-y-8" data-testid="settings-view-container">
+    <div className={`${rbStyles.animatedContent} space-y-8`} data-testid="settings-view-container" data-rb="AnimatedContent">
       {/* Back Link to Last Non-Settings Page */}
       <div>
         <Link
@@ -279,10 +434,10 @@ export function SettingsView({
 
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Left Side Navigation (Desktop) & Sticky Segmented Bar (Mobile) */}
-        <aside className="w-full lg:w-64 shrink-0 lg:sticky lg:top-24">
+        <aside className="w-full min-w-0 shrink-0 lg:sticky lg:top-24 lg:w-64">
           <nav
             role="tablist"
-            className="flex lg:flex-col gap-1.5 p-1.5 rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-sm overflow-x-auto no-scrollbar"
+            className="flex min-w-0 gap-1.5 overflow-x-auto rounded-2xl border border-border/80 bg-card/70 p-1.5 shadow-sm backdrop-blur-xl no-scrollbar lg:flex-col"
           >
             {[
               { id: "profile", label: isAr ? "تعديل الملف" : "Edit Profile", icon: User },
@@ -300,7 +455,7 @@ export function SettingsView({
                   aria-selected={isSelected}
                   data-testid={`settings-tab-${item.id}-btn`}
                   onClick={() => handleTabChange(item.id)}
-                  className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs sm:text-sm font-heading font-semibold transition-all whitespace-nowrap ${
+                  className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-3 text-xs font-heading font-semibold transition-all whitespace-nowrap sm:px-4 sm:text-sm ${
                     isSelected
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -321,13 +476,14 @@ export function SettingsView({
             <div
               id="settings-profile-section"
               data-testid="settings-profile-section"
-              className="p-6 sm:p-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-sm space-y-8"
+              data-cover-crop-aspect={coverAspect}
+              className="min-w-0 space-y-8 overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-5 shadow-sm sm:bg-card/60 sm:p-10 sm:backdrop-blur-xl"
             >
               <div>
-                <h2 className="text-xl font-heading font-bold text-foreground">
+                <h2 className="break-words text-xl font-heading font-bold text-foreground">
                   {isAr ? "الملف الشخصي والصور" : "Personal Profile & Imagery"}
                 </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                <p className="mt-0.5 break-words text-xs text-muted-foreground sm:text-sm">
                   {isAr
                     ? "حدّث صورتك الشخصية، غلاف حسابك، وبياناتك الشخصية والأكاديمية"
                     : "Update your avatar, profile cover banner, and academic background"}
@@ -339,8 +495,8 @@ export function SettingsView({
                 <Label className="text-xs font-semibold text-foreground">
                   {isAr ? "غلاف الملف الشخصي" : "Profile Cover"}
                 </Label>
-                <div className="relative h-44 rounded-2xl overflow-hidden border border-border/70 bg-muted/40">
-                  <PatternCover coverUrl={coverUrl} alt="Cover" />
+                <div data-testid="settings-cover-preview" className="relative start-1/2 h-48 w-[min(calc(100%+2.5rem),64rem)] -translate-x-1/2 overflow-hidden rounded-2xl border border-border/70 bg-muted/40 sm:h-64 sm:w-[min(calc(100%+5rem),64rem)] rtl:translate-x-1/2">
+                  <PatternCover coverUrl={coverUrl} alt="Cover" imageWidth={coverImageWidth} imageHeight={coverImageHeight} />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center gap-3 opacity-90 hover:opacity-100 transition-opacity">
                     <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card/90 backdrop-blur text-foreground text-xs font-semibold hover:bg-card">
                       <Upload className="size-3.5 text-primary" />
@@ -356,12 +512,12 @@ export function SettingsView({
                 </div>
 
                 {/* Default Cover Option */}
-                <div className="flex items-center justify-between pt-1">
-                  <div className="space-y-0.5">
+                <div className="flex min-w-0 flex-col items-start gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-0.5">
                     <span className="text-xs font-semibold text-foreground block">
                       {isAr ? "الغلاف الافتراضي" : "Default Pattern Cover"}
                     </span>
-                    <span className="text-[11px] text-muted-foreground block">
+                    <span className="block break-words text-[11px] text-muted-foreground">
                       {isAr ? "نمط هندسي إسلامي يتغير لونه تلقائياً مع السمة" : "Islamic geometric pattern automatically matching active theme"}
                     </span>
                   </div>
@@ -371,7 +527,7 @@ export function SettingsView({
                     size="sm"
                     onClick={() => handleSelectDefaultCover("/patterns/girih.svg")}
                     data-testid="default-cover-btn"
-                    className="rounded-xl text-xs font-heading font-medium"
+                    className="min-h-10 max-w-full min-w-0 whitespace-normal rounded-xl px-3 text-start text-xs font-heading font-medium sm:w-auto"
                   >
                     {isAr ? "استخدام النمط الافتراضي" : "Use Default Pattern"}
                   </Button>
@@ -383,7 +539,7 @@ export function SettingsView({
                 <Label className="text-xs font-semibold text-foreground">
                   {isAr ? "الصورة الشخصية" : "Profile Avatar"}
                 </Label>
-                <div className="flex items-center gap-5">
+                <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-5">
                   <div className="relative rounded-full border-2 border-border overflow-hidden bg-muted/40 shrink-0">
                     <UserAvatar
                       id={userData.id}
@@ -395,9 +551,9 @@ export function SettingsView({
                     />
                   </div>
 
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border/80 bg-card hover:bg-muted/50 text-xs font-semibold text-foreground transition-colors">
-                    <Upload className="size-3.5 text-primary" />
-                    <span>{isAr ? "تغيير الصورة الشخصية" : "Change Avatar"}</span>
+                  <label className="inline-flex min-h-11 min-w-0 max-w-full cursor-pointer items-center gap-2 rounded-xl border border-border/80 bg-card px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/50 sm:px-4">
+                    <Upload className="size-3.5 shrink-0 text-primary" />
+                    <span className="min-w-0 break-words">{isAr ? "تغيير الصورة الشخصية" : "Change Avatar"}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -412,75 +568,95 @@ export function SettingsView({
               <form onSubmit={handleProfileSubmit} className="space-y-5 pt-4 border-t border-border/60">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "الاسم الكامل" : "Full Name"}</Label>
+                    <Label htmlFor="settings-name" className="text-xs font-semibold">{isAr ? "الاسم الكامل" : "Full Name"}</Label>
                     <Input
+                      id="settings-name"
+                      data-testid="settings-name-input"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="mt-1"
+                      onBlur={(e) => setName(e.target.value.trim())}
+                      placeholder={isAr ? "الاسم الكامل" : "Full name"}
+                      className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                       required
                     />
                   </div>
 
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "المدينة" : "City"}</Label>
-                    <select
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="mt-1 w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground"
-                    >
-                      <option value="">{isAr ? "اختر مدينتك..." : "Select city..."}</option>
-                      {MOROCCAN_CITIES.map((c) => (
-                        <option key={c.id} value={isAr ? c.nameAr : c.nameEn}>
-                          {isAr ? c.nameAr : c.nameEn}
-                        </option>
-                      ))}
-                    </select>
+                    <Label htmlFor="b-city" className="text-xs font-semibold">{isAr ? "المدينة" : "City"}</Label>
+                    <div className="mt-1.5">
+                      <CityCombobox
+                        value={city}
+                        onChange={setCity}
+                        locale={locale}
+                        placeholder={isAr ? "اختر مدينتك..." : "Select city..."}
+                        className="min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "العمر" : "Age"}</Label>
+                    <Label htmlFor="settings-age" className="text-xs font-semibold">{isAr ? "العمر" : "Age"}</Label>
                     <Input
-                      type="number"
+                      id="settings-age"
+                      data-testid="settings-age-input"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
-                      min={10}
-                      max={120}
-                      className="mt-1"
+                      onBlur={(e) =>
+                        setAge(
+                          e.target.value
+                            .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+                            .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+                            .trim(),
+                        )
+                      }
+                      placeholder={isAr ? "مثال: 22" : "e.g. 22"}
+                      className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                     />
                   </div>
 
                   <div>
-                    <Label className="text-xs font-semibold">{isAr ? "المستوى الدراسي" : "Study Level"}</Label>
+                    <Label htmlFor="settings-studylevel" className="text-xs font-semibold">{isAr ? "المستوى الدراسي" : "Study Level"}</Label>
                     <Input
+                      id="settings-studylevel"
+                      data-testid="settings-studylevel-input"
                       value={studyLevel}
                       onChange={(e) => setStudyLevel(e.target.value)}
+                      onBlur={(e) => setStudyLevel(e.target.value.trim())}
                       placeholder={isAr ? "مثال: بكالوريا، ماستر، إجازة..." : "e.g. Master, Bachelor..."}
-                      className="mt-1"
+                      className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold">{isAr ? "المؤسسة التعليمية" : "Institution"}</Label>
+                  <Label htmlFor="settings-institution" className="text-xs font-semibold">{isAr ? "المؤسسة التعليمية" : "Institution"}</Label>
                   <Input
+                    id="settings-institution"
+                    data-testid="settings-institution-input"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
+                    onBlur={(e) => setInstitution(e.target.value.trim())}
                     placeholder={isAr ? "مثال: جامعة محمد الخامس..." : "e.g. Mohammed V University..."}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold">{isAr ? "نبذة قصيرة" : "Short Bio"}</Label>
+                  <Label htmlFor="settings-bio" className="text-xs font-semibold">{isAr ? "نبذة قصيرة" : "Short Bio"}</Label>
                   <Textarea
+                    id="settings-bio"
+                    data-testid="settings-bio-input"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    rows={3}
+                    rows={4}
                     maxLength={280}
                     placeholder={isAr ? "بضع كلمات عن أهدافك وطموحاتك..." : "A few words about your goals..."}
-                    className="mt-1 text-sm resize-none"
+                    className="mt-1.5 min-h-28 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm resize-none"
                   />
                 </div>
 
@@ -532,7 +708,7 @@ export function SettingsView({
                     type="submit"
                     disabled={isPending}
                     data-testid="settings-save-profile-btn"
-                    className="rounded-xl px-8 font-heading font-semibold"
+                    className="min-h-11 max-w-full whitespace-normal rounded-xl px-5 text-center font-heading text-xs font-semibold sm:px-8 sm:text-sm"
                   >
                     {isPending ? (isAr ? "جاري الحفظ..." : "Saving...") : isAr ? "حفظ التغييرات" : "Save Changes"}
                   </Button>
@@ -783,7 +959,7 @@ export function SettingsView({
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
@@ -793,7 +969,7 @@ export function SettingsView({
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
@@ -803,7 +979,7 @@ export function SettingsView({
                     type="password"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5 min-h-12 h-12 rounded-xl px-4 py-3 text-base md:text-sm placeholder:text-base md:placeholder:text-sm"
                   />
                 </div>
 
@@ -816,6 +992,103 @@ export function SettingsView({
                 </Button>
               </form>
 
+              {/* Messaging & Friends Privacy */}
+              <div className="pt-6 border-t border-border/60 space-y-5 max-w-xl" data-testid="settings-chat-privacy-block">
+                <div>
+                  <h3 className="text-sm font-heading font-bold text-foreground">
+                    {t("privacySettings.heading")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t("privacySettings.description")}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    {t("privacySettings.friendRequestPolicyLabel")}
+                  </Label>
+                  <Select
+                    value={friendRequestPolicy}
+                    disabled={isSavingPrivacy}
+                    onValueChange={(value) => {
+                      const next = value === "NOBODY" ? "NOBODY" : "EVERYONE";
+                      setFriendRequestPolicy(next);
+                      void updatePrivacySettings({ friendRequestPolicy: next });
+                    }}
+                  >
+                    <SelectTrigger data-testid="privacy-friend-request-policy" className="max-w-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EVERYONE">{t("privacySettings.policyEveryone")}</SelectItem>
+                      <SelectItem value="NOBODY">{t("privacySettings.policyNobody")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/40 p-4">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-foreground">
+                      {t("privacySettings.showOnlineStatusLabel")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("privacySettings.showOnlineStatusHint")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showOnlineStatus}
+                    aria-label={t("privacySettings.showOnlineStatusLabel")}
+                    data-testid="privacy-show-online-toggle"
+                    disabled={isSavingPrivacy}
+                    onClick={() => {
+                      const next = !showOnlineStatus;
+                      setShowOnlineStatus(next);
+                      void updatePrivacySettings({ showOnlineStatus: next });
+                    }}
+                    className={`flex h-7 w-12 shrink-0 items-center rounded-full border p-1 transition-colors ${
+                      showOnlineStatus
+                        ? "justify-end border-primary bg-primary"
+                        : "justify-start border-border bg-muted"
+                    }`}
+                  >
+                    <span className="size-5 rounded-full bg-background shadow-sm" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/40 p-4">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-foreground">
+                      {t("privacySettings.showFriendCountLabel")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("privacySettings.showFriendCountHint")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showFriendCount}
+                    aria-label={t("privacySettings.showFriendCountLabel")}
+                    data-testid="privacy-show-friend-count-toggle"
+                    disabled={isSavingPrivacy}
+                    onClick={() => {
+                      const next = !showFriendCount;
+                      setShowFriendCount(next);
+                      void updatePrivacySettings({ showFriendCount: next });
+                    }}
+                    className={`flex h-7 w-12 shrink-0 items-center rounded-full border p-1 transition-colors ${
+                      showFriendCount
+                        ? "justify-end border-primary bg-primary"
+                        : "justify-start border-border bg-muted"
+                    }`}
+                  >
+                    <span className="size-5 rounded-full bg-background shadow-sm" />
+                  </button>
+                </div>
+              </div>
+
               {/* Data Inquiries Notice */}
               <div className="pt-6 border-t border-border/60 space-y-2">
                 <h3 className="text-sm font-heading font-bold text-foreground">
@@ -823,9 +1096,29 @@ export function SettingsView({
                 </h3>
                 <p className="text-xs text-muted-foreground max-w-xl">
                   {isAr
-                    ? "وفقاً لسياسة الخصوصية، يمكنك في أي وقت طلب نسخة من بياناتك أو طلب تصحيحها أو حذفها بالتواصل المباشر مع إدارة البرنامج عبر وسائل الاتصال المعتمدة."
-                    : "In accordance with our Privacy Policy, you may request a copy of your personal data, corrections, or deletion at any time by contacting the program administrators directly."}
+                    ? "وفقاً لسياسة الخصوصية، يمكنك طلب نسخة من بياناتك أو تصحيحها بالتواصل مع إدارة البرنامج. يمكنك حذف حسابك مباشرة من هذا القسم."
+                    : "You may request a copy of your data or corrections by contacting the program administrators. You can delete your account directly from this section."}
                 </p>
+              </div>
+
+              <div className="pt-6 border-t border-border/60 space-y-2">
+                <h3 className="text-sm font-heading font-bold text-destructive">
+                  {t("account.deleteAccountTitle")}
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-xl">
+                  {t("account.deleteAccountDescription")}
+                </p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  data-testid="settings-delete-account-btn"
+                  disabled={isDeletingAccount}
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="mt-2 rounded-xl font-heading font-semibold text-xs gap-2"
+                >
+                  <Trash2 className="size-4" />
+                  <span>{t("account.deleteAccountAction")}</span>
+                </Button>
               </div>
 
               {/* Legal Links */}
@@ -851,7 +1144,10 @@ export function SettingsView({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => {
+                    clearLegacyBookingState();
+                    signOut({ callbackUrl: "/login" });
+                  }}
                   data-testid="settings-signout-btn"
                   className="rounded-xl font-heading font-semibold text-xs gap-2"
                 >
@@ -863,6 +1159,47 @@ export function SettingsView({
           )}
         </div>
       </div>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingAccount) setDeleteDialogOpen(open);
+        }}
+      >
+        <DialogContent
+          data-testid="settings-delete-account-dialog"
+          closeLabel={t("common.close")}
+          className="rounded-2xl sm:max-w-md"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="size-5" />
+              {t("account.deleteAccountConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription>{t("account.deleteAccountConfirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              data-testid="settings-delete-account-cancel"
+              disabled={isDeletingAccount}
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              {t("account.deleteAccountCancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              data-testid="settings-delete-account-confirm"
+              disabled={isDeletingAccount}
+              onClick={handleDeleteOwnAccount}
+            >
+              {isDeletingAccount ? t("account.deleteAccountDeleting") : t("account.deleteAccountConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cropper Dialogs */}
       {rawAvatarSrc && (
@@ -881,13 +1218,14 @@ export function SettingsView({
 
       {rawCoverSrc && (
         <ImageCropperDialog
+          key={`cover-${coverAspect}`}
           open={isCoverCropOpen}
           onOpenChange={(open) => {
             setIsCoverCropOpen(open);
             if (!open) setRawCoverSrc(null);
           }}
           imageSrc={rawCoverSrc}
-          aspect={16 / 9}
+          aspect={coverAspect}
           onCropComplete={handleCoverCropped}
         />
       )}

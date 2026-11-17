@@ -51,14 +51,23 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeLabel = "Close",
+  closeButtonClassName,
+  fullScreenMobile = false,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  closeLabel?: string
+  closeButtonClassName?: string
+  fullScreenMobile?: boolean
 }) {
   return (
     <DialogPortal>
       <DialogOverlay />
-      <div className="fixed inset-0 z-50 grid place-items-center p-4 overflow-y-auto pointer-events-none">
+      <div className={cn(
+        "fixed inset-0 z-50 grid place-items-center p-4 overflow-y-auto pointer-events-none",
+        fullScreenMobile && "p-0 sm:p-4",
+      )}>
         <DialogPrimitive.Content
           data-slot="dialog-content"
           className={cn(
@@ -77,12 +86,12 @@ function DialogContent({
             <DialogPrimitive.Close data-slot="dialog-close" asChild>
               <Button
                 variant="ghost"
-                className="absolute top-2 end-2"
+                className={cn("absolute top-2 end-2", closeButtonClassName)}
                 size="icon-sm"
               >
                 <XIcon
                 />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{closeLabel}</span>
               </Button>
             </DialogPrimitive.Close>
           )}

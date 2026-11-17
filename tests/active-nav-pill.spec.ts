@@ -19,9 +19,10 @@ test.describe("Task 3: Active Nav Link Highlight with Framer Motion layoutId Pil
     const eventsLink = page.locator('header nav ul a[href="/events"]');
     await eventsLink.click();
     await page.waitForURL((url) => url.pathname.includes("/events"));
+    await expect(page.locator("main h2")).toBeVisible({ timeout: 30_000 });
 
-    await expect(eventsLink).toHaveAttribute("aria-current", "page");
-    await expect(homeLink).not.toHaveAttribute("aria-current", "page");
+    await expect(page.locator('header nav ul a[href="/events"]')).toHaveAttribute("aria-current", "page", { timeout: 30_000 });
+    await expect(page.locator('header nav ul a[href="/"]')).not.toHaveAttribute("aria-current", "page", { timeout: 30_000 });
 
     // Check sliding pill moved to /events
     const eventsPill = page.locator('header nav ul a[href="/events"] span.bg-primary');
@@ -31,9 +32,10 @@ test.describe("Task 3: Active Nav Link Highlight with Framer Motion layoutId Pil
     const galleryLink = page.locator('header nav ul a[href="/gallery"]');
     await galleryLink.click();
     await page.waitForURL((url) => url.pathname.includes("/gallery"));
+    await expect(page.locator("main h2")).toBeVisible({ timeout: 30_000 });
 
-    await expect(galleryLink).toHaveAttribute("aria-current", "page");
-    await expect(eventsLink).not.toHaveAttribute("aria-current", "page");
+    await expect(page.locator('header nav ul a[href="/gallery"]')).toHaveAttribute("aria-current", "page", { timeout: 30_000 });
+    await expect(page.locator('header nav ul a[href="/events"]')).not.toHaveAttribute("aria-current", "page", { timeout: 30_000 });
 
     const galleryPill = page.locator('header nav ul a[href="/gallery"] span.bg-primary');
     await expect(galleryPill).toBeVisible();

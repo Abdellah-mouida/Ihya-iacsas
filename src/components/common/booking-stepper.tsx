@@ -6,18 +6,14 @@ import {
   ArrowRight,
   Calendar,
   Check,
-  CheckCircle2,
   Clock,
-  Home,
   MapPin,
   Pencil,
   Phone,
   ShieldCheck,
   Sparkles,
-  User,
   Users,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
@@ -30,11 +26,11 @@ import { getEventById } from "@/app/actions/events";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { SmoothImage } from "@/components/common/smooth-image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/i18n/locale-provider";
-import { isEventBooked, markEventBooked } from "@/lib/booking-state";
 import { notify } from "@/lib/toast";
 import { EVENT, IMAGES } from "@/lib/content";
 import { EASE } from "@/lib/motion";
@@ -74,6 +70,8 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     time?: string;
     location?: string;
     posterUrl?: string | null;
+    posterWidth?: number | null;
+    posterHeight?: number | null;
     capacityType?: string;
     capacity?: number | null;
     confirmedCount?: number;
@@ -137,47 +135,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
     };
   }, [targetEventId]);
 
-  const [arrivedAlreadyBooked] = useState<boolean>(() => isEventBooked(targetEventId));
-
-  useEffect(() => {
-    if (arrivedAlreadyBooked && step !== 2) {
-      const timer = setTimeout(() => {
-        router.replace(`/events#event-${targetEventId}`);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [arrivedAlreadyBooked, step, targetEventId, router]);
-
-  if (arrivedAlreadyBooked && step !== 2) {
-    return (
-      <div
-        data-testid="already-booked-gate"
-        className="mx-auto w-full max-w-lg text-center py-12 px-6 rounded-3xl border border-brass/20 bg-card/60 backdrop-blur-sm shadow-layered"
-      >
-        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-brass/10 text-brass">
-          <CheckCircle2 className="size-8" />
-        </div>
-        <h2 className="font-amiri text-2xl font-bold text-foreground">
-          {t("booking.alreadyRegisteredTitle")}
-        </h2>
-        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-          {t("booking.alreadyRegisteredDesc")}
-        </p>
-        <div className="mt-8 flex justify-center">
-          <Button
-            asChild
-            data-testid="already-booked-back-btn"
-            className="rounded-full bg-brass-gradient px-8 py-3 text-night font-bold shadow-layered hover:brightness-110"
-          >
-            <Link href={`/events#event-${targetEventId}`}>
-              {t("booking.alreadyRegisteredBack")}
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   if (!userAuthChecked || (eventLoading && !eventInfo)) {
     return (
       <div
@@ -219,7 +176,6 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
           setWaitlistOrder(res.waitlistOrder ?? null);
         }
 
-        markEventBooked(res.eventId || targetEventId, res.bookingRef);
         setStep(2);
         notify.success(t("booking.bookingSuccessToast"));
       } else {
@@ -359,8 +315,8 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                     data-testid="account-snapshot-card"
                     className="rounded-2xl border border-brass/25 bg-muted/40 p-4 sm:p-5 flex flex-col gap-4 shadow-sm"
                   >
-                    <div className="flex items-center justify-between border-b border-border/50 pb-3">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <UserAvatar
                           src={userSnapshot?.image}
                           name={userSnapshot?.name}
@@ -369,9 +325,9 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                           shape="circle"
                           className="size-12 shrink-0 border-brass/30 ring-1 ring-primary/20"
                         />
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-heading font-bold text-foreground">
+                            <span className="truncate font-heading font-bold text-foreground">
                               {userSnapshot?.name}
                             </span>
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
@@ -379,7 +335,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                               {locale === "ar" ? "موثق" : "Verified"}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground dir-ltr block">
+                          <span className="block truncate text-xs text-muted-foreground dir-ltr">
                             {userSnapshot?.email}
                           </span>
                         </div>
@@ -389,11 +345,12 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         asChild
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-brass hover:text-brass/80 gap-1.5 h-8 px-2.5 rounded-full"
+                        className="h-11 min-w-11 shrink-0 gap-1.5 rounded-full px-2.5 text-xs text-brass hover:text-brass/80"
                       >
-                        <Link href="/settings?tab=profile" target="_blank">
+                        <Link href="/settings?tab=profile" target="_blank" rel="noopener noreferrer">
                           <Pencil className="size-3" />
-                          {t("booking.editAccountProfile")}
+                          <span className="sm:hidden">{t("booking.editProfileShort")}</span>
+                          <span className="hidden sm:inline">{t("booking.editAccountProfile")}</span>
                         </Link>
                       </Button>
                     </div>
@@ -505,7 +462,7 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         ? "bg-amber-500/20 text-amber-500 border border-amber-500/40"
                         : bookingStatus === "WAITLISTED"
                           ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
-                          : "bg-brass-gradient text-night",
+                          : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40",
                     )}
                   >
                     {bookingStatus === "PENDING" ? (
@@ -534,6 +491,11 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         ? `${t("booking.statusWaitlistDesc")} (#${waitlistOrder || 1})`
                         : t("booking.confirmDesc")}
                   </p>
+                  {(bookingStatus === "PENDING" || bookingStatus === "WAITLISTED") && (
+                    <p data-testid="booking-email-notification-note" className="text-xs text-muted-foreground">
+                      {t("booking.statusNotificationNote")}
+                    </p>
+                  )}
 
                   <OrnamentDivider compact />
 
@@ -553,16 +515,10 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
                         )}
                       >
                         {bookingStatus === "CONFIRMED"
-                          ? locale === "ar"
-                            ? "مؤكد"
-                            : "Confirmed"
+                          ? t("booking.statusConfirmedShort")
                           : bookingStatus === "PENDING"
-                            ? locale === "ar"
-                              ? "قيد المراجعة والموافقة"
-                              : "Pending Approval"
-                            : locale === "ar"
-                              ? `قائمة الانتظار (#${waitlistOrder || 1})`
-                              : `Waitlist (#${waitlistOrder || 1})`}
+                            ? t("booking.statusPendingShort")
+                            : t("booking.statusWaitlistPosition", { order: waitlistOrder || 1 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -670,10 +626,12 @@ export function BookingStepper({ initialEventId }: { initialEventId?: string } =
 
             {/* Poster image 16:9 ratio */}
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-brass/15 bg-muted/40 shadow-inner">
-              <Image
+              <SmoothImage
                 src={summaryPoster}
                 alt={summaryTitle}
                 fill
+                width={eventInfo?.posterWidth ?? 512}
+                height={eventInfo?.posterHeight ?? 288}
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 400px"
               />

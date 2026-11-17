@@ -2,10 +2,12 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bell,
   Calendar,
   ChevronDown,
   ChevronLeft,
   LogOut,
+  MessagesSquare,
   Settings,
   Shield,
   User as UserIcon,
@@ -20,7 +22,6 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { RoleBadge } from "@/components/common/role-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Texture } from "@/components/common/texture";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,7 @@ import {
 import { useLocale } from "@/i18n/locale-provider";
 import { EVENT, IMAGES, NAV_LINKS, hasNewEvent as staticHasNewEvent } from "@/lib/content";
 import { getPublicEvents } from "@/app/actions/events";
-import { isEventBooked } from "@/lib/booking-state";
+import { clearLegacyBookingState } from "@/lib/booking-state";
 import { EASE, fadeUp, staggerContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -58,12 +59,39 @@ function NewEventDot({ label }: { label: string }) {
   );
 }
 
+function ChatUnreadBadge({
+  count,
+  label,
+  testId = "navbar-chat-badge",
+}: {
+  count: number;
+  label: string;
+  testId?: string;
+}) {
+  if (count <= 0) return null;
+  return (
+    <motion.span
+      key={count}
+      initial={{ scale: 0.72, opacity: 0.6 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 460, damping: 24 }}
+      data-testid={testId}
+      aria-label={label}
+      className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-brass px-1.5 py-0.5 text-[11px] font-bold leading-none text-night shadow-sm"
+    >
+      {count > 99 ? "99+" : count}
+    </motion.span>
+  );
+}
+
 export function GlassNavbar({
   initialBookable = null,
   initialSession,
+  initialChatEnabled = false,
 }: {
   initialBookable?: boolean | null;
   initialSession?: Session | null;
+  initialChatEnabled?: boolean;
 } = {}) {
   const { t } = useLocale();
   const pathname = usePathname();
@@ -73,6 +101,10 @@ export function GlassNavbar({
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [hasNewEvent, setHasNewEvent] = useState(staticHasNewEvent);
+  const [chatEnabled, setChatEnabled] = useState(initialChatEnabled);
+  const [publicUnread, setPublicUnread] = useState(0);
+  const [privateUnread, setPrivateUnread] = useState(0);
+  const [notificationsUnread, setNotificationsUnread] = useState(0);
   // Render nothing until known to eliminate button flicker:
   // Starts null (unknown), only renders when explicitly true.
   const [hasBookableEvents, setHasBookableEvents] = useState<boolean | null>(initialBookable);
@@ -83,7 +115,7 @@ export function GlassNavbar({
       getPublicEvents().then((res) => {
         if (!mounted) return;
         if (res.success && res.openEvents) {
-          const unbookedEvents = res.openEvents.filter((e) => !isEventBooked(e.id));
+          const unbookedEvents = res.openEvents.filter((e) => !e.userBookingStatus);
           const hasAny = unbookedEvents.length > 0;
           setHasNewEvent(hasAny);
           setHasBookableEvents(hasAny);
@@ -106,18 +138,193 @@ export function GlassNavbar({
     };
   }, [pathname]);
 
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      return;
+    }
+
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    const loadUnread = async () => {
+      try {
+        const [chatRes, notifRes] = await Promise.all([
+          fetch("/api/chat/unread", { cache: "no-store" }),
+          fetch("/api/notifications/summary", { cache: "no-store" }),
+        ]);
+        if (cancelled) return;
+        if (notifRes.ok) {
+          const notifData = (await notifRes.json()) as { unreadCount?: number };
+          if (!cancelled && typeof notifData.unreadCount === "number") {
+            setNotificationsUnread(Math.max(0, notifData.unreadCount));
+          }
+        }
+        if (!chatRes.ok) {
+          setChatEnabled(false);
+          setPublicUnread(0);
+          setPrivateUnread(0);
+          return;
+        }
+        const data = (await chatRes.json()) as {
+          publicUnread?: number;
+          privateUnread?: number;
+          pendingRequestsCount?: number;
+          pendingInvitesCount?: number;
+        };
+        if (cancelled) return;
+        setChatEnabled(true);
+        setPublicUnread(data.publicUnread ?? 0);
+        setPrivateUnread(
+          data.privateUnread ??
+            (data.pendingRequestsCount ?? 0) + (data.pendingInvitesCount ?? 0),
+        );
+      } catch {
+        // Silent network fallback
+      }
+    };
+
+    const scheduleLoad = () => {
+      if (initialChatEnabled) {
+        void loadUnread();
+        return;
+      }
+      if (typeof window.requestIdleCallback === "function") {
+        idleHandle = window.requestIdleCallback(() => void loadUnread(), {
+          timeout: 1200,
+        });
+      } else {
+        timeoutHandle = window.setTimeout(() => void loadUnread(), 400);
+      }
+    };
+
+    scheduleLoad();
+
+    const onUnreadCustom = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          publicTotal?: number;
+          privateTotal?: number;
+          total?: number;
+          count?: number;
+        }>
+      ).detail;
+      let handled = false;
+      if (typeof detail?.publicTotal === "number") {
+        setChatEnabled(true);
+        setPublicUnread(Math.max(0, detail.publicTotal));
+        handled = true;
+      }
+      if (typeof detail?.privateTotal === "number") {
+        setChatEnabled(true);
+        setPrivateUnread(Math.max(0, detail.privateTotal));
+        handled = true;
+      }
+      if (!handled) {
+        const legacyCount =
+          typeof detail?.total === "number" ? detail.total : detail?.count;
+        if (typeof legacyCount === "number") {
+          setChatEnabled(true);
+          setPublicUnread(Math.max(0, legacyCount));
+        } else {
+          void loadUnread();
+        }
+      }
+    };
+
+    const onNotificationUnreadCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ total?: number }>).detail;
+      if (typeof detail?.total === "number") {
+        setNotificationsUnread(Math.max(0, detail.total));
+      }
+    };
+
+    window.addEventListener("ihyaa_chat_unread", onUnreadCustom);
+    window.addEventListener("ihyaa_notifications_unread", onNotificationUnreadCustom);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("ihyaa_chat_unread", onUnreadCustom);
+      window.removeEventListener(
+        "ihyaa_notifications_unread",
+        onNotificationUnreadCustom,
+      );
+      if (idleHandle !== null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+      }
+    };
+  }, [session?.user?.id, pathname, initialChatEnabled]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (
+      !userId ||
+      !chatEnabled ||
+      pathname.startsWith("/chat") ||
+      pathname.startsWith("/messages")
+    ) {
+      return;
+    }
+
+    let disposed = false;
+    let release: (() => void) | undefined;
+    let unsubscribe: (() => void) | undefined;
+    let unsubscribeReconnect: (() => void) | undefined;
+    let timer: number | null = null;
+
+    const connectIdle = () => {
+      import("@/lib/chat/realtime/client")
+        .then(({ getChatRealtimeClient }) => {
+          if (disposed) return;
+          const client = getChatRealtimeClient();
+          release = client.acquire();
+          client.connectNow();
+          unsubscribeReconnect = client.onReconnect(() => {
+            window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
+          });
+          unsubscribe = client.onEvent((event) => {
+            if (
+              event.type === "unread.sync" ||
+              event.type === "message.created" ||
+              event.type === "friend.changed" ||
+              event.type === "invite.received"
+            ) {
+              window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
+            }
+          });
+          window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
+        })
+        .catch(() => {});
+    };
+
+    timer = window.setTimeout(connectIdle, 1500);
+    return () => {
+      disposed = true;
+      if (timer !== null) window.clearTimeout(timer);
+      unsubscribe?.();
+      unsubscribeReconnect?.();
+      release?.();
+    };
+  }, [session?.user?.id, chatEnabled, pathname, t]);
+
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   // Transparent at the very top of every page; background after scrolling.
   const transparentTop = !scrolled;
 
   // Close the mobile menu on route change
   useEffect(() => {
-    setOpen(false);
+    const frame = window.requestAnimationFrame(() => setOpen(false));
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
-  // Top sentinel IntersectionObserver: transparent at top (scrollY = 0), glass after scrolling past 200px threshold
+  // Top sentinel IntersectionObserver: transparent at top (scrollY = 0), glass after scrolling past 100px threshold
   useEffect(() => {
     let sentinel = document.getElementById("navbar-scroll-sentinel");
     if (!sentinel) {
@@ -127,7 +334,7 @@ export function GlassNavbar({
       sentinel.style.top = "0px";
       sentinel.style.left = "0px";
       sentinel.style.width = "1px";
-      sentinel.style.height = "200px";
+      sentinel.style.height = "100px";
       sentinel.style.pointerEvents = "none";
       sentinel.style.visibility = "hidden";
       sentinel.style.zIndex = "-1";
@@ -136,7 +343,7 @@ export function GlassNavbar({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When the 200px sentinel is intersecting the top viewport, we are at the top (< 200px scroll)
+        // When the 100px sentinel is intersecting the top viewport, we are at the top (< 100px scroll)
         setScrolled(!entry.isIntersecting);
       },
       { threshold: 0 }
@@ -234,7 +441,7 @@ export function GlassNavbar({
                   className={cn(
                     "relative flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200",
                     active
-                      ? "text-primary-foreground dark:text-white"
+                      ? "text-primary-foreground dark:text-primary-foreground"
                       : transparentTop
                       ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
                       : "text-foreground/80 hover:text-foreground",
@@ -260,6 +467,44 @@ export function GlassNavbar({
               </li>
             );
           })}
+          {session?.user && chatEnabled ? (
+            <li className="relative" role="none">
+              <Link
+                href="/chat"
+                role="menuitem"
+                data-testid="navbar-chat-link"
+                aria-current={isActive("/chat") ? "page" : undefined}
+                className={cn(
+                  "relative flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200",
+                  isActive("/chat")
+                    ? "text-primary-foreground dark:text-primary-foreground"
+                    : transparentTop
+                    ? "text-foreground/85 hover:text-foreground dark:text-white/90 dark:hover:text-white"
+                    : "text-foreground/80 hover:text-foreground",
+                )}
+              >
+                {isActive("/chat") && (
+                  <motion.span
+                    layoutId="active-nav-pill"
+                    className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 30,
+                    }}
+                    style={{ willChange: "transform" }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center">
+                  {t("nav.chat")}
+                  <ChatUnreadBadge
+                    count={publicUnread}
+                    label={t("nav.chatUnread").replace("{count}", String(publicUnread))}
+                  />
+                </span>
+              </Link>
+            </li>
+          ) : null}
         </ul>
 
         {/* Controls */}
@@ -291,14 +536,22 @@ export function GlassNavbar({
           {/* Desktop Auth State / User Menu */}
           {isAuthKnown ? (
             session?.user ? (
+              (() => {
+                const dropdownUnread =
+                  (chatEnabled ? privateUnread : 0) + notificationsUnread;
+                return (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     data-testid="navbar-user-menu-btn"
-                    aria-label={t("nav.userMenu")}
+                    aria-label={
+                      dropdownUnread > 0
+                        ? `${t("nav.userMenu")} (${t("nav.totalUnreadLabel").replace("{count}", String(dropdownUnread))})`
+                        : t("nav.userMenu")
+                    }
                     className={cn(
-                      "hidden sm:inline-flex items-center gap-1.5 rounded-full p-1 outline-none transition-all hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-primary",
+                      "relative hidden sm:inline-flex items-center gap-1.5 rounded-full p-1 outline-none transition-all hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-primary",
                       transparentTop
                         ? "bg-foreground/10 text-foreground dark:bg-white/10 dark:text-white"
                         : "bg-muted/70 text-foreground border border-border/60",
@@ -310,6 +563,14 @@ export function GlassNavbar({
                       shape="circle"
                       className="border-brass/25 ring-1 ring-primary/20"
                     />
+                    {dropdownUnread > 0 ? (
+                      <span
+                        data-testid="navbar-avatar-unread-badge"
+                        className="absolute -top-1 -end-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-brass px-1 text-[10px] font-bold leading-none text-night ring-2 ring-background"
+                      >
+                        {dropdownUnread > 99 ? "99+" : dropdownUnread}
+                      </span>
+                    ) : null}
                     <ChevronDown className="size-3.5 opacity-60 me-1" />
                   </button>
                 </DropdownMenuTrigger>
@@ -358,6 +619,48 @@ export function GlassNavbar({
                       {t("nav.myBookings")}
                     </Link>
                   </DropdownMenuItem>
+                  {chatEnabled ? (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/messages"
+                        data-testid="navbar-messages-link"
+                        className="flex cursor-pointer items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <MessagesSquare className="size-4" />
+                          {t("nav.privateMessages")}
+                        </span>
+                        <ChatUnreadBadge
+                          testId="navbar-messages-badge"
+                          count={privateUnread}
+                          label={t("nav.privateMessagesUnread").replace(
+                            "{count}",
+                            String(privateUnread),
+                          )}
+                        />
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/notifications"
+                      data-testid="navbar-notifications-link"
+                      className="flex cursor-pointer items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Bell className="size-4" />
+                        {t("nav.notifications")}
+                      </span>
+                      <ChatUnreadBadge
+                        testId="navbar-notifications-badge"
+                        count={notificationsUnread}
+                        label={t("nav.unreadNotifications").replace(
+                          "{count}",
+                          String(notificationsUnread),
+                        )}
+                      />
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
                       href="/settings"
@@ -384,7 +687,10 @@ export function GlassNavbar({
                   <DropdownMenuItem
                     variant="destructive"
                     data-testid="navbar-logout-btn"
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={() => {
+                      clearLegacyBookingState();
+                      signOut({ callbackUrl: "/login" });
+                    }}
                     className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
                   >
                     <LogOut className="size-4" />
@@ -392,6 +698,8 @@ export function GlassNavbar({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+                );
+              })()
             ) : (
               <div className="hidden sm:inline-flex items-center gap-2">
                 <Link
@@ -432,12 +740,19 @@ export function GlassNavbar({
             aria-label={t("nav.menu")}
             aria-expanded={open}
             className={cn(
-              "grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
+              "relative grid size-10 place-items-center rounded-full transition-all duration-300 hover:scale-105 lg:hidden",
               transparentTop
                 ? "text-foreground dark:text-white"
                 : "glass text-foreground",
             )}
           >
+            {session?.user &&
+            (chatEnabled ? publicUnread + privateUnread : 0) + notificationsUnread > 0 ? (
+              <span
+                data-testid="navbar-mobile-unread-dot"
+                className="absolute top-1.5 end-1.5 size-2.5 rounded-full bg-brass ring-2 ring-background"
+              />
+            ) : null}
             <span className="relative block size-5 text-current">
               <motion.span
                 variants={hamburgerTop}
@@ -547,6 +862,89 @@ export function GlassNavbar({
                     </motion.li>
                   );
                 })}
+                {session?.user && chatEnabled ? (
+                  <motion.li variants={fadeUp}>
+                    <Link
+                      href="/chat"
+                      data-testid="navbar-mobile-chat-link"
+                      onClick={() => setOpen(false)}
+                      aria-current={isActive("/chat") ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                        isActive("/chat")
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex items-center">
+                        {t("nav.chat")}
+                        <ChatUnreadBadge
+                          count={publicUnread}
+                          label={t("nav.chatUnread").replace("{count}", String(publicUnread))}
+                        />
+                      </span>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
+                {session?.user && chatEnabled ? (
+                  <motion.li variants={fadeUp}>
+                    <Link
+                      href="/messages"
+                      data-testid="navbar-mobile-messages-link"
+                      onClick={() => setOpen(false)}
+                      aria-current={isActive("/messages") ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                        isActive("/messages")
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex items-center">
+                        {t("nav.privateMessages")}
+                        <ChatUnreadBadge
+                          testId="navbar-mobile-messages-badge"
+                          count={privateUnread}
+                          label={t("nav.privateMessagesUnread").replace(
+                            "{count}",
+                            String(privateUnread),
+                          )}
+                        />
+                      </span>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
+                {session?.user ? (
+                  <motion.li variants={fadeUp}>
+                    <Link
+                      href="/notifications"
+                      data-testid="navbar-mobile-notifications-link"
+                      onClick={() => setOpen(false)}
+                      aria-current={isActive("/notifications") ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl px-4 py-3 text-lg font-semibold transition-colors",
+                        isActive("/notifications")
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex items-center">
+                        {t("nav.notifications")}
+                        <ChatUnreadBadge
+                          testId="navbar-mobile-notifications-badge"
+                          count={notificationsUnread}
+                          label={t("nav.unreadNotifications").replace(
+                            "{count}",
+                            String(notificationsUnread),
+                          )}
+                        />
+                      </span>
+                      <ChevronLeft className="size-4 opacity-40 rtl:rotate-180" />
+                    </Link>
+                  </motion.li>
+                ) : null}
               </motion.ul>
               <div className="mt-3 flex flex-col gap-2.5 border-t border-border/60 pt-3">
                 {/* Theme & Language Switchers: ONLY rendered when signed out */}
@@ -600,6 +998,7 @@ export function GlassNavbar({
                       data-testid="navbar-mobile-logout-btn"
                       onClick={() => {
                         setOpen(false);
+                        clearLegacyBookingState();
                         signOut({ callbackUrl: "/login" });
                       }}
                       className="h-11 w-full rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/10"

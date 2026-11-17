@@ -1,0 +1,120 @@
+.frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+}
+
+.intrinsic {
+  width: 100%;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.02);
+  transition-property: opacity, transform;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.imageWaiting {
+  opacity: 0;
+}
+
+.imageLoaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.skeleton {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--card);
+  transition: opacity 550ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.skeletonLeaving {
+  opacity: 0;
+  background: transparent;
+}
+
+.errorTile {
+  background: color-mix(in oklch, var(--card) 92%, var(--muted));
+}
+
+.icon {
+  display: grid;
+  width: clamp(12px, 30cqi, 44px);
+  height: clamp(12px, 30cqi, 44px);
+  place-items: center;
+  color: color-mix(in oklch, var(--main) 58%, transparent);
+  animation: smooth-image-icon-pulse 1.6s ease-in-out infinite;
+}
+
+.iconStatic {
+  animation: none;
+  color: color-mix(in oklch, var(--foreground) 45%, transparent);
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.spinnerArc {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smooth-image-icon-spin 1s linear infinite;
+}
+
+.sweep {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -40%;
+  width: 30%;
+  transform: skewX(-14deg);
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--foreground) 6%, transparent), transparent);
+  animation: smooth-image-sweep 2.6s ease-in-out infinite;
+}
+
+@keyframes smooth-image-sweep {
+  to { transform: translateX(480%) skewX(-14deg); }
+}
+
+@keyframes smooth-image-icon-pulse {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes smooth-image-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep,
+  .icon,
+  .spinnerArc {
+    animation: none;
+  }
+  .skeleton, .image { transition-duration: 0ms !important; }
+  .image { transform: none; }
+}

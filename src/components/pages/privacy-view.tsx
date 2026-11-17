@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, FileText, Phone, ShieldCheck } from "lucide-react";
 
 import { useLocale } from "@/i18n/locale-provider";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
-import { FacebookIcon, InstagramIcon } from "@/components/common/social-icons";
+import { SocialIcon } from "@/components/common/social-icons";
+import { SOCIAL_LINKS } from "@/config/social";
 import { EVENT, IMAGES } from "@/lib/content";
 import { TERMS_VERSION } from "@/lib/terms";
 
@@ -27,6 +28,7 @@ const PRIVACY_SECTIONS: LegalSection[] = [
   { id: "children", titleKey: "privacy.secChildrenTitle", bodyKey: "privacy.secChildrenBody" },
   { id: "changes", titleKey: "privacy.secChangesTitle", bodyKey: "privacy.secChangesBody" },
   { id: "contact", titleKey: "privacy.secContactTitle", bodyKey: "privacy.secContactBody" },
+  { id: "messaging", titleKey: "privacy.secMessagingTitle", bodyKey: "privacy.secMessagingBody" },
 ];
 
 export function PrivacyView() {
@@ -54,7 +56,7 @@ export function PrivacyView() {
 
         <div className="mb-10 text-center sm:text-start">
           <div className="inline-flex items-center gap-2.5 mb-3">
-            <Image
+            <SmoothImage
               src={IMAGES.logoCircle}
               alt="Ihyaa"
               width={36}
@@ -103,7 +105,6 @@ export function PrivacyView() {
           {/* Main sections card */}
           <main className="lg:col-span-8">
             <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/75 p-6 backdrop-blur-xl shadow-xl sm:p-10">
-              <div className="pattern-islamic pointer-events-none absolute inset-0 opacity-[0.03]" />
 
               <div className="relative space-y-10">
                 {PRIVACY_SECTIONS.map((sec, idx) => (
@@ -131,24 +132,19 @@ export function PrivacyView() {
                           <Phone className="size-4 text-brass" />
                           <span>{t("contact.phone")}</span>
                         </a>
-                        <a
-                          href="https://www.facebook.com/profile.php?id=61580907187601"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brass/50 hover:text-brass"
-                        >
-                          <FacebookIcon className="size-4 text-brass" />
-                          <span>Facebook</span>
-                        </a>
-                        <a
-                          href="https://www.instagram.com/i7yae_shabab/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brass/50 hover:text-brass"
-                        >
-                          <InstagramIcon className="size-4 text-brass" />
-                          <span>Instagram</span>
-                        </a>
+                        {SOCIAL_LINKS.map((social) => (
+                          <a
+                            key={social.platform}
+                            href={social.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={t(social.ariaLabelKey)}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brass/50 hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <SocialIcon platform={social.platform} className="size-4 text-brass" />
+                            <span>{t(social.labelKey)}</span>
+                          </a>
+                        ))}
                       </div>
                     )}
 

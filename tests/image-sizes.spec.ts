@@ -13,17 +13,18 @@ test.describe("Task 5: Next.js Image sizes fix on hero and about", () => {
     await page.waitForLoadState("networkidle");
 
     // Check Hero Image
-    const heroImg = page.locator("#home img[alt='Ihyaa Youth Gathering']");
+    const heroImg = page.locator("#home img[src*='group-portrait']").first();
     await expect(heroImg).toBeVisible();
     const heroSizes = await heroImg.getAttribute("sizes");
-    expect(heroSizes).toBe("100vw");
+    expect(heroSizes).toContain("calc(100vw - 2rem)");
+    expect(heroSizes).toContain("607px");
 
     // Check About Image
-    const aboutImg = page.locator("#about img[src*='gathering']");
+    const aboutImg = page.locator("#about img[src*='logo-circle']");
     await expect(aboutImg).toBeVisible();
     const aboutSizes = await aboutImg.getAttribute("sizes");
-    expect(aboutSizes).toContain("520px");
-    expect(aboutSizes).toContain("(max-width: 640px) 100vw");
+    expect(aboutSizes).toContain("240px");
+    expect(aboutSizes).toContain("176px");
 
     // Ensure no Next.js Image sizes mismatch warning occurred
     const sizesWarnings = warnings.filter(

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,7 +10,6 @@ import { BookingFallback } from "@/components/common/booking-fallback";
 import { BookingStepper } from "@/components/common/booking-stepper";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { PageTexture } from "@/components/common/page-texture";
 import { IMAGES } from "@/lib/content";
 import { prisma } from "@/lib/prisma";
 
@@ -37,8 +36,6 @@ export default async function BookPage({
     redirect(`/onboarding?callbackUrl=${encodeURIComponent(currentPath)}`);
   }
 
-  const cookieStore = await cookies();
-
   let targetEventId = params?.eventId;
   const event = targetEventId
     ? await prisma.event.findFirst({
@@ -62,10 +59,7 @@ export default async function BookPage({
     const existing = await prisma.booking.findFirst({
       where: {
         eventId: event.id,
-        OR: [
-          { userId: session.user.id },
-          { email: session.user.email! },
-        ],
+        userId: session.user.id,
       },
     });
     if (existing) {
@@ -73,27 +67,8 @@ export default async function BookPage({
     }
   }
 
-  const hasEventCookie = cookieStore.get(`ihyaa_booked_${targetEventId}`)?.value === "true";
-  let hasListCookie = false;
-  const bookedListRaw = cookieStore.get("ihyaa_booked_events")?.value;
-  if (bookedListRaw) {
-    try {
-      const list = JSON.parse(decodeURIComponent(bookedListRaw));
-      if (Array.isArray(list) && list.includes(targetEventId)) {
-        hasListCookie = true;
-      }
-    } catch {}
-  }
-
-  if (!isServerAction && (hasEventCookie || hasListCookie)) {
-    redirect(`/events#event-${targetEventId}`);
-  }
-
   return (
-    <div className="relative isolate min-h-dvh overflow-hidden bg-background z-0">
-      <PageTexture />
-      <div className="bg-brass-gradient absolute -top-24 start-1/2 z-[1] size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl pointer-events-none" />
-
+    <div className="relative isolate min-h-dvh overflow-hidden z-0">
       <header className="relative z-10 mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
           <span className="relative shrink-0">

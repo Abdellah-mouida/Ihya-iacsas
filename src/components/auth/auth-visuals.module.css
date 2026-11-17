@@ -1,0 +1,11 @@
+.sideHeading {
+  text-shadow: 0 0 1.25rem color-mix(in oklch, var(--main) 32%, transparent);
+}
+
+.sideGlow {
+  background-image: radial-gradient(
+    ellipse at 50% 46%,
+    color-mix(in oklch, var(--main) 18%, transparent),
+    transparent 72%
+  );
+}

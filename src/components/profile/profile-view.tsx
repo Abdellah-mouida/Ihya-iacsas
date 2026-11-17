@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { UserAccountData, AccountBookingItem } from "@/app/actions/account";
+import { UserAccountData } from "@/app/actions/account";
 import { useLocale } from "@/i18n/locale-provider";
 import { RoleBadge } from "@/components/common/role-badge";
 import { StatusNotice } from "@/components/common/status-notice";
 import { PatternCover } from "@/components/common/pattern-cover";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { CountUp } from "@/components/common/count-up";
 import { Button } from "@/components/ui/button";
+import rbStyles from "@/components/common/react-bits-adaptations.module.css";
 import {
   Calendar,
   Clock,
@@ -19,8 +19,6 @@ import {
   Building,
   Heart,
   Wrench,
-  Globe2,
-  Users,
   Settings,
   CalendarCheck,
   CheckCircle2,
@@ -29,6 +27,7 @@ import {
   XCircle,
   ExternalLink,
   ChevronRight,
+  Users,
 } from "lucide-react";
 
 interface ProfileViewProps {
@@ -36,7 +35,7 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ initialData }: ProfileViewProps) {
-  const { t, locale, dir } = useLocale();
+  const { locale, t } = useLocale();
   const isAr = locale === "ar";
   const { user, bookings } = initialData;
 
@@ -54,17 +53,17 @@ export function ProfileView({ initialData }: ProfileViewProps) {
   return (
     <div className="space-y-8" data-testid="profile-view-container">
       {/* Profile Header & Hero Banner */}
-      <div className="relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card transition-all duration-300 hover:shadow-profile-hover">
+      <div data-testid="profile-header-card" data-rb="ProfileCard" className={`${rbStyles.profileCard} relative rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl transition-[box-shadow,border-color] duration-300`}>
         {/* Cover Canvas */}
-        <div className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
-          <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} />
+        <div data-testid="profile-cover-frame" data-cover-source={user.coverImage || "default"} className="relative h-48 sm:h-64 w-full overflow-hidden rounded-t-3xl bg-muted/40">
+          <PatternCover coverUrl={user.coverImage} alt={user.name || "Cover"} imageWidth={user.coverWidth} imageHeight={user.coverHeight} />
         </div>
 
         {/* Profile Card & Avatar */}
-        <div className="relative px-6 sm:px-10 pb-8 pt-0 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 -mt-16 sm:-mt-20">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-start">
+          <div className="relative flex min-w-0 flex-col gap-6 px-6 pb-8 pt-0 sm:flex-row sm:items-end sm:justify-between sm:px-10 -mt-16 sm:-mt-20">
+          <div className="flex min-w-0 flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-start">
             {/* Centered Avatar with layout wrapper */}
-            <div className="relative rounded-full border-4 border-background bg-card shadow-profile-card hover:shadow-profile-hover transition-all duration-300 ring-2 ring-primary/30 shrink-0">
+            <div data-testid="profile-avatar-ring" className="relative rounded-full border-4 border-background bg-card shadow-profile-card hover:shadow-profile-hover transition-all duration-300 ring-2 ring-primary/30 shrink-0 sm:-translate-y-12">
               <UserAvatar
                 user={{
                   id: user.id,
@@ -77,8 +76,8 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               />
             </div>
 
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+            <div className="min-w-0 w-full max-w-full space-y-2 sm:w-fit">
+              <div data-testid="profile-glass-name" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-2.5 rounded-2xl border-0 bg-card/70 px-3 py-2 text-center shadow-none backdrop-blur-xl sm:w-fit sm:justify-start sm:text-start">
                 <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">
                   {user.name || (isAr ? "مستخدم إحياء" : "Ihyaa Member")}
                 </h1>
@@ -86,17 +85,17 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               </div>
 
               {/* Basics: City, Age, Email stay at the top */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs sm:text-sm text-muted-foreground">
+              <div data-testid="profile-glass-details" className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl border-0 bg-card/65 px-3 py-2 text-xs text-muted-foreground shadow-none backdrop-blur-xl sm:w-fit sm:justify-start sm:text-sm">
                 {user.email && (
-                  <span className="flex items-center gap-1 font-sans">
-                    <Mail className="size-3.5 text-primary" />
-                    <span>{user.email}</span>
+                  <span className="flex min-w-0 max-w-full items-center gap-1 font-sans">
+                    <Mail className="size-3.5 shrink-0 text-primary" />
+                    <span className="min-w-0 break-all" title={user.email}>{user.email}</span>
                   </span>
                 )}
                 {user.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="size-3.5 text-primary" />
-                    <span>{user.city}</span>
+                  <span className="flex min-w-0 max-w-full items-center gap-1">
+                    <MapPin className="size-3.5 shrink-0 text-primary" />
+                    <span className="min-w-0 break-words">{user.city}</span>
                   </span>
                 )}
                 {user.age && (
@@ -104,20 +103,25 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                     {user.age} {isAr ? "سنة" : "years"}
                   </span>
                 )}
+                <span data-testid="profile-friend-count" className="flex min-w-0 items-center gap-1 font-medium text-foreground/90">
+                  <Users className="size-3.5 shrink-0 text-primary" />
+                  <CountUp value={user.friendCount} locale={locale} className="tabular-nums font-semibold" />
+                  <span>{t("friends.friendCountLabel")}</span>
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-center sm:justify-end shrink-0">
+          <div className="flex w-full min-w-0 justify-center sm:w-auto sm:justify-end sm:shrink-0">
             <Button
               asChild
               variant="outline"
               data-testid="profile-edit-settings-btn"
-              className="rounded-xl gap-2 font-heading font-semibold h-11 px-5 border-border/80 hover:bg-primary/10 hover:text-primary"
+              className="h-auto min-h-11 max-w-full min-w-0 rounded-xl border-border/80 px-3 font-heading text-xs font-semibold hover:bg-primary/10 hover:text-primary sm:px-5 sm:text-sm"
             >
-              <Link href="/settings">
-                <Settings className="size-4" />
-                <span>{isAr ? "تعديل الملف والإعدادات" : "Edit Profile & Settings"}</span>
+              <Link href="/settings" className="flex min-w-0 max-w-full items-center gap-2 whitespace-normal">
+                <Settings className="size-4 shrink-0" />
+                <span className="min-w-0 break-words text-start">{isAr ? "تعديل الملف والإعدادات" : "Edit Profile & Settings"}</span>
               </Link>
             </Button>
           </div>
@@ -136,7 +140,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
               <h2 className="text-sm font-heading font-bold text-primary flex items-center gap-2">
                 <span>{isAr ? "نبذة عني" : "About Me"}</span>
               </h2>
-              <blockquote className="border-s-4 border-primary/50 ps-4 py-1 text-sm sm:text-base text-foreground font-serif italic leading-relaxed">
+              <blockquote className="border-s-4 border-primary/50 ps-4 py-1 text-sm sm:text-base text-foreground font-serif italic leading-relaxed whitespace-pre-line [overflow-wrap:anywhere]">
                 «{user.bio}»
               </blockquote>
             </div>
@@ -284,7 +288,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
         data-testid="profile-bookings-section"
         className="p-6 sm:p-10 rounded-3xl border border-border/80 bg-card/60 backdrop-blur-xl shadow-profile-card space-y-6"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
               <CalendarCheck className="size-5 text-primary" />
@@ -350,7 +354,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                           variant="success"
                           size="sm"
                           icon={<CheckCircle2 className="size-3.5" />}
-                          message={isAr ? "حجز مؤكد" : "Confirmed"}
+                          message={t("booking.statusConfirmedShort")}
                           testId={`booking-status-${booking.id}`}
                         />
                       )}
@@ -359,7 +363,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                           variant="warning"
                           size="sm"
                           icon={<Clock3 className="size-3.5" />}
-                          message={isAr ? "قيد المراجعة" : "Pending"}
+                          message={t("booking.statusPendingShort")}
                           testId={`booking-status-${booking.id}`}
                         />
                       )}
@@ -368,15 +372,7 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                           variant="pending"
                           size="sm"
                           icon={<AlertCircle className="size-3.5" />}
-                          message={
-                            booking.waitlistOrder
-                              ? (isAr
-                                  ? `قائمة الانتظار (رقم #${booking.waitlistOrder})`
-                                  : `Waitlist (Position #${booking.waitlistOrder})`)
-                              : isAr
-                              ? "قائمة الانتظار"
-                              : "Waitlist"
-                          }
+                          message={t("booking.statusWaitlistPosition", { order: booking.waitlistOrder || 1 })}
                           testId={`booking-status-${booking.id}`}
                         />
                       )}
@@ -391,22 +387,28 @@ export function ProfileView({ initialData }: ProfileViewProps) {
                       )}
                     </div>
 
+                    {(isPending || isWaitlisted) && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("booking.statusNotificationNote")}
+                      </p>
+                    )}
+
                     <h3 className="font-heading font-bold text-base text-foreground truncate">
                       {eventTitle}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="size-3 text-primary" />
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex min-w-0 max-w-full items-center gap-1">
+                        <Calendar className="size-3 shrink-0 text-primary" />
                         <span>{booking.event.date}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3 text-primary" />
+                      <span className="flex min-w-0 max-w-full items-center gap-1">
+                        <Clock className="size-3 shrink-0 text-primary" />
                         <span>{booking.event.time}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="size-3 text-primary" />
-                        <span>{booking.event.location}</span>
+                      <span className="flex min-w-0 max-w-full items-center gap-1">
+                        <MapPin className="size-3 shrink-0 text-primary" />
+                        <span className="min-w-0 break-words" title={booking.event.location}>{booking.event.location}</span>
                       </span>
                     </div>
                   </div>

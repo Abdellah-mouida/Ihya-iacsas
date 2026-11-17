@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { safeRevalidatePath } from "@/lib/cache";
+import { deleteImageFromCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { getCachedEnabledThemes } from "@/lib/theme-server";
+import { isSafeLocalAssetPath, verifyUploadProof } from "@/lib/upload-security";
 
 export async function GET() {
   const session = await auth();
@@ -16,6 +19,8 @@ export async function GET() {
       locale: true,
       reduceMotion: true,
       coverImage: true,
+      coverWidth: true,
+      coverHeight: true,
     },
   });
 
@@ -30,7 +35,7 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
-    const { theme, locale, reduceMotion, coverImage, coverImagePublicId } = body;
+    const { theme, locale, reduceMotion, coverImage, uploadProof } = body;
 
     const data: {
       theme?: string;
@@ -38,6 +43,8 @@ export async function PATCH(req: Request) {
       reduceMotion?: boolean;
       coverImage?: string | null;
       coverImagePublicId?: string | null;
+      coverWidth?: number | null;
+      coverHeight?: number | null;
     } = {};
 
     // Validate theme against enabled themes in DB
@@ -56,12 +63,56 @@ export async function PATCH(req: Request) {
       data.reduceMotion = reduceMotion;
     }
 
-    if (coverImage !== undefined) {
-      data.coverImage = typeof coverImage === "string" ? coverImage : null;
-    }
+    let previousCoverPublicIdToDelete: string | null = null;
 
-    if (coverImagePublicId !== undefined) {
-      data.coverImagePublicId = typeof coverImagePublicId === "string" ? coverImagePublicId : null;
+    if (typeof uploadProof === "string" && uploadProof.trim()) {
+      const verified = verifyUploadProof(uploadProof.trim(), session.user.id, "covers");
+      if (!verified) {
+        return NextResponse.json({ error: "Invalid cover upload proof" }, { status: 400 });
+      }
+      const existingUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { coverImagePublicId: true },
+      });
+      if (
+        existingUser?.coverImagePublicId &&
+        existingUser.coverImagePublicId.startsWith("ihyaa-covers/") &&
+        existingUser.coverImagePublicId !== verified.publicId
+      ) {
+        previousCoverPublicIdToDelete = existingUser.coverImagePublicId;
+      }
+      data.coverImage = verified.url;
+      data.coverImagePublicId = verified.publicId;
+      data.coverWidth = verified.imageWidth;
+      data.coverHeight = verified.imageHeight;
+    } else if (coverImage !== undefined) {
+      if (coverImage === null) {
+        const existingUser = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { coverImagePublicId: true },
+        });
+        if (existingUser?.coverImagePublicId?.startsWith("ihyaa-covers/")) {
+          previousCoverPublicIdToDelete = existingUser.coverImagePublicId;
+        }
+        data.coverImage = null;
+        data.coverImagePublicId = null;
+        data.coverWidth = null;
+        data.coverHeight = null;
+      } else if (typeof coverImage === "string" && isSafeLocalAssetPath(coverImage)) {
+        const existingUser = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { coverImagePublicId: true },
+        });
+        if (existingUser?.coverImagePublicId?.startsWith("ihyaa-covers/")) {
+          previousCoverPublicIdToDelete = existingUser.coverImagePublicId;
+        }
+        data.coverImage = coverImage.trim();
+        data.coverImagePublicId = null;
+        data.coverWidth = null;
+        data.coverHeight = null;
+      } else {
+        return NextResponse.json({ error: "Invalid cover image URL" }, { status: 400 });
+      }
     }
 
     const updated = await prisma.user.update({
@@ -72,8 +123,18 @@ export async function PATCH(req: Request) {
         locale: true,
         reduceMotion: true,
         coverImage: true,
+        coverWidth: true,
+        coverHeight: true,
       },
     });
+
+    if (previousCoverPublicIdToDelete) {
+      await deleteImageFromCloudinary(previousCoverPublicIdToDelete).catch(() => {});
+    }
+
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
+    safeRevalidatePath(`/u/${session.user.id}`);
 
     const response = NextResponse.json({ success: true, preferences: updated });
 

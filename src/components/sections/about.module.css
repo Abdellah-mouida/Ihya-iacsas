@@ -1,0 +1,26 @@
+.activityCard {
+  --activity-safe-inset: clamp(3.25rem, 5vw, 4rem);
+  padding: var(--activity-safe-inset);
+}
+
+.activitySurface {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: var(--card);
+  clip-path: var(--activity-clip);
+  -webkit-clip-path: var(--activity-clip);
+}
+
+.activityOutline {
+  z-index: 1;
+  overflow: visible;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .activitySurface {
+    background: color-mix(in oklch, var(--card) 58%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}

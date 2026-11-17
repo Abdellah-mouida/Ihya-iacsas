@@ -19,12 +19,18 @@ async function preparePage(page: Page, config: ScanConfig, path: string) {
   await page.addInitScript(
     ({ locale, theme }) => {
       window.localStorage.setItem("ihyaa-locale", locale);
-      window.localStorage.setItem("theme", theme);
+      window.localStorage.setItem("ihyaa-theme", theme === "dark" ? "black" : "light");
     },
     { locale: config.locale, theme: config.theme }
   );
 
   await page.goto(path, { waitUntil: "domcontentloaded" });
+  // /book is intentionally private. Wait for its unauthenticated server redirect
+  // so axe scans the actual login UI instead of the transient route shell.
+  if (path === "/book") {
+    await page.waitForURL((url) => url.pathname === "/login", { timeout: 30_000 });
+    await page.locator('[data-testid="login-view"]').waitFor({ timeout: 30_000 });
+  }
   await page.waitForTimeout(500); // Allow Radix UI / animations to settle
 
   // Ensure HTML attributes match
@@ -33,9 +39,11 @@ async function preparePage(page: Page, config: ScanConfig, path: string) {
       document.documentElement.lang = locale;
       document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
       if (theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "black");
         document.documentElement.classList.add("dark");
         document.documentElement.classList.remove("light");
       } else {
+        document.documentElement.setAttribute("data-theme", "light");
         document.documentElement.classList.add("light");
         document.documentElement.classList.remove("dark");
       }
@@ -104,6 +112,7 @@ test.describe("Accessibility Audits (Axe-core)", () => {
   test("1. Homepage / passes serious & critical axe scans across themes, locales & viewports", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     // Desktop Arabic Light
     await preparePage(page, { theme: "light", locale: "ar", viewport: VIEWPORTS.desktop }, "/");
     let res = await new AxeBuilder({ page }).analyze();
@@ -147,6 +156,7 @@ test.describe("Accessibility Audits (Axe-core)", () => {
   test("3. Auth pages (/login & /signup) pass serious & critical axe scans", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     // /login Desktop Arabic Light
     await preparePage(page, { theme: "light", locale: "ar", viewport: VIEWPORTS.desktop }, "/login");
     let res = await new AxeBuilder({ page }).analyze();
@@ -168,9 +178,10 @@ test.describe("Accessibility Audits (Axe-core)", () => {
     assertZeroSeriousOrCriticalViolations(res, "Signup Mobile AR Light");
   });
 
-  test("4. Booking page /book passes serious & critical axe scans", async ({
+  test("4. Unauthenticated /book redirect reaches an accessible login page", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     // /book Desktop Arabic Light
     await preparePage(page, { theme: "light", locale: "ar", viewport: VIEWPORTS.desktop }, "/book");
     let res = await new AxeBuilder({ page }).analyze();

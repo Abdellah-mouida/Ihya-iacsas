@@ -6,6 +6,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { decideOnboardingRedirect } from "@/lib/onboarding-guard";
 
 async function getAuthToken(request: NextRequest) {
   const secret = process.env.AUTH_SECRET;
@@ -55,21 +56,87 @@ const PROTECTED_USER_ROUTES = [
   "/profile",
   "/change-password",
   "/onboarding",
+  "/chat",
+  "/messages",
+  "/notifications",
+  "/u",
 ];
 
 function isSafeRelativeUrl(url: string | null): boolean {
   if (!url) return false;
-  // Must start with a single slash and not double slashes (protocol-relative)
-  if (!url.startsWith("/") || url.startsWith("//")) return false;
+  // Must start with a single slash and not double slashes, backslash, or control chars
+  if (
+    !url.startsWith("/") ||
+    url.startsWith("//") ||
+    url.startsWith("/\\") ||
+    /[\u0000-\u001f\u007f]/.test(url)
+  ) {
+    return false;
+  }
   // Must not redirect to another auth route
-  if (PUBLIC_AUTH_ROUTES.some((route) => url === route || url.startsWith(`${route}?`))) {
+  if (
+    PUBLIC_AUTH_ROUTES.some((route) => url === route || url.startsWith(`${route}?`)) ||
+    url === "/onboarding" ||
+    url.startsWith("/onboarding?") ||
+    url.startsWith("/onboarding/")
+  ) {
     return false;
   }
   return true;
 }
 
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
+const CSRF_PROTECTED_API_PREFIXES = [
+  "/api/chat/",
+  "/api/admin/",
+  "/api/notifications",
+  "/api/upload",
+  "/api/user/",
+  "/api/themes",
+];
+
+function isCrossOriginApiMutation(request: NextRequest): boolean {
+  const { pathname } = request.nextUrl;
+  if (
+    !MUTATING_METHODS.has(request.method) ||
+    !CSRF_PROTECTED_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  ) {
+    return false;
+  }
+
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite === "cross-site") {
+    return true;
+  }
+
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+
+  const expectedHost =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
+  try {
+    return new URL(origin).host !== expectedHost;
+  } catch {
+    return true;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/v1")) {
+    return NextResponse.next();
+  }
+
+  if (isCrossOriginApiMutation(request)) {
+    return NextResponse.json(
+      { error: "Cross-origin request rejected" },
+      { status: 403 },
+    );
+  }
 
   // Legacy /account redirect -> /profile
   if (pathname === "/account" || pathname.startsWith("/account/")) {
@@ -83,13 +150,24 @@ export async function middleware(request: NextRequest) {
 
   // Legacy admin login URL redirect -> /login
   if (pathname === "/admin/login") {
-    const nextParam =
+    const rawNext =
       request.nextUrl.searchParams.get("next") ||
-      request.nextUrl.searchParams.get("callbackUrl") ||
-      "/admin";
+      request.nextUrl.searchParams.get("callbackUrl");
+    const safeNext = isSafeRelativeUrl(rawNext) ? rawNext! : "/admin";
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", nextParam);
+    loginUrl.searchParams.set("callbackUrl", safeNext);
     return NextResponse.redirect(loginUrl);
+  }
+
+  const token = await getAuthToken(request);
+  const onboardingRedirect = decideOnboardingRedirect({
+    pathname,
+    search: request.nextUrl.search,
+    authenticated: Boolean(token),
+    onboardingComplete: token?.onboardingComplete === true,
+  });
+  if (onboardingRedirect) {
+    return NextResponse.redirect(new URL(onboardingRedirect, request.url));
   }
 
   // 1. Check if user is already signed in on public auth routes
@@ -98,7 +176,6 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isPublicAuthRoute) {
-    const token = await getAuthToken(request);
     if (token) {
       const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
       const target = isSafeRelativeUrl(callbackUrl) ? callbackUrl! : "/";
@@ -113,7 +190,6 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isProtectedUserRoute) {
-    const token = await getAuthToken(request);
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       const callbackUrl = pathname + (request.nextUrl.search || "");
@@ -125,8 +201,6 @@ export async function middleware(request: NextRequest) {
 
   // 3. Protected /admin routes
   if (pathname.startsWith("/admin")) {
-    const token = await getAuthToken(request);
-
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       const callbackUrl = pathname + (request.nextUrl.search || "");
@@ -147,6 +221,7 @@ export async function middleware(request: NextRequest) {
       const restrictedForModerator = [
         "/admin/users",
         "/admin/audit",
+        "/admin/logs",
         "/admin/settings",
       ];
       const isRestricted = restrictedForModerator.some(

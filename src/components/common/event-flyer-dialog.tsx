@@ -1,7 +1,6 @@
 "use client";
 
 import { Download, ExternalLink, Maximize2, X } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useLocale } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
+import { SmoothImage } from "@/components/common/smooth-image";
 
 interface EventFlyerDialogProps {
   isOpen: boolean;
@@ -22,6 +22,8 @@ interface EventFlyerDialogProps {
   title: string;
   dateStr?: string;
   locationStr?: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 export function EventFlyerDialog({
@@ -31,13 +33,17 @@ export function EventFlyerDialog({
   title,
   dateStr,
   locationStr,
+  imageWidth,
+  imageHeight,
 }: EventFlyerDialogProps) {
-  const { t, locale } = useLocale();
+  const { locale } = useLocale();
   const [isZoomed, setIsZoomed] = useState(false);
 
   // Reset zoom on open/close
   useEffect(() => {
     if (!isOpen) {
+      // Reset transient zoom state after the modal closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsZoomed(false);
     }
   }, [isOpen]);
@@ -130,11 +136,11 @@ export function EventFlyerDialog({
               isZoomed ? "scale-125 sm:scale-150" : "scale-100",
             )}
           >
-            <Image
+            <SmoothImage
               src={posterUrl}
               alt={title}
-              width={768}
-              height={960}
+              width={imageWidth ?? 768}
+              height={imageHeight ?? 960}
               priority
               className="max-h-[68vh] w-auto rounded-2xl object-contain shadow-2xl ring-1 ring-border/50"
             />

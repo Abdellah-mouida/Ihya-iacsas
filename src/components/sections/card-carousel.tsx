@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import {
   useCallback,
   useEffect,
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 const GAP = 26; // px between posters
 const AUTOPLAY_MS = 4500;
 const TRANSITION = { duration: 0.7, ease: EASE };
+type CarouselItem = { src: string; altKey: string; w: number; h: number };
 
 /**
  * Card poster carousel — a center-mode, infinitely looping showcase.
@@ -39,8 +40,7 @@ const TRANSITION = { duration: 0.7, ease: EASE };
 export function CardCarousel() {
   const { t } = useLocale();
   const reduceMotion = useReducedMotion();
-
-  const [dbItems, setDbItems] = useState<{ src: string; altKey: string; w: number; h: number }[]>([]);
+  const [dbItems, setDbItems] = useState<CarouselItem[]>([]);
 
   useEffect(() => {
     getCarouselPosts(true).then((res) => {
@@ -49,8 +49,8 @@ export function CardCarousel() {
           res.posts.map((p) => ({
             src: p.imageUrl,
             altKey: "cards.altNight",
-            w: 512,
-            h: 640,
+            w: p.imageWidth ?? 512,
+            h: p.imageHeight ?? 640,
           })),
         );
       }
@@ -229,10 +229,12 @@ export function CardCarousel() {
                           : "ring-border/60",
                       )}
                     >
-                      <Image
+                      <SmoothImage
                         src={item.src}
                         alt={t(item.altKey)}
                         fill
+                        width={item.w}
+                        height={item.h}
                         draggable={false}
                         loading="eager"
                         sizes="(max-width: 640px) 66vw, 360px"

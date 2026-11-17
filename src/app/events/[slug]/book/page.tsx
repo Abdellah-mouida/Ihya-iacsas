@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -35,8 +35,6 @@ export default async function EventBookPage({
     redirect(`/onboarding?callbackUrl=${encodeURIComponent(currentPath)}`);
   }
 
-  const cookieStore = await cookies();
-
   // The route slug is the single source of truth for the event
   let targetEventId = slug;
 
@@ -59,7 +57,7 @@ export default async function EventBookPage({
     targetEventId = event.slug || event.id;
   }
 
-  // Server-side check: if already booked in DB or cookie exists, redirect to event page (except during Server Action)
+  // Redirect only when this signed-in account has a matching booking row.
   const headerList = await headers();
   const isServerAction = headerList.has("next-action");
 
@@ -67,10 +65,7 @@ export default async function EventBookPage({
     const existing = await prisma.booking.findFirst({
       where: {
         eventId: event.id,
-        OR: [
-          { userId: session.user.id },
-          { email: session.user.email! },
-        ],
+        userId: session.user.id,
       },
     });
     if (existing) {
@@ -78,27 +73,8 @@ export default async function EventBookPage({
     }
   }
 
-  const hasEventCookie = cookieStore.get(`ihyaa_booked_${targetEventId}`)?.value === "true";
-  let hasListCookie = false;
-  const bookedListRaw = cookieStore.get("ihyaa_booked_events")?.value;
-  if (bookedListRaw) {
-    try {
-      const list = JSON.parse(decodeURIComponent(bookedListRaw));
-      if (Array.isArray(list) && list.includes(targetEventId)) {
-        hasListCookie = true;
-      }
-    } catch {}
-  }
-
-  if (!isServerAction && (hasEventCookie || hasListCookie)) {
-    redirect(`/events#event-${targetEventId}`);
-  }
-
   return (
     <div className="relative min-h-dvh overflow-hidden">
-      <div className="pattern-islamic absolute inset-0 -z-10" />
-      <div className="bg-brass-gradient absolute -top-24 start-1/2 -z-10 size-72 -translate-x-1/2 rounded-full opacity-15 blur-3xl" />
-
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Ihyaa">
           <span className="relative shrink-0">

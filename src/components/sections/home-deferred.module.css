@@ -1,0 +1,32 @@
+.branches,
+.carousel,
+.gallery,
+.program {
+  content-visibility: auto;
+}
+
+.branches {
+  contain-intrinsic-size: auto 1392px;
+}
+
+.carousel {
+  contain-intrinsic-size: auto 392px;
+}
+
+.gallery {
+  contain-intrinsic-size: auto 849px;
+}
+
+.program {
+  contain-intrinsic-size: auto 630px;
+}
+
+@media (min-width: 640px) {
+  .branches { contain-intrinsic-size: auto 1200px; }
+  .gallery { contain-intrinsic-size: auto 1000px; }
+}
+
+@media (min-width: 1024px) {
+  .branches { contain-intrinsic-size: auto 1027px; }
+  .gallery { contain-intrinsic-size: auto 1081px; }
+}

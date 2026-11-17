@@ -5,6 +5,11 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
+import { logActivity } from "@/lib/audit";
+import {
+  isVerifiedGoogleProfile,
+  verifySessionRotationProof,
+} from "@/lib/session-sync";
 
 export class UnverifiedEmailError extends CredentialsSignin {
   code = "unverified_email";
@@ -139,8 +144,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig.callbacks,
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        if (!user.email) return false;
-        const cleanEmail = user.email.trim().toLowerCase();
+        if (!isVerifiedGoogleProfile(profile, user.email)) {
+          return false;
+        }
+        const cleanEmail = user.email!.trim().toLowerCase();
 
         const existingUser = await prisma.user.findUnique({
           where: { email: cleanEmail },
@@ -195,6 +202,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } catch (loginErr) {
           console.warn("[auth] Failed to record lastLoginAt:", loginErr);
         }
+
+        await logActivity({
+          actorId: user.id,
+          actorName: user.name,
+          actorEmail: user.email,
+          action: account?.provider === "google" ? "SIGN_IN_GOOGLE" : "SIGN_IN_CREDENTIALS",
+          targetType: "User",
+          targetId: user.id,
+          targetName: user.name,
+          targetEmail: user.email,
+        });
       }
 
       return true;
@@ -219,22 +237,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // 2. Client called useSession().update(...)
-      if (trigger === "update" && session) {
-        if (session.name !== undefined) token.name = session.name;
-        if (session.image !== undefined) token.image = session.image;
-        if (session.city !== undefined) token.city = session.city;
-        if (session.age !== undefined) token.age = session.age;
-        if (session.locale !== undefined) token.locale = session.locale;
-        if (session.onboardingComplete !== undefined)
-          token.onboardingComplete = Boolean(session.onboardingComplete);
-        if (session.mustChangePassword !== undefined)
-          token.mustChangePassword = Boolean(session.mustChangePassword);
-        if (session.sessionVersion !== undefined)
-          token.sessionVersion = session.sessionVersion;
-      }
-
-      // 3. Token refresh / verification against database
+      // 2. Token refresh / verification against database (never trust client session fields on update)
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
@@ -256,8 +259,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        // User was deleted or sessionVersion mismatch (e.g. password was changed)
-        if (!dbUser || dbUser.sessionVersion !== (token.sessionVersion ?? 1)) {
+        const tokenVersion =
+          typeof token.sessionVersion === "number" ? token.sessionVersion : 1;
+        let isSessionValid = Boolean(
+          dbUser && dbUser.sessionVersion === tokenVersion,
+        );
+
+        if (
+          !isSessionValid &&
+          dbUser &&
+          trigger === "update" &&
+          session &&
+          typeof (session as { sessionRotationProof?: unknown })
+            .sessionRotationProof === "string"
+        ) {
+          isSessionValid = verifySessionRotationProof(
+            (session as { sessionRotationProof: string }).sessionRotationProof,
+            dbUser.id,
+            tokenVersion,
+            dbUser.sessionVersion,
+          );
+        }
+
+        // User was deleted or sessionVersion mismatch without signed rotation proof
+        if (!dbUser || !isSessionValid) {
           return null;
         }
 
@@ -294,6 +319,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.lastActiveAt = (token.lastActiveAt as Date | null) ?? null;
       }
       return session;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      await logActivity({
+        actorId: user.id,
+        actorName: user.name,
+        actorEmail: user.email,
+        action: "SIGN_UP",
+        targetType: "User",
+        targetId: user.id,
+        targetName: user.name,
+        targetEmail: user.email,
+      });
+    },
+    async signOut(message) {
+      const token = "token" in message
+        ? message.token as { id?: string; name?: string | null; email?: string | null }
+        : null;
+      const sessionUser = "session" in message && message.session
+        ? (message.session as unknown as {
+            user?: { id?: string; name?: string | null; email?: string | null };
+          }).user ?? null
+        : null;
+      const actorId = token?.id || sessionUser?.id || null;
+      const existingActor = actorId
+        ? await prisma.user.findUnique({ where: { id: actorId }, select: { id: true } })
+        : null;
+      await logActivity({
+        actorId: existingActor?.id ?? null,
+        actorName: token?.name || sessionUser?.name,
+        actorEmail: token?.email || sessionUser?.email,
+        action: "SIGN_OUT",
+        targetType: "User",
+        targetId: actorId,
+      });
     },
   },
 });

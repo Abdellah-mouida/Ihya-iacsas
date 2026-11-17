@@ -1,0 +1,1052 @@
+[
+  {
+    "id": "agadir-ida-ou-tanane",
+    "type": "prefecture",
+    "name": {
+      "en": "Agadir-Ida-Ou-Tanane",
+      "fr": "Agadir-Ida-Ou-Tanane",
+      "ar": "أكادير-إدا وتنان"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "hcpCode": "09.001",
+    "population": 721431,
+    "households": 197248
+  },
+  {
+    "id": "al-haouz",
+    "type": "province",
+    "name": {
+      "en": "Al Haouz",
+      "fr": "Al Haouz",
+      "ar": "الحوز"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.041",
+    "population": 642815,
+    "households": 147971
+  },
+  {
+    "id": "al-hoceima",
+    "type": "province",
+    "name": {
+      "en": "Al Hoceima",
+      "fr": "Al Hoceima",
+      "ar": "الحسيمة"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.051",
+    "population": 371527,
+    "households": 89181
+  },
+  {
+    "id": "aousserd",
+    "type": "province",
+    "name": {
+      "en": "Aousserd",
+      "fr": "Aousserd",
+      "ar": "أوسرد"
+    },
+    "country": "MA",
+    "region": "dakhla-oued-ed-dahab",
+    "hcpCode": "12.066",
+    "population": 24498,
+    "households": 2421
+  },
+  {
+    "id": "assa-zag",
+    "type": "province",
+    "name": {
+      "en": "Assa-Zag",
+      "fr": "Assa-Zag",
+      "ar": "آسا-الزاك"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "hcpCode": "10.071",
+    "population": 53298,
+    "households": 6297
+  },
+  {
+    "id": "azilal",
+    "type": "province",
+    "name": {
+      "en": "Azilal",
+      "fr": "Azilal",
+      "ar": "أزيلال"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "hcpCode": "05.081",
+    "population": 574112,
+    "households": 121842
+  },
+  {
+    "id": "beni-mellal",
+    "type": "province",
+    "name": {
+      "en": "Beni Mellal",
+      "fr": "Béni Mellal",
+      "ar": "بني ملال"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "hcpCode": "05.091",
+    "population": 580327,
+    "households": 150397
+  },
+  {
+    "id": "benslimane",
+    "type": "province",
+    "name": {
+      "en": "Benslimane",
+      "fr": "Benslimane",
+      "ar": "بنسليمان"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.111",
+    "population": 279517,
+    "households": 69353
+  },
+  {
+    "id": "berkane",
+    "type": "province",
+    "name": {
+      "en": "Berkane",
+      "fr": "Berkane",
+      "ar": "بركان"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.113",
+    "population": 284061,
+    "households": 75643
+  },
+  {
+    "id": "berrechid",
+    "type": "province",
+    "name": {
+      "en": "Berrechid",
+      "fr": "Berrechid",
+      "ar": "برشيد"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.117",
+    "population": 640657,
+    "households": 160957
+  },
+  {
+    "id": "boujdour",
+    "type": "province",
+    "name": {
+      "en": "Boujdour",
+      "fr": "Boujdour",
+      "ar": "بوجدور"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "hcpCode": "11.121",
+    "population": 65381,
+    "households": 14429
+  },
+  {
+    "id": "boulemane",
+    "type": "province",
+    "name": {
+      "en": "Boulemane",
+      "fr": "Boulemane",
+      "ar": "بولمان"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.131",
+    "population": 205411,
+    "households": 48509
+  },
+  {
+    "id": "casablanca",
+    "type": "prefecture",
+    "name": {
+      "en": "Casablanca",
+      "fr": "Casablanca",
+      "ar": "الدار البيضاء"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.141",
+    "population": 3218036,
+    "households": 909829
+  },
+  {
+    "id": "chefchaouen",
+    "type": "province",
+    "name": {
+      "en": "Chefchaouen",
+      "fr": "Chefchaouen",
+      "ar": "شفشاون"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.151",
+    "population": 412713,
+    "households": 90956
+  },
+  {
+    "id": "chichaoua",
+    "type": "province",
+    "name": {
+      "en": "Chichaoua",
+      "fr": "Chichaoua",
+      "ar": "شيشاوة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.161",
+    "population": 379079,
+    "households": 92262
+  },
+  {
+    "id": "chtouka-ait-baha",
+    "type": "province",
+    "name": {
+      "en": "Chtouka-Ait Baha",
+      "fr": "Chtouka-Aït Baha",
+      "ar": "اشتوكة-آيت باها"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "hcpCode": "09.163",
+    "population": 493623,
+    "households": 133727
+  },
+  {
+    "id": "driouch",
+    "type": "province",
+    "name": {
+      "en": "Driouch",
+      "fr": "Driouch",
+      "ar": "الدريوش"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.167",
+    "population": 188191,
+    "households": 48849
+  },
+  {
+    "id": "el-hajeb",
+    "type": "province",
+    "name": {
+      "en": "El Hajeb",
+      "fr": "El Hajeb",
+      "ar": "الحاجب"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.171",
+    "population": 267156,
+    "households": 66258
+  },
+  {
+    "id": "el-jadida",
+    "type": "province",
+    "name": {
+      "en": "El Jadida",
+      "fr": "El Jadida",
+      "ar": "الجديدة"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.181",
+    "population": 914367,
+    "households": 221678
+  },
+  {
+    "id": "el-kelaa-des-sraghna",
+    "type": "province",
+    "name": {
+      "en": "El Kelaa Des-Sraghna",
+      "fr": "El Kelâa Des-Sraghna",
+      "ar": "قلعة السراغنة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.191",
+    "population": 560273,
+    "households": 125161
+  },
+  {
+    "id": "errachidia",
+    "type": "province",
+    "name": {
+      "en": "Errachidia",
+      "fr": "Errachidia",
+      "ar": "الرشيدية"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "hcpCode": "08.201",
+    "population": 427572,
+    "households": 90107
+  },
+  {
+    "id": "essaouira",
+    "type": "province",
+    "name": {
+      "en": "Essaouira",
+      "fr": "Essaouira",
+      "ar": "الصويرة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.211",
+    "population": 426719,
+    "households": 111602
+  },
+  {
+    "id": "es-semara",
+    "type": "province",
+    "name": {
+      "en": "Es-Semara",
+      "fr": "Es-Semara",
+      "ar": "السمارة"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "hcpCode": "11.221",
+    "population": 73864,
+    "households": 14128
+  },
+  {
+    "id": "fahs-anjra",
+    "type": "province",
+    "name": {
+      "en": "Fahs-Anjra",
+      "fr": "Fahs-Anjra",
+      "ar": "الفحص-أنجرة"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.227",
+    "population": 100789,
+    "households": 25160
+  },
+  {
+    "id": "fes",
+    "type": "prefecture",
+    "name": {
+      "en": "Fes",
+      "fr": "Fès",
+      "ar": "فاس"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.231",
+    "population": 1256172,
+    "households": 329286
+  },
+  {
+    "id": "figuig",
+    "type": "province",
+    "name": {
+      "en": "Figuig",
+      "fr": "Figuig",
+      "ar": "فجيج"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.251",
+    "population": 144451,
+    "households": 34105
+  },
+  {
+    "id": "fquih-ben-salah",
+    "type": "province",
+    "name": {
+      "en": "Fquih Ben Salah",
+      "fr": "Fquih Ben Salah",
+      "ar": "الفقيه بن صالح"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "hcpCode": "05.255",
+    "population": 475977,
+    "households": 111668
+  },
+  {
+    "id": "guelmim",
+    "type": "province",
+    "name": {
+      "en": "Guelmim",
+      "fr": "Guelmim",
+      "ar": "كلميم"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "hcpCode": "10.261",
+    "population": 196267,
+    "households": 47250
+  },
+  {
+    "id": "guercif",
+    "type": "province",
+    "name": {
+      "en": "Guercif",
+      "fr": "Guercif",
+      "ar": "جرسيف"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.265",
+    "population": 215837,
+    "households": 47538
+  },
+  {
+    "id": "ifrane",
+    "type": "province",
+    "name": {
+      "en": "Ifrane",
+      "fr": "Ifrane",
+      "ar": "إفران"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.271",
+    "population": 160904,
+    "households": 42684
+  },
+  {
+    "id": "inezgane-ait-melloul",
+    "type": "prefecture",
+    "name": {
+      "en": "Inezgane-Ait Melloul",
+      "fr": "Inezgane-Aït Melloul",
+      "ar": "إنزكان-آيت ملول"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "hcpCode": "09.273",
+    "population": 636916,
+    "households": 161551
+  },
+  {
+    "id": "jerada",
+    "type": "province",
+    "name": {
+      "en": "Jerada",
+      "fr": "Jerada",
+      "ar": "جرادة"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.275",
+    "population": 103527,
+    "households": 23833
+  },
+  {
+    "id": "kenitra",
+    "type": "province",
+    "name": {
+      "en": "Kenitra",
+      "fr": "Kénitra",
+      "ar": "القنيطرة"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.281",
+    "population": 1284247,
+    "households": 300046
+  },
+  {
+    "id": "khemisset",
+    "type": "province",
+    "name": {
+      "en": "Khemisset",
+      "fr": "Khémisset",
+      "ar": "الخميسات"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.291",
+    "population": 563036,
+    "households": 146516
+  },
+  {
+    "id": "khenifra",
+    "type": "province",
+    "name": {
+      "en": "Khenifra",
+      "fr": "Khénifra",
+      "ar": "خنيفرة"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "hcpCode": "05.301",
+    "population": 370240,
+    "households": 100159
+  },
+  {
+    "id": "khouribga",
+    "type": "province",
+    "name": {
+      "en": "Khouribga",
+      "fr": "Khouribga",
+      "ar": "خريبكة"
+    },
+    "country": "MA",
+    "region": "beni-mellal-khenifra",
+    "hcpCode": "05.311",
+    "population": 525145,
+    "households": 132500
+  },
+  {
+    "id": "laayoune",
+    "type": "province",
+    "name": {
+      "en": "Laayoune",
+      "fr": "Laâyoune",
+      "ar": "العيون"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "hcpCode": "11.321",
+    "population": 295555,
+    "households": 73866
+  },
+  {
+    "id": "larache",
+    "type": "province",
+    "name": {
+      "en": "Larache",
+      "fr": "Larache",
+      "ar": "العرائش"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.331",
+    "population": 510211,
+    "households": 124642
+  },
+  {
+    "id": "marrakech",
+    "type": "prefecture",
+    "name": {
+      "en": "Marrakech",
+      "fr": "Marrakech",
+      "ar": "مراكش"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.351",
+    "population": 1571580,
+    "households": 402389
+  },
+  {
+    "id": "m-diq-fnideq",
+    "type": "prefecture",
+    "name": {
+      "en": "M'diq-Fnideq",
+      "fr": "M'diq-Fnideq",
+      "ar": "المضيق-الفنيدق"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.573",
+    "population": 254064,
+    "households": 67797
+  },
+  {
+    "id": "mediouna",
+    "type": "province",
+    "name": {
+      "en": "Mediouna",
+      "fr": "Médiouna",
+      "ar": "مديونة"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.355",
+    "population": 345787,
+    "households": 88190
+  },
+  {
+    "id": "meknes",
+    "type": "prefecture",
+    "name": {
+      "en": "Meknes",
+      "fr": "Meknès",
+      "ar": "مكناس"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.061",
+    "population": 942945,
+    "households": 248296
+  },
+  {
+    "id": "midelt",
+    "type": "province",
+    "name": {
+      "en": "Midelt",
+      "fr": "Midelt",
+      "ar": "ميدلت"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "hcpCode": "08.363",
+    "population": 313769,
+    "households": 73708
+  },
+  {
+    "id": "mohammadia",
+    "type": "prefecture",
+    "name": {
+      "en": "Mohammadia",
+      "fr": "Mohammadia",
+      "ar": "المحمدية"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.371",
+    "population": 514057,
+    "households": 137265
+  },
+  {
+    "id": "moulay-yacoub",
+    "type": "province",
+    "name": {
+      "en": "Moulay Yacoub",
+      "fr": "Moulay Yacoub",
+      "ar": "مولاي يعقوب"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.591",
+    "population": 216954,
+    "households": 46348
+  },
+  {
+    "id": "nador",
+    "type": "province",
+    "name": {
+      "en": "Nador",
+      "fr": "Nador",
+      "ar": "الناضور"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.381",
+    "population": 565987,
+    "households": 146090
+  },
+  {
+    "id": "nouaceur",
+    "type": "province",
+    "name": {
+      "en": "Nouaceur",
+      "fr": "Nouaceur",
+      "ar": "النواصر"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.385",
+    "population": 672324,
+    "households": 183539
+  },
+  {
+    "id": "ouarzazate",
+    "type": "province",
+    "name": {
+      "en": "Ouarzazate",
+      "fr": "Ouarzazate",
+      "ar": "ورزازات"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "hcpCode": "08.401",
+    "population": 304932,
+    "households": 66420
+  },
+  {
+    "id": "oued-ed-dahab",
+    "type": "province",
+    "name": {
+      "en": "Oued Ed-Dahab",
+      "fr": "Oued Ed-Dahab",
+      "ar": "وادي الذهب"
+    },
+    "country": "MA",
+    "region": "dakhla-oued-ed-dahab",
+    "hcpCode": "12.391",
+    "population": 195467,
+    "households": 51740
+  },
+  {
+    "id": "ouezzane",
+    "type": "province",
+    "name": {
+      "en": "Ouezzane",
+      "fr": "Ouezzane",
+      "ar": "وزان"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.405",
+    "population": 274577,
+    "households": 74896
+  },
+  {
+    "id": "oujda-angad",
+    "type": "prefecture",
+    "name": {
+      "en": "Oujda-Angad",
+      "fr": "Oujda-Angad",
+      "ar": "وجدة-أنجاد"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.411",
+    "population": 572454,
+    "households": 148929
+  },
+  {
+    "id": "rabat",
+    "type": "prefecture",
+    "name": {
+      "en": "Rabat",
+      "fr": "Rabat",
+      "ar": "الرباط"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.421",
+    "population": 515619,
+    "households": 157183
+  },
+  {
+    "id": "rehamna",
+    "type": "province",
+    "name": {
+      "en": "Rehamna",
+      "fr": "Rehamna",
+      "ar": "الرحامنة"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.427",
+    "population": 346108,
+    "households": 76166
+  },
+  {
+    "id": "safi",
+    "type": "province",
+    "name": {
+      "en": "Safi",
+      "fr": "Safi",
+      "ar": "آسفي"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.431",
+    "population": 719671,
+    "households": 175259
+  },
+  {
+    "id": "sale",
+    "type": "prefecture",
+    "name": {
+      "en": "Sale",
+      "fr": "Salé",
+      "ar": "سلا"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.441",
+    "population": 1089554,
+    "households": 290311
+  },
+  {
+    "id": "sefrou",
+    "type": "province",
+    "name": {
+      "en": "Sefrou",
+      "fr": "Sefrou",
+      "ar": "صفرو"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.451",
+    "population": 304748,
+    "households": 81262
+  },
+  {
+    "id": "settat",
+    "type": "province",
+    "name": {
+      "en": "Settat",
+      "fr": "Settat",
+      "ar": "سطات"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.461",
+    "population": 652292,
+    "households": 148224
+  },
+  {
+    "id": "sidi-bennour",
+    "type": "province",
+    "name": {
+      "en": "Sidi Bennour",
+      "fr": "Sidi Bennour",
+      "ar": "سيدي بنور"
+    },
+    "country": "MA",
+    "region": "casablanca-settat",
+    "hcpCode": "06.467",
+    "population": 451930,
+    "households": 101997
+  },
+  {
+    "id": "sidi-ifni",
+    "type": "province",
+    "name": {
+      "en": "Sidi Ifni",
+      "fr": "Sidi Ifni",
+      "ar": "سيدي إفني"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "hcpCode": "10.473",
+    "population": 104601,
+    "households": 28539
+  },
+  {
+    "id": "sidi-kacem",
+    "type": "province",
+    "name": {
+      "en": "Sidi Kacem",
+      "fr": "Sidi Kacem",
+      "ar": "سيدي قاسم"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.481",
+    "population": 545509,
+    "households": 122538
+  },
+  {
+    "id": "sidi-slimane",
+    "type": "province",
+    "name": {
+      "en": "Sidi Slimane",
+      "fr": "Sidi Slimane",
+      "ar": "سيدي سليمان"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.491",
+    "population": 351199,
+    "households": 76582
+  },
+  {
+    "id": "skhirate-temara",
+    "type": "prefecture",
+    "name": {
+      "en": "Skhirate-Temara",
+      "fr": "Skhirate-Témara",
+      "ar": "الصخيرات-تمارة"
+    },
+    "country": "MA",
+    "region": "rabat-sale-kenitra",
+    "hcpCode": "04.501",
+    "population": 783475,
+    "households": 208316
+  },
+  {
+    "id": "tanger-assilah",
+    "type": "prefecture",
+    "name": {
+      "en": "Tanger-Assilah",
+      "fr": "Tanger-Assilah",
+      "ar": "طنجة-أصيلة"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.511",
+    "population": 1494413,
+    "households": 418844
+  },
+  {
+    "id": "tan-tan",
+    "type": "province",
+    "name": {
+      "en": "Tan-Tan",
+      "fr": "Tan-Tan",
+      "ar": "طانطان"
+    },
+    "country": "MA",
+    "region": "guelmim-oued-noun",
+    "hcpCode": "10.521",
+    "population": 94519,
+    "households": 23308
+  },
+  {
+    "id": "taounate",
+    "type": "province",
+    "name": {
+      "en": "Taounate",
+      "fr": "Taounate",
+      "ar": "تاونات"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.531",
+    "population": 612650,
+    "households": 147051
+  },
+  {
+    "id": "taourirt",
+    "type": "province",
+    "name": {
+      "en": "Taourirt",
+      "fr": "Taourirt",
+      "ar": "تاوريرت"
+    },
+    "country": "MA",
+    "region": "oriental",
+    "hcpCode": "02.533",
+    "population": 220157,
+    "households": 50028
+  },
+  {
+    "id": "tarfaya",
+    "type": "province",
+    "name": {
+      "en": "Tarfaya",
+      "fr": "Tarfaya",
+      "ar": "طرفاية"
+    },
+    "country": "MA",
+    "region": "laayoune-sakia-el-hamra",
+    "hcpCode": "11.537",
+    "population": 16228,
+    "households": 4328
+  },
+  {
+    "id": "taroudannt",
+    "type": "province",
+    "name": {
+      "en": "Taroudannt",
+      "fr": "Taroudannt",
+      "ar": "تارودانت"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "hcpCode": "09.541",
+    "population": 858162,
+    "households": 209341
+  },
+  {
+    "id": "tata",
+    "type": "province",
+    "name": {
+      "en": "Tata",
+      "fr": "Tata",
+      "ar": "طاطا"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "hcpCode": "09.551",
+    "population": 111757,
+    "households": 25530
+  },
+  {
+    "id": "taza",
+    "type": "province",
+    "name": {
+      "en": "Taza",
+      "fr": "Taza",
+      "ar": "تازة"
+    },
+    "country": "MA",
+    "region": "fes-meknes",
+    "hcpCode": "03.561",
+    "population": 500971,
+    "households": 126023
+  },
+  {
+    "id": "tetouan",
+    "type": "province",
+    "name": {
+      "en": "Tetouan",
+      "fr": "Tétouan",
+      "ar": "تطوان"
+    },
+    "country": "MA",
+    "region": "tanger-tetouan-al-hoceima",
+    "hcpCode": "01.571",
+    "population": 611928,
+    "households": 157384
+  },
+  {
+    "id": "tinghir",
+    "type": "province",
+    "name": {
+      "en": "Tinghir",
+      "fr": "Tinghir",
+      "ar": "تنغير"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "hcpCode": "08.577",
+    "population": 323805,
+    "households": 62123
+  },
+  {
+    "id": "tiznit",
+    "type": "province",
+    "name": {
+      "en": "Tiznit",
+      "fr": "Tiznit",
+      "ar": "تيزنيت"
+    },
+    "country": "MA",
+    "region": "souss-massa",
+    "hcpCode": "09.581",
+    "population": 198542,
+    "households": 57811
+  },
+  {
+    "id": "youssoufia",
+    "type": "province",
+    "name": {
+      "en": "Youssoufia",
+      "fr": "Youssoufia",
+      "ar": "اليوسفية"
+    },
+    "country": "MA",
+    "region": "marrakech-safi",
+    "hcpCode": "07.585",
+    "population": 246148,
+    "households": 55055
+  },
+  {
+    "id": "zagora",
+    "type": "province",
+    "name": {
+      "en": "Zagora",
+      "fr": "Zagora",
+      "ar": "زاكورة"
+    },
+    "country": "MA",
+    "region": "draa-tafilalet",
+    "hcpCode": "08.587",
+    "population": 285545,
+    "households": 46619
+  }
+]

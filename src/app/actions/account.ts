@@ -7,10 +7,17 @@ import {
   uploadImageToCloudinaryDetailed,
 } from "@/lib/cloudinary";
 import { isEventEnded } from "@/lib/event-time";
-import { MOROCCAN_CITIES } from "@/lib/moroccan-cities";
+import { findMoroccanCity } from "@/data/morocco";
 import { prisma } from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/cache";
-import { sendWaitlistPromotionEmail } from "@/lib/email";
+import { cancelBookingForUser } from "@/lib/services/bookings";
+import {
+  hasValidImageMagicBytes,
+  isSafeLocalAssetPath,
+  verifyUploadProof,
+} from "@/lib/upload-security";
+import { deleteUserAccount } from "@/lib/user-deletion";
+import { logActivity } from "@/lib/audit";
 
 export interface AccountBookingItem {
   id: string;
@@ -28,6 +35,8 @@ export interface AccountBookingItem {
     time: string;
     location: string;
     posterUrl: string | null;
+    posterWidth: number | null;
+    posterHeight: number | null;
     capacityType: string;
     isEnded: boolean;
   };
@@ -43,6 +52,8 @@ export interface UserAccountData {
     age: number | null;
     image: string | null;
     coverImage: string | null;
+    coverWidth: number | null;
+    coverHeight: number | null;
     theme: string | null;
     reduceMotion: boolean;
     locale: string | null;
@@ -57,17 +68,35 @@ export interface UserAccountData {
     skills: string[];
     languages: string[];
     volunteerAreas: string[];
+    friendRequestPolicy: "EVERYONE" | "NOBODY";
+    showOnlineStatus: boolean;
+    showFriendCount: boolean;
+    friendCount: number;
   };
   bookings: AccountBookingItem[];
 }
 
-function sanitizePlainText(input: unknown): string {
+function sanitizePlainText(input: unknown, options?: { preserveNewlines?: boolean }): string {
   if (typeof input !== "string") return "";
-  return input
+  let cleaned = input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+    .replace(/<[^>]*>/g, "");
+  if (options?.preserveNewlines) {
+    cleaned = cleaned
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g, "")
+      .replace(/\n{4,}/g, "\n\n\n");
+  } else {
+    cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+  }
+  return cleaned.trim();
+}
+
+function normalizeAsciiDigits(value: string): string {
+  return value
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .trim();
 }
 
@@ -156,6 +185,12 @@ export async function getUserAccountData(): Promise<{
         image: true,
         emailVerified: true,
         passwordHash: true,
+        coverImage: true,
+        coverWidth: true,
+        coverHeight: true,
+        theme: true,
+        reduceMotion: true,
+        locale: true,
         termsAcceptedAt: true,
         role: true,
         createdAt: true,
@@ -166,6 +201,9 @@ export async function getUserAccountData(): Promise<{
         skills: true,
         languages: true,
         volunteerAreas: true,
+        friendRequestPolicy: true,
+        showOnlineStatus: true,
+        showFriendCount: true,
       },
     });
 
@@ -189,21 +227,29 @@ export async function getUserAccountData(): Promise<{
       });
     }
 
-    // Fetch user bookings
-    const bookings = await prisma.booking.findMany({
-      where: {
-        OR: [
-          { userId: user.id },
-          user.email ? { email: user.email.toLowerCase() } : { userId: user.id },
-        ],
-      },
-      include: {
-        event: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    // Fetch user bookings and accepted friend count
+    const [bookings, friendCount] = await Promise.all([
+      prisma.booking.findMany({
+        where: {
+          OR: [
+            { userId: user.id },
+            user.email ? { email: user.email.toLowerCase() } : { userId: user.id },
+          ],
+        },
+        include: {
+          event: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.friendship.count({
+        where: {
+          status: "ACCEPTED",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+        },
+      }),
+    ]);
 
     const formattedBookings: AccountBookingItem[] = bookings.map((b) => ({
       id: b.id,
@@ -221,6 +267,8 @@ export async function getUserAccountData(): Promise<{
         time: b.event.time,
         location: b.event.location,
         posterUrl: b.event.posterUrl,
+        posterWidth: b.event.posterWidth,
+        posterHeight: b.event.posterHeight,
         capacityType: b.event.capacityType,
         isEnded: isEventEnded(b.event.date, b.event.time),
       },
@@ -241,10 +289,12 @@ export async function getUserAccountData(): Promise<{
           hasPassword: Boolean(user.passwordHash),
           termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
           createdAt: user.createdAt.toISOString(),
-          coverImage: (user as any).coverImage || null,
-          theme: (user as any).theme || "oasis",
-          reduceMotion: Boolean((user as any).reduceMotion),
-          locale: (user as any).locale || "ar",
+          coverImage: user.coverImage || null,
+          coverWidth: user.coverWidth,
+          coverHeight: user.coverHeight,
+          theme: user.theme || "oasis",
+          reduceMotion: Boolean(user.reduceMotion),
+          locale: user.locale || "ar",
           bio: user.bio,
           studyLevel: user.studyLevel,
           institution: user.institution,
@@ -252,6 +302,10 @@ export async function getUserAccountData(): Promise<{
           skills: user.skills || [],
           languages: user.languages || [],
           volunteerAreas: user.volunteerAreas || [],
+          friendRequestPolicy: user.friendRequestPolicy,
+          showOnlineStatus: user.showOnlineStatus,
+          showFriendCount: user.showFriendCount,
+          friendCount,
         },
         bookings: formattedBookings,
       },
@@ -313,10 +367,8 @@ export async function updateUserProfile(
     };
   }
 
-  const validCity = MOROCCAN_CITIES.some(
-    (c) => c.nameAr === city || c.nameEn.toLowerCase() === city.toLowerCase(),
-  );
-  if (!city || !validCity) {
+  const cityMatch = findMoroccanCity(city);
+  if (!cityMatch) {
     return {
       success: false,
       error: isAr
@@ -325,7 +377,7 @@ export async function updateUserProfile(
     };
   }
 
-  const ageNum = ageRaw ? Number(ageRaw) : NaN;
+  const ageNum = typeof ageRaw === "string" && ageRaw.trim() ? Number(normalizeAsciiDigits(ageRaw)) : NaN;
   if (!Number.isInteger(ageNum) || ageNum < 10 || ageNum > 120) {
     return {
       success: false,
@@ -337,7 +389,7 @@ export async function updateUserProfile(
 
   // Parse & sanitize optional fields (strip HTML tags, control chars)
   const rawBio = formData.get("bio");
-  const bio = rawBio !== null ? sanitizePlainText(rawBio) : null;
+  const bio = rawBio !== null ? sanitizePlainText(rawBio, { preserveNewlines: true }) : null;
   if (bio && bio.length > 280) {
     return {
       success: false,
@@ -462,8 +514,16 @@ export async function updateUserProfile(
 
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
+      if (!hasValidImageMagicBytes(buffer)) {
+        return {
+          success: false,
+          error: isAr
+            ? "صيغة الصورة غير مدعومة. يرجى اختيار JPG أو PNG أو WebP"
+            : "Unsupported image format. Please select JPG, PNG, or WebP",
+        };
+      }
 
-      if (existingUser.imagePublicId) {
+      if (existingUser.imagePublicId && existingUser.imagePublicId.startsWith("ihyaa-profiles/")) {
         await deleteImageFromCloudinary(existingUser.imagePublicId);
       }
 
@@ -479,7 +539,7 @@ export async function updateUserProfile(
       where: { id: session.user.id },
       data: {
         name,
-        city,
+        city: isAr ? cityMatch.nameAr : cityMatch.nameEn,
         age: ageNum,
         image: finalImageUrl,
         imagePublicId: finalImagePublicId,
@@ -493,14 +553,25 @@ export async function updateUserProfile(
       },
     });
 
+    await logActivity({
+      actorId: updatedUser.id,
+      actorName: updatedUser.name,
+      actorEmail: updatedUser.email,
+      action: "PROFILE_UPDATED",
+      targetType: "User",
+      targetId: updatedUser.id,
+      targetName: updatedUser.name,
+      targetEmail: updatedUser.email,
+    });
+
     // Asynchronously record user activity
     touchUserActive(session.user.id).catch(() => {});
 
     safeRevalidatePath("/profile");
     safeRevalidatePath("/settings");
-    safeRevalidatePath("/profile");
-    safeRevalidatePath("/settings");
     safeRevalidatePath("/onboarding");
+    safeRevalidatePath(`/u/${updatedUser.id}`);
+    safeRevalidatePath("/", "layout");
 
     return {
       success: true,
@@ -532,6 +603,91 @@ export async function updateUserProfile(
   }
 }
 
+export async function updateUserAvatar(
+  input: { imageUrl?: string; imagePublicId?: string | null; uploadProof?: string },
+  locale: string = "ar",
+): Promise<{ success: boolean; image?: string | null; error?: string }> {
+  const isAr = locale === "ar";
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: isAr ? "يجب تسجيل الدخول أولاً" : "You must be signed in",
+    };
+  }
+
+  let verifiedUrl: string | null = null;
+  let verifiedPublicId: string | null = null;
+
+  if (typeof input.uploadProof === "string" && input.uploadProof.trim()) {
+    const proof = verifyUploadProof(input.uploadProof.trim(), session.user.id, "avatars");
+    if (!proof) {
+      return {
+        success: false,
+        error: isAr ? "تعذر التحقق من رفع الصورة" : "Invalid image upload proof",
+      };
+    }
+    verifiedUrl = proof.url;
+    verifiedPublicId = proof.publicId;
+  } else if (typeof input.imageUrl === "string" && isSafeLocalAssetPath(input.imageUrl)) {
+    verifiedUrl = input.imageUrl.trim();
+    verifiedPublicId = null;
+  } else {
+    return {
+      success: false,
+      error: isAr ? "رابط الصورة غير صالح" : "Invalid image URL",
+    };
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true, imagePublicId: true },
+    });
+    if (!existing) {
+      return { success: false, error: isAr ? "المستخدم غير موجود" : "User not found" };
+    }
+
+    if (
+      existing.imagePublicId &&
+      existing.imagePublicId.startsWith("ihyaa-profiles/") &&
+      existing.imagePublicId !== verifiedPublicId
+    ) {
+      await deleteImageFromCloudinary(existing.imagePublicId).catch(() => {});
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: existing.id },
+      data: { image: verifiedUrl, imagePublicId: verifiedPublicId },
+      select: { id: true, image: true, name: true, email: true },
+    });
+
+    await logActivity({
+      actorId: updated.id,
+      actorName: updated.name,
+      actorEmail: updated.email,
+      action: "PROFILE_UPDATED",
+      targetType: "User",
+      targetId: updated.id,
+      targetName: updated.name,
+      targetEmail: updated.email,
+    });
+
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/settings");
+    safeRevalidatePath(`/u/${updated.id}`);
+    safeRevalidatePath("/", "layout");
+
+    return { success: true, image: updated.image };
+  } catch (err) {
+    console.error("Error updating avatar:", err);
+    return {
+      success: false,
+      error: isAr ? "فشل حفظ الصورة الشخصية" : "Failed to save profile photo",
+    };
+  }
+}
+
 /**
  * Cancel a user's booking from their account dashboard.
  * If the cancelled booking was CONFIRMED on a LIMITED event, auto-promotes the next in waitlist!
@@ -554,105 +710,57 @@ export async function cancelUserBooking(
   }
 
   try {
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        event: true,
-      },
+    const result = await cancelBookingForUser({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      userName: session.user.name,
+      bookingId,
+      locale,
     });
 
-    if (!booking) {
-      return {
-        success: false,
-        error: isAr ? "الحجز غير موجود" : "Booking not found",
-      };
-    }
-
-    // Verify ownership
-    const isOwner =
-      booking.userId === session.user.id ||
-      (session.user.email &&
-        booking.email.toLowerCase() === session.user.email.toLowerCase());
-
-    if (!isOwner) {
-      return {
-        success: false,
-        error: isAr
-          ? "غير مصرح لك بإلغاء هذا الحجز"
-          : "You are not authorized to cancel this booking",
-      };
-    }
-
-    // Check if event has ended
-    if (isEventEnded(booking.event.date, booking.event.time)) {
-      return {
-        success: false,
-        error: isAr
-          ? "لا يمكن إلغاء الحجز لفعالية قد انتهت"
-          : "Cannot cancel booking for an event that has already ended",
-      };
-    }
-
-    const wasConfirmed = booking.status === "CONFIRMED" || booking.confirmed;
-
-    // Delete the booking record
-    await prisma.booking.delete({
-      where: { id: bookingId },
-    });
-
-    // If confirmed on limited event, auto-promote next waitlisted attendee
-    if (wasConfirmed && booking.event.capacityType === "LIMITED") {
-      const nextWaitlisted = await prisma.booking.findFirst({
-        where: {
-          eventId: booking.eventId,
-          status: "WAITLISTED",
-        },
-        orderBy: [
-          { waitlistOrder: "asc" },
-          { createdAt: "asc" },
-        ],
-      });
-
-      if (nextWaitlisted) {
-        await prisma.booking.update({
-          where: { id: nextWaitlisted.id },
-          data: {
-            status: "CONFIRMED",
-            confirmed: true,
-            waitlistOrder: null,
-          },
-        });
-
-        try {
-          await sendWaitlistPromotionEmail(nextWaitlisted.email, {
-            titleAr: booking.event.titleAr,
-            titleEn: booking.event.titleEn,
-            date: booking.event.date,
-            time: booking.event.time,
-            location: booking.event.location,
-          });
-        } catch (emailErr) {
-          console.error("Error sending auto-promotion email:", emailErr);
-        }
-      }
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
 
     safeRevalidatePath("/profile");
     safeRevalidatePath("/settings");
     safeRevalidatePath("/events");
     safeRevalidatePath("/admin/bookings");
+    safeRevalidatePath("/admin");
 
     return { success: true };
   } catch (err) {
     console.error("Error cancelling user booking:", err);
     return {
       success: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : isAr
-            ? "فشل إلغاء الحجز"
-            : "Failed to cancel booking",
+      error: isAr ? "فشل إلغاء الحجز" : "Failed to cancel booking",
     };
+  }
+}
+
+export async function deleteOwnAccount(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "ACCOUNT_DELETE_FAILED" };
+  }
+
+  try {
+    await deleteUserAccount({
+      targetUserId: session.user.id,
+      actorId: session.user.id,
+      action: "ACCOUNT_DELETE",
+      reason: "User deleted own account from Settings",
+    });
+    safeRevalidatePath("/settings");
+    safeRevalidatePath("/profile");
+    safeRevalidatePath("/events");
+    safeRevalidatePath("/admin/bookings");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting own account:", error);
+    return { success: false, error: "ACCOUNT_DELETE_FAILED" };
   }
 }

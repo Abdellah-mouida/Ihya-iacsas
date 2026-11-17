@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-provider";
 import { toast } from "@/lib/toast";
-import { validatePasswordStrength } from "@/lib/password";
+import { validatePasswordStrength } from "@/lib/password-strength";
 import { changePassword } from "@/app/actions/auth";
 
 export function ChangePasswordView() {
@@ -89,10 +89,9 @@ export function ChangePasswordView() {
         return;
       }
 
-      // Update active session with new sessionVersion and cleared mustChangePassword flag
+      // Update active session using signed server rotation proof
       await update({
-        sessionVersion: res.sessionVersion,
-        mustChangePassword: false,
+        sessionRotationProof: res.sessionRotationProof,
       });
 
       toast.success(t("auth.changePasswordSuccess"));
@@ -145,16 +144,16 @@ export function ChangePasswordView() {
       <div className="w-full max-w-5xl my-auto grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden border border-brass/20 bg-card/60 backdrop-blur-2xl shadow-2xl">
         {/* Left/Right Branding Banner (Desktop) */}
         <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-10 overflow-hidden bg-primary/95 text-white border-e border-brass/20">
-          <Image
+          <SmoothImage
             src="/images/gathering.jpg"
             alt="Ihyaa Program"
             fill
             className="object-cover opacity-20 mix-blend-overlay"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
+          <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary/90 via-primary to-primary-dark/95" />
 
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-20 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs font-semibold text-brass-light backdrop-blur-md">
               <Sparkles className="size-3.5" />
               <span>{isAr ? "أمان الحساب" : "Account Security"}</span>
@@ -169,7 +168,7 @@ export function ChangePasswordView() {
             </p>
           </div>
 
-          <div className="relative z-10 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
+          <div className="relative z-20 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-white/70">
             <span>{isAr ? "برنامج إحياء © 2026" : "Ihyaa Program © 2026"}</span>
             <div className="size-6 rounded-full border border-white/30 flex items-center justify-center text-brass-light font-heading font-bold text-xs">
               ۞

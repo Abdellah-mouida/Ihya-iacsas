@@ -1,22 +1,23 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import nextConfig from "../next.config";
 import { getInitials } from "../src/components/common/user-avatar";
+import { assertDevBranchDatabase } from "./helpers/dev-guard";
 
 const prisma = new PrismaClient();
 
 test.describe("Task 4: Avatars & Google Profile Integration", () => {
-  const timestamp = Date.now();
-  const testEmail = `avatar.tester.${timestamp}@ihyaa.org`;
-  const testPassword = "Password123#";
-  let userId = "";
+  const testEmail = `avatar.tester.${randomBytes(12).toString("hex")}@example.test`;
+  const testPassword = `Avatar-${randomBytes(18).toString("base64url")}!`;
 
   test.beforeAll(async () => {
+    assertDevBranchDatabase("Avatar integration test setup");
     // Create verified and onboarded test user
     const bcrypt = await import("bcryptjs");
     const passwordHash = await bcrypt.hash(testPassword, 10);
 
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         name: "Abdellah Mouida",
         email: testEmail,
@@ -30,14 +31,15 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
         sessionVersion: 1,
       },
     });
-    userId = user.id;
   });
 
   test.afterAll(async () => {
-    await prisma.user.deleteMany({
-      where: { email: testEmail },
-    });
-    await prisma.$disconnect();
+    try {
+      assertDevBranchDatabase("Avatar integration test cleanup");
+      await prisma.user.deleteMany({ where: { email: testEmail } });
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   test("1. Initials extraction handles English, Arabic, single words, and email fallbacks", async () => {
@@ -52,10 +54,10 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
   test("2. next.config.ts includes googleusercontent.com in images.remotePatterns", async () => {
     const remotePatterns = nextConfig.images?.remotePatterns || [];
     const hasLh3 = remotePatterns.some(
-      (p: any) => p.hostname === "lh3.googleusercontent.com"
+      (p) => p.hostname === "lh3.googleusercontent.com"
     );
     const hasWildcardGoogle = remotePatterns.some(
-      (p: any) => p.hostname === "*.googleusercontent.com"
+      (p) => p.hostname === "*.googleusercontent.com"
     );
 
     expect(hasLh3).toBe(true);
@@ -70,7 +72,7 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
     await page.fill('[data-testid="login-email-input"]', testEmail);
     await page.fill('[data-testid="login-password-input"]', testPassword);
     await page.click('[data-testid="login-submit-btn"]');
-    await page.waitForURL(/\/(account|events|$)/);
+    await page.waitForURL(/\/(account|profile|events|$)/);
 
     // Verify navbar user menu has user avatar
     const userMenuBtn = page.locator('[data-testid="navbar-user-menu-btn"]');
@@ -93,7 +95,7 @@ test.describe("Task 4: Avatars & Google Profile Integration", () => {
     await page.fill('[data-testid="login-email-input"]', testEmail);
     await page.fill('[data-testid="login-password-input"]', testPassword);
     await page.click('[data-testid="login-submit-btn"]');
-    await page.waitForURL(/\/(account|events|$)/);
+    await page.waitForURL(/\/(account|profile|events|$)/);
 
     await page.goto("/profile");
     const accountAvatar = page.locator('[data-testid="profile-view-container"] [data-testid="user-avatar"]');

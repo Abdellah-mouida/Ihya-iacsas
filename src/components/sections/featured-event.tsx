@@ -1,14 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarDays, CheckCircle2, Clock, MapPin, Phone } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 
 import { EventPoster } from "@/components/common/event-poster";
 import { OrnamentDivider } from "@/components/common/ornament-divider";
 import { Button } from "@/components/ui/button";
+import { StatusNotice } from "@/components/common/status-notice";
 import { useLocale } from "@/i18n/locale-provider";
-import { useIsEventBooked } from "@/lib/booking-state";
 import { EVENT, IMAGES } from "@/lib/content";
 import { isEventEnded } from "@/lib/event-time";
 import { fadeUp, slideIn, staggerContainer, viewportOnce } from "@/lib/motion";
@@ -25,10 +25,13 @@ type FeaturedEventProps = {
     time?: string;
     location?: string;
     posterUrl?: string;
+    posterWidth?: number | null;
+    posterHeight?: number | null;
     capacityType?: string;
     capacity?: number | null;
     confirmedCount?: number;
     isFull?: boolean;
+    userBookingStatus?: string | null;
     poster?: string;
     titleKey?: string;
     dateKey?: string;
@@ -41,7 +44,8 @@ type FeaturedEventProps = {
 export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
   const { t, locale, dir } = useLocale();
   const eventId = event?.id || "majlis-ihyaa";
-  const isBooked = useIsEventBooked(eventId);
+  const bookingStatus = event?.userBookingStatus ?? null;
+  const isBooked = Boolean(bookingStatus);
   const isEnded = event?.date ? isEventEnded(event.date, event.time) : false;
 
   const title = event
@@ -106,6 +110,8 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
             title={title}
             dateStr={dateStr}
             locationStr={locationStr}
+            imageWidth={event?.posterWidth}
+            imageHeight={event?.posterHeight}
           />
         </motion.div>
 
@@ -120,7 +126,7 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
         >
           <motion.span
             variants={fadeUp}
-            className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-brass"
+            className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-foreground"
           >
             <span className="size-1.5 rounded-full bg-brass" />
             {t("event.kicker")}
@@ -143,19 +149,26 @@ export function FeaturedEvent({ event, isFirst = true }: FeaturedEventProps) {
           >
             {isBooked && (
               <div className="mb-4">
-                <span
+                <StatusNotice
+                  variant={bookingStatus === "CONFIRMED" ? "success" : bookingStatus === "PENDING" ? "warning" : "pending"}
+                  size="sm"
+                  icon={bookingStatus === "CONFIRMED" ? undefined : <Clock className="size-3.5" />}
                   data-testid="booked-state-badge"
                   data-event-id={eventId}
                   id={`booked-badge-${eventId}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-sm"
+                  className="shadow-sm"
                 >
-                  <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  <span>
-                    {locale === "ar"
-                      ? "أنت مسجل — تم تأكيد حجزك"
-                      : "You're booked — registration confirmed"}
-                  </span>
-                </span>
+                  {bookingStatus === "CONFIRMED"
+                    ? t("booking.statusConfirmedShort")
+                    : bookingStatus === "PENDING"
+                      ? t("booking.statusPendingShort")
+                      : t("booking.statusWaitlistShort")}
+                </StatusNotice>
+                {(bookingStatus === "PENDING" || bookingStatus === "WAITLISTED") && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("booking.statusNotificationNote")}
+                  </p>
+                )}
               </div>
             )}
 

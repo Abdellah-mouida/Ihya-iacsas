@@ -1,0 +1,108 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireChatActor } from "@/lib/chat/guards";
+import {
+  canUserAccessConversation,
+  conversationChannel,
+  getRealtimeTransport,
+  userChannel,
+} from "@/lib/chat/realtime";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const typingSchema = z.object({
+  conversationId: z.string().trim().min(1).max(64),
+  isTyping: z.boolean(),
+});
+
+const globalThrottle = globalThis as typeof globalThis & {
+  __ihyaaTypingThrottle?: Map<string, number>;
+};
+
+function getTypingThrottleMap(): Map<string, number> {
+  if (!globalThrottle.__ihyaaTypingThrottle) {
+    globalThrottle.__ihyaaTypingThrottle = new Map();
+  }
+  return globalThrottle.__ihyaaTypingThrottle;
+}
+
+export async function POST(request: Request) {
+  const authResult = await requireChatActor({ requireTerms: true });
+  if (!authResult.ok) return authResult.response;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const parsed = typingSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const actor = authResult.user;
+  if (!actor.showOnlineStatus) {
+    return NextResponse.json({ ok: true, suppressed: true });
+  }
+
+  const { conversationId, isTyping } = parsed.data;
+
+  const access = await canUserAccessConversation(actor.id, conversationId);
+  if (!access.ok) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const throttleKey = `${actor.id}:${conversationId}`;
+  const map = getTypingThrottleMap();
+  const now = Date.now();
+  if (map.size > 1000) {
+    for (const [key, ts] of map.entries()) {
+      if (now - ts > 60_000) map.delete(key);
+    }
+    while (map.size >= 2000) {
+      const oldestKey = map.keys().next().value;
+      if (!oldestKey) break;
+      map.delete(oldestKey);
+    }
+  }
+  const prev = map.get(throttleKey) ?? 0;
+
+  if (isTyping && now - prev < 1500) {
+    return NextResponse.json({ ok: true, throttled: true });
+  }
+
+  const rl = await checkRateLimit(`chat_typing:${actor.id}`, 40, 60);
+  if (!rl.allowed) {
+    return NextResponse.json({ ok: true, throttled: true });
+  }
+
+  if (isTyping) {
+    map.set(throttleKey, now);
+  } else {
+    map.delete(throttleKey);
+  }
+
+  try {
+    const transport = getRealtimeTransport();
+    const targets = [conversationChannel(conversationId)];
+    if (access.conversationType === "DM" && access.dmPeerId) {
+      targets.push(userChannel(access.dmPeerId));
+    }
+    await Promise.all(
+      targets.map((ch) =>
+        transport.publish(ch, {
+          type: "typing",
+          conversationId,
+          userId: actor.id,
+          isTyping,
+          at: now,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("Failed to publish typing event:", err);
+  }
+
+  return NextResponse.json({ ok: true });
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SmoothImage } from "@/components/common/smooth-image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -25,6 +25,8 @@ export function VerifyEmailView() {
 
   useEffect(() => {
     if (emailParam) {
+      // A changed query parameter replaces the verification form's address.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(emailParam);
     }
   }, [emailParam]);
@@ -95,7 +97,7 @@ export function VerifyEmailView() {
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative size-16 rounded-full overflow-hidden border-2 border-brass/40 shadow-lg mb-4">
-            <Image
+            <SmoothImage
               src="/images/logo-circle.png"
               alt="Ihyaa Program Logo"
               fill

@@ -14,46 +14,105 @@ enum Role {
   ADMIN
 }
 
+enum BranchKind {
+  CITY
+  PROVINCE
+  CUSTOM
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum FriendRequestPolicy {
+  EVERYONE
+  NOBODY
+}
+
+enum ConversationType {
+  PUBLIC
+  DM
+  ROOM
+}
+
+enum ConversationMemberRole {
+  OWNER
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  ROOM_INVITE
+  SYSTEM
+}
+
+enum InviteKind {
+  LINK
+  MESSAGE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
 model CarouselPost {
-  id        String   @id @default(cuid())
-  imageUrl  String
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  imageUrl    String
+  imageWidth  Int?
+  imageHeight Int?
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([order])
 }
 
 model GalleryPhoto {
-  id        String   @id @default(cuid())
-  imageUrl  String
-  captionAr String?
-  captionEn String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  imageUrl    String
+  imageWidth  Int?
+  imageHeight Int?
+  captionAr   String?
+  captionEn   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([createdAt])
 }
 
 model Event {
-  id            String    @id @default(cuid())
-  slug          String    @unique
-  titleAr       String
-  titleEn       String
-  descriptionAr String
-  descriptionEn String
-  date          DateTime
-  time          String
-  location      String
-  posterUrl     String
-  isNew         Boolean   @default(false)
-  bookingOpen   Boolean   @default(true)
-  capacityType  String    @default("OPEN")
-  capacity      Int?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  bookings      Booking[]
+  id                String    @id @default(cuid())
+  slug              String    @unique
+  titleAr           String
+  titleEn           String
+  descriptionAr     String
+  descriptionEn     String
+  date              DateTime
+  time              String
+  location          String
+  posterUrl         String
+  posterWidth       Int?
+  posterHeight      Int?
+  isNew             Boolean   @default(false)
+  bookingOpen       Boolean   @default(true)
+  capacityType      String    @default("OPEN")
+  capacity          Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  bookings          Booking[]
 
   @@index([date])
   @@index([bookingOpen])
@@ -65,7 +124,7 @@ model Booking {
   eventId       String
   event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   userId        String?
-  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName      String
   email         String
   city          String
@@ -127,6 +186,8 @@ model User {
   imagePublicId         String?
   coverImage            String?
   coverImagePublicId    String?
+  coverWidth            Int?
+  coverHeight           Int?
   theme                 String?   @default("light")
   reduceMotion          Boolean   @default(false)
   locale                String?   @default("ar")
@@ -140,16 +201,65 @@ model User {
   tempPasswordHash      String?
   tempPasswordExpiresAt DateTime?
   sessionVersion        Int       @default(1)
+  friendRequestPolicy   FriendRequestPolicy @default(EVERYONE)
+  showOnlineStatus      Boolean   @default(true)
+  showFriendCount       Boolean   @default(true)
+  chatTermsAcceptedAt   DateTime?
+  chatPublicTimeoutUntil DateTime?
+  chatBannedAt          DateTime?
+  chatBannedReason      String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  accounts  Account[]
-  sessions  Session[]
-  bookings  Booking[]
-  auditLogs AuditLog[]
+  accounts                Account[]
+  sessions                Session[]
+  bookings                Booking[]
+  auditLogs               AuditLog[]
+  branchesCreated         Branch[]
+  friendshipsSent         Friendship[]         @relation("FriendshipRequester")
+  friendshipsReceived     Friendship[]         @relation("FriendshipAddressee")
+  blocksInitiated         Block[]              @relation("BlockBlocker")
+  blocksReceived          Block[]              @relation("BlockBlocked")
+  conversationsOwned      Conversation[]       @relation("ConversationOwner")
+  conversationMemberships ConversationMember[]
+  messagesSent            Message[]            @relation("MessageSender")
+  invitesSent             Invite[]             @relation("InviteInviter")
+  invitesReceived         Invite[]             @relation("InviteInvitee")
+  reportsFiled            Report[]             @relation("ReportReporter")
+  reportsTargeted         Report[]             @relation("ReportTarget")
+  reportsReviewed         Report[]             @relation("ReportReviewer")
+  notifications           Notification[]
+  apiSessions             ApiSession[]
 
   @@index([email])
   @@index([role])
+  @@index([name])
+}
+
+model Branch {
+  id          String     @id @default(cuid())
+  kind        BranchKind
+  geoId       String?
+  nameAr      String
+  nameEn      String?
+  nameArKey   String     @unique
+  nameEnKey   String?    @unique
+  idempotencyKey String? @unique
+  regionId    String
+  provinceId  String?
+  latitude    Float
+  longitude   Float
+  active      Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([active, sortOrder])
+  @@index([regionId, active])
+  @@index([provinceId])
+  @@index([geoId])
 }
 
 model Account {
@@ -214,20 +324,26 @@ model ContactMessage {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String?
-  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action     String
-  targetType String
-  targetId   String?
-  details    Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  actorId     String?
+  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName   String?
+  actorEmail  String?
+  actorRole   String?
+  action      String
+  targetType  String
+  targetId    String?
+  targetName  String?
+  targetEmail String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
 
   @@index([actorId])
   @@index([action])
   @@index([targetType])
+  @@index([actorId, createdAt])
   @@index([createdAt])
 }
 
@@ -238,3 +354,220 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 }
 
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  pairKey     String           @unique
+  status      FriendshipStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
+  @@index([status])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model Conversation {
+  id               String           @id @default(cuid())
+  type             ConversationType
+  name             String?
+  emoji            String?
+  accentColor      String?
+  ownerId          String?
+  membersCanInvite Boolean          @default(true)
+  dmPairKey        String?          @unique
+  publicKey        String?          @unique
+  memberCap        Int              @default(50)
+  lastMessageAt    DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  owner    User?                @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members  ConversationMember[]
+  messages Message[]
+  invites  Invite[]
+  reports  Report[]
+
+  @@index([type, lastMessageAt(sort: Desc)])
+  @@index([ownerId])
+}
+
+model ConversationMember {
+  id             String                 @id @default(cuid())
+  conversationId String
+  userId         String
+  role           ConversationMemberRole @default(MEMBER)
+  joinedAt       DateTime               @default(now())
+  lastReadAt     DateTime               @default(now())
+  muted          Boolean                @default(false)
+  leftAt         DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, leftAt])
+  @@index([conversationId, leftAt])
+}
+
+model Message {
+  id           String      @id @default(cuid())
+  clientId     String?
+  conversationId String
+  senderId     String?
+  isAnonymized Boolean     @default(false)
+  type         MessageType @default(TEXT)
+  ciphertext   String      @db.Text
+  nonce        String
+  keyVersion   Int         @default(1)
+  replyToId    String?
+  createdAt    DateTime    @default(now())
+  editedAt     DateTime?
+  deletedAt    DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  replyTo      Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("MessageReply")
+  invite       Invite?      @relation("InviteMessage")
+  reports      Report[]
+
+  @@unique([conversationId, senderId, clientId])
+  @@index([conversationId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([conversationId, deletedAt, createdAt(sort: Desc)])
+  @@index([senderId])
+}
+
+model Invite {
+  id        String       @id @default(cuid())
+  roomId    String
+  inviterId String
+  inviteeId String?
+  kind      InviteKind
+  tokenHash String?      @unique
+  messageId String?      @unique
+  expiresAt DateTime
+  maxUses   Int          @default(1)
+  uses      Int          @default(0)
+  status    InviteStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  room    Conversation @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  inviter User         @relation("InviteInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User?        @relation("InviteInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  message Message?     @relation("InviteMessage", fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([roomId, status])
+  @@index([inviterId, status])
+  @@index([inviteeId, status])
+  @@index([expiresAt])
+}
+
+model Report {
+  id                 String       @id @default(cuid())
+  reporterId         String
+  reportedUserId     String?
+  conversationId     String
+  messageId          String?
+  reason             String
+  snapshotCiphertext String       @db.Text
+  snapshotNonce      String
+  snapshotKeyVersion Int          @default(1)
+  snapshotAadSubject String
+  status             ReportStatus @default(OPEN)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  resolutionNote     String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  reporter     User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?        @relation("ReportTarget", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  reviewedBy   User?        @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([reporterId])
+  @@index([conversationId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  i18nKey   String
+  params    Json?
+  data      Json?
+  dedupeKey String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, dedupeKey, createdAt(sort: Desc)])
+}
+
+model ApiSession {
+  id             String    @id @default(cuid())
+  userId         String
+  familyId       String    @unique
+  deviceName     String?
+  platform       String?
+  ipAddress      String?
+  userAgent      String?
+  sessionVersion Int       @default(1)
+  lastUsedAt     DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  revokedReason  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens ApiRefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model ApiRefreshToken {
+  id           String    @id @default(cuid())
+  sessionId    String
+  familyId     String
+  tokenHash    String    @unique
+  replacedById String?
+  usedAt       DateTime?
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  session ApiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([familyId])
+  @@index([expiresAt])
+}

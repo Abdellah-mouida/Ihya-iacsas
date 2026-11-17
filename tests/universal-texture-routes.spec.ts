@@ -17,18 +17,20 @@ test.describe("Task 3: Universal Texture Integration Across Routes and Themes", 
     test(`renders active Texture layer on ${route.path} across themes`, async ({ page }) => {
       await page.goto(route.path);
       await page.waitForLoadState("domcontentloaded");
+      if (route.path === "/book") {
+        await page.waitForURL(/\/login/, { timeout: 15000 });
+      }
 
-      // Verify that at least one Texture layer is attached on the page
-      const textureLayer = page.locator('[data-testid="texture-layer"]').first();
+      // The root atmosphere is shared once across routes and contains inline khatam geometry.
+      const textureLayer = page.locator('[data-testid="site-atmosphere"]');
       await expect(textureLayer).toBeAttached({ timeout: 5000 });
 
       // Check SVG pattern element inside
       const svgEl = textureLayer.locator("svg");
       await expect(svgEl).toBeAttached();
 
-      // Check pattern image href
-      const imgHref = await textureLayer.locator("image").getAttribute("href");
-      expect(imgHref).toMatch(/^\/patterns\/[a-z0-9-]+\.svg$/);
+      await expect(textureLayer.locator("pattern#site-khatam-pattern")).toBeAttached();
+      await expect(textureLayer.locator("path")).toHaveAttribute("stroke", "currentColor");
 
       // Verify each theme applies without crashing
       for (const theme of THEMES) {
