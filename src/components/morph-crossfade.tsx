@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import { PhotoZoom, usePhotoZoom } from "@/components/common/photo-zoom";
 import { SmoothImage } from "@/components/common/smooth-image";
 import "./MorphSlider.css";
 
@@ -11,6 +12,8 @@ export type SliderItem = {
   alt?: string;
   caption?: string;
   date?: string;
+  width?: number | null;
+  height?: number | null;
 };
 
 export type SliderLabels = {
@@ -66,6 +69,7 @@ export function MorphCrossfade({
   const [inView, setInView] = useState(true);
   const [pageHidden, setPageHidden] = useState(false);
   const [mqReducedMotion, setMqReducedMotion] = useState(false);
+  const { zoomState, isOpen: isZoomOpen, openZoom, closeZoom, onTriggerPointerDown, onTriggerClick } = usePhotoZoom();
   const effectiveReducedMotion = reducedMotion || mqReducedMotion;
   const safeIndex = items.length > 0 ? ((index % items.length) + items.length) % items.length : 0;
   const isRtl = dir === "rtl";
@@ -109,12 +113,31 @@ export function MorphCrossfade({
   );
 
   useEffect(() => {
-    if (!autoplay || effectiveReducedMotion || hovering || focusWithin || !inView || pageHidden || items.length < 2) {
+    if (!autoplay || effectiveReducedMotion || hovering || focusWithin || isZoomOpen || !inView || pageHidden || items.length < 2) {
       return undefined;
     }
     const id = window.setTimeout(() => step(1), Math.max(autoplayDelay, 1) * 1000);
     return () => window.clearTimeout(id);
-  }, [autoplay, autoplayDelay, effectiveReducedMotion, hovering, focusWithin, inView, pageHidden, items.length, safeIndex, step]);
+  }, [autoplay, autoplayDelay, effectiveReducedMotion, hovering, focusWithin, isZoomOpen, inView, pageHidden, items.length, safeIndex, step]);
+
+  const openActiveSlide = useCallback(
+    (sourceEl: HTMLElement | null) => {
+      const current = items[safeIndex];
+      if (!current) return;
+      openZoom(
+        {
+          src: current.rawImage || current.image,
+          alt: current.alt || current.caption,
+          caption: current.caption,
+          date: current.date,
+          width: current.width,
+          height: current.height,
+        },
+        sourceEl,
+      );
+    },
+    [items, openZoom, safeIndex],
+  );
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
@@ -124,9 +147,12 @@ export function MorphCrossfade({
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         step(isRtl ? 1 : -1);
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openActiveSlide(e.currentTarget);
       }
     },
-    [isRtl, step],
+    [isRtl, openActiveSlide, step],
   );
 
   const hasCaptions = items.some((item) => item.caption);
@@ -152,12 +178,28 @@ export function MorphCrossfade({
       }}
     >
       <div
-        className="morph-slider-stage"
+        className="morph-slider-stage cursor-zoom-in"
         data-static="true"
         role="group"
         aria-roledescription="carousel"
         aria-label={labels.sliderLabel}
         tabIndex={0}
+        onPointerDown={onTriggerPointerDown}
+        onClick={(e) => {
+          const current = items[safeIndex];
+          if (!current) return;
+          onTriggerClick(
+            {
+              src: current.rawImage || current.image,
+              alt: current.alt || current.caption,
+              caption: current.caption,
+              date: current.date,
+              width: current.width,
+              height: current.height,
+            },
+            e,
+          );
+        }}
         onKeyDown={onKeyDown}
       >
         <div className="morph-slider-fallback">
@@ -254,6 +296,8 @@ export function MorphCrossfade({
           ))}
         </div>
       )}
+
+      <PhotoZoom zoomState={zoomState} onClose={closeZoom} />
     </div>
   );
 }

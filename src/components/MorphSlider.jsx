@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Renderer, Triangle, Program, Mesh, Texture } from 'ogl';
 import { gsap } from 'gsap';
+import { PhotoZoom, usePhotoZoom } from '@/components/common/photo-zoom';
 import { MorphCrossfade } from '@/components/morph-crossfade';
 
 import './MorphSlider.css';
@@ -702,6 +703,7 @@ export default function MorphSlider({
   const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const inViewRef = useRef(true);
+  const { zoomState, isOpen: isZoomOpen, openZoom, closeZoom, onTriggerPointerDown, onTriggerClick } = usePhotoZoom();
 
   const labels = { ...DEFAULT_LABELS, ...labelsProp };
   const isRtl = dir === 'rtl';
@@ -758,14 +760,21 @@ export default function MorphSlider({
 
   const useCrossfadeFallback = forceFallback || reducedMotion || webglFailed;
 
+  const safeIndex = items.length > 0 ? ((index % items.length) + items.length) % items.length : 0;
+  const safeIndexRef = useRef(safeIndex);
+  useLayoutEffect(() => {
+    safeIndexRef.current = safeIndex;
+  }, [safeIndex]);
+
   useEffect(() => {
     if (useCrossfadeFallback || !stageRef.current || items.length === 0) return undefined;
 
+    const initialIndex = items.length > 0 ? ((safeIndexRef.current % items.length) + items.length) % items.length : 0;
     let engine;
     try {
       engine = new MorphEngine(stageRef.current, {
         items,
-        startIndex,
+        startIndex: initialIndex,
         reducedMotion,
         lowPower,
         dprCap: lowPower ? 1 : 1.5,
@@ -797,9 +806,7 @@ export default function MorphSlider({
       setFirstFrameReady(false);
       setIsRendering(false);
     };
-  }, [items, startIndex, useCrossfadeFallback, reducedMotion, lowPower]);
-
-  const safeIndex = items.length > 0 ? ((index % items.length) + items.length) % items.length : 0;
+  }, [items, useCrossfadeFallback, reducedMotion, lowPower]);
 
   const stepFallback = useCallback(
     delta => {
@@ -841,12 +848,12 @@ export default function MorphSlider({
   );
 
   useEffect(() => {
-    if (!autoplay || reducedMotion || hovering || focusWithin || !inView || pageHidden || items.length < 2) {
+    if (!autoplay || reducedMotion || hovering || focusWithin || isZoomOpen || !inView || pageHidden || items.length < 2) {
       return undefined;
     }
     const id = window.setTimeout(handleNext, Math.max(autoplayDelay, 1) * 1000);
     return () => window.clearTimeout(id);
-  }, [autoplay, autoplayDelay, reducedMotion, hovering, focusWithin, inView, pageHidden, items.length, safeIndex, handleNext]);
+  }, [autoplay, autoplayDelay, reducedMotion, hovering, focusWithin, isZoomOpen, inView, pageHidden, items.length, safeIndex, handleNext]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -893,6 +900,25 @@ export default function MorphSlider({
     };
   }, [useCrossfadeFallback, isRtl]);
 
+  const openActiveSlide = useCallback(
+    sourceEl => {
+      const current = items[safeIndex];
+      if (!current) return;
+      openZoom(
+        {
+          src: current.rawImage || current.image,
+          alt: current.alt || current.caption,
+          caption: current.caption,
+          date: current.date,
+          width: current.width,
+          height: current.height
+        },
+        sourceEl
+      );
+    },
+    [items, openZoom, safeIndex]
+  );
+
   const onKeyDown = useCallback(
     e => {
       if (e.key === 'ArrowRight') {
@@ -903,14 +929,17 @@ export default function MorphSlider({
         e.preventDefault();
         if (isRtl) handleNext();
         else handlePrev();
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openActiveSlide(e.currentTarget);
       }
     },
-    [handleNext, handlePrev, isRtl]
+    [handleNext, handlePrev, isRtl, openActiveSlide]
   );
 
   const hasCaptions = items.some(item => item.caption);
   const effectiveDuration = reducedMotion || lowPower ? Math.min(duration, 0.45) : duration;
-  const firstItem = items[startIndex] ?? items[0];
+  const firstItem = items[safeIndex] ?? items[0];
 
   if (useCrossfadeFallback) {
     return (
@@ -953,11 +982,27 @@ export default function MorphSlider({
     >
       <div
         ref={stageRef}
-        className="morph-slider-stage"
+        className="morph-slider-stage cursor-zoom-in"
         role="group"
         aria-roledescription="carousel"
         aria-label={labels.sliderLabel}
         tabIndex={0}
+        onPointerDown={onTriggerPointerDown}
+        onClick={e => {
+          const current = items[safeIndex];
+          if (!current) return;
+          onTriggerClick(
+            {
+              src: current.rawImage || current.image,
+              alt: current.alt || current.caption,
+              caption: current.caption,
+              date: current.date,
+              width: current.width,
+              height: current.height
+            },
+            e
+          );
+        }}
         onKeyDown={onKeyDown}
       >
         {firstItem && (
@@ -1036,6 +1081,8 @@ export default function MorphSlider({
           ))}
         </div>
       )}
+
+      <PhotoZoom zoomState={zoomState} onClose={closeZoom} />
     </div>
   );
 }

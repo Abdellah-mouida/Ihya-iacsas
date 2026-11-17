@@ -13,6 +13,8 @@ const MorphSlider = dynamic(() => import("@/components/MorphSlider"), { ssr: fal
 
 type RawPhoto = {
   imageUrl: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
   captionAr: string | null;
   captionEn: string | null;
   createdAt?: Date | string | null;
@@ -86,6 +88,8 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
           alt: caption,
           caption,
           date,
+          width: photo.imageWidth ?? null,
+          height: photo.imageHeight ?? null,
         };
       });
     }
@@ -97,6 +101,8 @@ export function HomeGallerySlider({ limit = 10 }: { limit?: number }) {
         rawImage: item.src,
         alt: caption,
         caption,
+        width: item.w,
+        height: item.h,
       };
     });
   }, [dbPhotos, isMobile, limit, locale, t]);

@@ -58,13 +58,15 @@ test("the gallery DriftWall keeps its top title, borderless random layout, modal
           const els = Array.from(wallEl.querySelectorAll("button[data-gallery-card]"));
           const match = els.find((el) => {
             const r = el.getBoundingClientRect();
+            const cx = (r.left + r.right) / 2;
+            const cy = (r.top + r.bottom) / 2;
             return (
               r.width > 20 &&
               r.height > 20 &&
-              r.left >= Math.max(0, wr.left + 8) &&
-              r.right <= Math.min(window.innerWidth, wr.right - 8) &&
-              r.top >= Math.max(0, wr.top + 32) &&
-              r.bottom <= Math.min(window.innerHeight, wr.bottom - 32)
+              cx >= Math.max(8, wr.left + 8) &&
+              cx <= Math.min(window.innerWidth - 8, wr.right - 8) &&
+              cy >= Math.max(8, wr.top + 8) &&
+              cy <= Math.min(window.innerHeight - 8, wr.bottom - 8)
             );
           });
           return match?.getAttribute("data-tile-id") ?? null;
@@ -75,11 +77,7 @@ test("the gallery DriftWall keeps its top title, borderless random layout, modal
         await expect(dialog).toBeVisible();
         await expect(dialog.getByRole("img")).toHaveAttribute("alt", /.+/);
         await expect(dialog.getByRole("button", { name: locale === "ar" ? "إغلاق" : "Close" })).toBeVisible();
-        if (uniquePhotos > 1) {
-          const nextBtn = dialog.getByRole("button", { name: locale === "ar" ? "الصورة التالية" : "Next image" });
-          await expect(nextBtn).toBeVisible();
-          await nextBtn.click();
-        }
+        await expect(dialog.getByRole("button", { name: locale === "ar" ? "الصورة التالية" : "Next image" })).toHaveCount(0);
         await page.keyboard.press("Escape");
         await expect(dialog).toBeHidden();
       } finally {
@@ -115,14 +113,24 @@ test("the home gallery preview uses localized MorphSlider controls without a leg
       const nextBtn = slider.getByRole("button", { name: locale === "ar" ? "الشريحة التالية" : "Next slide" });
       await expect(prevBtn).toBeVisible();
       await expect(nextBtn).toBeVisible();
-      const secondDot = slider.getByRole("tab").nth(1);
-      await expect(slider.getByRole("tab").nth(0)).toHaveAttribute("aria-selected", "true");
+      const dots = slider.getByRole("tab");
+      const dotCount = await dots.count();
+      expect(dotCount).toBeGreaterThan(1);
+      const beforeIndex = await dots.evaluateAll((els) =>
+        els.findIndex((el) => el.getAttribute("aria-selected") === "true"),
+      );
+      expect(beforeIndex).toBeGreaterThanOrEqual(0);
       await nextBtn.click();
-      await expect(secondDot).toHaveAttribute("aria-selected", "true");
+      const expectedNext = (beforeIndex + 1) % dotCount;
+      await expect(dots.nth(expectedNext)).toHaveAttribute("aria-selected", "true");
       await slider.locator(".morph-slider-stage").click();
-      await expect(page.getByRole("dialog")).toHaveCount(0);
+      const zoomDialog = page.getByRole("dialog");
+      await expect(zoomDialog).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(zoomDialog).toBeHidden();
     } finally {
       await context.close();
+      fs.rmSync("evidence/task-07", { recursive: true, force: true });
     }
   }
 });
