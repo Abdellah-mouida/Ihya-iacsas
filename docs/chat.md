@@ -35,9 +35,24 @@ Active transport selection:
   - A **per-conversation 256-bit subkey** derived with HKDF-SHA256 (`info = "ihyaa-chat-v1:" + conversationId`).
   - A fresh random 12-byte nonce (`iv`) per message.
   - **Associated Authenticated Data (AAD)** binding `${conversationId}:${messageId}:${senderId}:${keyVersion}` so ciphertext cannot be transplanted across conversations, messages, or senders without failing authentication.
-- **Zero-content realtime channels:** Realtime events carry **only IDs and event types** (e.g., `message:new` with `{ messageId, conversationId }`, `typing`, `read`, `member:changed`, `friend:updated`, `invite:updated`). Message bodies are **never** published to the realtime provider; clients fetch ciphertext-decrypted messages only from our authenticated HTTPS API after server membership checks.
-- **Not true end-to-end encryption (E2EE):** Device-only E2EE (Signal/MLS key exchange, multi-device backup, key recovery) is intentionally out of scope because it prevents server-side moderation of reported messages and reliable multi-device web access.
+- **Blind encrypted realtime push (`WireEncryptedMessagePayload`):** Realtime events never carry plaintext message bodies. `message.created` and `message.updated` push the AES-256-GCM encrypted payload (`ciphertext`, `nonce`, `keyVersion`, `keyEpoch`, sender/reply/invite metadata) on `conv:{id}` / `user:{id}` channels. Authorized members fetch per-conversation HKDF keys (`keyVersion` + `keyEpoch`, kept in browser memory only with `Cache-Control: no-store`) via `GET /api/chat/conversations/[id]/key` and decrypt locally with WebCrypto (`src/lib/chat/client-crypto.ts`), falling back to `GET /api/chat/messages/[id]` on key miss or rotation. Leaving or removing a room member atomically increments `Conversation.keyEpoch`.
+- **Delivery & read receipts:** `ConversationMember.lastDeliveredAt` tracks device delivery; receiving clients batch-ack via `POST /api/chat/conversations/[id]/delivered`, which publishes `delivered` events. In DM and ROOM chats, messages progress through single-check (sent) → muted double-check (delivered to all other members) → glowing primary double-check (seen by all other members). No ticks are shown in `PUBLIC`.
+- **Not true end-to-end encryption (E2EE):** Server-derived HKDF keys are intentional because server-side moderation of reported messages and multi-device web access require server decryption on authorized HTTPS routes.
 - **Staff access policy:** Staff and administrators **cannot** browse private conversations (DMs or private rooms). Only messages explicitly reported by a user create an encrypted `Report` snapshot visible to `ADMIN` / `MODERATOR` in the moderation queue.
+
+---
+
+## 2.5. Unified Live Sync (`publishChange` & `useLive`)
+
+All DB-backed user-facing surfaces stay live over the single per-tab realtime connection (`src/lib/realtime/publish.ts` on the server, `src/lib/realtime/use-live.ts` on the client), with automatic reconciliation on reconnect, `visibilitychange`, and a 60-second visible-only safety heartbeat.
+
+| Channel / Topic | Subscribers | Triggered By (Server Mutations) | Client Surfaces Updated |
+|---|---|---|---|
+| `conv:{id}` | Active members of conversation (DM/ROOM/PUBLIC) | `sendMessage`, `editMessage`, `deleteMessage`, `markConversationDelivered`, `markConversationRead`, `removeRoomMember`, `leaveRoom`, `setGlobalChatEnabled` | `ChatWorkspace`, `ChatConversationPane`, `NotificationRealtimeBridge` (grouped toast + delivery ack) |
+| `user:{id}` | Authenticated user (`id`) | `createMessageInvite`, `respondToMessageInvite`, `executeFriendAction` / `/api/chat/friends`, `setConversationMuted`, `notify`, `setNotificationReadState`, `markAllNotificationsRead`, booking mutations | `ChatWorkspace`, `NotificationsInbox`, `NotificationRealtimeBridge` (title + badges), `GlassNavbar`, `ProfileView`, `PublicProfileView` |
+| `presence:global` | Authenticated chat users | Connect/disconnect/heartbeat in `local-sse` or Ably | `ChatWorkspace`, `PublicProfileView` |
+| `events:public` | Authenticated sessions | `createEvent`, `updateEvent`, `toggleEventStatus`, `deleteEvent`, booking capacity changes | `OpenEvents`, `FeaturedEvent`, `GlassNavbar`, `ProfileView` |
+| `admin:global` (topics `admin:bookings`, `admin:users`, `admin:moderation`) | `ADMIN` & `MODERATOR` sessions | Booking approvals/rejections/promotions/deletions, `updateUserRole`, `deleteOrAnonymizeUser`, `createMessageReport`, `resolveChatReport`, moderation actions, `setGlobalChatEnabled` | `/admin/bookings`, `/admin/users`, `/admin/moderation` |
 
 ---
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-provider";
 import { notify } from "@/lib/toast";
+import { useLive } from "@/lib/realtime/use-live";
 import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { PatternCover } from "@/components/common/pattern-cover";
 import { UserAvatar } from "@/components/common/user-avatar";
@@ -33,7 +34,27 @@ export function PublicProfileView({ initialProfile }: PublicProfileViewProps) {
   const { locale, t } = useLocale();
   const router = useRouter();
   const isAr = locale === "ar";
-  const [profile, setProfile] = useState<PublicProfileData>(initialProfile);
+  const fetchPublicProfile = useCallback(async () => {
+    const res = await fetch(
+      `/api/chat/friends?profileId=${encodeURIComponent(initialProfile.id)}`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return initialProfile;
+    const payload = (await res.json()) as { profile?: PublicProfileData };
+    return payload.profile ?? initialProfile;
+  }, [initialProfile]);
+  const { data: liveProfile, setData: setLiveProfile } = useLive<PublicProfileData>(
+    `public-profile:${initialProfile.id}`,
+    fetchPublicProfile,
+    ["friends", "presence"],
+    { initialData: initialProfile },
+  );
+  const profile = liveProfile ?? initialProfile;
+  const setProfile = (
+    updater: (prev: PublicProfileData) => PublicProfileData,
+  ) => {
+    setLiveProfile((prev) => updater(prev ?? initialProfile));
+  };
   const [isPending, setIsPending] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 

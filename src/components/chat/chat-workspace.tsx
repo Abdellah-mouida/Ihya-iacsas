@@ -9,6 +9,16 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/i18n/locale-provider";
+import {
+  scheduleDeliveryAck,
+  setActiveChatConversation,
+} from "@/lib/chat/active-chat";
+import {
+  clearClientConversationKeys,
+  decryptWireMessageToDto,
+  storeConversationKeyBundle,
+} from "@/lib/chat/client-crypto";
+import type { WireEncryptedMessagePayload } from "@/lib/chat/realtime/types";
 import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { ChatConversationPane } from "./chat-conversation-pane";
@@ -112,7 +122,18 @@ export function ChatWorkspace({
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
-  }, [selectedId]);
+    if (termsAccepted && !isBanned) {
+      setActiveChatConversation(selectedId);
+    } else {
+      setActiveChatConversation(null);
+    }
+  }, [selectedId, termsAccepted, isBanned]);
+
+  useEffect(() => {
+    return () => {
+      setActiveChatConversation(null);
+    };
+  }, []);
 
   useEffect(() => {
     messagesByConvRef.current = messagesByConv;
@@ -176,28 +197,34 @@ export function ChatWorkspace({
   );
 
   const fetchConversations = useCallback(async () => {
-    const res = await fetch("/api/chat/conversations", { cache: "no-store" });
-    if (!res.ok) return [] as ChatConversationSummary[];
-    const data = (await res.json()) as { conversations?: ChatConversationSummary[] };
-    const list = data.conversations ?? [];
-    setConversations(list);
-    broadcastUnreadTotal(list);
-    setSelectedId((prev) => {
-      if (isPublicOnly) {
-        return list.find((c) => c.type === "PUBLIC")?.id ?? null;
-      }
-      if (prev && list.some((c) => c.id === prev && c.type !== "PUBLIC")) return prev;
-      return null;
-    });
-    return list;
+    try {
+      const res = await fetch("/api/chat/conversations", { cache: "no-store" });
+      if (!res.ok) return [] as ChatConversationSummary[];
+      const data = (await res.json()) as { conversations?: ChatConversationSummary[] };
+      const list = data.conversations ?? [];
+      setConversations(list);
+      broadcastUnreadTotal(list);
+      setSelectedId((prev) => {
+        if (isPublicOnly) {
+          return list.find((c) => c.type === "PUBLIC")?.id ?? null;
+        }
+        if (prev && list.some((c) => c.id === prev && c.type !== "PUBLIC")) return prev;
+        return null;
+      });
+      return list;
+    } catch {
+      return [] as ChatConversationSummary[];
+    }
   }, [broadcastUnreadTotal, isPublicOnly]);
 
   const fetchFriends = useCallback(async () => {
-    const res = await fetch("/api/chat/friends", { cache: "no-store" });
-    if (!res.ok) return;
-    const data = (await res.json()) as FriendsDashboardState;
-    setFriendsData(data);
-    broadcastUnreadTotal(conversationsRef.current, data.incomingRequests.length);
+    try {
+      const res = await fetch("/api/chat/friends", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as FriendsDashboardState;
+      setFriendsData(data);
+      broadcastUnreadTotal(conversationsRef.current, data.incomingRequests.length);
+    } catch {}
   }, [broadcastUnreadTotal]);
 
   const markRead = useCallback(
@@ -224,7 +251,11 @@ export function ChatWorkspace({
     async (conversationId: string, before?: string | null) => {
       if (!before) setLoadingConvId(conversationId);
       try {
-        const params = new URLSearchParams({ conversationId, limit: "30" });
+        const params = new URLSearchParams({
+          conversationId,
+          limit: "30",
+          wire: "1",
+        });
         if (before) params.set("cursor", before);
         const res = await fetch(`/api/chat/messages?${params.toString()}`, {
           cache: "no-store",
@@ -232,24 +263,86 @@ export function ChatWorkspace({
         if (!res.ok) return;
         const data = (await res.json()) as {
           messages?: ChatMessageItem[];
+          wireMessages?: WireEncryptedMessagePayload[];
+          keyBundle?: Parameters<typeof storeConversationKeyBundle>[0];
           nextCursor?: string | null;
+          peerLastReadAt?: string | null;
+          peerLastDeliveredAt?: string | null;
+          memberStates?: ChatConversationSummary["memberStates"];
         };
-        const fetched = (data.messages ?? []).slice().reverse();
-        setCursorByConv((prev) => ({ ...prev, [conversationId]: data.nextCursor ?? null }));
+
+        if (data.keyBundle) {
+          storeConversationKeyBundle(data.keyBundle);
+        }
+
+        let resolved: ChatMessageItem[] = [];
+        if (Array.isArray(data.wireMessages) && data.wireMessages.length > 0) {
+          const decrypted = await Promise.all(
+            data.wireMessages.map((wire) => decryptWireMessageToDto(wire)),
+          );
+          const needsFallback = decrypted.some((item) => item === null);
+          if (!needsFallback) {
+            resolved = decrypted as ChatMessageItem[];
+          } else {
+            const fallbackRes = await fetch(
+              `/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}&limit=30${before ? `&cursor=${encodeURIComponent(before)}` : ""}`,
+              { cache: "no-store" },
+            );
+            if (fallbackRes.ok) {
+              const fbData = (await fallbackRes.json()) as {
+                messages?: ChatMessageItem[];
+              };
+              resolved = fbData.messages ?? [];
+            }
+          }
+        } else {
+          resolved = data.messages ?? [];
+        }
+
+        const fetched = resolved.slice().reverse();
+        setCursorByConv((prev) => ({
+          ...prev,
+          [conversationId]: data.nextCursor ?? null,
+        }));
         setMessagesByConv((prev) => {
           const existing = prev[conversationId] ?? [];
           if (before) {
             const seenIds = new Set(existing.map((m) => m.id));
-            const merged = [...fetched.filter((m) => !seenIds.has(m.id)), ...existing];
+            const merged = [
+              ...fetched.filter((m) => !seenIds.has(m.id)),
+              ...existing,
+            ];
             return { ...prev, [conversationId]: merged };
           }
           const pending = existing.filter((m) => m.optimisticState);
           return { ...prev, [conversationId]: [...fetched, ...pending] };
         });
 
-        if (!before && fetched.length > 0 && selectedIdRef.current === conversationId) {
-          void markRead(conversationId, fetched[fetched.length - 1].createdAt);
+        if (data.memberStates || data.peerLastReadAt || data.peerLastDeliveredAt) {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== conversationId) return c;
+              return {
+                ...c,
+                memberStates: data.memberStates ?? c.memberStates,
+                peer: c.peer
+                  ? {
+                      ...c.peer,
+                      lastReadAt: data.peerLastReadAt ?? c.peer.lastReadAt,
+                      lastDeliveredAt:
+                        data.peerLastDeliveredAt ?? c.peer.lastDeliveredAt,
+                    }
+                  : c.peer,
+              };
+            }),
+          );
         }
+
+        if (!before && fetched.length > 0 && selectedIdRef.current === conversationId) {
+          const lastMsg = fetched[fetched.length - 1];
+          void markRead(conversationId, lastMsg.createdAt);
+        }
+      } catch {
       } finally {
         if (!before) setLoadingConvId((cur) => (cur === conversationId ? null : cur));
       }
@@ -321,6 +414,40 @@ export function ChatWorkspace({
     let active = true;
     let releaseFn: (() => void) | null = null;
     const unsubs: Array<() => void> = [];
+    let lastReconcileAt = 0;
+
+    const reconcileSelectedMessages = async () => {
+      const curId = selectedIdRef.current;
+      if (!curId || !active) return;
+      const curList = messagesByConvRef.current[curId] ?? [];
+      const lastConfirmed = [...curList].reverse().find((m) => !m.optimisticState);
+      if (!lastConfirmed) {
+        void loadMessages(curId);
+        return;
+      }
+      try {
+        const res = await fetch(
+          `/api/chat/realtime/backfill?conversationId=${encodeURIComponent(curId)}&afterMessageId=${encodeURIComponent(lastConfirmed.id)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          items?: Array<{ messageId: string }>;
+        };
+        for (const item of data.items ?? []) {
+          const mid = item.messageId;
+          const msgRes = await fetch(`/api/chat/messages/${mid}`, { cache: "no-store" });
+          if (!msgRes.ok) continue;
+          const msgData = (await msgRes.json()) as { message?: ChatMessageItem };
+          if (!msgData.message) continue;
+          setMessagesByConv((prev) => {
+            const list = prev[curId] ?? [];
+            if (list.some((m) => m.id === msgData.message!.id)) return prev;
+            return { ...prev, [curId]: [...list, msgData.message!] };
+          });
+        }
+      } catch {}
+    };
 
     void import("@/lib/chat/realtime/client").then(({ getChatRealtimeClient }) => {
       if (!active) return;
@@ -335,35 +462,79 @@ export function ChatWorkspace({
         }),
       );
 
+      const maxIso = (a: string | null | undefined, b: string): string => {
+        if (!a) return b;
+        return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
+      };
+
+      const patchMemberTimestamp = (
+        convId: string,
+        uid: string,
+        field: "lastDeliveredAt" | "lastReadAt",
+        ts: string,
+      ) => {
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const nextPeer =
+              c.peer && c.peer.id === uid
+                ? {
+                    ...c.peer,
+                    lastDeliveredAt:
+                      field === "lastDeliveredAt" || field === "lastReadAt"
+                        ? maxIso(c.peer.lastDeliveredAt, ts)
+                        : c.peer.lastDeliveredAt,
+                    lastReadAt:
+                      field === "lastReadAt"
+                        ? maxIso(c.peer.lastReadAt, ts)
+                        : c.peer.lastReadAt,
+                  }
+                : c.peer;
+
+            const existingStates = c.memberStates ?? [];
+            const foundState = existingStates.some((m) => m.userId === uid);
+            const nextStates = foundState
+              ? existingStates.map((m) =>
+                  m.userId === uid
+                    ? {
+                        ...m,
+                        lastDeliveredAt:
+                          field === "lastDeliveredAt" || field === "lastReadAt"
+                            ? maxIso(m.lastDeliveredAt, ts)
+                            : m.lastDeliveredAt,
+                        lastReadAt:
+                          field === "lastReadAt"
+                            ? maxIso(m.lastReadAt, ts)
+                            : m.lastReadAt,
+                      }
+                    : m,
+                )
+              : [
+                  ...existingStates,
+                  {
+                    userId: uid,
+                    lastDeliveredAt: ts,
+                    lastReadAt: field === "lastReadAt" ? ts : "",
+                  },
+                ];
+
+            return {
+              ...c,
+              peer: nextPeer,
+              memberStates: nextStates,
+            };
+          }),
+        );
+      };
+
       unsubs.push(
         client.onReconnect(async () => {
-          const curId = selectedIdRef.current;
-          if (!curId) return;
-          const curList = messagesByConvRef.current[curId] ?? [];
-          const lastConfirmed = [...curList].reverse().find((m) => !m.optimisticState);
-          if (!lastConfirmed) {
-            return;
+          void fetchConversations();
+          if (!isPublicOnly) {
+            void fetchFriends();
           }
-          const res = await fetch(
-            `/api/chat/realtime/backfill?conversationId=${encodeURIComponent(curId)}&afterMessageId=${encodeURIComponent(lastConfirmed.id)}`,
-            { cache: "no-store" },
-          );
-          if (!res.ok) return;
-          const data = (await res.json()) as {
-            items?: Array<{ messageId: string }>;
-          };
-          for (const item of data.items ?? []) {
-            const mid = item.messageId;
-            const msgRes = await fetch(`/api/chat/messages/${mid}`, { cache: "no-store" });
-            if (!msgRes.ok) continue;
-            const msgData = (await msgRes.json()) as { message?: ChatMessageItem };
-            if (!msgData.message) continue;
-            setMessagesByConv((prev) => {
-              const list = prev[curId] ?? [];
-              if (list.some((m) => m.id === msgData.message!.id)) return prev;
-              return { ...prev, [curId]: [...list, msgData.message!] };
-            });
-          }
+          lastReconcileAt = Date.now();
+          await reconcileSelectedMessages();
         }),
       );
 
@@ -380,25 +551,45 @@ export function ChatWorkspace({
             ) {
               return;
             }
-            const res = await fetch(`/api/chat/messages/${messageId}`, {
-              cache: "no-store",
-            });
-            if (!res.ok) {
-              void fetchConversations();
-              return;
-            }
-            const data = (await res.json()) as { message?: ChatMessageItem };
-            const incoming = data.message;
-            if (!incoming) return;
 
-            client.recordMessageSeen(conversationId, incoming.id);
+            let incoming: ChatMessageItem | null = null;
+            if (event.wire) {
+              try {
+                incoming = await decryptWireMessageToDto(event.wire);
+              } catch {}
+            }
+            if (!incoming) {
+              try {
+                const res = await fetch(`/api/chat/messages/${messageId}`, {
+                  cache: "no-store",
+                });
+                if (!res.ok) {
+                  void fetchConversations();
+                  return;
+                }
+                const data = (await res.json()) as { message?: ChatMessageItem };
+                incoming = data.message ?? null;
+              } catch {
+                return;
+              }
+            }
+            if (!incoming || !active) return;
+
+            client.recordMessageSeen(conversationId, incoming.id, incoming.createdAt);
+            if (
+              incoming.senderId !== actor.id &&
+              event.conversationType !== "PUBLIC"
+            ) {
+              scheduleDeliveryAck(conversationId, incoming.createdAt);
+            }
+
             setMessagesByConv((prev) => {
               const list = prev[conversationId] ?? [];
-              if (list.some((m) => m.id === incoming.id)) return prev;
-              const withoutOptimistic = incoming.clientId
-                ? list.filter((m) => m.clientId !== incoming.clientId)
+              if (list.some((m) => m.id === incoming!.id)) return prev;
+              const withoutOptimistic = incoming!.clientId
+                ? list.filter((m) => m.clientId !== incoming!.clientId)
                 : list;
-              return { ...prev, [conversationId]: [...withoutOptimistic, incoming] };
+              return { ...prev, [conversationId]: [...withoutOptimistic, incoming!] };
             });
 
             if (selectedIdRef.current === conversationId) {
@@ -411,18 +602,18 @@ export function ChatWorkspace({
                   const isCurrent = selectedIdRef.current === conversationId;
                   return {
                     ...c,
-                    lastMessageAt: incoming.createdAt,
+                    lastMessageAt: incoming!.createdAt,
                     lastMessage: {
-                      id: incoming.id,
-                      type: incoming.type,
-                      body: incoming.body,
-                      createdAt: incoming.createdAt,
-                      senderId: incoming.senderId,
-                      senderName: incoming.sender?.name ?? null,
-                      deleted: incoming.deleted,
+                      id: incoming!.id,
+                      type: incoming!.type,
+                      body: incoming!.body,
+                      createdAt: incoming!.createdAt,
+                      senderId: incoming!.senderId,
+                      senderName: incoming!.sender?.name ?? null,
+                      deleted: incoming!.deleted,
                     },
                     unreadCount:
-                      isCurrent || incoming.senderId === actor.id
+                      isCurrent || incoming!.senderId === actor.id
                         ? 0
                         : c.unreadCount + 1,
                   };
@@ -450,17 +641,29 @@ export function ChatWorkspace({
 
           if (event.type === "message.updated") {
             const { conversationId, messageId } = event;
-            const res = await fetch(`/api/chat/messages/${messageId}`, {
-              cache: "no-store",
-            });
-            if (!res.ok) return;
-            const data = (await res.json()) as { message?: ChatMessageItem };
-            const updated = data.message;
-            if (!updated) return;
+            let updated: ChatMessageItem | null = null;
+            if (event.wire) {
+              try {
+                updated = await decryptWireMessageToDto(event.wire);
+              } catch {}
+            }
+            if (!updated) {
+              try {
+                const res = await fetch(`/api/chat/messages/${messageId}`, {
+                  cache: "no-store",
+                });
+                if (!res.ok) return;
+                const data = (await res.json()) as { message?: ChatMessageItem };
+                updated = data.message ?? null;
+              } catch {
+                return;
+              }
+            }
+            if (!updated || !active) return;
             setMessagesByConv((prev) => ({
               ...prev,
               [conversationId]: (prev[conversationId] ?? []).map((m) =>
-                m.id === updated.id ? updated : m,
+                m.id === updated!.id ? updated! : m,
               ),
             }));
             void fetchConversations();
@@ -496,14 +699,27 @@ export function ChatWorkspace({
             return;
           }
 
+          if (event.type === "delivered") {
+            if (event.userId !== actor.id) {
+              patchMemberTimestamp(
+                event.conversationId,
+                event.userId,
+                "lastDeliveredAt",
+                event.lastDeliveredAt,
+              );
+            }
+            return;
+          }
+
           if (event.type === "read") {
-            setConversations((prev) =>
-              prev.map((c) => {
-                if (c.id !== event.conversationId || !c.peer) return c;
-                if (c.peer.id !== event.userId) return c;
-                return { ...c, peer: { ...c.peer, lastReadAt: event.lastReadAt } };
-              }),
-            );
+            if (event.userId !== actor.id) {
+              patchMemberTimestamp(
+                event.conversationId,
+                event.userId,
+                "lastReadAt",
+                event.lastReadAt,
+              );
+            }
             return;
           }
 
@@ -524,13 +740,42 @@ export function ChatWorkspace({
             return;
           }
 
+          if (event.type === "invite.updated") {
+            setMessagesByConv((prev) => {
+              let changed = false;
+              const next: typeof prev = {};
+              for (const [cid, list] of Object.entries(prev)) {
+                const updatedList = list.map((m) => {
+                  if (m.invite?.id !== event.inviteId) return m;
+                  changed = true;
+                  return {
+                    ...m,
+                    invite: {
+                      ...m.invite,
+                      status: event.status,
+                    },
+                  };
+                });
+                next[cid] = updatedList;
+              }
+              return changed ? next : prev;
+            });
+            void fetchConversations();
+            if (event.status === "ACCEPTED") {
+              void client.refreshSubscriptions();
+            }
+            return;
+          }
+
           if (
-            event.type === "invite.updated" ||
             event.type === "member.changed" ||
             event.type === "unread.sync"
           ) {
             void fetchConversations();
             if (event.type === "member.changed") {
+              if (event.action === "removed" || event.action === "left") {
+                clearClientConversationKeys(event.conversationId);
+              }
               if (
                 event.action === "moderation" ||
                 event.action === "banned" ||
@@ -549,8 +794,33 @@ export function ChatWorkspace({
       );
     });
 
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && active) {
+        void fetchConversations();
+        if (!isPublicOnly) {
+          void fetchFriends();
+        }
+        if (Date.now() - lastReconcileAt >= 3000) {
+          lastReconcileAt = Date.now();
+          void reconcileSelectedMessages();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === "visible" && active) {
+        void fetchConversations();
+        if (!isPublicOnly) {
+          void fetchFriends();
+        }
+      }
+    }, 60_000);
+
     return () => {
       active = false;
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(heartbeat);
       for (const unsub of unsubs) unsub();
       if (releaseFn) releaseFn();
     };
@@ -756,6 +1026,7 @@ export function ChatWorkspace({
   }
 
   async function handleRespondInvite(inviteId: string, action: "accept" | "decline") {
+    const prevSelected = selectedIdRef.current;
     const res = await fetch(`/api/chat/invites/message/${inviteId}/respond`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -769,17 +1040,20 @@ export function ChatWorkspace({
       notify.error(data.error || t("chat.actionError"));
       return;
     }
-    await fetchConversations();
-    if (selectedId) await loadMessages(selectedId);
     if (action === "accept" && data.roomId) {
       if (isPublicOnly) {
         router.push(`/messages?tab=rooms&c=${encodeURIComponent(data.roomId)}`);
         return;
       }
-      setActiveTab("rooms");
-      setSelectedId(data.roomId);
-      setMobilePane("thread");
+      await fetchConversations();
+      if (selectedIdRef.current === prevSelected) {
+        setActiveTab("rooms");
+        setSelectedId(data.roomId);
+        setMobilePane("thread");
+      }
+      return;
     }
+    void fetchConversations();
   }
 
   async function handleFriendAction(

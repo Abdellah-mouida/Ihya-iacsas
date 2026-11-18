@@ -10,6 +10,8 @@ import { notify } from "@/lib/notifications";
 import { can, ForbiddenError, UnauthorizedError } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { adminChannel, eventsChannel, userChannel } from "@/lib/chat/realtime/types";
+import { publishChange } from "@/lib/realtime/publish";
 
 export interface BookingsActor {
   id: string;
@@ -195,6 +197,27 @@ export async function createBookingForUser(params: {
     },
   });
 
+  await Promise.all([
+    publishChange([userChannel(user.id), adminChannel()], {
+      type: "bookings.changed",
+      eventId: event.id,
+      bookingId: txOutcome.booking.id,
+      userId: user.id,
+      status: txOutcome.newStatus,
+    }),
+    publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: event.id,
+      action: "capacity",
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "bookings",
+      action: "created",
+      targetId: txOutcome.booking.id,
+    }),
+  ]);
+
   return {
     success: true as const,
     bookingId: txOutcome.booking.id,
@@ -328,6 +351,27 @@ export async function cancelBookingForUser(params: {
       },
     });
   }
+
+  await Promise.all([
+    publishChange([userChannel(userId), adminChannel()], {
+      type: "bookings.changed",
+      eventId: booking.eventId,
+      bookingId: booking.id,
+      userId,
+      status: "CANCELLED",
+    }),
+    publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: booking.eventId,
+      action: "capacity",
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "bookings",
+      action: "cancelled",
+      targetId: booking.id,
+    }),
+  ]);
 
   return { success: true as const };
 }
@@ -550,6 +594,30 @@ export async function rejectBookingForActor(
     },
   });
 
+  await Promise.all([
+    publishChange(
+      [...(booking.userId ? [userChannel(booking.userId)] : []), adminChannel()],
+      {
+        type: "bookings.changed",
+        eventId: booking.eventId,
+        bookingId: booking.id,
+        userId: booking.userId ?? undefined,
+        status: "REJECTED",
+      },
+    ),
+    publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: booking.eventId,
+      action: "capacity",
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "bookings",
+      action: "rejected",
+      targetId: id,
+    }),
+  ]);
+
   return { success: true as const, eventId: booking.eventId, autoPromotedName };
 }
 
@@ -686,6 +754,29 @@ export async function deleteBookingForActor(
         email: booking.email,
       },
     });
+    await Promise.all([
+      publishChange(
+        [...(booking.userId ? [userChannel(booking.userId)] : []), adminChannel()],
+        {
+          type: "bookings.changed",
+          eventId: booking.eventId,
+          bookingId: id,
+          userId: booking.userId ?? undefined,
+          status: "DELETED",
+        },
+      ),
+      publishChange([eventsChannel()], {
+        type: "events.changed",
+        eventId: booking.eventId,
+        action: "capacity",
+      }),
+      publishChange([adminChannel()], {
+        type: "admin.changed",
+        area: "bookings",
+        action: "deleted",
+        targetId: id,
+      }),
+    ]);
   }
 
   return { success: true as const };

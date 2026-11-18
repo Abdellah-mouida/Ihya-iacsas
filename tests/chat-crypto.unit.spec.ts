@@ -7,6 +7,7 @@ import {
   ChatEncryptionError,
   decryptMessage,
   encryptMessage,
+  exportConversationKeyMaterial,
   loadKeyringFromEnv,
   rotateMessageEncryption,
   type ChatKeyring,
@@ -126,4 +127,34 @@ test("wrong key version fails closed and key rotation re-encrypts cleanly", () =
 test("missing or malformed CHAT_ENCRYPTION_KEY fails closed", () => {
   expect(() => loadKeyringFromEnv({ NODE_ENV: "test" })).toThrow(ChatEncryptionError);
   expect(() => loadKeyringFromEnv({ NODE_ENV: "test", CHAT_ENCRYPTION_KEY: "too-short" })).toThrow(ChatEncryptionError);
+});
+
+test("keyEpoch isolates derived keys and exports 32-byte key material for WebCrypto", () => {
+  const keyring = makeKeyring(1);
+  const meta = {
+    conversationId: "conv_room_epoch",
+    messageId: "msg_epoch_1",
+    senderId: "user_a",
+  };
+  const e1 = encryptMessage({ plaintext: "Epoch 1", ...meta, keyEpoch: 1 }, keyring);
+  const e2 = encryptMessage({ plaintext: "Epoch 2", ...meta, keyEpoch: 2 }, keyring);
+
+  expect(decryptMessage({ ...e1, ...meta, keyEpoch: 1 }, keyring)).toBe("Epoch 1");
+  expect(decryptMessage({ ...e2, ...meta, keyEpoch: 2 }, keyring)).toBe("Epoch 2");
+  expect(() => decryptMessage({ ...e2, ...meta, keyEpoch: 1 }, keyring)).toThrow(ChatEncryptionError);
+
+  const exported1 = exportConversationKeyMaterial({
+    conversationId: meta.conversationId,
+    keyVersion: 1,
+    keyEpoch: 1,
+    keyring,
+  });
+  const exported2 = exportConversationKeyMaterial({
+    conversationId: meta.conversationId,
+    keyVersion: 1,
+    keyEpoch: 2,
+    keyring,
+  });
+  expect(Buffer.from(exported1.keyBase64, "base64").byteLength).toBe(32);
+  expect(exported1.keyBase64).not.toBe(exported2.keyBase64);
 });

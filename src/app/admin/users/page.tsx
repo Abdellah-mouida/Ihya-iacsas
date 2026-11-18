@@ -65,6 +65,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLocale } from "@/i18n/locale-provider";
+import { useLive } from "@/lib/realtime/use-live";
 
 type UserItem = {
   id: string;
@@ -195,6 +196,32 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   }, [isAr]);
+
+  const silentRefreshUsers = useCallback(async () => {
+    const res = await getAdminUsers({
+      page,
+      limit,
+      search: searchRef.current,
+      role: roleFilter,
+    });
+    if (res.success) {
+      setUsers(res.users as UserItem[]);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
+      setPage(res.page);
+      if (res.stats) {
+        setStats(res.stats);
+      }
+    }
+    return true;
+  }, [limit, page, roleFilter]);
+
+  useLive(
+    `admin:users:${page}:${roleFilter}:${limit}`,
+    silentRefreshUsers,
+    ["admin:users"],
+    { initialData: true },
+  );
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

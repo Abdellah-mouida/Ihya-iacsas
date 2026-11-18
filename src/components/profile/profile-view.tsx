@@ -1,8 +1,10 @@
 "use client";
 
+import { useCallback } from "react";
 import Link from "next/link";
-import { UserAccountData } from "@/app/actions/account";
+import { getUserAccountData, UserAccountData } from "@/app/actions/account";
 import { useLocale } from "@/i18n/locale-provider";
+import { useLive } from "@/lib/realtime/use-live";
 import { RoleBadge } from "@/components/common/role-badge";
 import { StatusNotice } from "@/components/common/status-notice";
 import { PatternCover } from "@/components/common/pattern-cover";
@@ -37,7 +39,17 @@ interface ProfileViewProps {
 export function ProfileView({ initialData }: ProfileViewProps) {
   const { locale, t } = useLocale();
   const isAr = locale === "ar";
-  const { user, bookings } = initialData;
+  const fetchAccount = useCallback(async () => {
+    const res = await getUserAccountData();
+    return res.success && res.data ? res.data : initialData;
+  }, [initialData]);
+  const { data: liveData } = useLive<UserAccountData>(
+    `profile:${initialData.user.id}`,
+    fetchAccount,
+    ["bookings", "friends", "events"],
+    { initialData },
+  );
+  const { user, bookings } = liveData ?? initialData;
 
   const confirmedBookingsCount = bookings.filter((b) => b.status === "CONFIRMED" || b.confirmed).length;
 

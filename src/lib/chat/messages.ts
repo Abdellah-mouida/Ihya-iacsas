@@ -7,6 +7,7 @@ import {
   ChatEncryptionError,
   decryptMessage,
   encryptMessage,
+  exportConversationKeyMaterial,
   loadKeyringFromEnv,
 } from "./crypto-core";
 import {
@@ -15,12 +16,16 @@ import {
   ChatServiceError,
   ONLINE_WINDOW_MS,
 } from "./friends";
-import { getRealtimeTransport } from "./realtime";
+import { publishChange } from "@/lib/realtime/publish";
 import {
   canUserAccessConversation,
   ensurePublicConversationMember,
 } from "./realtime/channels";
-import { conversationChannel, userChannel } from "./realtime/types";
+import {
+  conversationChannel,
+  userChannel,
+  type WireEncryptedMessagePayload,
+} from "./realtime/types";
 
 export const MAX_MESSAGE_LENGTH = 2000;
 export const DEFAULT_PAGE_SIZE = 30;
@@ -75,6 +80,12 @@ export interface ChatMessageDTO {
   deleted: boolean;
 }
 
+export interface ConversationMemberStateDTO {
+  userId: string;
+  lastReadAt: string;
+  lastDeliveredAt: string | null;
+}
+
 export interface ConversationSummaryDTO {
   id: string;
   type: "PUBLIC" | "DM" | "ROOM";
@@ -84,6 +95,7 @@ export interface ConversationSummaryDTO {
   ownerId: string | null;
   membersCanInvite: boolean;
   memberCount: number;
+  keyEpoch?: number;
   muted: boolean;
   lastReadAt: string;
   lastMessageAt: string | null;
@@ -94,7 +106,9 @@ export interface ConversationSummaryDTO {
     image: string | null;
     isOnline: boolean | null;
     lastReadAt: string | null;
+    lastDeliveredAt?: string | null;
   } | null;
+  memberStates?: ConversationMemberStateDTO[];
   lastMessage: {
     id: string;
     senderId: string | null;
@@ -145,6 +159,7 @@ function safeDecryptRow(row: {
   ciphertext: string;
   nonce: string;
   keyVersion: number;
+  keyEpoch?: number;
   deletedAt: Date | null;
 }): string | null {
   if (row.deletedAt || !row.ciphertext || !row.nonce) {
@@ -156,6 +171,7 @@ function safeDecryptRow(row: {
       ciphertext: row.ciphertext,
       nonce: row.nonce,
       keyVersion: row.keyVersion,
+      keyEpoch: row.keyEpoch ?? 1,
       conversationId: row.conversationId,
       messageId: row.id,
       senderId: aadSender,
@@ -166,6 +182,7 @@ function safeDecryptRow(row: {
         messageId: row.id,
         conversationId: row.conversationId,
         keyVersion: row.keyVersion,
+        keyEpoch: row.keyEpoch ?? 1,
       });
       return null;
     }
@@ -173,7 +190,7 @@ function safeDecryptRow(row: {
   }
 }
 
-const messageInclude = {
+export const messageInclude = {
   sender: {
     select: {
       id: true,
@@ -192,6 +209,7 @@ const messageInclude = {
       ciphertext: true,
       nonce: true,
       keyVersion: true,
+      keyEpoch: true,
       deletedAt: true,
       sender: {
         select: { name: true },
@@ -217,7 +235,75 @@ const messageInclude = {
   },
 } satisfies Prisma.MessageInclude;
 
-type MessageRow = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
+export type MessageRow = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
+
+export function buildWirePayload(
+  row: MessageRow,
+  fallbackEpoch = 1,
+): WireEncryptedMessagePayload {
+  const deleted = Boolean(row.deletedAt);
+  const replyDeleted = Boolean(row.replyTo?.deletedAt);
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    conversationId: row.conversationId,
+    senderId: row.isAnonymized ? null : row.senderId,
+    sender:
+      row.isAnonymized || !row.sender
+        ? null
+        : {
+            id: row.sender.id,
+            name: row.sender.name,
+            image: row.sender.image,
+            isOnline: computeOnline(
+              row.sender.showOnlineStatus,
+              row.sender.lastActiveAt,
+            ),
+          },
+    isAnonymized: row.isAnonymized,
+    type: row.type,
+    ciphertext: deleted ? "" : row.ciphertext,
+    nonce: deleted ? "" : row.nonce,
+    keyVersion: row.keyVersion,
+    keyEpoch: row.keyEpoch ?? fallbackEpoch,
+    replyTo: row.replyTo
+      ? {
+          id: row.replyTo.id,
+          senderId: row.replyTo.isAnonymized ? null : row.replyTo.senderId,
+          senderName: row.replyTo.isAnonymized
+            ? null
+            : (row.replyTo.sender?.name ?? null),
+          isAnonymized: row.replyTo.isAnonymized,
+          ciphertext: replyDeleted ? "" : row.replyTo.ciphertext,
+          nonce: replyDeleted ? "" : row.replyTo.nonce,
+          keyVersion: row.replyTo.keyVersion,
+          keyEpoch: row.replyTo.keyEpoch ?? fallbackEpoch,
+          deleted: replyDeleted,
+        }
+      : null,
+    invite:
+      !deleted && row.invite
+        ? {
+            id: row.invite.id,
+            roomId: row.invite.roomId,
+            roomName: row.invite.room.name,
+            roomEmoji: row.invite.room.emoji,
+            roomAccentColor: row.invite.room.accentColor,
+            inviterId: row.invite.inviterId,
+            inviteeId: row.invite.inviteeId,
+            status:
+              row.invite.status === "PENDING" &&
+              row.invite.expiresAt.getTime() <= Date.now()
+                ? ("EXPIRED" as const)
+                : row.invite.status,
+            expiresAt: row.invite.expiresAt.toISOString(),
+          }
+        : null,
+    createdAt: row.createdAt.toISOString(),
+    editedAt: row.editedAt ? row.editedAt.toISOString() : null,
+    deleted,
+  };
+}
 
 function serializeMessage(row: MessageRow): ChatMessageDTO {
   const deleted = Boolean(row.deletedAt);
@@ -337,6 +423,7 @@ export async function listConversationsForUser(
             accentColor: true,
             ownerId: true,
             membersCanInvite: true,
+            keyEpoch: true,
             dmPairKey: true,
             lastMessageAt: true,
           },
@@ -387,6 +474,7 @@ export async function listConversationsForUser(
               accentColor: true,
               ownerId: true,
               membersCanInvite: true,
+              keyEpoch: true,
               dmPairKey: true,
               lastMessageAt: true,
             },
@@ -416,13 +504,13 @@ export async function listConversationsForUser(
   }
 
   const accessibleIds = validMemberships.map((m) => m.conversation.id);
-  const dmIds = validMemberships
-    .filter((m) => m.conversation.type === "DM")
+  const nonPublicIds = validMemberships
+    .filter((m) => m.conversation.type !== "PUBLIC")
     .map((m) => m.conversation.id);
 
   loadKeyringFromEnv();
 
-  const [latestRows, unreadRows, memberCounts, dmPeers] = await Promise.all([
+  const [latestRows, unreadRows, memberCounts, nonPublicPeers] = await Promise.all([
     prisma.$queryRaw<
       Array<{
         id: string;
@@ -433,6 +521,7 @@ export async function listConversationsForUser(
         ciphertext: string;
         nonce: string;
         keyVersion: number;
+        keyEpoch: number;
         createdAt: Date;
         deletedAt: Date | null;
         senderName: string | null;
@@ -447,6 +536,7 @@ export async function listConversationsForUser(
         m.ciphertext,
         m.nonce,
         m."keyVersion",
+        m."keyEpoch",
         m."createdAt",
         m."deletedAt",
         u.name AS "senderName"
@@ -476,16 +566,18 @@ export async function listConversationsForUser(
       where: { conversationId: { in: accessibleIds }, leftAt: null },
       _count: { _all: true },
     }),
-    dmIds.length > 0
+    nonPublicIds.length > 0
       ? prisma.conversationMember.findMany({
           where: {
-            conversationId: { in: dmIds },
+            conversationId: { in: nonPublicIds },
             userId: { not: userId },
             leftAt: null,
           },
           select: {
             conversationId: true,
+            userId: true,
             lastReadAt: true,
+            lastDeliveredAt: true,
             user: {
               select: {
                 id: true,
@@ -505,7 +597,12 @@ export async function listConversationsForUser(
   const countMap = new Map(
     memberCounts.map((c) => [c.conversationId, c._count._all]),
   );
-  const dmPeerMap = new Map(dmPeers.map((p) => [p.conversationId, p]));
+  const memberStatesMap = new Map<string, typeof nonPublicPeers>();
+  for (const pm of nonPublicPeers) {
+    const arr = memberStatesMap.get(pm.conversationId) ?? [];
+    arr.push(pm);
+    memberStatesMap.set(pm.conversationId, arr);
+  }
 
   let unreadTotal = 0;
   const conversations: ConversationSummaryDTO[] = validMemberships.map((m) => {
@@ -515,7 +612,8 @@ export async function listConversationsForUser(
       unreadTotal += unreadCount;
     }
     const latest = latestMap.get(conv.id);
-    const peerMember = dmPeerMap.get(conv.id);
+    const otherMembers = memberStatesMap.get(conv.id) ?? [];
+    const peerMember = conv.type === "DM" ? otherMembers[0] : undefined;
 
     return {
       id: conv.id,
@@ -526,6 +624,7 @@ export async function listConversationsForUser(
       ownerId: conv.ownerId,
       membersCanInvite: conv.membersCanInvite,
       memberCount: countMap.get(conv.id) ?? 1,
+      keyEpoch: conv.keyEpoch,
       muted: m.muted,
       lastReadAt: m.lastReadAt.toISOString(),
       lastMessageAt: conv.lastMessageAt
@@ -542,8 +641,22 @@ export async function listConversationsForUser(
               peerMember.user.lastActiveAt,
             ),
             lastReadAt: peerMember.lastReadAt.toISOString(),
+            lastDeliveredAt: peerMember.lastDeliveredAt
+              ? peerMember.lastDeliveredAt.toISOString()
+              : null,
           }
         : null,
+      ...(conv.type !== "PUBLIC"
+        ? {
+            memberStates: otherMembers.map((om) => ({
+              userId: om.userId,
+              lastReadAt: om.lastReadAt.toISOString(),
+              lastDeliveredAt: om.lastDeliveredAt
+                ? om.lastDeliveredAt.toISOString()
+                : null,
+            })),
+          }
+        : {}),
       lastMessage: latest
         ? (() => {
             const decryptedLatest = safeDecryptRow(latest);
@@ -580,6 +693,7 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
   pendingRequestsCount: number;
   pendingInvitesCount: number;
   privateUnread: number;
+  mutedConversationIds: string[];
 }> {
   const [user, pendingRequestsCount, pendingInvitesCount, memberships, blocks, friendships] =
     await Promise.all([
@@ -598,8 +712,9 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
         },
       }),
       prisma.conversationMember.findMany({
-        where: { userId, leftAt: null, muted: false },
+        where: { userId, leftAt: null },
         select: {
+          muted: true,
           conversation: {
             select: { id: true, type: true, dmPairKey: true },
           },
@@ -626,8 +741,13 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
       pendingRequestsCount: 0,
       pendingInvitesCount: 0,
       privateUnread: 0,
+      mutedConversationIds: [],
     };
   }
+
+  const mutedConversationIds = memberships
+    .filter((m) => m.muted)
+    .map((m) => m.conversation.id);
 
   if (!user.chatTermsAcceptedAt) {
     return {
@@ -637,6 +757,7 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
       pendingRequestsCount,
       pendingInvitesCount,
       privateUnread: pendingRequestsCount + pendingInvitesCount,
+      mutedConversationIds,
     };
   }
 
@@ -648,6 +769,7 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
 
   const accessibleIds = memberships
     .filter((m) => {
+      if (m.muted) return false;
       const conv = m.conversation;
       if (conv.type !== "DM") return true;
       if (!conv.dmPairKey || !acceptedPairs.has(conv.dmPairKey)) return false;
@@ -665,6 +787,7 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
       pendingRequestsCount,
       pendingInvitesCount,
       privateUnread: pendingRequestsCount + pendingInvitesCount,
+      mutedConversationIds,
     };
   }
 
@@ -698,6 +821,7 @@ export async function getUnreadBadgeCounts(userId: string): Promise<{
     pendingRequestsCount,
     pendingInvitesCount,
     privateUnread: privateMessagesUnread + pendingRequestsCount + pendingInvitesCount,
+    mutedConversationIds,
   };
 }
 
@@ -715,6 +839,7 @@ export async function openOrCreateDmConversation(
     accentColor: true,
     ownerId: true,
     membersCanInvite: true,
+    keyEpoch: true,
     lastMessageAt: true,
   } as const;
 
@@ -779,6 +904,7 @@ export async function openOrCreateDmConversation(
       },
       select: {
         lastReadAt: true,
+        lastDeliveredAt: true,
         user: {
           select: {
             id: true,
@@ -801,6 +927,7 @@ export async function openOrCreateDmConversation(
     ownerId: conv.ownerId,
     membersCanInvite: conv.membersCanInvite,
     memberCount: 2,
+    keyEpoch: conv.keyEpoch,
     muted: selfMember.muted,
     lastReadAt: selfMember.lastReadAt.toISOString(),
     lastMessageAt: conv.lastMessageAt ? conv.lastMessageAt.toISOString() : null,
@@ -814,7 +941,19 @@ export async function openOrCreateDmConversation(
         peerMember.user.lastActiveAt,
       ),
       lastReadAt: peerMember.lastReadAt.toISOString(),
+      lastDeliveredAt: peerMember.lastDeliveredAt
+        ? peerMember.lastDeliveredAt.toISOString()
+        : null,
     },
+    memberStates: [
+      {
+        userId: peerMember.user.id,
+        lastReadAt: peerMember.lastReadAt.toISOString(),
+        lastDeliveredAt: peerMember.lastDeliveredAt
+          ? peerMember.lastDeliveredAt.toISOString()
+          : null,
+      },
+    ],
     lastMessage: null,
   };
 }
@@ -824,11 +963,27 @@ export async function getConversationMessages(params: {
   conversationId: string;
   cursor?: string | null;
   limit?: number;
+  wire?: boolean;
 }): Promise<{
   messages: ChatMessageDTO[];
+  wireMessages?: WireEncryptedMessagePayload[];
+  keyBundle?: {
+    conversationId: string;
+    keyVersion: number;
+    keyEpoch: number;
+    keys: Array<{
+      conversationId: string;
+      keyVersion: number;
+      keyEpoch: number;
+      keyBase64: string;
+    }>;
+    expiresAt: number;
+  };
   nextCursor: string | null;
   hasMore: boolean;
   peerLastReadAt: string | null;
+  peerLastDeliveredAt: string | null;
+  memberStates?: ConversationMemberStateDTO[];
 }> {
   const access = await canUserAccessConversation(
     params.userId,
@@ -842,7 +997,8 @@ export async function getConversationMessages(params: {
     await ensurePublicConversationMember(params.userId);
   }
 
-  loadKeyringFromEnv();
+  const keyring = loadKeyringFromEnv();
+  const currentEpoch = access.keyEpoch && access.keyEpoch > 1 ? access.keyEpoch : 1;
 
   const limit = Math.min(
     MAX_PAGE_SIZE,
@@ -865,34 +1021,97 @@ export async function getConversationMessages(params: {
       : {}),
   };
 
-  const [rows, peerMember] = await Promise.all([
+  const [rows, otherMembers] = await Promise.all([
     prisma.message.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: limit + 1,
       include: messageInclude,
     }),
-    access.conversationType === "DM"
-      ? prisma.conversationMember.findFirst({
+    access.conversationType !== "PUBLIC"
+      ? prisma.conversationMember.findMany({
           where: {
             conversationId: params.conversationId,
             userId: { not: params.userId },
             leftAt: null,
           },
-          select: { lastReadAt: true },
+          select: { userId: true, lastReadAt: true, lastDeliveredAt: true },
         })
-      : Promise.resolve(null),
+      : Promise.resolve([]),
   ]);
 
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
   const lastRow = pageRows[pageRows.length - 1];
+  const peerMember = access.conversationType === "DM" ? (otherMembers[0] ?? null) : null;
+  const memberStates: ConversationMemberStateDTO[] | undefined =
+    access.conversationType !== "PUBLIC"
+      ? otherMembers.map((m) => ({
+          userId: m.userId,
+          lastReadAt: m.lastReadAt.toISOString(),
+          lastDeliveredAt: m.lastDeliveredAt
+            ? m.lastDeliveredAt.toISOString()
+            : null,
+        }))
+      : undefined;
+
+  if (params.wire) {
+    const wireMessages = pageRows.map((row) => buildWirePayload(row, currentEpoch));
+    const pairKeys = new Set<string>([`${keyring.activeVersion}:${currentEpoch}`]);
+    for (const w of wireMessages) {
+      if (w.ciphertext) {
+        pairKeys.add(`${w.keyVersion}:${w.keyEpoch}`);
+      }
+      if (w.replyTo && w.replyTo.ciphertext) {
+        pairKeys.add(`${w.replyTo.keyVersion}:${w.replyTo.keyEpoch}`);
+      }
+    }
+    const keys = [];
+    for (const key of pairKeys) {
+      const [vStr, eStr] = key.split(":");
+      const keyVersion = Number(vStr);
+      const keyEpoch = Number(eStr);
+      if (keyring.keys.has(keyVersion) && keyEpoch >= 1) {
+        keys.push(
+          exportConversationKeyMaterial({
+            conversationId: params.conversationId,
+            keyVersion,
+            keyEpoch,
+            keyring,
+          }),
+        );
+      }
+    }
+    return {
+      messages: [],
+      wireMessages,
+      keyBundle: {
+        conversationId: params.conversationId,
+        keyVersion: keyring.activeVersion,
+        keyEpoch: currentEpoch,
+        keys,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      },
+      nextCursor:
+        hasMore && lastRow ? encodeCursor(lastRow.createdAt, lastRow.id) : null,
+      hasMore,
+      peerLastReadAt: peerMember ? peerMember.lastReadAt.toISOString() : null,
+      peerLastDeliveredAt: peerMember?.lastDeliveredAt
+        ? peerMember.lastDeliveredAt.toISOString()
+        : null,
+      memberStates,
+    };
+  }
 
   return {
     messages: pageRows.map(serializeMessage),
     nextCursor: hasMore && lastRow ? encodeCursor(lastRow.createdAt, lastRow.id) : null,
     hasMore,
     peerLastReadAt: peerMember ? peerMember.lastReadAt.toISOString() : null,
+    peerLastDeliveredAt: peerMember?.lastDeliveredAt
+      ? peerMember.lastDeliveredAt.toISOString()
+      : null,
+    memberStates,
   };
 }
 
@@ -1060,11 +1279,13 @@ export async function sendMessage(params: {
   }
 
   const messageId = `msg_${randomUUID().replace(/-/g, "")}`;
+  const keyEpoch = access.keyEpoch && access.keyEpoch > 1 ? access.keyEpoch : 1;
   const encrypted = encryptMessage({
     plaintext: trimmed,
     conversationId: params.conversationId,
     messageId,
     senderId: params.userId,
+    keyEpoch,
   });
 
   const now = new Date();
@@ -1081,6 +1302,7 @@ export async function sendMessage(params: {
           ciphertext: encrypted.ciphertext,
           nonce: encrypted.nonce,
           keyVersion: encrypted.keyVersion,
+          keyEpoch: encrypted.keyEpoch,
           replyToId: params.replyToId ?? null,
           createdAt: now,
         },
@@ -1096,7 +1318,7 @@ export async function sendMessage(params: {
           userId: params.userId,
           leftAt: null,
         },
-        data: { lastReadAt: now },
+        data: { lastReadAt: now, lastDeliveredAt: now },
       }),
     ]);
     createdRow = msg;
@@ -1123,18 +1345,20 @@ export async function sendMessage(params: {
     throw err;
   }
 
-  const transport = getRealtimeTransport();
-  const payload = {
-    type: "message.created" as const,
+  const targets = [conversationChannel(params.conversationId)];
+  if (access.conversationType === "DM" && access.dmPeerId) {
+    targets.push(userChannel(access.dmPeerId));
+  }
+  await publishChange(targets, {
+    type: "message.created",
     conversationId: params.conversationId,
+    conversationType: access.conversationType,
+    conversationTitle: access.conversationName ?? null,
     messageId: createdRow.id,
     senderId: params.userId,
     createdAt: createdRow.createdAt.toISOString(),
-  };
-  await transport.publish(conversationChannel(params.conversationId), payload);
-  if (access.conversationType === "DM" && access.dmPeerId) {
-    await transport.publish(userChannel(access.dmPeerId), payload);
-  }
+    wire: buildWirePayload(createdRow, keyEpoch),
+  });
 
   return { message: serializeMessage(createdRow), deduplicated: false };
 }
@@ -1197,11 +1421,13 @@ export async function editMessage(params: {
   }
 
   loadKeyringFromEnv();
+  const keyEpoch = access.keyEpoch && access.keyEpoch > 1 ? access.keyEpoch : 1;
   const encrypted = encryptMessage({
     plaintext: trimmed,
     conversationId: row.conversationId,
     messageId: row.id,
     senderId: params.userId,
+    keyEpoch,
   });
 
   const editedAt = new Date();
@@ -1211,27 +1437,24 @@ export async function editMessage(params: {
       ciphertext: encrypted.ciphertext,
       nonce: encrypted.nonce,
       keyVersion: encrypted.keyVersion,
+      keyEpoch: encrypted.keyEpoch,
       editedAt,
     },
     include: messageInclude,
   });
 
-  const transport = getRealtimeTransport();
   const targets = [conversationChannel(row.conversationId)];
   if (access.conversationType === "DM" && access.dmPeerId) {
     targets.push(userChannel(access.dmPeerId));
   }
-  await Promise.all(
-    targets.map((ch) =>
-      transport.publish(ch, {
-        type: "message.updated",
-        conversationId: row.conversationId,
-        messageId: row.id,
-        senderId: params.userId,
-        editedAt: editedAt.toISOString(),
-      }),
-    ),
-  );
+  await publishChange(targets, {
+    type: "message.updated",
+    conversationId: row.conversationId,
+    messageId: row.id,
+    senderId: params.userId,
+    editedAt: editedAt.toISOString(),
+    wire: buildWirePayload(updated, keyEpoch),
+  });
 
   return serializeMessage(updated);
 }
@@ -1289,22 +1512,17 @@ export async function deleteMessage(params: {
     include: messageInclude,
   });
 
-  const transport = getRealtimeTransport();
   const targets = [conversationChannel(row.conversationId)];
   if (access.conversationType === "DM" && access.dmPeerId) {
     targets.push(userChannel(access.dmPeerId));
   }
-  await Promise.all(
-    targets.map((ch) =>
-      transport.publish(ch, {
-        type: "message.deleted",
-        conversationId: row.conversationId,
-        messageId: row.id,
-        senderId: params.userId,
-        deletedAt: deletedAt.toISOString(),
-      }),
-    ),
-  );
+  await publishChange(targets, {
+    type: "message.deleted",
+    conversationId: row.conversationId,
+    messageId: row.id,
+    senderId: params.userId,
+    deletedAt: deletedAt.toISOString(),
+  });
 
   return serializeMessage(updated);
 }
@@ -1332,30 +1550,75 @@ export async function markConversationRead(params: {
       userId: params.userId,
       leftAt: null,
     },
-    data: { lastReadAt },
+    data: { lastReadAt, lastDeliveredAt: lastReadAt },
   });
 
-  const transport = getRealtimeTransport();
   const readTargets = [conversationChannel(params.conversationId)];
   if (access.conversationType === "DM" && access.dmPeerId) {
     readTargets.push(userChannel(access.dmPeerId));
   }
   await Promise.all([
-    ...readTargets.map((ch) =>
-      transport.publish(ch, {
-        type: "read",
-        conversationId: params.conversationId,
-        userId: params.userId,
-        lastReadAt: lastReadAt.toISOString(),
-      }),
-    ),
-    transport.publish(userChannel(params.userId), {
+    publishChange(readTargets, {
+      type: "read",
+      conversationId: params.conversationId,
+      userId: params.userId,
+      lastReadAt: lastReadAt.toISOString(),
+    }),
+    publishChange([userChannel(params.userId)], {
       type: "unread.sync",
       conversationId: params.conversationId,
     }),
   ]);
 
   return lastReadAt;
+}
+
+export async function markConversationDelivered(params: {
+  userId: string;
+  conversationId: string;
+  at?: string;
+}): Promise<Date> {
+  const access = await canUserAccessConversation(
+    params.userId,
+    params.conversationId,
+  );
+  if (!access.ok) {
+    throw new ChatServiceError("Conversation not found", 404, "NOT_FOUND");
+  }
+
+  const parsedDate = params.at ? new Date(params.at) : new Date();
+  const deliveredAt = Number.isNaN(parsedDate.getTime())
+    ? new Date()
+    : parsedDate;
+
+  if (access.conversationType === "PUBLIC") {
+    return deliveredAt;
+  }
+
+  const updated = await prisma.conversationMember.updateMany({
+    where: {
+      conversationId: params.conversationId,
+      userId: params.userId,
+      leftAt: null,
+      lastDeliveredAt: { lt: deliveredAt },
+    },
+    data: { lastDeliveredAt: deliveredAt },
+  });
+
+  if (updated.count > 0) {
+    const targets = [conversationChannel(params.conversationId)];
+    if (access.conversationType === "DM" && access.dmPeerId) {
+      targets.push(userChannel(access.dmPeerId));
+    }
+    await publishChange(targets, {
+      type: "delivered",
+      conversationId: params.conversationId,
+      userId: params.userId,
+      lastDeliveredAt: deliveredAt.toISOString(),
+    });
+  }
+
+  return deliveredAt;
 }
 
 export async function setConversationMuted(params: {
@@ -1382,6 +1645,11 @@ export async function setConversationMuted(params: {
       leftAt: null,
     },
     data: { muted: params.muted },
+  });
+
+  await publishChange([userChannel(params.userId)], {
+    type: "unread.sync",
+    conversationId: params.conversationId,
   });
 
   return params.muted;

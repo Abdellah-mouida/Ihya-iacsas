@@ -14,6 +14,7 @@ import { useConfirmDialog } from "@/components/common/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-provider";
+import { useLive } from "@/lib/realtime/use-live";
 import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +112,16 @@ export function AdminModerationView({
       }
     },
     [searchQuery, statusFilter],
+  );
+
+  useLive(
+    `admin:moderation:${statusFilter}`,
+    async () => {
+      await refresh(statusFilter, searchQuery);
+      return true;
+    },
+    ["admin:moderation"],
+    { initialData: true },
   );
 
   const handleToggleChat = async () => {

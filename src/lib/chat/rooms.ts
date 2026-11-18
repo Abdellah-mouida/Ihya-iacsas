@@ -13,6 +13,8 @@ import {
 import { getRealtimeTransport } from "./realtime";
 import { canUserAccessConversation } from "./realtime/channels";
 import { conversationChannel, userChannel } from "./realtime/types";
+import { buildWirePayload, messageInclude } from "./messages";
+import { publishChange } from "@/lib/realtime/publish";
 import { notify } from "@/lib/notifications";
 
 export const ROOM_ACCENT_TOKENS = ["main", "brass", "gold", "sage"] as const;
@@ -489,30 +491,32 @@ export async function removeRoomMember(
     throw new ChatServiceError("Owner cannot remove self; leave or transfer ownership", 400, "CANNOT_REMOVE_SELF");
   }
 
-  const result = await prisma.conversationMember.updateMany({
-    where: { conversationId: roomId, userId: targetUserId, leftAt: null },
-    data: { leftAt: new Date() },
+  const { keyEpoch } = await prisma.$transaction(async (tx) => {
+    const result = await tx.conversationMember.updateMany({
+      where: { conversationId: roomId, userId: targetUserId, leftAt: null },
+      data: { leftAt: new Date() },
+    });
+
+    if (result.count === 0) {
+      throw new ChatServiceError("Member not found in room", 404, "NOT_FOUND");
+    }
+
+    return tx.conversation.update({
+      where: { id: roomId },
+      data: { keyEpoch: { increment: 1 } },
+      select: { keyEpoch: true },
+    });
   });
 
-  if (result.count === 0) {
-    throw new ChatServiceError("Member not found in room", 404, "NOT_FOUND");
-  }
-
-  const transport = getRealtimeTransport();
   await Promise.all([
-    transport.publish(conversationChannel(roomId), {
+    publishChange([conversationChannel(roomId), userChannel(targetUserId)], {
       type: "member.changed",
       conversationId: roomId,
       action: "removed",
       userId: targetUserId,
+      keyEpoch,
     }),
-    transport.publish(userChannel(targetUserId), {
-      type: "member.changed",
-      conversationId: roomId,
-      action: "removed",
-      userId: targetUserId,
-    }),
-    transport.publish(userChannel(targetUserId), {
+    publishChange([userChannel(targetUserId)], {
       type: "unread.sync",
       conversationId: roomId,
     }),
@@ -617,26 +621,27 @@ export async function leaveRoom(userId: string, roomId: string): Promise<{ delet
     return { deleted: true };
   }
 
-  await prisma.conversationMember.updateMany({
-    where: { conversationId: roomId, userId, leftAt: null },
-    data: { leftAt: new Date() },
+  const { keyEpoch } = await prisma.$transaction(async (tx) => {
+    await tx.conversationMember.updateMany({
+      where: { conversationId: roomId, userId, leftAt: null },
+      data: { leftAt: new Date() },
+    });
+    return tx.conversation.update({
+      where: { id: roomId },
+      data: { keyEpoch: { increment: 1 } },
+      select: { keyEpoch: true },
+    });
   });
 
-  const transport = getRealtimeTransport();
   await Promise.all([
-    transport.publish(conversationChannel(roomId), {
+    publishChange([conversationChannel(roomId), userChannel(userId)], {
       type: "member.changed",
       conversationId: roomId,
       action: "left",
       userId,
+      keyEpoch,
     }),
-    transport.publish(userChannel(userId), {
-      type: "member.changed",
-      conversationId: roomId,
-      action: "left",
-      userId,
-    }),
-    transport.publish(userChannel(userId), {
+    publishChange([userChannel(userId)], {
       type: "unread.sync",
       conversationId: roomId,
     }),
@@ -714,13 +719,13 @@ export async function createMessageInvite(
   const now = new Date();
   let dm = await prisma.conversation.findUnique({
     where: { dmPairKey },
-    select: { id: true },
+    select: { id: true, keyEpoch: true },
   });
   if (!dm) {
     try {
       dm = await prisma.conversation.create({
         data: { type: "DM", dmPairKey, memberCap: 2 },
-        select: { id: true },
+        select: { id: true, keyEpoch: true },
       });
     } catch (err) {
       if (
@@ -731,7 +736,7 @@ export async function createMessageInvite(
       ) {
         dm = await prisma.conversation.findUniqueOrThrow({
           where: { dmPairKey },
-          select: { id: true },
+          select: { id: true, keyEpoch: true },
         });
       } else {
         throw err;
@@ -750,6 +755,7 @@ export async function createMessageInvite(
         userId: inviterId,
         role: "MEMBER",
         lastReadAt: now,
+        lastDeliveredAt: now,
       },
     }),
     prisma.conversationMember.upsert({
@@ -765,6 +771,7 @@ export async function createMessageInvite(
         userId: input.inviteeId,
         role: "MEMBER",
         lastReadAt: new Date(0),
+        lastDeliveredAt: new Date(0),
       },
     }),
   ]);
@@ -782,11 +789,12 @@ export async function createMessageInvite(
       messageId,
       senderId: inviterId,
       plaintext: room.name ?? "Room invite",
+      keyEpoch: dm.keyEpoch,
     },
     keyring,
   );
 
-  const [, invite] = await prisma.$transaction([
+  const [createdMessage, invite] = await prisma.$transaction([
     prisma.message.create({
       data: {
         id: messageId,
@@ -796,8 +804,10 @@ export async function createMessageInvite(
         ciphertext: encrypted.ciphertext,
         nonce: encrypted.nonce,
         keyVersion: encrypted.keyVersion,
+        keyEpoch: dm.keyEpoch,
         createdAt: now,
       },
+      include: messageInclude,
     }),
     prisma.invite.create({
       data: {
@@ -829,26 +839,48 @@ export async function createMessageInvite(
       where: {
         conversationId_userId: { conversationId: dm.id, userId: inviterId },
       },
-      data: { lastReadAt: now },
+      data: { lastReadAt: now, lastDeliveredAt: now },
     }),
   ]);
 
-  const transport = getRealtimeTransport();
+  const wire = buildWirePayload(
+    {
+      ...createdMessage,
+      invite: {
+        id: invite.id,
+        roomId: invite.roomId,
+        inviterId: invite.inviterId,
+        inviteeId: invite.inviteeId,
+        status: invite.status,
+        expiresAt: invite.expiresAt,
+        room: {
+          name: room.name,
+          emoji: room.emoji,
+          accentColor: room.accentColor,
+        },
+      },
+    },
+    dm.keyEpoch,
+  );
+
   await Promise.all([
-    transport.publish(conversationChannel(dm.id), {
+    publishChange([conversationChannel(dm.id), userChannel(input.inviteeId)], {
       type: "message.created",
       conversationId: dm.id,
       messageId,
       senderId: inviterId,
       createdAt: now.toISOString(),
+      conversationType: "DM",
+      conversationTitle: inviter?.name ?? null,
+      wire,
     }),
-    transport.publish(userChannel(input.inviteeId), {
+    publishChange([userChannel(input.inviteeId)], {
       type: "invite.received",
       inviteId: invite.id,
       conversationId: dm.id,
       inviterId,
     }),
-    transport.publish(userChannel(input.inviteeId), {
+    publishChange([userChannel(input.inviteeId)], {
       type: "unread.sync",
       conversationId: dm.id,
     }),
@@ -899,6 +931,7 @@ export async function respondToMessageInvite(
       uses: true,
       maxUses: true,
       expiresAt: true,
+      messageId: true,
       message: { select: { conversationId: true } },
       room: { select: { id: true, ownerId: true, memberCap: true } },
     },
@@ -925,21 +958,23 @@ export async function respondToMessageInvite(
       where: { id: invite.id, status: "PENDING" },
       data: { status: "EXPIRED" },
     });
-    if (invite.message?.conversationId) {
-      await getRealtimeTransport().publish(
-        conversationChannel(invite.message.conversationId),
-        {
-          type: "invite.updated",
-          inviteId: invite.id,
-          conversationId: invite.message.conversationId,
-          status: "EXPIRED",
-        },
-      );
-    }
+    const dmConvId = invite.message?.conversationId;
+    const topics = [
+      ...(dmConvId ? [conversationChannel(dmConvId)] : []),
+      userChannel(invite.inviterId),
+      userChannel(actorId),
+    ];
+    await publishChange(topics, {
+      type: "invite.updated",
+      inviteId: invite.id,
+      conversationId: dmConvId ?? "",
+      roomId: invite.roomId,
+      messageId: invite.messageId ?? undefined,
+      status: "EXPIRED",
+    });
     throw new ChatServiceError("Invite has expired", 410, "INVITE_EXPIRED");
   }
 
-  const transport = getRealtimeTransport();
   const dmId = invite.message?.conversationId;
 
   if (decision === "decline") {
@@ -950,16 +985,21 @@ export async function respondToMessageInvite(
     if (updated.count === 0) {
       throw new ChatServiceError("Invite is no longer active", 409, "INVITE_INACTIVE");
     }
+    const inviteTopics = [
+      ...(dmId ? [conversationChannel(dmId)] : []),
+      userChannel(invite.inviterId),
+      userChannel(actorId),
+    ];
     await Promise.all([
-      dmId
-        ? transport.publish(conversationChannel(dmId), {
-            type: "invite.updated",
-            inviteId: invite.id,
-            conversationId: dmId,
-            status: "DECLINED",
-          })
-        : Promise.resolve(),
-      transport.publish(userChannel(invite.inviterId), {
+      publishChange(inviteTopics, {
+        type: "invite.updated",
+        inviteId: invite.id,
+        conversationId: dmId ?? "",
+        roomId: invite.roomId,
+        messageId: invite.messageId ?? undefined,
+        status: "DECLINED",
+      }),
+      publishChange([userChannel(invite.inviterId), userChannel(actorId)], {
         type: "unread.sync",
         conversationId: dmId,
       }),
@@ -1020,6 +1060,7 @@ export async function respondToMessageInvite(
       leftAt: null,
       joinedAt: now,
       lastReadAt: now,
+      lastDeliveredAt: now,
     },
     create: {
       conversationId: invite.roomId,
@@ -1027,34 +1068,35 @@ export async function respondToMessageInvite(
       role: "MEMBER",
       joinedAt: now,
       lastReadAt: now,
+      lastDeliveredAt: now,
     },
   });
 
+  const inviteTopics = [
+    ...(dmId ? [conversationChannel(dmId)] : []),
+    userChannel(invite.inviterId),
+    userChannel(actorId),
+  ];
+
   await Promise.all([
-    transport.publish(conversationChannel(invite.roomId), {
+    publishChange([conversationChannel(invite.roomId), userChannel(actorId)], {
       type: "member.changed",
       conversationId: invite.roomId,
       action: "joined",
       userId: actorId,
     }),
-    transport.publish(userChannel(actorId), {
-      type: "member.changed",
-      conversationId: invite.roomId,
-      action: "joined",
-      userId: actorId,
-    }),
-    transport.publish(userChannel(actorId), {
+    publishChange([userChannel(actorId), userChannel(invite.inviterId)], {
       type: "unread.sync",
       conversationId: invite.roomId,
     }),
-    dmId
-      ? transport.publish(conversationChannel(dmId), {
-          type: "invite.updated",
-          inviteId: invite.id,
-          conversationId: dmId,
-          status: "ACCEPTED",
-        })
-      : Promise.resolve(),
+    publishChange(inviteTopics, {
+      type: "invite.updated",
+      inviteId: invite.id,
+      conversationId: dmId ?? "",
+      roomId: invite.roomId,
+      messageId: invite.messageId ?? undefined,
+      status: "ACCEPTED",
+    }),
   ]);
 
   return { status: "ACCEPTED" as const, roomId: invite.roomId };

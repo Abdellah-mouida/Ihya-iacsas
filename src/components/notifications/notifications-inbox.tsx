@@ -92,14 +92,58 @@ export function NotificationsInbox({
       }
     };
 
+    const onNotificationsChanged = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          action?: "read" | "unread" | "read_all";
+          notificationId?: string;
+          unreadCount?: number;
+        }>
+      ).detail;
+      if (!detail) return;
+      if (typeof detail.unreadCount === "number") {
+        setUnreadCount(Math.max(0, detail.unreadCount));
+      }
+      if (detail.action === "read_all") {
+        const nowIso = new Date().toISOString();
+        setItems((prev) =>
+          filter === "unread"
+            ? []
+            : prev.map((row) => ({ ...row, readAt: row.readAt ?? nowIso })),
+        );
+      } else if (detail.action === "read" && detail.notificationId) {
+        const nowIso = new Date().toISOString();
+        setItems((prev) =>
+          filter === "unread"
+            ? prev.filter((row) => row.id !== detail.notificationId)
+            : prev.map((row) =>
+                row.id === detail.notificationId
+                  ? { ...row, readAt: row.readAt ?? nowIso }
+                  : row,
+              ),
+        );
+      } else if (detail.action === "unread" && detail.notificationId) {
+        setItems((prev) =>
+          prev.map((row) =>
+            row.id === detail.notificationId ? { ...row, readAt: null } : row,
+          ),
+        );
+      }
+    };
+
     window.addEventListener("ihyaa_notification_received", onLiveNotification);
+    window.addEventListener("ihyaa_notifications_changed", onNotificationsChanged);
     return () => {
       window.removeEventListener(
         "ihyaa_notification_received",
         onLiveNotification,
       );
+      window.removeEventListener(
+        "ihyaa_notifications_changed",
+        onNotificationsChanged,
+      );
     };
-  }, []);
+  }, [filter]);
 
   const formatTimestamp = useCallback(
     (iso: string) => {

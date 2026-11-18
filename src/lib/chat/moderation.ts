@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { decryptMessage, encryptMessage, loadKeyringFromEnv } from "./crypto-core";
 import { ChatServiceError } from "./friends";
-import { getRealtimeTransport } from "./realtime";
 import { canUserAccessConversation } from "./realtime/channels";
-import { conversationChannel, userChannel } from "./realtime/types";
+import { adminChannel, conversationChannel, userChannel } from "./realtime/types";
+import { invalidateChatEnabledCache } from "./guards";
+import { publishChange } from "@/lib/realtime/publish";
 import { notify, notifyStaffModerationReport } from "@/lib/notifications";
 
 export const reportMessageSchema = z.object({
@@ -203,11 +204,19 @@ export async function reportMessage(params: {
     },
   });
 
-  await notifyStaffModerationReport({
-    actorId: params.reporterId,
-    actorName: params.reporterName || "User",
-    reportId: report.id,
-  });
+  await Promise.all([
+    notifyStaffModerationReport({
+      actorId: params.reporterId,
+      actorName: params.reporterName || "User",
+      reportId: report.id,
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "moderation",
+      action: "report_created",
+      targetId: report.id,
+    }),
+  ]);
 
   return report;
 }
@@ -428,6 +437,13 @@ export async function resolveChatReport(params: {
     },
   });
 
+  await publishChange([adminChannel()], {
+    type: "admin.changed",
+    area: "moderation",
+    action: "report_resolved",
+    targetId: updated.id,
+  });
+
   return updated;
 }
 
@@ -491,16 +507,21 @@ export async function moderateDeletePublicMessage(params: {
     },
   });
 
-  await getRealtimeTransport().publish(
-    conversationChannel(message.conversationId),
-    {
+  await Promise.all([
+    publishChange([conversationChannel(message.conversationId)], {
       type: "message.deleted",
       conversationId: message.conversationId,
       messageId: message.id,
       senderId: message.senderId ?? params.actor.id,
       deletedAt: now.toISOString(),
-    },
-  );
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "moderation",
+      action: "message_deleted",
+      targetId: message.id,
+    }),
+  ]);
 
   return { id: message.id, deletedAt: now.toISOString() };
 }
@@ -587,7 +608,7 @@ export async function timeoutUserFromPublicChat(params: {
     select: { id: true },
   });
   if (publicConv) {
-    await getRealtimeTransport().publish(userChannel(target.id), {
+    await publishChange([userChannel(target.id)], {
       type: "member.changed",
       conversationId: publicConv.id,
       action: "moderation",
@@ -595,10 +616,18 @@ export async function timeoutUserFromPublicChat(params: {
     });
   }
 
-  await notify(target.id, "CHAT_MODERATION_ACTION", {
-    params: { hours: parsed.data.hours },
-    data: { kind: parsed.data.hours > 0 ? "timeout" : "timeout_cleared" },
-  });
+  await Promise.all([
+    notify(target.id, "CHAT_MODERATION_ACTION", {
+      params: { hours: parsed.data.hours },
+      data: { kind: parsed.data.hours > 0 ? "timeout" : "timeout_cleared" },
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "moderation",
+      action: parsed.data.hours > 0 ? "timeout" : "timeout_cleared",
+      targetId: target.id,
+    }),
+  ]);
 
   return {
     userId: target.id,
@@ -662,7 +691,7 @@ export async function setUserChatBan(params: {
     select: { id: true },
   });
   if (publicConv) {
-    await getRealtimeTransport().publish(userChannel(target.id), {
+    await publishChange([userChannel(target.id)], {
       type: "member.changed",
       conversationId: publicConv.id,
       action: parsed.data.banned ? "banned" : "unbanned",
@@ -670,10 +699,18 @@ export async function setUserChatBan(params: {
     });
   }
 
-  await notify(target.id, "CHAT_MODERATION_ACTION", {
-    params: { hours: parsed.data.banned ? 1 : 0 },
-    data: { kind: parsed.data.banned ? "banned" : "unbanned" },
-  });
+  await Promise.all([
+    notify(target.id, "CHAT_MODERATION_ACTION", {
+      params: { hours: parsed.data.banned ? 1 : 0 },
+      data: { kind: parsed.data.banned ? "banned" : "unbanned" },
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "moderation",
+      action: parsed.data.banned ? "banned" : "unbanned",
+      targetId: target.id,
+    }),
+  ]);
 
   return {
     userId: target.id,
@@ -697,6 +734,7 @@ export async function setGlobalChatEnabled(params: {
     update: { value },
     create: { key: "chatEnabled", value },
   });
+  invalidateChatEnabledCache();
 
   await logActivity({
     actorId: params.actor.id,
@@ -708,6 +746,25 @@ export async function setGlobalChatEnabled(params: {
     targetId: "chatEnabled",
     details: { chatEnabled: parsed.data.enabled },
   });
+
+  const publicConv = await prisma.conversation.findUnique({
+    where: { publicKey: "PUBLIC" },
+    select: { id: true },
+  });
+  await Promise.all([
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "moderation",
+      action: parsed.data.enabled ? "chat_enabled" : "chat_disabled",
+    }),
+    publicConv
+      ? publishChange([conversationChannel(publicConv.id)], {
+          type: "member.changed",
+          conversationId: publicConv.id,
+          action: "moderation",
+        })
+      : Promise.resolve(),
+  ]);
 
   return { chatEnabled: parsed.data.enabled };
 }

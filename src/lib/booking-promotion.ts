@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/audit";
 import { sendWaitlistPromotionEmail } from "@/lib/email";
 import { notify } from "@/lib/notifications";
+import { adminChannel, eventsChannel, userChannel } from "@/lib/chat/realtime/types";
+import { publishChange } from "@/lib/realtime/publish";
 
 export type BookingPromotionRecord = {
   id: string;
@@ -60,6 +62,31 @@ export async function deliverBookingPromotionEffects(
       },
     );
   }
+
+  const bookingTopics = [
+    ...(booking.userId ? [userChannel(booking.userId)] : []),
+    adminChannel(),
+  ];
+  await Promise.all([
+    publishChange(bookingTopics, {
+      type: "bookings.changed",
+      eventId: booking.eventId,
+      bookingId: booking.id,
+      userId: booking.userId ?? undefined,
+      status: "CONFIRMED",
+    }),
+    publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: booking.eventId,
+      action: "capacity",
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "bookings",
+      action: sourceAction,
+      targetId: booking.id,
+    }),
+  ]);
 
   try {
     const sendEmail = dependencies.sendEmail ?? sendWaitlistPromotionEmail;

@@ -16,6 +16,7 @@ import {
 } from "../src/lib/chat/realtime/channels";
 import {
   conversationChannel,
+  eventsChannel,
   presenceChannel,
   userChannel,
 } from "../src/lib/chat/realtime/types";
@@ -140,6 +141,15 @@ test.describe("12-T3: RealtimeTransport, Scoped 10m Tokens, SSE Pub/Sub & Member
 
   test("channel authorization enforces terms, room leave, DM friendship & blocking", async () => {
     assertDevBranchDatabase("chat-realtime authz test");
+    const priorChatSetting = await prisma.systemSetting.findUnique({
+      where: { key: "chatEnabled" },
+    });
+    await prisma.systemSetting.upsert({
+      where: { key: "chatEnabled" },
+      update: { value: "true" },
+      create: { key: "chatEnabled", value: "true" },
+    });
+
     const [u1, u2, uNoTerms] = await Promise.all([
       createUser("U1", true),
       createUser("U2", true),
@@ -174,10 +184,10 @@ test.describe("12-T3: RealtimeTransport, Scoped 10m Tokens, SSE Pub/Sub & Member
     });
 
     try {
-      // Unaccepted terms user only gets personal channel, no public/presence
+      // Unaccepted terms user gets personal + public events channel, no chat rooms/presence
       const noTermsAuthz = await getAuthorizedChannelsForUser(uNoTerms.id);
       expect(noTermsAuthz.termsAccepted).toBe(false);
-      expect(noTermsAuthz.channels).toEqual([userChannel(uNoTerms.id)]);
+      expect(noTermsAuthz.channels).toEqual([userChannel(uNoTerms.id), eventsChannel()]);
       expect(noTermsAuthz.channels).not.toContain(presenceChannel());
 
       // Before friendship accepted: u1 has room + public + presence, NOT dmConv
@@ -206,6 +216,15 @@ test.describe("12-T3: RealtimeTransport, Scoped 10m Tokens, SSE Pub/Sub & Member
       expect((await canUserAccessConversation(u1.id, dmConv.id)).ok).toBe(false);
       expect((await canUserAccessConversation(u2.id, dmConv.id)).ok).toBe(false);
     } finally {
+      if (priorChatSetting) {
+        await prisma.systemSetting.upsert({
+          where: { key: "chatEnabled" },
+          update: { value: priorChatSetting.value },
+          create: { key: "chatEnabled", value: priorChatSetting.value },
+        });
+      } else {
+        await prisma.systemSetting.deleteMany({ where: { key: "chatEnabled" } });
+      }
       await prisma.conversation.deleteMany({
         where: { id: { in: [dmConv.id, roomConv.id] } },
       });

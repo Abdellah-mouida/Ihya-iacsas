@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { canonicalPairKey } from "@/lib/chat/friends";
 import {
+  adminChannel,
   conversationChannel,
+  eventsChannel,
   presenceChannel,
   userChannel,
 } from "./types";
@@ -45,6 +47,7 @@ export async function getAuthorizedChannelsForUser(
     prisma.user.findUnique({
       where: { id: userId },
       select: {
+        role: true,
         showOnlineStatus: true,
         onboardingCompletedAt: true,
         chatTermsAcceptedAt: true,
@@ -74,9 +77,12 @@ export async function getAuthorizedChannelsForUser(
     Boolean(user.onboardingCompletedAt) &&
     termsAccepted;
 
-  // Personal channel is always issued for authenticated users so realtime notifications
-  // work even when community chat is disabled, terms aren't accepted, or chat is restricted.
-  const channels = [userChannel(userId)];
+  // Personal and public-events channels are issued for authenticated users so realtime
+  // notifications, booking status, and events updates work even when chat is disabled or restricted.
+  const channels = [userChannel(userId), eventsChannel()];
+  if (user.role === "ADMIN" || user.role === "MODERATOR") {
+    channels.push(adminChannel());
+  }
   const conversationIds: string[] = [];
 
   if (!canAccessChat) {
@@ -157,6 +163,8 @@ export async function canUserAccessConversation(
 ): Promise<{
   ok: boolean;
   conversationType?: "PUBLIC" | "DM" | "ROOM";
+  conversationName?: string | null;
+  keyEpoch?: number;
   hasMembership?: boolean;
   dmPeerId?: string;
 }> {
@@ -165,6 +173,8 @@ export async function canUserAccessConversation(
     select: {
       id: true,
       type: true,
+      name: true,
+      keyEpoch: true,
       dmPairKey: true,
       members: {
         where: { userId, leftAt: null },
@@ -178,7 +188,13 @@ export async function canUserAccessConversation(
   const hasMembership = conv.members.length > 0;
 
   if (conv.type === "PUBLIC") {
-    return { ok: true, conversationType: "PUBLIC", hasMembership };
+    return {
+      ok: true,
+      conversationType: "PUBLIC",
+      conversationName: conv.name,
+      keyEpoch: conv.keyEpoch,
+      hasMembership,
+    };
   }
 
   if (!hasMembership) {
@@ -212,10 +228,18 @@ export async function canUserAccessConversation(
     return {
       ok: true,
       conversationType: "DM",
+      conversationName: conv.name,
+      keyEpoch: conv.keyEpoch,
       hasMembership,
       dmPeerId: peerId,
     };
   }
 
-  return { ok: true, conversationType: conv.type, hasMembership };
+  return {
+    ok: true,
+    conversationType: conv.type,
+    conversationName: conv.name,
+    keyEpoch: conv.keyEpoch,
+    hasMembership,
+  };
 }

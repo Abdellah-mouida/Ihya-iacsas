@@ -871,11 +871,49 @@ export function ChatConversationPane({
                   new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime() <
                     3 * 60_000;
 
-                const peerReadAt = conversation.peer?.lastReadAt
-                  ? new Date(conversation.peer.lastReadAt).getTime()
-                  : 0;
-                const isSeenInDm =
-                  isDm && own && !msg.optimisticState && peerReadAt >= new Date(msg.createdAt).getTime();
+                const msgTime = new Date(msg.createdAt).getTime();
+                const receiptMembers =
+                  conversation.type === "PUBLIC"
+                    ? []
+                    : conversation.memberStates && conversation.memberStates.length > 0
+                      ? conversation.memberStates.filter(
+                          (m) => m.userId !== currentUserId,
+                        )
+                      : conversation.peer
+                        ? [
+                            {
+                              userId: conversation.peer.id,
+                              lastReadAt: conversation.peer.lastReadAt,
+                              lastDeliveredAt:
+                                conversation.peer.lastDeliveredAt ?? null,
+                            },
+                          ]
+                        : [];
+                const showReceipt =
+                  conversation.type !== "PUBLIC" &&
+                  own &&
+                  !msg.optimisticState &&
+                  receiptMembers.length > 0;
+                const isSeen =
+                  showReceipt &&
+                  receiptMembers.every(
+                    (m) =>
+                      Boolean(m.lastReadAt) &&
+                      new Date(m.lastReadAt!).getTime() >= msgTime,
+                  );
+                const isDelivered =
+                  showReceipt &&
+                  (isSeen ||
+                    receiptMembers.every(
+                      (m) =>
+                        Boolean(m.lastDeliveredAt) &&
+                        new Date(m.lastDeliveredAt!).getTime() >= msgTime,
+                    ));
+                const deliveryState: "seen" | "delivered" | "sent" = isSeen
+                  ? "seen"
+                  : isDelivered
+                    ? "delivered"
+                    : "sent";
 
                 const senderName = msg.isAnonymized
                   ? t("chat.anonymizedAuthor")
@@ -1144,18 +1182,35 @@ export function ChatConversationPane({
                                 <span>{t("chat.sending")}</span>
                               ) : null}
                               <span dir="ltr">{timeFormatter.format(new Date(msg.createdAt))}</span>
-                              {isDm && own && !msg.optimisticState ? (
+                              {showReceipt ? (
                                 <span
                                   data-testid={`msg-receipt-${msg.id}`}
+                                  data-delivery-state={deliveryState}
                                   className="inline-flex items-center"
                                 >
-                                  {isSeenInDm ? (
-                                    <CheckCheck className="size-3.5" aria-hidden="true" />
+                                  {deliveryState === "seen" ? (
+                                    <CheckCheck
+                                      className="size-3.5 text-primary-foreground drop-shadow-[0_0_2px_currentColor]"
+                                      strokeWidth={2.5}
+                                      aria-hidden="true"
+                                    />
+                                  ) : deliveryState === "delivered" ? (
+                                    <CheckCheck
+                                      className="size-3.5 text-primary-foreground/65"
+                                      aria-hidden="true"
+                                    />
                                   ) : (
-                                    <Check className="size-3.5" aria-hidden="true" />
+                                    <Check
+                                      className="size-3.5 text-primary-foreground/65"
+                                      aria-hidden="true"
+                                    />
                                   )}
                                   <span className="sr-only">
-                                    {isSeenInDm ? t("chat.seenReceipt") : t("chat.sentReceipt")}
+                                    {deliveryState === "seen"
+                                      ? t("chat.seenReceipt")
+                                      : deliveryState === "delivered"
+                                        ? t("chat.deliveredReceipt")
+                                        : t("chat.sentReceipt")}
                                   </span>
                                 </span>
                               ) : null}

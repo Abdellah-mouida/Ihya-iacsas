@@ -26,6 +26,7 @@ import {
   verifyLocalRealtimeToken,
 } from "@/lib/chat/realtime/local-sse";
 import { notify } from "@/lib/notifications";
+import { publishChange } from "@/lib/realtime/publish";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -77,7 +78,6 @@ export async function executeFriendAction(params: {
       break;
   }
 
-  const transport = getRealtimeTransport();
   const kindMap = {
     send: result.autoAccepted ? "accepted" : "requested",
     cancel: "canceled",
@@ -85,28 +85,20 @@ export async function executeFriendAction(params: {
     decline: "declined",
     unfriend: "unfriended",
     block: "blocked",
+    unblock: "unblocked",
   } as const;
 
-  if (action !== "unblock") {
-    const kind = kindMap[action];
-    await Promise.all([
-      transport.publish(userChannel(targetUserId), {
-        type: "friend.changed",
-        kind,
-        actorId,
-      }),
-      transport.publish(userChannel(targetUserId), {
-        type: "unread.sync",
-      }),
-      transport.publish(userChannel(actorId), {
-        type: "unread.sync",
-      }),
-    ]);
-  } else {
-    await transport.publish(userChannel(actorId), {
+  const kind = kindMap[action];
+  await Promise.all([
+    publishChange([userChannel(targetUserId), userChannel(actorId)], {
+      type: "friend.changed",
+      kind,
+      actorId,
+    }),
+    publishChange([userChannel(targetUserId), userChannel(actorId)], {
       type: "unread.sync",
-    });
-  }
+    }),
+  ]);
 
   if (action === "send") {
     if (result.autoAccepted) {

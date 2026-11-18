@@ -131,12 +131,33 @@ export function GlassNavbar({
     updateEvents();
     window.addEventListener("ihyaa_booking_change", updateEvents);
     window.addEventListener("storage", updateEvents);
+
+    let disposed = false;
+    let releaseEvents: (() => void) | undefined;
+    let unsubEvents: (() => void) | undefined;
+    if (session?.user?.id) {
+      void import("@/lib/chat/realtime/client").then(({ getChatRealtimeClient }) => {
+        if (disposed) return;
+        const client = getChatRealtimeClient();
+        releaseEvents = client.acquire();
+        client.connectNow();
+        unsubEvents = client.onEvent((event) => {
+          if (event.type === "events.changed" || event.type === "bookings.changed") {
+            updateEvents();
+          }
+        });
+      });
+    }
+
     return () => {
       mounted = false;
+      disposed = true;
       window.removeEventListener("ihyaa_booking_change", updateEvents);
       window.removeEventListener("storage", updateEvents);
+      unsubEvents?.();
+      releaseEvents?.();
     };
-  }, [pathname]);
+  }, [pathname, session?.user?.id]);
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -289,8 +310,11 @@ export function GlassNavbar({
             if (
               event.type === "unread.sync" ||
               event.type === "message.created" ||
+              event.type === "message.deleted" ||
               event.type === "friend.changed" ||
-              event.type === "invite.received"
+              event.type === "invite.received" ||
+              event.type === "invite.updated" ||
+              event.type === "member.changed"
             ) {
               window.dispatchEvent(new CustomEvent("ihyaa_chat_unread"));
             }

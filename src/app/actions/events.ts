@@ -12,6 +12,8 @@ import { logActivity } from "@/lib/audit";
 import { resolveImageUrl } from "@/lib/content";
 import { readImageDimensions } from "@/lib/image-dimensions";
 import { safeActionError } from "@/lib/safe-error";
+import { eventsChannel } from "@/lib/chat/realtime/types";
+import { publishChange } from "@/lib/realtime/publish";
 import {
   hasValidImageMagicBytes,
   isSafePublicImageUrl,
@@ -285,6 +287,12 @@ export async function createEvent(formData: FormData) {
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/events");
 
+    await publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: event.id,
+      action: "created",
+    });
+
     return { success: true, event };
   } catch (error) {
     console.error("Error creating event:", error);
@@ -423,6 +431,12 @@ export async function updateEvent(id: string, formData: FormData) {
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/events");
 
+    await publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: event.id,
+      action: "updated",
+    });
+
     return { success: true, event };
   } catch (error) {
     console.error("Error updating event:", error);
@@ -453,6 +467,12 @@ export async function toggleEventStatus(id: string, field: "isNew" | "bookingOpe
     safeRevalidatePath("/events");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/events");
+
+    await publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: event.id,
+      action: "updated",
+    });
 
     return { success: true, event };
   } catch (error) {
@@ -492,6 +512,12 @@ export async function deleteEvent(id: string) {
     safeRevalidatePath("/events");
     safeRevalidatePath("/admin");
     safeRevalidatePath("/admin/events");
+
+    await publishChange([eventsChannel()], {
+      type: "events.changed",
+      eventId: id,
+      action: "deleted",
+    });
 
     return { success: true };
   } catch (error) {

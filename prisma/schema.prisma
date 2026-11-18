@@ -397,6 +397,7 @@ model Conversation {
   dmPairKey        String?          @unique
   publicKey        String?          @unique
   memberCap        Int              @default(50)
+  keyEpoch         Int              @default(1)
   lastMessageAt    DateTime?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
@@ -416,8 +417,9 @@ model ConversationMember {
   conversationId String
   userId         String
   role           ConversationMemberRole @default(MEMBER)
-  joinedAt       DateTime               @default(now())
-  lastReadAt     DateTime               @default(now())
+  joinedAt        DateTime               @default(now())
+  lastDeliveredAt DateTime               @default(now())
+  lastReadAt      DateTime               @default(now())
   muted          Boolean                @default(false)
   leftAt         DateTime?
 
@@ -439,6 +441,7 @@ model Message {
   ciphertext   String      @db.Text
   nonce        String
   keyVersion   Int         @default(1)
+  keyEpoch     Int         @default(1)
   replyToId    String?
   createdAt    DateTime    @default(now())
   editedAt     DateTime?

@@ -18,6 +18,8 @@ import {
 } from "@/lib/services/bookings";
 import { notify } from "@/lib/notifications";
 import { safeActionError } from "@/lib/safe-error";
+import { adminChannel, eventsChannel, userChannel } from "@/lib/chat/realtime/types";
+import { publishChange } from "@/lib/realtime/publish";
 
 /**
  * Returns the current authenticated user state for the booking flow:
@@ -361,6 +363,32 @@ export async function rejectBooking(id: string) {
     revalidatePath(`/events/${booking.eventId}`);
     revalidatePath("/events");
 
+    if (txResult.changed) {
+      await Promise.all([
+        publishChange(
+          [...(booking.userId ? [userChannel(booking.userId)] : []), adminChannel()],
+          {
+            type: "bookings.changed",
+            eventId: booking.eventId,
+            bookingId: booking.id,
+            userId: booking.userId ?? undefined,
+            status: "REJECTED",
+          },
+        ),
+        publishChange([eventsChannel()], {
+          type: "events.changed",
+          eventId: booking.eventId,
+          action: "capacity",
+        }),
+        publishChange([adminChannel()], {
+          type: "admin.changed",
+          area: "bookings",
+          action: "rejected",
+          targetId: id,
+        }),
+      ]);
+    }
+
     return { success: true, autoPromotedName };
   } catch (error) {
     console.error("Error rejecting booking:", error);
@@ -480,6 +508,29 @@ export async function deleteBooking(id: string) {
             email: booking.email,
           },
         });
+        await Promise.all([
+          publishChange(
+            [...(booking.userId ? [userChannel(booking.userId)] : []), adminChannel()],
+            {
+              type: "bookings.changed",
+              eventId: booking.eventId,
+              bookingId: id,
+              userId: booking.userId ?? undefined,
+              status: "DELETED",
+            },
+          ),
+          publishChange([eventsChannel()], {
+            type: "events.changed",
+            eventId: booking.eventId,
+            action: "capacity",
+          }),
+          publishChange([adminChannel()], {
+            type: "admin.changed",
+            area: "bookings",
+            action: "deleted",
+            targetId: id,
+          }),
+        ]);
       }
     }
 

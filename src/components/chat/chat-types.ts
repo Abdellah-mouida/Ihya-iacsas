@@ -29,7 +29,14 @@ export interface ChatConversationSummary {
     image: string | null;
     isOnline: boolean | null;
     lastReadAt: string | null;
+    lastDeliveredAt?: string | null;
   } | null;
+  memberStates?: Array<{
+    userId: string;
+    lastReadAt: string;
+    lastDeliveredAt: string | null;
+  }>;
+  keyEpoch?: number;
   lastMessage: {
     id: string;
     senderId: string | null;

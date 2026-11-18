@@ -202,7 +202,10 @@ test.describe("13-T6: Stored & Realtime Notification System", () => {
       const disabledTokJson = (await disabledChatTok.json()) as {
         channels?: string[];
       };
-      expect(disabledTokJson.channels).toEqual([`user:${onlineUser.id}`]);
+      expect(disabledTokJson.channels).toEqual([
+        `user:${onlineUser.id}`,
+        "events:public",
+      ]);
 
       // Restore chatEnabled
       await prisma.systemSetting.upsert({

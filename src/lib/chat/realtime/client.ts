@@ -2,12 +2,15 @@
 
 import type { RealtimeEnvelope, RealtimeEvent, RealtimeTokenResponse } from "./types";
 
-type EventListener = (event: RealtimeEvent, envelope?: RealtimeEnvelope) => void;
+type EventListener = (
+  event: RealtimeEvent,
+  envelope?: RealtimeEnvelope,
+) => void | Promise<void>;
 type ReconnectListener = (info: {
   lastSeenByConv: Record<string, string>;
   sinceIso: string | null;
-}) => void;
-type PresenceListener = (onlineUserIds: Set<string>) => void;
+}) => void | Promise<void>;
+type PresenceListener = (onlineUserIds: Set<string>) => void | Promise<void>;
 
 class ChatRealtimeClient {
   private refCount = 0;
@@ -239,6 +242,13 @@ class ChatRealtimeClient {
         }
       }
     });
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        if (this.started && !this.destroyed) {
+          void this.refreshSubscriptions();
+        }
+      });
+    }
   }
 
   private async connect(): Promise<void> {
@@ -486,7 +496,7 @@ class ChatRealtimeClient {
 
     for (const listener of this.eventListeners) {
       try {
-        listener(event, envelope);
+        void Promise.resolve(listener(event, envelope)).catch(() => {});
       } catch {}
     }
   }
@@ -495,7 +505,7 @@ class ChatRealtimeClient {
     const snap = new Set(this.onlineUsers);
     for (const listener of this.presenceListeners) {
       try {
-        listener(snap);
+        void Promise.resolve(listener(snap)).catch(() => {});
       } catch {}
     }
   }
@@ -505,7 +515,7 @@ class ChatRealtimeClient {
     const sinceIso = this.lastEventIso;
     for (const listener of this.reconnectListeners) {
       try {
-        listener({ lastSeenByConv, sinceIso });
+        void Promise.resolve(listener({ lastSeenByConv, sinceIso })).catch(() => {});
       } catch {}
     }
   }

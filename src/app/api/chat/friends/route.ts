@@ -8,13 +8,14 @@ import {
   ChatServiceError,
   declineFriendRequest,
   getFriendsDashboardData,
+  getPublicProfile,
   sendFriendRequest,
   unblockUser,
   unfriendUser,
 } from "@/lib/chat/friends";
-import { getRealtimeTransport } from "@/lib/chat/realtime";
 import { userChannel } from "@/lib/chat/realtime/types";
 import { notify } from "@/lib/notifications";
+import { publishChange } from "@/lib/realtime/publish";
 
 const friendActionSchema = z.object({
   action: z.enum([
@@ -29,11 +30,25 @@ const friendActionSchema = z.object({
   targetUserId: z.string().trim().min(1).max(64),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const authResult = await requireChatActor();
   if (!authResult.ok) return authResult.response;
 
+  const { searchParams } = new URL(request.url);
+  const profileId = searchParams.get("profileId")?.trim();
+
   try {
+    if (profileId) {
+      const profile = await getPublicProfile(authResult.user.id, profileId);
+      if (!profile) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      return NextResponse.json(
+        { profile },
+        { headers: { "Cache-Control": "no-store, max-age=0" } },
+      );
+    }
+
     const data = await getFriendsDashboardData(authResult.user.id);
     return NextResponse.json(data, {
       headers: { "Cache-Control": "no-store, max-age=0" },
@@ -95,7 +110,6 @@ export async function POST(request: Request) {
         break;
     }
 
-    const transport = getRealtimeTransport();
     const kindMap = {
       send: result.autoAccepted ? "accepted" : "requested",
       cancel: "canceled",
@@ -103,28 +117,21 @@ export async function POST(request: Request) {
       decline: "declined",
       unfriend: "unfriended",
       block: "blocked",
+      unblock: "unblocked",
     } as const;
 
-    if (action !== "unblock") {
-      const kind = kindMap[action];
-      await Promise.all([
-        transport.publish(userChannel(targetUserId), {
-          type: "friend.changed",
-          kind,
-          actorId,
-        }),
-        transport.publish(userChannel(targetUserId), {
-          type: "unread.sync",
-        }),
-        transport.publish(userChannel(actorId), {
-          type: "unread.sync",
-        }),
-      ]);
-    } else {
-      await transport.publish(userChannel(actorId), {
+    const kind = kindMap[action];
+    const channels = [userChannel(targetUserId), userChannel(actorId)];
+    await Promise.all([
+      publishChange(channels, {
+        type: "friend.changed",
+        kind,
+        actorId,
+      }),
+      publishChange(channels, {
         type: "unread.sync",
-      });
-    }
+      }),
+    ]);
 
     if (action === "send") {
       if (result.autoAccepted) {

@@ -23,18 +23,21 @@ export interface EncryptMessageInput {
   conversationId: string;
   messageId: string;
   senderId: string;
+  keyEpoch?: number;
 }
 
 export interface EncryptedMessagePayload {
   ciphertext: string;
   nonce: string;
   keyVersion: number;
+  keyEpoch: number;
 }
 
 export interface DecryptMessageInput {
   ciphertext: string;
   nonce: string;
   keyVersion: number;
+  keyEpoch?: number;
   conversationId: string;
   messageId: string;
   senderId: string;
@@ -90,9 +93,55 @@ export function loadKeyringFromEnv(env: NodeJS.ProcessEnv = process.env): ChatKe
   return { activeVersion, keys };
 }
 
-function deriveConversationKey(masterKey: Buffer, conversationId: string, keyVersion: number): Buffer {
-  const info = Buffer.from(`ihyaa:chat:conv:${conversationId}:v${keyVersion}`, "utf8");
+export function deriveConversationKey(
+  masterKey: Buffer,
+  conversationId: string,
+  keyVersion: number,
+  keyEpoch = 1,
+): Buffer {
+  const epochSuffix = keyEpoch > 1 ? `:e${keyEpoch}` : "";
+  const info = Buffer.from(
+    `ihyaa:chat:conv:${conversationId}:v${keyVersion}${epochSuffix}`,
+    "utf8",
+  );
   return Buffer.from(hkdfSync("sha256", masterKey, HKDF_SALT, info, KEY_BYTES));
+}
+
+export function exportConversationKeyMaterial(params: {
+  conversationId: string;
+  keyVersion: number;
+  keyEpoch?: number;
+  keyring?: ChatKeyring;
+}): {
+  conversationId: string;
+  keyVersion: number;
+  keyEpoch: number;
+  keyBase64: string;
+} {
+  const keyring = params.keyring ?? loadKeyringFromEnv();
+  const masterKey = keyring.keys.get(params.keyVersion);
+  if (!masterKey || masterKey.byteLength !== KEY_BYTES) {
+    throw new ChatEncryptionError(
+      `No chat encryption key available for version ${params.keyVersion}`,
+    );
+  }
+  const keyEpoch = params.keyEpoch && params.keyEpoch > 1 ? params.keyEpoch : 1;
+  const subkey = deriveConversationKey(
+    masterKey,
+    params.conversationId,
+    params.keyVersion,
+    keyEpoch,
+  );
+  try {
+    return {
+      conversationId: params.conversationId,
+      keyVersion: params.keyVersion,
+      keyEpoch,
+      keyBase64: subkey.toString("base64"),
+    };
+  } finally {
+    subkey.fill(0);
+  }
 }
 
 function buildMessageAad(conversationId: string, messageId: string, senderId: string): Buffer {
@@ -115,9 +164,10 @@ export function encryptMessage(
     throw new ChatEncryptionError("Active chat encryption key is missing or invalid");
   }
 
+  const keyEpoch = input.keyEpoch && input.keyEpoch > 1 ? input.keyEpoch : 1;
   const nonce = randomBytes(NONCE_BYTES);
   const aad = buildMessageAad(conversationId, messageId, senderId);
-  const subkey = deriveConversationKey(masterKey, conversationId, keyring.activeVersion);
+  const subkey = deriveConversationKey(masterKey, conversationId, keyring.activeVersion, keyEpoch);
 
   try {
     const cipher = createCipheriv(AES_ALGORITHM, subkey, nonce, { authTagLength: AUTH_TAG_BYTES });
@@ -128,6 +178,7 @@ export function encryptMessage(
       ciphertext: `${encrypted.toString("base64")}.${tag.toString("base64")}`,
       nonce: nonce.toString("base64"),
       keyVersion: keyring.activeVersion,
+      keyEpoch,
     };
   } finally {
     subkey.fill(0);
@@ -139,6 +190,7 @@ export function decryptMessage(
   keyring: ChatKeyring = loadKeyringFromEnv(),
 ): string {
   const { ciphertext, nonce, keyVersion, conversationId, messageId, senderId } = input;
+  const keyEpoch = input.keyEpoch && input.keyEpoch > 1 ? input.keyEpoch : 1;
   const masterKey = keyring.keys.get(keyVersion);
   if (!masterKey || masterKey.byteLength !== KEY_BYTES) {
     throw new ChatEncryptionError(`No chat decryption key available for version ${keyVersion}`);
@@ -157,7 +209,7 @@ export function decryptMessage(
   }
 
   const aad = buildMessageAad(conversationId, messageId, senderId);
-  const subkey = deriveConversationKey(masterKey, conversationId, keyVersion);
+  const subkey = deriveConversationKey(masterKey, conversationId, keyVersion, keyEpoch);
 
   try {
     const decipher = createDecipheriv(AES_ALGORITHM, subkey, nonceBuf, { authTagLength: AUTH_TAG_BYTES });
@@ -184,6 +236,7 @@ export function rotateMessageEncryption(
       conversationId: input.conversationId,
       messageId: input.messageId,
       senderId: input.senderId,
+      keyEpoch: input.keyEpoch,
     },
     targetKeyring,
   );

@@ -19,8 +19,9 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "@/lib/toast";
+import { useLive } from "@/lib/realtime/use-live";
 
 import {
   approveBooking,
@@ -115,6 +116,33 @@ export default function AdminBookingsPage() {
 
     setLoading(false);
   };
+
+  const silentRefreshBookings = useCallback(async () => {
+    const [bookingRes, eventsRes] = await Promise.all([
+      getBookings(selectedEventId),
+      getEvents(),
+    ]);
+    if (bookingRes.success && bookingRes.bookings) {
+      setBookings(bookingRes.bookings as unknown as BookingRecord[]);
+    }
+    if (eventsRes.success && eventsRes.events) {
+      setEvents(
+        eventsRes.events.map((e) => ({
+          id: e.id,
+          titleAr: e.titleAr,
+          titleEn: e.titleEn,
+        })),
+      );
+    }
+    return true;
+  }, [selectedEventId]);
+
+  useLive(
+    `admin:bookings:${selectedEventId}`,
+    silentRefreshBookings,
+    ["admin:bookings", "bookings", "events"],
+    { initialData: true },
+  );
 
   useEffect(() => {
     let ignore = false;

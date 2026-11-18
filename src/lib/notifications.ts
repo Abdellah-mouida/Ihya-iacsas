@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getRealtimeTransport, userChannel } from "@/lib/chat/realtime";
+import { userChannel } from "@/lib/chat/realtime";
+import { publishChange } from "@/lib/realtime/publish";
 import {
   getNotificationDefinition,
   sanitizeNotificationRecordFields,
@@ -95,17 +96,12 @@ export function toNotificationDTO(row: NotificationDbRow): NotificationItemDTO {
 export async function publishNotificationRealtime(
   row: Pick<NotificationDbRow, "id" | "userId" | "type" | "createdAt">,
 ): Promise<void> {
-  try {
-    const transport = getRealtimeTransport();
-    await transport.publish(userChannel(row.userId), {
-      type: "notification.created",
-      notificationId: row.id,
-      notificationType: row.type,
-      createdAt: row.createdAt.toISOString(),
-    });
-  } catch (err) {
-    console.error("Failed to publish notification realtime signal:", err);
-  }
+  await publishChange([userChannel(row.userId)], {
+    type: "notification.created",
+    notificationId: row.id,
+    notificationType: row.type,
+    createdAt: row.createdAt.toISOString(),
+  });
 }
 
 export async function notifyWithDeps(
@@ -324,6 +320,13 @@ export async function setNotificationReadState(
     where: { userId, readAt: null },
   });
 
+  await publishChange([userChannel(userId)], {
+    type: "notifications.changed",
+    action: read ? "read" : "unread",
+    notificationId: existing.id,
+    unreadCount,
+  });
+
   return {
     notification: toNotificationDTO(updated),
     unreadCount,
@@ -338,6 +341,13 @@ export async function markAllNotificationsRead(userId: string): Promise<{
     where: { userId, readAt: null },
     data: { readAt: new Date() },
   });
+
+  await publishChange([userChannel(userId)], {
+    type: "notifications.changed",
+    action: "read_all",
+    unreadCount: 0,
+  });
+
   return {
     updatedCount: res.count,
     unreadCount: 0,

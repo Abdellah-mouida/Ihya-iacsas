@@ -11,6 +11,8 @@ import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { deleteUserAccount } from "@/lib/user-deletion";
 import { notify } from "@/lib/notifications";
+import { adminChannel } from "@/lib/chat/realtime/types";
+import { publishChange } from "@/lib/realtime/publish";
 
 export interface GetAdminUsersParams {
   page?: number;
@@ -201,11 +203,19 @@ export async function updateUserRole({
   });
 
   revalidatePath("/admin/users");
-  await notify(userId, "ADMIN_ROLE_CHANGED", {
-    params: { role: newRole },
-    data: { role: newRole },
-    dedupeKey: `role:${userId}:${newRole}:${actor.id}`,
-  });
+  await Promise.all([
+    notify(userId, "ADMIN_ROLE_CHANGED", {
+      params: { role: newRole },
+      data: { role: newRole },
+      dedupeKey: `role:${userId}:${newRole}:${actor.id}`,
+    }),
+    publishChange([adminChannel()], {
+      type: "admin.changed",
+      area: "users",
+      action: "role_updated",
+      targetId: userId,
+    }),
+  ]);
   return { success: true, user: updated };
 }
 
@@ -293,6 +303,12 @@ export async function deleteOrAnonymizeUser({
   }
 
   revalidatePath("/admin/users");
+  await publishChange([adminChannel()], {
+    type: "admin.changed",
+    area: "users",
+    action,
+    targetId: userId,
+  });
   return { success: true };
 }
 

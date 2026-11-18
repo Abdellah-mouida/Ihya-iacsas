@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getPublicEvents } from "@/app/actions/events";
 import { IslamicLoader } from "@/components/common/islamic-loader";
 import { useLocale } from "@/i18n/locale-provider";
+import { useLive } from "@/lib/realtime/use-live";
 import { cn } from "@/lib/utils";
 import { FeaturedEvent } from "./featured-event";
 
@@ -36,7 +37,19 @@ type DisplayEvent = {
 
 export function OpenEvents() {
   const { t, dir } = useLocale();
-  const [openEvents, setOpenEvents] = useState<DisplayEvent[] | null>(null);
+  const fetchOpenEvents = useCallback(async () => {
+    const res = await getPublicEvents();
+    if (res.success && res.openEvents) {
+      return res.openEvents as unknown as DisplayEvent[];
+    }
+    return [];
+  }, []);
+  const { data: liveOpenEvents, refresh: refreshOpenEvents } = useLive<
+    DisplayEvent[] | null
+  >("open-events", fetchOpenEvents, ["events", "bookings"], {
+    initialData: null,
+  });
+  const openEvents = liveOpenEvents ?? null;
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -48,19 +61,14 @@ export function OpenEvents() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    let ignore = false;
-    getPublicEvents().then((res) => {
-      if (ignore) return;
-      if (res.success && res.openEvents) {
-        setOpenEvents(res.openEvents as unknown as DisplayEvent[]);
-      } else {
-        setOpenEvents([]);
-      }
-    });
-    return () => {
-      ignore = true;
+    const onBookingChange = () => {
+      void refreshOpenEvents();
     };
-  }, []);
+    window.addEventListener("ihyaa_booking_change", onBookingChange);
+    return () => {
+      window.removeEventListener("ihyaa_booking_change", onBookingChange);
+    };
+  }, [refreshOpenEvents]);
 
   // Listen for prefers-reduced-motion
   useEffect(() => {
