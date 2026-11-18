@@ -9,7 +9,9 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
+  AlertCircle,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
@@ -20,8 +22,10 @@ import {
   CheckCheck,
   ChevronDown,
   ChevronUp,
+  Copy,
   ExternalLink,
   Flag,
+  Loader2,
   LogOut,
   MoreHorizontal,
   MoreVertical,
@@ -55,13 +59,49 @@ import { cn } from "@/lib/utils";
 import {
   type ChatConversationSummary,
   type ChatMessageItem,
-  CURATED_CHAT_EMOJIS,
   getRoomAccentStyle,
 } from "./chat-types";
 import styles from "./chat-workspace.module.css";
 
+const ChatEmojiPicker = dynamic(
+  () => import("./chat-emoji-picker").then((m) => m.ChatEmojiPicker),
+  { ssr: false },
+);
+
 const WINDOW_OVERSCAN = 18;
-const DEFAULT_ROW_HEIGHT = 76;
+const DEFAULT_ROW_HEIGHT = 64;
+
+function BubbleTail({
+  own,
+  failed,
+  dir,
+}: {
+  own: boolean;
+  failed: boolean;
+  dir: "ltr" | "rtl";
+}) {
+  const flipX = (own && dir === "rtl") || (!own && dir === "ltr");
+  return (
+    <svg
+      viewBox="0 0 8 12"
+      width="8"
+      height="12"
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute top-0",
+        own ? "-end-[6px]" : "-start-[6px]",
+        own
+          ? failed
+            ? "text-destructive/15"
+            : "text-primary"
+          : "text-card",
+        flipX ? "-scale-x-100" : "",
+      )}
+    >
+      <path d="M0 0 L8 0 C3.5 2.5 2 6.5 0 11 Z" fill="currentColor" />
+    </svg>
+  );
+}
 
 function dayKey(iso: string): string {
   const d = new Date(iso);
@@ -139,6 +179,11 @@ export function ChatConversationPane({
     bottomSpacer: 0,
   });
   const [inviteBusyId, setInviteBusyId] = useState<string | null>(null);
+  const [openMenuMsgId, setOpenMenuMsgId] = useState<string | null>(null);
+  const [longPressedMsgId, setLongPressedMsgId] = useState<string | null>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [copyAnnouncement, setCopyAnnouncement] = useState("");
+  const [arrivingIds, setArrivingIds] = useState<Set<string>>(() => new Set());
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -148,6 +193,12 @@ export function ChatConversationPane({
   const prevScrollHeightRef = useRef(0);
   const loadingOlderLockRef = useRef(false);
   const heightCacheRef = useRef<Map<string, number>>(new Map());
+  const initializedConvIdRef = useRef<string | null>(null);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const copyResetTimerRef = useRef<number | null>(null);
+  const focusComposerOnMenuCloseRef = useRef(false);
 
   const BackIcon = dir === "rtl" ? ArrowRight : ArrowLeft;
   const intlLocale = locale === "ar" ? "ar-MA" : "en-US";
@@ -213,9 +264,15 @@ export function ChatConversationPane({
       return;
     }
 
-    const avgRow = DEFAULT_ROW_HEIGHT;
-    const visibleCount = Math.max(12, Math.ceil(el.clientHeight / avgRow));
-    const approxFirst = Math.floor(el.scrollTop / avgRow);
+    let acc = 0;
+    let approxFirst = 0;
+    while (approxFirst < messages.length) {
+      const h = heightCacheRef.current.get(messages[approxFirst].id) ?? DEFAULT_ROW_HEIGHT;
+      if (acc + h > el.scrollTop) break;
+      acc += h;
+      approxFirst += 1;
+    }
+    const visibleCount = Math.max(12, Math.ceil(el.clientHeight / DEFAULT_ROW_HEIGHT));
     const start = Math.max(0, approxFirst - WINDOW_OVERSCAN);
     const end = Math.min(messages.length, approxFirst + visibleCount + WINDOW_OVERSCAN);
     const { topSpacer, bottomSpacer } = computeSpacers(start, end);
@@ -227,13 +284,62 @@ export function ChatConversationPane({
         ? prev
         : { start, end, topSpacer, bottomSpacer },
     );
-  }, [computeSpacers, hasMore, loadingOlder, messages.length, onLoadOlder]);
+  }, [computeSpacers, hasMore, loadingOlder, messages, onLoadOlder]);
 
   useEffect(() => {
     if (!loadingOlder) {
       loadingOlderLockRef.current = false;
     }
   }, [loadingOlder]);
+
+  useEffect(() => {
+    const convId = conversation?.id ?? null;
+    if (!convId) return;
+    if (initializedConvIdRef.current !== convId) {
+      if (loadingMessages && messages.length === 0) return;
+      knownIdsRef.current = new Set(messages.map((m) => m.id));
+      initializedConvIdRef.current = convId;
+      queueMicrotask(() => setArrivingIds(new Set()));
+      return;
+    }
+
+    const newIds: string[] = [];
+    for (const m of messages) {
+      if (!knownIdsRef.current.has(m.id)) {
+        knownIdsRef.current.add(m.id);
+        newIds.push(m.id);
+      }
+    }
+
+    if (newIds.length > 0 && newIds.length <= 5 && !loadingOlder && prevScrollHeightRef.current === 0) {
+      queueMicrotask(() => {
+        setArrivingIds((prev) => {
+          const next = new Set(prev);
+          for (const id of newIds) next.add(id);
+          return next;
+        });
+      });
+      const timer = window.setTimeout(() => {
+        setArrivingIds((prev) => {
+          const next = new Set(prev);
+          for (const id of newIds) next.delete(id);
+          return next;
+        });
+      }, 220);
+      return () => window.clearTimeout(timer);
+    }
+  }, [conversation, loadingMessages, loadingOlder, messages]);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current !== null) {
+        window.clearTimeout(longPressTimerRef.current);
+      }
+      if (copyResetTimerRef.current !== null) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const el = listRef.current;
@@ -253,6 +359,8 @@ export function ChatConversationPane({
         setSearchOpen(false);
         setSearchQuery("");
         setActiveMatchIdx(0);
+        setOpenMenuMsgId(null);
+        setLongPressedMsgId(null);
         setAtBottom(true);
         const start = messages.length <= 60 ? 0 : Math.max(0, messages.length - 50);
         const end = messages.length;
@@ -265,18 +373,26 @@ export function ChatConversationPane({
         el.scrollTop += diff;
       }
       prevScrollHeightRef.current = 0;
+      queueMicrotask(() => updateWindowFromScroll());
     } else if (lenDelta > 0 && atBottom) {
-      el.scrollTop = el.scrollHeight;
       queueMicrotask(() => {
         const start = messages.length <= 60 ? 0 : Math.max(0, messages.length - 50);
         const end = messages.length;
         const { topSpacer, bottomSpacer } = computeSpacers(start, end);
         setScrollWindow({ start, end, topSpacer, bottomSpacer });
+        window.requestAnimationFrame(() => {
+          const node = listRef.current;
+          if (node) {
+            node.scrollTop = node.scrollHeight;
+          }
+        });
       });
+    } else if (lenDelta > 0) {
+      queueMicrotask(() => updateWindowFromScroll());
     }
 
     prevLenRef.current = messages.length;
-  }, [atBottom, computeSpacers, conversation, messages.length]);
+  }, [atBottom, computeSpacers, conversation, messages.length, updateWindowFromScroll]);
 
   useEffect(() => {
     const ta = textareaRef.current;
@@ -354,6 +470,75 @@ export function ChatConversationPane({
     );
     target?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [activeMatchId]);
+
+  async function copyMessageText(msg: ChatMessageItem) {
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(msg.body);
+        copied = true;
+      }
+    } catch {
+      copied = false;
+    }
+    if (!copied && typeof document !== "undefined") {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = msg.body;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        copied = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch {
+        copied = false;
+      }
+    }
+    if (copied) {
+      setCopiedMsgId(msg.id);
+      setCopyAnnouncement("");
+      window.requestAnimationFrame(() => {
+        setCopyAnnouncement(t("chat.copiedFeedback"));
+      });
+      if (copyResetTimerRef.current !== null) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+      copyResetTimerRef.current = window.setTimeout(() => {
+        setCopiedMsgId(null);
+      }, 1200);
+    }
+  }
+
+  function insertEmojiAtCursor(emoji: string) {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setDraft((prev) => `${prev}${emoji}`);
+      return;
+    }
+    const start = ta.selectionStart ?? draft.length;
+    const end = ta.selectionEnd ?? draft.length;
+    const next = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`;
+    setDraft(next);
+    window.requestAnimationFrame(() => {
+      ta.focus();
+      const caret = start + emoji.length;
+      try {
+        ta.setSelectionRange(caret, caret);
+      } catch {
+        // Ignore selection errors on unsupported elements
+      }
+    });
+  }
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressOriginRef.current = null;
+  }
 
   function openSearchBar() {
     setSearchOpen(true);
@@ -449,12 +634,15 @@ export function ChatConversationPane({
       className="flex h-full min-h-0 flex-col bg-transparent"
     >
       {ConfirmDialogComponent}
+      <div className="sr-only" aria-live="polite" data-testid="chat-copy-live">
+        {copyAnnouncement}
+      </div>
 
       <header
         data-testid="chat-conv-header"
-        className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-card/75 px-2 py-2 sm:px-4"
+        className="flex shrink-0 items-center justify-between gap-1 border-b border-border/70 bg-card/75 px-1.5 py-1.5 sm:gap-2 sm:px-4 sm:py-2"
       >
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2.5">
           {showMobileBack ? (
             <Button
               type="button"
@@ -472,7 +660,7 @@ export function ChatConversationPane({
           {isDm && conversation.peer ? (
             <Link
               href={`/u/${conversation.peer.id}`}
-              className="flex min-w-0 items-center gap-2.5 py-0.5 hover:opacity-85"
+              className="flex min-w-0 flex-1 items-center gap-2 py-0.5 hover:opacity-85 sm:gap-2.5"
             >
               <div className="relative shrink-0">
                 <UserAvatar user={conversation.peer} size="sm" shape="circle" />
@@ -483,7 +671,7 @@ export function ChatConversationPane({
                   />
                 ) : null}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate font-heading text-sm font-bold text-foreground sm:text-base">
                   {title}
                 </p>
@@ -502,7 +690,7 @@ export function ChatConversationPane({
               </div>
             </Link>
           ) : (
-            <div className="flex min-w-0 items-center gap-2.5 py-0.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2 py-0.5 sm:gap-2.5">
               <span
                 className={cn(
                   "grid size-9 shrink-0 place-items-center rounded-xl border text-base",
@@ -511,7 +699,7 @@ export function ChatConversationPane({
               >
                 {conversation.emoji || "🌙"}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate font-heading text-sm font-bold text-foreground sm:text-base">
                   {title}
                 </p>
@@ -812,7 +1000,7 @@ export function ChatConversationPane({
           ref={listRef}
           onScroll={updateWindowFromScroll}
           data-testid="chat-messages-scroll"
-          className={cn(styles.chatScroll, "h-full overflow-y-auto px-2.5 py-3 sm:px-5 sm:py-4")}
+          className={cn(styles.chatScroll, "h-full overflow-y-auto px-2 py-2 sm:px-4 sm:py-3")}
         >
           {hasMore && !loadingOlder ? (
             <div className="pb-3 text-center">
@@ -853,7 +1041,7 @@ export function ChatConversationPane({
               </p>
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="flex flex-col">
               {topSpacer > 0 ? <div style={{ height: topSpacer }} aria-hidden="true" /> : null}
 
               {visibleMessages.map((msg, localIdx) => {
@@ -869,7 +1057,7 @@ export function ChatConversationPane({
                   msg.type === "TEXT" &&
                   prev.senderId === msg.senderId &&
                   new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime() <
-                    3 * 60_000;
+                    5 * 60_000;
 
                 const msgTime = new Date(msg.createdAt).getTime();
                 const receiptMembers =
@@ -920,10 +1108,146 @@ export function ChatConversationPane({
                   : msg.sender?.name || t("chatInvite.unknownInviter");
 
                 const segments = parseSafeMessageSegments(msg.body);
+                const isArriving = arrivingIds.has(msg.id);
+                const hasMenu =
+                  !msg.deleted && !msg.decryptionFailed && !msg.optimisticState;
+                const menuSide = (own ? dir === "ltr" : dir === "rtl") ? "left" : "right";
+
+                const actionTriggerEl = hasMenu ? (
+                  <DropdownMenu
+                    open={openMenuMsgId === msg.id}
+                    onOpenChange={(open) => {
+                      setOpenMenuMsgId(open ? msg.id : null);
+                      if (!open) {
+                        setLongPressedMsgId((cur) => (cur === msg.id ? null : cur));
+                      }
+                    }}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        data-testid={`msg-actions-trigger-${msg.id}`}
+                        aria-label={t("chat.messageActionsLabel")}
+                        className={cn(
+                          "shrink-0 items-center justify-center rounded-full text-muted-foreground transition-opacity hover:bg-muted/60 hover:text-foreground focus-visible:opacity-100",
+                          longPressedMsgId === msg.id || openMenuMsgId === msg.id
+                            ? "inline-flex size-11 md:size-7 opacity-100"
+                            : "hidden md:inline-flex md:size-7 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+                        )}
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      side={menuSide}
+                      align="center"
+                      sideOffset={6}
+                      collisionPadding={12}
+                      avoidCollisions
+                      onCloseAutoFocus={(e) => {
+                        if (focusComposerOnMenuCloseRef.current) {
+                          e.preventDefault();
+                          focusComposerOnMenuCloseRef.current = false;
+                          textareaRef.current?.focus();
+                        }
+                      }}
+                      className="w-44"
+                    >
+                      <DropdownMenuItem
+                        data-testid={`copy-msg-${msg.id}`}
+                        onClick={() => void copyMessageText(msg)}
+                        className="min-h-11 gap-2 md:min-h-9"
+                      >
+                        {copiedMsgId === msg.id ? (
+                          <>
+                            <Check className="size-4 text-primary" />
+                            <span>{t("chat.copiedFeedback")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="size-4" />
+                            <span>{t("chat.copyAction")}</span>
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-testid={`reply-msg-${msg.id}`}
+                        onClick={() => {
+                          focusComposerOnMenuCloseRef.current = true;
+                          setReplyTo(msg);
+                          textareaRef.current?.focus();
+                        }}
+                        className="min-h-11 gap-2 md:min-h-9"
+                      >
+                        <Reply className="size-4" />
+                        <span>{t("chat.replyAction")}</span>
+                      </DropdownMenuItem>
+                      {own ? (
+                        <>
+                          <DropdownMenuItem
+                            data-testid={`edit-msg-${msg.id}`}
+                            onClick={() => {
+                              setEditingId(msg.id);
+                              setEditingDraft(msg.body);
+                            }}
+                            className="min-h-11 gap-2 md:min-h-9"
+                          >
+                            <Pencil className="size-4" />
+                            <span>{t("chat.editAction")}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            data-testid={`delete-msg-${msg.id}`}
+                            variant="destructive"
+                            onClick={() => void handleDelete(msg)}
+                            className="min-h-11 gap-2 md:min-h-9"
+                          >
+                            <Trash2 className="size-4" />
+                            <span>{t("chat.deleteAction")}</span>
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <>
+                          {onReportMessage ? (
+                            <DropdownMenuItem
+                              data-testid={`report-msg-${msg.id}`}
+                              onClick={() => onReportMessage(msg)}
+                              className="min-h-11 gap-2 md:min-h-9"
+                            >
+                              <Flag className="size-4" />
+                              <span>{t("chat.reportBtn")}</span>
+                            </DropdownMenuItem>
+                          ) : null}
+                          {conversation?.type === "PUBLIC" &&
+                          onModeratorDeleteMessage ? (
+                            <DropdownMenuItem
+                              data-testid={`mod-delete-msg-${msg.id}`}
+                              variant="destructive"
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: t("chat.moderatorDeleteConfirmTitle"),
+                                  description: t("chat.moderatorDeleteConfirmDesc"),
+                                  variant: "destructive",
+                                });
+                                if (ok) {
+                                  await onModeratorDeleteMessage(msg.id);
+                                }
+                              }}
+                              className="min-h-11 gap-2 md:min-h-9"
+                            >
+                              <Trash2 className="size-4" />
+                              <span>{t("chat.moderatorDeleteMsg")}</span>
+                            </DropdownMenuItem>
+                          ) : null}
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null;
 
                 return (
                   <div
                     key={msg.id}
+                    className={styles.messageRow}
                     ref={(node) => {
                       if (node) {
                         const h = node.getBoundingClientRect().height;
@@ -932,7 +1256,7 @@ export function ChatConversationPane({
                     }}
                   >
                     {showDay ? (
-                      <div className="my-3 flex items-center justify-center">
+                      <div className="my-2.5 flex items-center justify-center">
                         <span className="rounded-full border border-border/70 bg-card/85 px-3 py-0.5 text-[11px] font-medium text-muted-foreground">
                           {dateFormatter.format(new Date(msg.createdAt))}
                         </span>
@@ -940,7 +1264,7 @@ export function ChatConversationPane({
                     ) : null}
 
                     {msg.type === "SYSTEM" ? (
-                      <div className="my-2 text-center text-xs text-muted-foreground">
+                      <div className="my-1.5 text-center text-xs text-muted-foreground">
                         {msg.body}
                       </div>
                     ) : msg.type === "ROOM_INVITE" && msg.invite ? (
@@ -1026,15 +1350,22 @@ export function ChatConversationPane({
                     ) : (
                       <div
                         data-testid={`chat-message-${msg.id}`}
+                        data-group-first={!sameGroup ? "true" : "false"}
                         className={cn(
-                          styles.messageEnter,
-                          "group flex items-end gap-2",
-                          own ? "justify-end" : "justify-start",
-                          sameGroup ? "mt-0.5" : "mt-2.5",
+                          "group flex items-start",
+                          !isDm ? "gap-2" : "",
+                          own ? "justify-end pe-2" : isDm ? "justify-start ps-2" : "justify-start",
+                          absIndex === 0 || showDay ? "mt-0" : sameGroup ? "mt-[2px]" : "mt-2",
+                          isArriving
+                            ? cn(
+                                styles.messageArrival,
+                                own ? styles.messageArrivalOwn : styles.messageArrivalOther,
+                              )
+                            : "",
                         )}
                       >
-                        {!own ? (
-                          <div className="w-8 shrink-0">
+                        {!own && !isDm ? (
+                          <div className="w-8 shrink-0 pt-0.5">
                             {!sameGroup && msg.sender && !msg.isAnonymized ? (
                               <Link href={`/u/${msg.sender.id}`} className="block">
                                 <UserAvatar
@@ -1049,20 +1380,23 @@ export function ChatConversationPane({
 
                         <div
                           className={cn(
-                            "flex max-w-[82%] flex-col sm:max-w-[70%]",
+                            "flex min-w-0 flex-col",
+                            isDm || own
+                              ? "max-w-[90%] md:max-w-[60%]"
+                              : "max-w-[min(90%,calc(100%-2.75rem))] md:max-w-[60%]",
                             own ? "items-end" : "items-start",
                           )}
                         >
-                          {!own && !sameGroup ? (
+                          {!own && !isDm && !sameGroup ? (
                             msg.sender && !msg.isAnonymized ? (
                               <Link
                                 href={`/u/${msg.sender.id}`}
-                                className="mb-1 px-1 text-xs font-semibold text-primary hover:underline"
+                                className="mb-0.5 px-1 text-xs font-semibold text-primary hover:underline"
                               >
                                 {senderName}
                               </Link>
                             ) : (
-                              <span className="mb-1 px-1 text-xs font-semibold text-muted-foreground">
+                              <span className="mb-0.5 px-1 text-xs font-semibold text-muted-foreground">
                                 {senderName}
                               </span>
                             )
@@ -1070,317 +1404,251 @@ export function ChatConversationPane({
 
                           <div
                             className={cn(
-                              "relative rounded-2xl border px-3.5 py-2 text-sm leading-relaxed break-words",
-                              own
-                                ? "rounded-ee-md border-primary/25 bg-primary text-primary-foreground"
-                                : "rounded-es-md border-border/75 bg-card/90 text-foreground",
-                              matchedSet.has(msg.id)
-                                ? msg.id === activeMatchId
-                                  ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
-                                  : "ring-1 ring-primary/50"
-                                : "",
-                              msg.optimisticState === "sending" ? "opacity-75" : "",
-                              msg.optimisticState === "failed"
-                                ? "border-destructive bg-destructive/15 text-foreground"
-                                : "",
+                              "flex max-w-full items-center gap-1",
+                              own ? "flex-row" : "flex-row",
                             )}
                           >
-                            {msg.replyTo ? (
-                              <div
-                                className={cn(
-                                  "mb-1.5 rounded-xl border-s-2 px-2.5 py-1 text-xs",
-                                  own
-                                    ? "border-primary-foreground/50 bg-primary-foreground/10 text-primary-foreground/90"
-                                    : "border-primary bg-muted/60 text-muted-foreground",
-                                )}
-                              >
-                                <p className="font-semibold">
-                                  {msg.replyTo.senderName || t("chat.anonymizedAuthor")}
-                                </p>
-                                <p dir="auto" className="truncate">
-                                  {msg.replyTo.deleted
-                                    ? t("chat.deletedMessage")
-                                    : msg.replyTo.decryptionFailed
-                                      ? t("chat.messageUnavailable")
-                                      : msg.replyTo.body}
-                                </p>
-                              </div>
+                            {own ? (
+                              <>
+                                {copiedMsgId === msg.id ? (
+                                  <span
+                                    data-testid={`msg-copied-badge-${msg.id}`}
+                                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-card/95 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm animate-in fade-in zoom-in-95 duration-150"
+                                  >
+                                    <Check className="size-3" />
+                                    <span>{t("chat.copiedFeedback")}</span>
+                                  </span>
+                                ) : null}
+                                {actionTriggerEl}
+                              </>
                             ) : null}
-
-                            {editingId === msg.id ? (
-                              <div className="space-y-2 min-w-48">
-                                <textarea
-                                  dir="auto"
-                                  value={editingDraft}
-                                  onChange={(e) => setEditingDraft(e.target.value)}
-                                  maxLength={2000}
-                                  rows={2}
-                                  className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring md:text-sm"
-                                />
-                                <div className="flex justify-end gap-1.5">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setEditingId(null)}
-                                    className="h-11 px-3 text-xs text-foreground"
-                                  >
-                                    {t("chat.cancelEdit")}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => void handleSaveEdit(msg.id)}
-                                    className="h-11 bg-primary px-3 text-xs text-primary-foreground"
-                                  >
-                                    {t("chat.saveEdit")}
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : msg.deleted ? (
-                              <p className="italic opacity-75">
-                                {t("chat.deletedMessage")}
-                              </p>
-                            ) : msg.decryptionFailed ? (
-                              <p className="italic opacity-75">
-                                {t("chat.messageUnavailable")}
-                              </p>
-                            ) : (
-                              <p dir="auto" className="whitespace-pre-wrap">
-                                {segments.map((seg, i) =>
-                                  seg.type === "link" ? (
-                                    <a
-                                      key={i}
-                                      href={seg.href}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={cn(
-                                        "underline underline-offset-2",
-                                        own ? "text-primary-foreground" : "text-primary",
-                                      )}
-                                    >
-                                      {renderHighlightedText(seg.value)}
-                                    </a>
-                                  ) : (
-                                    <span key={i}>{renderHighlightedText(seg.value)}</span>
-                                  ),
-                                )}
-                              </p>
-                            )}
 
                             <div
-                              data-testid={`msg-bubble-meta-${msg.id}`}
+                              data-testid={`msg-bubble-${msg.id}`}
+                              data-tail={!sameGroup ? "true" : "false"}
+                              onPointerDown={(e) => {
+                                if (!hasMenu || e.pointerType === "mouse") return;
+                                clearLongPressTimer();
+                                longPressOriginRef.current = { x: e.clientX, y: e.clientY };
+                                longPressTimerRef.current = window.setTimeout(() => {
+                                  setLongPressedMsgId(msg.id);
+                                  setOpenMenuMsgId(msg.id);
+                                  longPressTimerRef.current = null;
+                                }, 420);
+                              }}
+                              onPointerMove={(e) => {
+                                const origin = longPressOriginRef.current;
+                                if (!origin) return;
+                                if (
+                                  Math.abs(e.clientX - origin.x) > 8 ||
+                                  Math.abs(e.clientY - origin.y) > 8
+                                ) {
+                                  clearLongPressTimer();
+                                }
+                              }}
+                              onPointerUp={clearLongPressTimer}
+                              onPointerCancel={clearLongPressTimer}
                               className={cn(
-                                "mt-1 flex items-center justify-end gap-1 text-[10px] leading-none",
-                                own ? "text-primary-foreground/80" : "text-muted-foreground",
+                                "relative min-w-0 rounded-2xl border px-3 py-1.5 text-sm leading-relaxed [overflow-wrap:anywhere]",
+                                !sameGroup
+                                  ? own
+                                    ? "rounded-se-[4px]"
+                                    : "rounded-ss-[4px]"
+                                  : "",
+                                own
+                                  ? "border-primary/25 bg-primary text-primary-foreground"
+                                  : "border-border/75 bg-card text-foreground",
+                                matchedSet.has(msg.id)
+                                  ? msg.id === activeMatchId
+                                    ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                    : "ring-1 ring-primary/50"
+                                  : "",
+                                msg.optimisticState === "sending" ? "opacity-80" : "",
+                                msg.optimisticState === "failed"
+                                  ? "border-destructive bg-destructive/15 text-foreground"
+                                  : "",
                               )}
                             >
-                              {msg.editedAt && !msg.deleted ? (
-                                <span>{t("chat.editedTag")}</span>
+                              {!sameGroup ? (
+                                <BubbleTail
+                                  own={own}
+                                  failed={msg.optimisticState === "failed"}
+                                  dir={dir}
+                                />
                               ) : null}
-                              {msg.optimisticState === "sending" ? (
-                                <span>{t("chat.sending")}</span>
-                              ) : null}
-                              <span dir="ltr">{timeFormatter.format(new Date(msg.createdAt))}</span>
-                              {showReceipt ? (
-                                <span
-                                  data-testid={`msg-receipt-${msg.id}`}
-                                  data-delivery-state={deliveryState}
-                                  className="inline-flex items-center"
-                                >
-                                  {deliveryState === "seen" ? (
-                                    <CheckCheck
-                                      className="size-3.5 text-primary-foreground drop-shadow-[0_0_2px_currentColor]"
-                                      strokeWidth={2.5}
-                                      aria-hidden="true"
-                                    />
-                                  ) : deliveryState === "delivered" ? (
-                                    <CheckCheck
-                                      className="size-3.5 text-primary-foreground/65"
-                                      aria-hidden="true"
-                                    />
-                                  ) : (
-                                    <Check
-                                      className="size-3.5 text-primary-foreground/65"
-                                      aria-hidden="true"
-                                    />
+
+                              {msg.replyTo ? (
+                                <div
+                                  className={cn(
+                                    "mb-1.5 rounded-xl border-s-2 px-2.5 py-1 text-xs",
+                                    own
+                                      ? "border-primary-foreground/50 bg-primary-foreground/10 text-primary-foreground/90"
+                                      : "border-primary bg-muted/60 text-muted-foreground",
                                   )}
-                                  <span className="sr-only">
-                                    {deliveryState === "seen"
-                                      ? t("chat.seenReceipt")
-                                      : deliveryState === "delivered"
-                                        ? t("chat.deliveredReceipt")
-                                        : t("chat.sentReceipt")}
-                                  </span>
-                                </span>
+                                >
+                                  <p className="font-semibold">
+                                    {msg.replyTo.senderName || t("chat.anonymizedAuthor")}
+                                  </p>
+                                  <p dir="auto" className="truncate">
+                                    {msg.replyTo.deleted
+                                      ? t("chat.deletedMessage")
+                                      : msg.replyTo.decryptionFailed
+                                        ? t("chat.messageUnavailable")
+                                        : msg.replyTo.body}
+                                  </p>
+                                </div>
                               ) : null}
-                            </div>
-                          </div>
 
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1 px-1 text-[11px] text-muted-foreground">
-                            {msg.optimisticState === "failed" ? (
-                              <button
-                                type="button"
-                                onClick={() => void onRetryMessage(msg)}
-                                className="inline-flex min-h-11 items-center gap-1 px-2 font-semibold text-destructive hover:underline"
+                              {editingId === msg.id ? (
+                                <div className="min-w-48 space-y-2">
+                                  <textarea
+                                    dir="auto"
+                                    value={editingDraft}
+                                    onChange={(e) => setEditingDraft(e.target.value)}
+                                    maxLength={2000}
+                                    rows={2}
+                                    className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring md:text-sm"
+                                  />
+                                  <div className="flex justify-end gap-1.5">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingId(null)}
+                                      className="h-11 px-3 text-xs text-foreground"
+                                    >
+                                      {t("chat.cancelEdit")}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => void handleSaveEdit(msg.id)}
+                                      className="h-11 bg-primary px-3 text-xs text-primary-foreground"
+                                    >
+                                      {t("chat.saveEdit")}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : msg.deleted ? (
+                                <p className="italic opacity-75">
+                                  {t("chat.deletedMessage")}
+                                </p>
+                              ) : msg.decryptionFailed ? (
+                                <p className="italic opacity-75">
+                                  {t("chat.messageUnavailable")}
+                                </p>
+                              ) : (
+                                <p dir="auto" className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                                  {segments.map((seg, i) =>
+                                    seg.type === "link" ? (
+                                      <a
+                                        key={i}
+                                        href={seg.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={cn(
+                                          "underline underline-offset-2 [overflow-wrap:anywhere]",
+                                          own ? "text-primary-foreground" : "text-primary",
+                                        )}
+                                      >
+                                        {renderHighlightedText(seg.value)}
+                                      </a>
+                                    ) : (
+                                      <span key={i}>{renderHighlightedText(seg.value)}</span>
+                                    ),
+                                  )}
+                                </p>
+                              )}
+
+                              <div
+                                data-testid={`msg-bubble-meta-${msg.id}`}
+                                className={cn(
+                                  "mt-0.5 flex items-center justify-end gap-1 text-[10px] leading-none",
+                                  own && msg.optimisticState !== "failed"
+                                    ? "text-primary-foreground/80"
+                                    : "text-muted-foreground",
+                                )}
                               >
-                                <RotateCw className="size-3.5" />
-                                {t("chat.retrySend")}
-                              </button>
-                            ) : null}
-
-                            {!msg.deleted && !msg.decryptionFailed && !msg.optimisticState ? (
-                              <>
-                                <div className="hidden items-center gap-1 opacity-0 transition-opacity md:inline-flex md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                                {msg.editedAt && !msg.deleted ? (
+                                  <span>{t("chat.editedTag")}</span>
+                                ) : null}
+                                <span dir="ltr">{timeFormatter.format(new Date(msg.createdAt))}</span>
+                                {conversation.type !== "PUBLIC" &&
+                                own &&
+                                msg.optimisticState === "sending" ? (
+                                  <span
+                                    data-testid={`msg-receipt-${msg.id}`}
+                                    data-delivery-state="sending"
+                                    className="inline-flex items-center"
+                                  >
+                                    <Loader2
+                                      className="size-3 animate-spin text-primary-foreground/80"
+                                      aria-hidden="true"
+                                    />
+                                    <span className="sr-only">{t("chat.sending")}</span>
+                                  </span>
+                                ) : conversation.type !== "PUBLIC" &&
+                                  own &&
+                                  msg.optimisticState === "failed" ? (
                                   <button
                                     type="button"
-                                    onClick={() => setReplyTo(msg)}
-                                    aria-label={t("chat.replyAction")}
-                                    title={t("chat.replyAction")}
-                                    className="rounded p-1 hover:text-foreground"
+                                    data-testid={`msg-retry-${msg.id}`}
+                                    onClick={() => void onRetryMessage(msg)}
+                                    aria-label={t("chat.retrySend")}
+                                    title={t("chat.retrySend")}
+                                    className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-destructive hover:underline"
                                   >
-                                    <Reply className="size-3.5" />
+                                    <AlertCircle className="size-3.5" aria-hidden="true" />
+                                    <RotateCw className="size-3" aria-hidden="true" />
                                   </button>
-                                  {own ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingId(msg.id);
-                                          setEditingDraft(msg.body);
-                                        }}
-                                        aria-label={t("chat.editAction")}
-                                        title={t("chat.editAction")}
-                                        className="rounded p-1 hover:text-foreground"
-                                      >
-                                        <Pencil className="size-3.5" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => void handleDelete(msg)}
-                                        aria-label={t("chat.deleteAction")}
-                                        title={t("chat.deleteAction")}
-                                        className="rounded p-1 hover:text-destructive"
-                                      >
-                                        <Trash2 className="size-3.5" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {onReportMessage ? (
-                                        <button
-                                          type="button"
-                                          data-testid={`report-msg-${msg.id}`}
-                                          onClick={() => onReportMessage(msg)}
-                                          aria-label={t("chat.reportBtn")}
-                                          title={t("chat.reportBtn")}
-                                          className="rounded p-1 hover:text-destructive"
-                                        >
-                                          <Flag className="size-3.5" />
-                                        </button>
-                                      ) : null}
-                                      {conversation?.type === "PUBLIC" &&
-                                      onModeratorDeleteMessage ? (
-                                        <button
-                                          type="button"
-                                          data-testid={`mod-delete-msg-${msg.id}`}
-                                          onClick={async () => {
-                                            const ok = await confirm({
-                                              title: t("chat.moderatorDeleteConfirmTitle"),
-                                              description: t("chat.moderatorDeleteConfirmDesc"),
-                                              variant: "destructive",
-                                            });
-                                            if (ok) {
-                                              await onModeratorDeleteMessage(msg.id);
-                                            }
-                                          }}
-                                          aria-label={t("chat.moderatorDeleteMsg")}
-                                          title={t("chat.moderatorDeleteMsg")}
-                                          className="rounded p-1 hover:text-destructive"
-                                        >
-                                          <Trash2 className="size-3.5" />
-                                        </button>
-                                      ) : null}
-                                    </>
-                                  )}
-                                </div>
+                                ) : showReceipt ? (
+                                  <span
+                                    data-testid={`msg-receipt-${msg.id}`}
+                                    data-delivery-state={deliveryState}
+                                    className="inline-flex items-center"
+                                  >
+                                    {deliveryState === "seen" ? (
+                                      <CheckCheck
+                                        style={{ color: "var(--chat-seen)" }}
+                                        className="size-3.5 drop-shadow-[0_0_2px_color-mix(in_oklch,var(--chat-seen)_35%,transparent)]"
+                                        strokeWidth={2.5}
+                                        aria-hidden="true"
+                                      />
+                                    ) : deliveryState === "delivered" ? (
+                                      <CheckCheck
+                                        className="size-3.5 text-primary-foreground/70"
+                                        aria-hidden="true"
+                                      />
+                                    ) : (
+                                      <Check
+                                        className="size-3.5 text-primary-foreground/70"
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    <span className="sr-only">
+                                      {deliveryState === "seen"
+                                        ? t("chat.seenReceipt")
+                                        : deliveryState === "delivered"
+                                          ? t("chat.deliveredReceipt")
+                                          : t("chat.sentReceipt")}
+                                    </span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
 
-                                <div className="md:hidden">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <button
-                                        type="button"
-                                        aria-label={t("chat.messageActionsLabel")}
-                                        className="grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                                      >
-                                        <MoreHorizontal className="size-4" />
-                                      </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align={own ? "end" : "start"}>
-                                      <DropdownMenuItem
-                                        onClick={() => setReplyTo(msg)}
-                                        className="min-h-11 gap-2"
-                                      >
-                                        <Reply className="size-4" />
-                                        <span>{t("chat.replyAction")}</span>
-                                      </DropdownMenuItem>
-                                      {own ? (
-                                        <>
-                                          <DropdownMenuItem
-                                            onClick={() => {
-                                              setEditingId(msg.id);
-                                              setEditingDraft(msg.body);
-                                            }}
-                                            className="min-h-11 gap-2"
-                                          >
-                                            <Pencil className="size-4" />
-                                            <span>{t("chat.editAction")}</span>
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            variant="destructive"
-                                            onClick={() => void handleDelete(msg)}
-                                            className="min-h-11 gap-2"
-                                          >
-                                            <Trash2 className="size-4" />
-                                            <span>{t("chat.deleteAction")}</span>
-                                          </DropdownMenuItem>
-                                        </>
-                                      ) : (
-                                        <>
-                                          {onReportMessage ? (
-                                            <DropdownMenuItem
-                                              onClick={() => onReportMessage(msg)}
-                                              className="min-h-11 gap-2"
-                                            >
-                                              <Flag className="size-4" />
-                                              <span>{t("chat.reportBtn")}</span>
-                                            </DropdownMenuItem>
-                                          ) : null}
-                                          {conversation?.type === "PUBLIC" &&
-                                          onModeratorDeleteMessage ? (
-                                            <DropdownMenuItem
-                                              variant="destructive"
-                                              onClick={async () => {
-                                                const ok = await confirm({
-                                                  title: t("chat.moderatorDeleteConfirmTitle"),
-                                                  description: t("chat.moderatorDeleteConfirmDesc"),
-                                                  variant: "destructive",
-                                                });
-                                                if (ok) {
-                                                  await onModeratorDeleteMessage(msg.id);
-                                                }
-                                              }}
-                                              className="min-h-11 gap-2"
-                                            >
-                                              <Trash2 className="size-4" />
-                                              <span>{t("chat.moderatorDeleteMsg")}</span>
-                                            </DropdownMenuItem>
-                                          ) : null}
-                                        </>
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
+                            {!own ? (
+                              <>
+                                {actionTriggerEl}
+                                {copiedMsgId === msg.id ? (
+                                  <span
+                                    data-testid={`msg-copied-badge-${msg.id}`}
+                                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-card/95 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm animate-in fade-in zoom-in-95 duration-150"
+                                  >
+                                    <Check className="size-3" />
+                                    <span>{t("chat.copiedFeedback")}</span>
+                                  </span>
+                                ) : null}
                               </>
                             ) : null}
                           </div>
@@ -1443,6 +1711,7 @@ export function ChatConversationPane({
                 </div>
                 <button
                   type="button"
+                  data-testid="chat-reply-cancel-btn"
                   onClick={() => setReplyTo(null)}
                   aria-label={t("common.close")}
                   className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:text-foreground"
@@ -1452,36 +1721,19 @@ export function ChatConversationPane({
               </div>
             ) : null}
 
-            {emojiOpen ? (
-              <div
-                data-testid="chat-emoji-picker"
-                className="absolute bottom-full start-2 mb-2 grid grid-cols-6 gap-1 rounded-2xl border border-border/80 bg-card/95 p-2 shadow-layered sm:start-3 sm:grid-cols-8"
-              >
-                {CURATED_CHAT_EMOJIS.map((em) => (
-                  <button
-                    key={em}
-                    type="button"
-                    onClick={() => {
-                      setDraft((prev) => `${prev}${em}`);
-                      textareaRef.current?.focus();
-                    }}
-                    className="grid size-11 place-items-center rounded-xl text-lg hover:bg-primary/15"
-                  >
-                    {em}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
             <div className="flex items-end gap-2">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 data-testid="chat-emoji-btn"
+                aria-expanded={emojiOpen}
                 onClick={() => setEmojiOpen((v) => !v)}
                 aria-label={t("chat.emojiPickerLabel")}
-                className="size-11 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "size-11 shrink-0 rounded-xl hover:text-foreground",
+                  emojiOpen ? "bg-primary/15 text-primary" : "text-muted-foreground",
+                )}
               >
                 <Smile className="size-5" />
               </Button>
@@ -1521,6 +1773,13 @@ export function ChatConversationPane({
                 </Button>
               </ClickSpark>
             </div>
+
+            {emojiOpen ? (
+              <ChatEmojiPicker
+                onSelect={insertEmojiAtCursor}
+                onClose={() => setEmojiOpen(false)}
+              />
+            ) : null}
           </>
         )}
       </footer>

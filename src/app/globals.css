@@ -132,6 +132,7 @@
   --sand: oklch(0.95 0.02 85);
   --main: oklch(0.44 0.13 146); /* Light default brand green */
   --texture-color: var(--main); /* Light: green texture */
+  --chat-seen: oklch(0.86 0.13 226);
 
   --gradient-brass: linear-gradient(
     135deg,
@@ -222,6 +223,7 @@
   --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: oklch(0.82 0.14 84);
   --main: oklch(0.86 0.14 85); /* Black: warm gold */
+  --chat-seen: oklch(0.5 0.22 248);
 }
 
 /* 4 Official Themes:
@@ -267,6 +269,7 @@ html[data-theme="oasis"],
   --night-deep: oklch(0.15 0.025 265);
   --sand: oklch(0.95 0.02 85);
   --main: oklch(0.44 0.13 146); /* Light: brand green */
+  --chat-seen: oklch(0.86 0.13 226);
 }
 
 /* 2. Sunset */
@@ -314,6 +317,7 @@ html[data-theme="ochre"],
   --sidebar-ring: oklch(0.65 0.14 50);
   --main: oklch(0.55 0.15 48); /* Sunset: warm terracotta/orange */
   --texture-color: var(--main); /* Sunset: orange/terracotta texture */
+  --chat-seen: oklch(0.87 0.13 226);
 }
 
 /* 3. Amoled (Pure #000, Green main titles, Gold secondary) */
@@ -372,6 +376,7 @@ html[data-theme="obsidian"],
   --sidebar-ring: oklch(0.72 0.17 148);
   --main: oklch(0.76 0.18 147); /* Amoled: vibrant green */
   --texture-color: var(--main); /* Amoled: vibrant green texture */
+  --chat-seen: oklch(0.38 0.23 252);
 }
 
 /* 4. Black (#111 background, Gold main titles, Green secondary) */
@@ -429,6 +434,7 @@ html[data-theme="ember"],
   --sidebar-ring: oklch(0.84 0.14 84);
   --main: oklch(0.86 0.14 85); /* Black: gold */
   --texture-color: var(--main); /* Black: gold texture */
+  --chat-seen: oklch(0.5 0.22 248);
 }
 
 @keyframes float {

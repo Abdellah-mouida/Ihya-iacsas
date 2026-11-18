@@ -500,6 +500,9 @@ test.describe("12-T9: Full Multi-Context Chat E2E (A, B, C, Moderator)", () => {
       await pageMod
         .locator(`[data-testid="chat-message-${pubMsgPayload.message.id}"]`)
         .hover();
+      await pageMod
+        .locator(`[data-testid="msg-actions-trigger-${pubMsgPayload.message.id}"]`)
+        .click();
       const modDelBtn = pageMod.locator(
         `[data-testid="mod-delete-msg-${pubMsgPayload.message.id}"]`,
       );

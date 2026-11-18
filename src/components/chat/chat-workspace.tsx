@@ -136,6 +136,14 @@ export function ChatWorkspace({
   }, []);
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prefixMatch = document.title.match(/^(\(\d+\)\s*)/);
+    const prefix = prefixMatch ? prefixMatch[1] : "";
+    const pageName = isPublicOnly ? t("chat.pageTitle") : t("chat.messagesPageTitle");
+    document.title = `${prefix}${pageName} — ${t("nav.brand")}`;
+  }, [isPublicOnly, t]);
+
+  useEffect(() => {
     messagesByConvRef.current = messagesByConv;
   }, [messagesByConv]);
 

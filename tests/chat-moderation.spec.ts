@@ -463,6 +463,12 @@ test("browser moderation flow, global chatEnabled switch, and /privacy messaging
         timeout: 20_000,
       });
 
+      await bobLogin.page
+        .locator(`[data-testid="chat-message-${sendJson.message.id}"]`)
+        .hover();
+      await bobLogin.page
+        .locator(`[data-testid="msg-actions-trigger-${sendJson.message.id}"]`)
+        .click();
       const reportBtn = bobLogin.page.locator(
         `[data-testid="report-msg-${sendJson.message.id}"]`,
       );

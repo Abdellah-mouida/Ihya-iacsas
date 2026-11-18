@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { PageBackground } from "@/components/common/page-background";
@@ -10,6 +11,12 @@ import { listConversationsForUser } from "@/lib/chat/messages";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "الرسائل الخاصة — إحياء | Ihyaa Private messages",
+  description:
+    "الرسائل الخاصة والغرف المغلقة في برنامج إحياء. Private messages and invite-only rooms.",
+};
 
 export default async function MessagesPage({
   searchParams,
