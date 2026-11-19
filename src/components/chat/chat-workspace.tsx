@@ -1328,10 +1328,11 @@ export function ChatWorkspace({
         onOpenChange={setCreateRoomOpen}
         friends={friendsData.friends}
         onCreated={(roomId) => {
-          void fetchConversations();
           setActiveTab("rooms");
-          setSelectedId(roomId);
           setMobilePane("thread");
+          void fetchConversations().then(() => {
+            setSelectedId(roomId);
+          });
         }}
       />
 

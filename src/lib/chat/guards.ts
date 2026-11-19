@@ -7,8 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { touchUserActive } from "@/lib/activity";
 import { ChatServiceError } from "./friends";
 
-export function invalidateChatEnabledCache(): void {}
-
 export async function isChatEnabled(): Promise<boolean> {
   const row = await prisma.systemSetting.findUnique({
     where: { key: "chatEnabled" },

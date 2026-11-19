@@ -6,7 +6,6 @@ import { decryptMessage, encryptMessage, loadKeyringFromEnv } from "./crypto-cor
 import { ChatServiceError } from "./friends";
 import { canUserAccessConversation } from "./realtime/channels";
 import { adminChannel, conversationChannel, userChannel } from "./realtime/types";
-import { invalidateChatEnabledCache } from "./guards";
 import { publishChange } from "@/lib/realtime/publish";
 import { notify, notifyStaffModerationReport } from "@/lib/notifications";
 
@@ -734,7 +733,6 @@ export async function setGlobalChatEnabled(params: {
     update: { value },
     create: { key: "chatEnabled", value },
   });
-  invalidateChatEnabledCache();
 
   await logActivity({
     actorId: params.actor.id,
