@@ -127,7 +127,7 @@ function isCrossOriginApiMutation(request: NextRequest): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/v1")) {
+  if (pathname.startsWith("/api/v1") || pathname.startsWith("/.well-known/")) {
     return NextResponse.next();
   }
 

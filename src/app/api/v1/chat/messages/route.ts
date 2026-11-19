@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     }
 
     const cursor = searchParams.get("cursor")?.trim() || null;
+    const wire = searchParams.get("wire") === "1";
     const rawLimit = Number(searchParams.get("limit") ?? DEFAULT_PAGE_SIZE);
     const limit = Number.isFinite(rawLimit)
       ? Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(rawLimit)))
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
       conversationId,
       cursor,
       limit,
+      wire,
     });
     return jsonOk(result);
   });

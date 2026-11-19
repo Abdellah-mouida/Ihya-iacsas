@@ -10,8 +10,8 @@ Requests enter through `src/middleware.ts` before reaching App Router pages, int
 
 1. **Static & Media Bypass (`config.matcher`)**:
    `_next/static`, `_next/image`, `favicon.ico`, `icon.png`, `apple-icon.png`, `/images/*`, and static extensions (`svg|png|jpg|jpeg|gif|webp|avif|ico`) skip middleware completely.
-2. **External REST API Bypass (`/api/v1/*`)**:
-   Middleware immediately returns `NextResponse.next()` for `/api/v1/*` so Bearer-authenticated clients (mobile, React SPA, external services) are never redirected to `/login`, never blocked by cookie-session CSRF origin checks, and never forced through web onboarding redirects. Security for `/api/v1/*` is enforced per handler via `withV1()`, `requireApiActor()`, `handleCorsPreflight()`, Zod schemas, and `checkRateLimit()`.
+2. **External REST API & App Link Bypass (`/api/v1/*`, `/.well-known/*`)**:
+   Middleware immediately returns `NextResponse.next()` for `/api/v1/*` and `/.well-known/*` so Bearer-authenticated clients (mobile, React SPA, external services) and iOS/Android Universal/App Link verifiers are never redirected to `/login` or `/onboarding`, and never blocked by cookie-session CSRF origin checks. Security for `/api/v1/*` is enforced per handler via `withV1()`, `requireApiActor()`, `handleCorsPreflight()`, Zod schemas, and `checkRateLimit()`.
 3. **Cross-Origin Mutation CSRF Guard (Internal Cookie APIs)**:
    `POST`, `PATCH`, `PUT`, and `DELETE` requests to `/api/chat/*`, `/api/admin/*`, `/api/notifications*`, `/api/upload*`, `/api/user/*`, and `/api/themes*` are rejected with `403` when `sec-fetch-site: cross-site` or when the `Origin` header host does not match `x-forwarded-host` / `host`.
 4. **Legacy Redirects**:
@@ -90,6 +90,8 @@ All mutating routes below require a valid NextAuth cookie session and pass the m
 
 | Method(s) | Path | Auth / Permission | Purpose |
 |---|---|---|---|
+| `GET` | `/.well-known/assetlinks.json` | Public | Android App Links Digital Asset Links JSON (`ANDROID_APP_PACKAGE`, `ANDROID_SHA256_CERT_FINGERPRINTS`) |
+| `GET` | `/.well-known/apple-app-site-association` | Public | iOS Universal Links AASA JSON (`APPLE_APP_ID`) |
 | `GET`, `POST` | `/api/auth/[...nextauth]` | Public / NextAuth | Auth.js v5 session, CSRF, credentials & Google OAuth callbacks |
 | `GET` | `/api/themes` | Public (read-only) | Active theme metadata list |
 | `POST` | `/api/upload` | Authenticated | Upload validated image (magic bytes + rate limit) to Cloudinary; returns `{ url, publicId, uploadProof }` |
@@ -164,29 +166,29 @@ Designed for mobile apps, React SPAs, and third-party integrations. Built on the
 - **Base path**: `/api/v1`
 - **Authentication**: `Authorization: Bearer <accessToken>` (HS256 JWT signed with `API_TOKEN_SECRET`, min 32 chars, `15m` TTL). Every `requireApiActor()` call verifies signature, `iss`/`aud`/`token_type: "api_access"`, `ApiSession` non-revoked/non-expired, and live `User.sessionVersion` + `role` in PostgreSQL.
 - **Refresh Tokens**: Opaque 48-byte tokens stored SHA-256 hashed in `ApiRefreshToken` (`30d` TTL), bound to `ApiSession` + `familyId`. Refresh rotates atomically (`usedAt` + `replacedById`). Reusing a rotated/revoked token revokes the entire token family + session (`REUSE_DETECTED`).
-- **CORS (`src/lib/api/v1/cors.ts`)**: Strict exact-origin allowlist from `API_ALLOWED_ORIGINS` (comma-separated). Wildcard `*` is rejected. Non-browser clients (no `Origin` header) are allowed; disallowed browser origins receive `403 CORS_ORIGIN_DENIED` on preflight and no `Access-Control-Allow-Origin` header.
-- **Response Envelope**:
-  - Success: `{ "ok": true, "data": { ... } }` with `Cache-Control: no-store` (unless public cacheable GET).
-  - Error: `{ "ok": false, "error": { "code": "...", "message": "...", "details"?: ... } }` with safe status codes (`400`, `401`, `403`, `404`, `409`, `429`, `500`).
+- **CORS (`src/lib/api/v1/cors.ts`)**: Strict exact-origin allowlist from `API_ALLOWED_ORIGINS` (comma-separated). Wildcard `*` is rejected. Non-browser clients (no `Origin` header) are allowed; disallowed browser origins receive `403 CORS_FORBIDDEN` on preflight and no `Access-Control-Allow-Origin` header.
+- **Response Envelope (`src/lib/api/v1/errors.ts`)**:
+  - Success: returns the JSON payload object directly (`{ ... }`) with `Cache-Control: no-store, max-age=0` (unless overridden, e.g. public cacheable GETs `/api/v1/events`, `/api/v1/gallery`, `/api/v1/carousel`, `/api/v1/branches`).
+  - Error: `{ "error": { "code": "...", "message": "...", "details"?: ... } }` with safe status codes (`400`, `401`, `403`, `404`, `409`, `429`, `500`, `502`).
 - **Standard Headers**:
   - `Authorization: Bearer <accessToken>`
   - `Content-Type: application/json` (or `multipart/form-data` for `/api/v1/upload`)
-  - `X-Device-Name`, `X-Platform` (optional device metadata on login/refresh)
+  - `X-Device-Name`, `X-Client-Platform` (optional device metadata on login/refresh; also parsed from JSON body `deviceName` / `platform`)
   - `X-Realtime-Token` (allowed in CORS for SSE stream subscriptions)
 
-### 6.2 Complete `/api/v1/*` Endpoint Table (71 Routes)
+### 6.2 Complete `/api/v1/*` Endpoint Table (73 Routes)
 
 #### A. Auth & Sessions (12 routes)
 
 | Method(s) | Endpoint | Auth | Rate Limit / Rules | Purpose |
 |---|---|---|---|---|
-| `POST`, `OPTIONS` | `/api/v1/auth/register` | Public | IP rate-limited; forces `role: "USER"` | Register user & send email verification OTP |
+| `POST`, `OPTIONS` | `/api/v1/auth/register` | Public | IP + email rate-limited; forces `role: "USER"` | Register user & send email verification OTP |
 | `POST`, `OPTIONS` | `/api/v1/auth/verify-email` | Public | IP + email rate-limited | Verify email OTP (`6`-digit HMAC hash) |
 | `POST`, `OPTIONS` | `/api/v1/auth/resend-otp` | Public | IP + email rate-limited; neutral response | Resend email verification OTP |
-| `POST`, `OPTIONS` | `/api/v1/auth/login` | Public | IP + email rate-limited; requires verified email | Email/password login → returns `{ accessToken, refreshToken, expiresIn, sessionId, user }` |
-| `POST`, `OPTIONS` | `/api/v1/auth/google` | Public | IP rate-limited; `email_verified === true` via Google JWKS | Exchange Google ID token (`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_MOBILE_IDS`) for API tokens |
-| `POST`, `OPTIONS` | `/api/v1/auth/refresh` | Public (Refresh Token) | Atomic rotation + reuse family revocation | Rotate refresh token & return new access + refresh tokens |
-| `POST`, `OPTIONS` | `/api/v1/auth/forgot-password` | Public | IP + email rate-limited; neutral response | Request password reset OTP or apply reset with `otp` + `newPassword` |
+| `POST`, `OPTIONS` | `/api/v1/auth/login` | Public | `auth_login:<email>` (`5/15m`) + `api_login_ip:<ip>` (`25/15m`); requires verified email | Email/password login → returns `{ tokenType, accessToken, accessTokenExpiresIn, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, sessionId, user, mustChangePassword? }` |
+| `POST`, `OPTIONS` | `/api/v1/auth/google` | Public | `api_google_ip:<ip>` (`20/15m`); `email_verified === true` via Google JWKS | Exchange Google ID token (`AUTH_GOOGLE_ID` / `GOOGLE_ANDROID_CLIENT_ID` / `GOOGLE_IOS_CLIENT_ID` / `AUTH_GOOGLE_MOBILE_IDS`) for API tokens |
+| `POST`, `OPTIONS` | `/api/v1/auth/refresh` | Public (Refresh Token) | `api_refresh_ip:<ip>` (`60/15m`); atomic rotation + reuse family revocation | Rotate refresh token & return new access + refresh tokens |
+| `POST`, `OPTIONS` | `/api/v1/auth/forgot-password` | Public | `auth_pwd_reset:<email>` (`3/15m`); neutral response | Email a temporary password (`mustChangePassword: true` on next login) |
 | `POST`, `OPTIONS` | `/api/v1/auth/logout` | Bearer or Refresh Token | — | Revoke current `ApiSession` |
 | `POST`, `OPTIONS` | `/api/v1/auth/logout-all` | Bearer | Increments `sessionVersion` | Revoke all `ApiSession` + `ApiRefreshToken` rows for user |
 | `POST`, `OPTIONS` | `/api/v1/auth/change-password` | Bearer | Increments `sessionVersion` | Change password & revoke all active sessions |
@@ -199,10 +201,10 @@ Designed for mobile apps, React SPAs, and third-party integrations. Built on the
 |---|---|---|---|
 | `GET`, `PATCH`, `DELETE`, `OPTIONS` | `/api/v1/users/me` | Bearer | Get self DTO, update profile fields, or delete own account |
 | `POST`, `OPTIONS` | `/api/v1/users/me/onboarding` | Bearer | Complete onboarding (`phone`, `city`, `age`, etc.) |
-| `PATCH`, `OPTIONS` | `/api/v1/users/me/preferences` | Bearer | Update theme & cover image (requires valid `uploadProof` for cover) |
-| `PATCH`, `OPTIONS` | `/api/v1/users/me/privacy` | Bearer | Update profile & online-status privacy flags |
-| `PATCH`, `OPTIONS` | `/api/v1/users/me/avatar` | Bearer | Update avatar (`multipart/form-data` image, magic-byte checked) |
-| `GET`, `OPTIONS` | `/api/v1/users/search` | Bearer + chat terms | Search visible users (`?q=...&limit=...`) |
+| `PATCH`, `OPTIONS` | `/api/v1/users/me/preferences` | Bearer | Update `theme`, `locale`, `reduceMotion`, & `coverImage` (requires valid `uploadProof` for custom cover) |
+| `PATCH`, `OPTIONS` | `/api/v1/users/me/privacy` | Bearer | Update `friendRequestPolicy`, `showOnlineStatus`, & `showFriendCount` |
+| `PATCH`, `OPTIONS` | `/api/v1/users/me/avatar` | Bearer | Update avatar (`imageUrl`, `uploadProof`) from `/api/v1/upload` |
+| `GET`, `OPTIONS` | `/api/v1/users/search` | Bearer + onboarding | Search visible users (`?q=...`, min 3 chars) |
 | `GET`, `OPTIONS` | `/api/v1/users/[id]` | Bearer (or optional viewer) | Public profile DTO respecting `profileVisibility` |
 | `POST`, `OPTIONS` | `/api/v1/upload` | Bearer | Upload validated image (`multipart/form-data`); returns `{ url, publicId, uploadProof }` |
 
@@ -236,18 +238,20 @@ Designed for mobile apps, React SPAs, and third-party integrations. Built on the
 | `GET`, `OPTIONS` | `/api/v1/admin/contacts` | `contacts:view` | List contact messages |
 | `DELETE`, `OPTIONS` | `/api/v1/admin/contacts/[id]` | `contacts:manage` | Delete contact message |
 
-#### E. Chat, Rooms, Realtime & Moderation (31 routes)
+#### E. Chat, Rooms, Realtime & Moderation (33 routes)
 
 | Method(s) | Endpoint | Auth / Permission | Purpose |
 |---|---|---|---|
 | `POST`, `OPTIONS` | `/api/v1/chat/terms` | Bearer (not chat-banned) | Accept chat terms |
-| `GET`, `OPTIONS` | `/api/v1/chat/unread` | Bearer + chat terms | Unread counts |
+| `GET`, `OPTIONS` | `/api/v1/chat/unread` | Bearer + chat terms | Unread counts & `mutedConversationIds` |
 | `GET`, `POST`, `OPTIONS` | `/api/v1/chat/friends` | Bearer + chat terms | Friends dashboard & send/accept/decline/cancel/unfriend/block/unblock |
-| `GET`, `OPTIONS` | `/api/v1/chat/conversations` | Bearer + chat terms | List conversations |
+| `GET`, `OPTIONS` | `/api/v1/chat/conversations` | Bearer + chat terms | List conversations (includes `keyEpoch`, `memberStates`) |
 | `POST`, `OPTIONS` | `/api/v1/chat/conversations/dm` | Bearer + chat terms | Open/create DM conversation |
+| `GET`, `OPTIONS` | `/api/v1/chat/conversations/[id]/key` | Bearer + member | Export HKDF-derived conversation key material (`keyVersion`, `keyEpoch`, `keys`) |
+| `POST`, `OPTIONS` | `/api/v1/chat/conversations/[id]/delivered` | Bearer + member | Record monotonic delivery ack (`lastDeliveredAt`) & publish `delivered` event |
 | `POST`, `OPTIONS` | `/api/v1/chat/conversations/[id]/read` | Bearer + member | Mark conversation read |
 | `PATCH`, `OPTIONS` | `/api/v1/chat/conversations/[id]/mute` | Bearer + member | Mute/unmute conversation |
-| `GET`, `POST`, `OPTIONS` | `/api/v1/chat/messages` | Bearer + member | List messages or send encrypted message |
+| `GET`, `POST`, `OPTIONS` | `/api/v1/chat/messages` | Bearer + member | List messages (`?wire=1` for client E2EE ciphertext) or send encrypted message |
 | `GET`, `PATCH`, `DELETE`, `OPTIONS` | `/api/v1/chat/messages/[id]` | Bearer + member/author | Get, edit, or delete message |
 | `POST`, `OPTIONS` | `/api/v1/chat/reports` | Bearer + chat terms | Report chat message |
 | `POST`, `OPTIONS` | `/api/v1/chat/rooms` | Bearer + chat terms | Create group chat room |
@@ -283,11 +287,11 @@ BASE_URL="http://localhost:3000"
 LOGIN_JSON=$(curl -sS -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -H "X-Device-Name: IhyaaMobile" \
-  -H "X-Platform: android" \
-  -d '{"email":"member@example.com","password":"YourStrongPassword123!"}')
+  -H "X-Client-Platform: android" \
+  -d '{"email":"member@example.test","password":"YourStrongPassword123!"}')
 
-ACCESS_TOKEN=$(echo "$LOGIN_JSON" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.data.accessToken)")
-REFRESH_TOKEN=$(echo "$LOGIN_JSON" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.data.refreshToken)")
+ACCESS_TOKEN=$(echo "$LOGIN_JSON" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.accessToken)")
+REFRESH_TOKEN=$(echo "$LOGIN_JSON" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(d.refreshToken)")
 
 # 2. Fetch current user profile
 curl -sS "$BASE_URL/api/v1/users/me" \
